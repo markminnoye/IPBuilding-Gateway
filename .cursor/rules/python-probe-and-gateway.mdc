@@ -1,0 +1,25 @@
+---
+description: Python scripts for capture, REST probe, and future gateway service
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python in this repo
+
+## Probe / capture (current direction)
+
+- REST: `aiohttp` to IPBox `http://<host>:30200/api/v1/...` (see knowledge doc §5).
+- UDP: `scapy` or `subprocess` + `tcpdump` on macOS; capture often needs elevated privileges (`sudo`).
+- Correlate each REST action with UDP payloads by monotonic timestamps; log human-readable hex + offsets.
+- Sequence with ~2s gaps between actions when correlating against IPBox polling.
+
+## REST action examples (IDs are installation-specific)
+
+```text
+GET .../action/action?id=<id>&actionType=ON&value=1
+GET .../action/action?id=<id>&actionType=DIM&value=50
+```
+
+## Future gateway
+
+Keep UDP framing and REST compatibility concerns separated (decode layer vs HTTP façade).

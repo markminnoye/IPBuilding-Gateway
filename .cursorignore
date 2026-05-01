@@ -1,0 +1,16 @@
+# Large / binary assets — keep out of default indexing
+resources_and_docs/*.pcapng
+resources_and_docs/*.pdf
+resources_and_docs/*.jpeg
+resources_and_docs/*.jpg
+resources_and_docs/*.png
+
+# Python noise (when present)
+.venv/
+__pycache__/
+*.pyc
+
+# Local probe logs
+probe_output.log
+
+.DS_Store

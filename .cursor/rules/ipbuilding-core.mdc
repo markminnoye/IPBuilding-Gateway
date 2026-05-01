@@ -1,0 +1,35 @@
+---
+description: IPBuilding gateway project — goals, docs, and constraints
+alwaysApply: true
+---
+
+# IPBuilding (Cursor)
+
+## Purpose
+
+Replace the proprietary IPBox by reverse-engineering controller UDP/1001 and eventually exposing an IPBox-compatible REST API (port 30200) for Home Assistant.
+
+## Authoritative docs (read before deep work)
+
+- `AGENTS.md` — current priorities and immediate tasks
+- `resources_and_docs/IPBUILDING_KNOWLEDGE.md` — hardware, topology, REST API, UDP notes, install specifics
+
+## External reference
+
+HA integration (REST client patterns): https://github.com/markminnoye/HA-IPBuilding — `custom_components/ipbuilding/api.py`
+
+## Defaults (lab / prod as documented)
+
+| Role | IP | Port |
+|------|-----|------|
+| IPBox REST | 10.10.1.1 | 30200 |
+| IP200PoE relays UDP | 10.10.1.30 | 1001 |
+| IP0300PoE dimmers UDP | 10.10.0.40 | 1001 |
+
+Treat lab IPs as configurable in code; do not hardcode secrets.
+
+## Working style
+
+- Prefer small, testable steps toward UDP command decode and correlation (timestamps, diffs).
+- Binary captures and PDFs live under `resources_and_docs/`; do not load huge binaries into context unless analyzing a specific slice.
+- This workspace enables the **wireshark-mcp** MCP (see `.cursor/mcp.json`); use it for structured reads/stats on `.pcapng` instead of pulling full captures into the chat.

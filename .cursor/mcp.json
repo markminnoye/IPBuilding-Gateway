@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "wireshark-mcp": {
+      "command": "uvx",
+      "args": ["wireshark-mcp"],
+      "env": {}
+    }
+  }
+}
