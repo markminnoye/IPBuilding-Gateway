@@ -1,0 +1,117 @@
+# Thuis-LAN (Mark): 192.168.1.0/24 — zet ipbox_base_url en capture.bpf_filter (host …) op het
+# actuele IPBox-adres op dat subnet. Waarden hieronder zijn archief (oud segment 192.168.0.185).
+version: 1
+name: ipbuilding-golden-run
+
+settings:
+  run_name: golden-protocol-capture
+  ipbox_base_url: "http://192.168.0.185:30200/api/v1"
+  ip1100_base_url: "http://10.10.1.50"
+  capture:
+    interface: "en7"
+    # Alle UDP tussen IPBox/controllers/home-REST-IP (elke poort); plus IPBox REST en embedded HTTP op modules.
+    bpf_filter: "udp and (host 10.10.1.1 or host 10.10.1.30 or host 10.10.1.40 or host 10.10.1.50 or host 192.168.0.185) or tcp port 30200 or (tcp port 80 and (host 10.10.1.30 or host 10.10.1.40 or host 10.10.1.50))"
+    settle_before_steps_seconds: 2
+    settle_after_steps_seconds: 30
+  network_notes:
+    execution_mode: "ethernet_capture_on_en7_mirror_ipbox_vlan_leg"
+    mirror_destination_port: 7
+    # Default mirror: dest 7 <- bron 15 (IPBox 10.10.1.x / hub POV). Alternate 7<-14 = relay-switchpoort alleen als expliciete POV — zie 2026-05-14_relay_run_a_operational_playbook.md. Eén mirror voor alle controller-UDP naar .30/.40/.50.
+    # REST naar de IPBox loopt over thuis-LAN 192.168.1.0/24 (host in bpf_filter aanpassen); oude notitie: 192.168.0.185.
+    mirror_source_ports: [15]
+
+outputs:
+  save_inventory_pre_as: "inventory_pre.json"
+  save_getbuttons_pre_as: "ip1100_getbuttons_pre.json"
+  save_getbuttons_post_as: "ip1100_getbuttons_post.json"
+
+steps:
+  - type: inventory_snapshot
+    step_id: inventory_pre
+    description: "Haal volledige comp/items op om IDs te bevriezen."
+
+  - type: http_snapshot
+    step_id: getbuttons_pre
+    description: "Lees IP1100 knopmapping voor correlatie."
+    url: "{ip1100_base_url}/api.html?method=getButtons"
+    save_as: "ip1100_getbuttons_pre.json"
+    wait_after_seconds: 2
+
+  - type: rest_action
+    step_id: relay_on
+    description: "Relay aan (A1)."
+    id: 547
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 2
+
+  - type: rest_action
+    step_id: relay_off
+    description: "Relay uit (A2)."
+    id: 547
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
+
+  - type: rest_action
+    step_id: dimmer_50
+    description: "Dimmer 50% (A3)."
+    id: 571
+    action_type: "DIM"
+    value: 50
+    wait_after_seconds: 2
+
+  - type: rest_action
+    step_id: dimmer_100
+    description: "Dimmer 100% (A3)."
+    id: 571
+    action_type: "DIM"
+    value: 100
+    wait_after_seconds: 2
+
+  - type: rest_action
+    step_id: dimmer_off
+    description: "Dimmer uit (A4)."
+    id: 571
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
+
+  - type: rest_action
+    step_id: scene_on
+    description: "Scene trigger (A5) — Keuken UIT (id 100064); beperktere impact dan 100061 Alle Verlichting AAN."
+    id: 100064
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 5
+
+  - type: physical_input
+    step_id: physical_keuken_1
+    description: "Druk fysieke knop Keuken 1 eenmalig."
+    label: "Keuken 1"
+    expected_cable: "Cat5-A"
+    note: "1 korte druk"
+    wait_after_seconds: 5
+
+  - type: physical_input
+    step_id: physical_woonkamer_hal_l
+    description: "Druk fysieke knop Woonkamer hal links."
+    label: "Woonkamer hal L"
+    expected_cable: "Cat5-A"
+    note: "1 korte druk"
+    wait_after_seconds: 5
+
+  - type: physical_input
+    step_id: physical_inkom_l
+    description: "Druk fysieke knop inkom links."
+    label: "Inkom L"
+    expected_cable: "Cat5-B"
+    note: "1 korte druk"
+    wait_after_seconds: 5
+
+  - type: http_snapshot
+    step_id: getbuttons_post
+    description: "Lees IP1100 knopmapping na fysieke blok."
+    url: "{ip1100_base_url}/api.html?method=getButtons"
+    save_as: "ip1100_getbuttons_post.json"
+    wait_after_seconds: 2

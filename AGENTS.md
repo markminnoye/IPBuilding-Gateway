@@ -1,88 +1,99 @@
-# IPBuilding — Project Brief voor Claude Code
+# IPBuilding — agent brief
 
-## WAT DIT PROJECT IS
+**Doel:** een **eigen open centrale** bouwen die de rol van de propriëtaire **IPBox op de veldbus** overneemt (UDP/1001 naar relay/dimmer/input modules).
 
-We reverse-engineeren het propriëtaire UDP-protocol waarmee de IPBuilding controllers communiceren, om daarna de IPBox (IP0000X) te kunnen vervangen door een open-source oplossing die integreert met Home Assistant en andere domotica systemen.
+**Niet het doel:** de IPBox REST API op `:30200` nabootsen. IPBox REST en WebConfig blijven **referentie** voor RE/correlatie en het bestaande HA-project — geen verplicht northbound-contract voor de nieuwe centrale.
 
-**Volledige technische kennis:** zie `resources_and_docs/IPBUILDING_KNOWLEDGE.md`.
+**Productprincipe (2026-05-22):** de gateway is een **dunne veldbus-hub** (pollen, commando’s, `B-…E` doorgeven). **Geen** IPBox-pariteit voor sferen/scenes, knop→actie-regels of andere “slimme” logica in de gateway — dat hoort in **Home Assistant** (scenes, automations, Matter). Minimale mapping (device/kanaal ↔ veldbus) in de companion; geen tweede projectdatabase in de add-on.
 
----
+**Architectuur (goedgekeurd):** [docs/superpowers/specs/2026-05-18-gateway-architecture-design.md](docs/superpowers/specs/2026-05-18-gateway-architecture-design.md) — **Aanpak C:** HA Add-on `ipbuilding-gateway` + companion `ipbuilding-open` (WebSocket + eigen REST `/api/v1/`); IPBox REST `:30200` alleen als **tijdelijke shim** in transitie. Apple/Google via HA Matter bridge.
 
-## HUIDIGE STATUS
+**Fase 1 RE (veldbus):** relay, dimmer en input **wire** afgerond (5-sprint plan + Sprint 5 fysieke input). IPBox GUI (wizards, provisioning) deels gedocumenteerd als **referentie**, niet als eindmodel. Zie [RE_STATE.md](resources_and_docs/RE_STATE.md).
 
-- [x] Hardware en netwerktopologie gedocumenteerd
-- [x] IPBox REST API volledig gedocumenteerd (zie sectie 5 van knowledge doc)
-- [x] UDP/1001 polling protocol gedeeltelijk gedecodeeerd (poll + status response)
-- [ ] **VOLGENDE STAP: UDP commandopakketten reverse-engineeren**
-- [ ] Custom gateway service bouwen
+**Diepte-facts:** `resources_and_docs/IPBUILDING_KNOWLEDGE.md` — niet herschrijven in de chat; verwijs naar sectie.
+
+**Token-/contextbeleid:** `docs/context-policy.md`.
 
 ---
 
-## ONMIDDELLIJKE TAAK
+## Status
 
-Schrijf een Python script (`ipbuilding_probe.py`) dat op de Mac van de gebruiker draait en:
+| Done | Open |
+|------|------|
+| 5-sprint RE (relay/dimmer/input wire, mirror POV) | Optionele RE: input logical flow IPBox-project (referentie) |
+| Sprint 5 fysieke input (`B-…E`, mirror 7←13) | **Gateway Fase 2+** (UDP bus service, registry, add-on, companion) |
+| `gateway/payloads/` + tests + `udp_bus.py` | Dun provisioning (entiteiten in HA, niet in gateway) |
+| Architectuur northbound (2026-05-18) | Productie add-on + `ipbuilding-open` |
 
-1. REST API commando's stuurt naar de IPBox (10.10.1.1:30200) met precieze timestamps
-2. Tegelijk UDP/1001 verkeer captureert via `tcpdump` of `scapy`
-3. Commando's en paketten correleert op timestamp
-4. Output geeft die toont welke UDP bytes er veranderen bij elk commando
+**Canonieke RE-status:** [resources_and_docs/RE_STATE.md](resources_and_docs/RE_STATE.md) — Fase 1 RE **afgesloten** 2026-05-22. PCAP-index: [CAPTURES.md](resources_and_docs/CAPTURES.md).
 
-**Doel:** Achterhalen hoe relay aan/uit, dimmer en scene commando's er op UDP niveau uitzien.
+**Sprint 5 afsluiting:** [resources_and_docs/evidence/2026-05-22_sprint5_input_physical_completion.md](resources_and_docs/evidence/2026-05-22_sprint5_input_physical_completion.md) (incl. § Architectuurdoel: hub beslist bij druk — logica in HA, niet in gateway)
 
-### Script vereisten
-- Draait met `sudo python3 ipbuilding_probe.py` op macOS
-- Gebruikt `aiohttp` voor REST calls, `scapy` of `subprocess+tcpdump` voor capture
-- Logt naar stdout EN naar `probe_output.log`
-- Pakt systematisch: relay aan → relay uit → dimmer 50% → dimmer 100% → dimmer uit → scene
-- Wacht 2s tussen commando's (polling interval van IPBox)
+**Field-bus capabilities:** [resources_and_docs/2026-05-17_ipbuilding_fieldbus_capability_matrix.md](resources_and_docs/2026-05-17_ipbuilding_fieldbus_capability_matrix.md)
 
----
-
-## NETWERK (PRODUCTIE)
-
-| Device | IP | Poort | Protocol |
-|--------|-----|-------|---------|
-| IPBox | 10.10.1.1 | 30200 | REST/HTTP |
-| IP200PoE (relays) | 10.10.1.30 | 1001 | UDP binair |
-| IP0300PoE (dimmers) | 10.10.0.40 | 1001 | UDP binair |
-| IP1100PoE (inputs) | onbekend | 1001 | UDP binair |
+**RE Wizards (IPBox WebConfig):** [resources_and_docs/reference/2026-05-17_RE_WIZARDS_PLAN.md](resources_and_docs/reference/2026-05-17_RE_WIZARDS_PLAN.md) — referentie; geen verplicht eindmodel.
 
 ---
 
-## BESTAANDE CODE
+## Volgende focus (implementatie)
 
-**HA integratie:** https://github.com/markminnoye/HA-IPBuilding  
-Bevat werkende REST API client in `custom_components/ipbuilding/api.py` — herbruikbaar als referentie.
+1. **Gateway Fase 2** — asyncio hub op `10.10.1.1`: pollen (`I0000`), relay/dimmer commando’s, input `B-…E` → events naar companion (geen scene-engine in de gateway).
+2. **Companion** — entiteiten (switch, light, button event); knop→actie via HA automations/scenes.
+3. Captures blijven nuttig bij regressie; standaard mirror **7←15** ([playbook](resources_and_docs/workflows/2026-05-14_relay_run_a_operational_playbook.md)).
 
-**REST API aanroep voorbeeld:**
-```python
-# Devices ophalen
-GET http://10.10.1.1:30200/api/v1/comp/items
-
-# Relay aan
-GET http://10.10.1.1:30200/api/v1/action/action?id=5&actionType=ON&value=1
-
-# Dimmer op 50%
-GET http://10.10.1.1:30200/api/v1/action/action?id=12&actionType=DIM&value=50
-```
+**IPBox thuis-LAN (RE-stimulus / archief):** `192.168.0.185` (REST `:30200`, WebConfig). Veld-bus hub: `10.10.1.1`. Zie `IPBUILDING_KNOWLEDGE.md` §3.0.
 
 ---
 
-## GEWENSTE EINDOPLOSSING
+## Volgende sprint (uitgesteld — waarschijnlijk overslaan)
 
-Een Python service (geen IPBox nodig) die:
-- Rechtstreeks praat met controllers via UDP/1001
-- REST API aanbiedt compatibel met de IPBox (poort 30200) → bestaande HA integratie blijft werken
-- Draait als Docker container of HA Add-on
+**Gepland voor optionele documentatie-RE (niet blokkerend voor gateway):**
+
+- IPBox **sferen / moods:** `http://192.168.0.185/general/Configuration/Moods/Index` (WebConfig, geen veldbus-wire vereist).
+- Gerelateerd: scenes, input→meerdere acties in IPBox-project (§12, REST `action`).
+
+**Intentie:** waarschijnlijk **links laten liggen** — sferen en automatisering in **HA**; gateway alleen veldbus transport. Bij start van die RE: kort HAR/pcap alleen als referentie voor migratie uit bestaand IPBox-project, niet om parity te bouwen.
 
 ---
 
-## BESTANDEN IN DEZE MAP
+## Netwerk (referentie)
 
-| Bestand | Inhoud |
-|---------|--------|
-| `AGENTS.md` | Project brief en huidige taken (ook voor Cursor) |
-| `resources_and_docs/IPBUILDING_KNOWLEDGE.md` | Volledige technische kennis (hardware, protocollen, installatie) |
-| `resources_and_docs/IP0000X-IPBox.pdf` | Fabrikantsdocumentatie IPBox |
-| `resources_and_docs/IP040x - drukknopinterface1.pdf` | Fabrikantsdocumentatie drukknop interfaces |
-| `resources_and_docs/traffic between controller an IPbox.pcapng` | Wireshark capture van UDP polling verkeer |
+| Rol | IP | Poort / protocol |
+|-----|-----|------------------|
+| IPBox REST (thuis-LAN; referentie) | host uit router (archief `192.168.0.185`) | 30200 |
+| Veld-bus hub (IPBox of gateway) | `10.10.1.1` | UDP/1001 |
+| Relays | `10.10.1.30` | 1001, 80 |
+| Dimmers | `10.10.1.40` | 1001, 80 |
+| Inputs | `10.10.1.50` | 1001, 80 |
+
+**HA vandaag (legacy):** [HA-IPBuilding](https://github.com/markminnoye/HA-IPBuilding) — IPBox REST. **Doel:** companion + gateway add-on per architectuurdoc.
+
+---
+
+## Skills
+
+| Skill | Trigger |
+|-------|---------|
+| **protocol-reverse-engineering** | PCAP, Wireshark MCP, UDP correlatie |
+| **binary-analysis-patterns** | Payload-structuur, parsers |
+| **network-engineer** | VLAN, mirror POV |
+| **async-python-patterns** | asyncio veldbus + gateway service |
+
+---
+
+## Doc-index (tier — `docs/context-policy.md`)
+
+- **Index:** [resources_and_docs/README.md](resources_and_docs/README.md) (volledig), [docs/README.md](docs/README.md) (specs/plans)
+- **T0:** `AGENTS.md`, `docs/context-policy.md`
+- **T1:** `IPBUILDING_KNOWLEDGE.md` (sectie-gewijs)
+- **T2:** `RE_STATE.md`, `CAPTURES.md`, sprint5 completion, gateway-architectuur, fieldbus matrix, capture workflows
+- **T3:** PDFs, volledige pcaps (`captures/` lokaal)
+- **Doc-structuur:** [REORGANIZE_BRIEF.md](resources_and_docs/REORGANIZE_BRIEF.md) — uitgevoerd 2026-05-22 (`workflows/`, `evidence/`, `reference/`, `archive/`)
+
+**Code:** `gateway/payloads/`, `gateway/udp_bus.py`, `ipbuilding_capture_run.py` (RE) — **`gateway/rest_api.py` = experimenteel, geen product-API**
+
+---
+
+## Einddoel
+
+**IPBuilding Gateway** HA Add-on: UDP/1001 veldbus-hub; WebSocket naar **ipbuilding-open**; optionele REST-shim `:30200` in transitie. Scenes/logica in HA, niet in de gateway. Netwerk: HA Green + VLAN trunk (architectuurdoc § Netwerkconstraint).

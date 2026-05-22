@@ -1,0 +1,99 @@
+# Push/pull investigation - Run A (project default capture filter + fixed relay stimulus)
+version: 1
+name: push-pull-run-a
+settings:
+  run_name: push-pull-run-a
+  ipbox_base_url: "http://192.168.0.185:30200/api/v1"
+  correlate_extra_args:
+    - "--verdict-profile"
+    - "relay"
+    - "--rest-ip"
+    - "192.168.0.185"
+  capture:
+    interface: "en7"
+    bpf_filter: "udp and (host 10.10.1.1 or host 10.10.1.30 or host 10.10.1.40 or host 10.10.1.50 or host 192.168.0.185) or tcp port 30200 or (tcp port 80 and (host 10.10.1.30 or host 10.10.1.40 or host 10.10.1.50))"
+    settle_before_steps_seconds: 5
+    settle_after_steps_seconds: 15
+
+outputs:
+  save_inventory_pre_as: "inventory_pre.json"
+
+steps:
+  - type: inventory_snapshot
+    step_id: inventory_pre
+
+  - type: rest_action
+    step_id: relay_547_off_pre
+    id: 547
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 5
+  - type: rest_action
+    step_id: relay_547_on
+    id: 547
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 5
+  - type: rest_action
+    step_id: relay_547_off_post
+    id: 547
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 5
+
+  - type: rest_action
+    step_id: relay_557_off_pre
+    id: 557
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 5
+  - type: rest_action
+    step_id: relay_557_on
+    id: 557
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 5
+  - type: rest_action
+    step_id: relay_557_off_post
+    id: 557
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 5
+
+  - type: rest_action
+    step_id: relay_563_off_pre
+    id: 563
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 5
+  - type: rest_action
+    step_id: relay_563_on
+    id: 563
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 5
+  - type: rest_action
+    step_id: relay_563_off_post
+    id: 563
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 5
+
+  - type: rest_action
+    step_id: relay_570_off_pre
+    id: 570
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 5
+  - type: rest_action
+    step_id: relay_570_on
+    id: 570
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 5
+  - type: rest_action
+    step_id: relay_570_off_post
+    id: 570
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 5

@@ -1,7 +1,7 @@
 # IPBuilding Gateway — Architectuurontwerp
 
-**Datum:** 2026-05-18  
-**Status:** Goedgekeurd — klaar voor implementatieplan  
+**Datum:** 2026-05-18 (roadmap bijgewerkt 2026-05-22)  
+**Status:** Goedgekeurd — **Fase 1 (veldbus-RE) voltooid**; implementatie Fase 2+ open  
 **Beslissing:** Aanpak C — HA Add-on + Companion Component
 
 ---
@@ -16,7 +16,9 @@ De IPBox (IP0000X) is verouderde, propriëtaire hardware die als hub fungeert tu
 - Architectureel voorbereid is op Apple Home en Google Home (via HA Matter bridge)
 - Installeerbaar is als één coherent pakket op een HA OS-installatie
 
-**Scope van dit document:** northbound-architectuur (hoe clients de gateway aanspreken). De UDP/1001 veldbus-laag is een apart, lopend RE-traject (zie `resources_and_docs/IPBUILDING_KNOWLEDGE.md` §6 en `RE_STATE.md`).
+**Scope van dit document:** northbound-architectuur (hoe clients de gateway aanspreken). De UDP/1001 veldbus-wire (relay, dimmer, input `B-…E`) is **afgerond** (RE Sprint 1–5); codecs in `gateway/payloads/`. Zie `resources_and_docs/RE_STATE.md`, `IPBUILDING_KNOWLEDGE.md` §10.5.
+
+**Productprincipe (2026-05-22):** de gateway is een **dunne veldbus-hub** (pollen, commando’s, events doorsturen). **Geen** IPBox-pariteit voor sferen/scenes of knop→actie-regels — dat hoort in Home Assistant (`ipbuilding-open`).
 
 ---
 
@@ -38,7 +40,7 @@ Gekozen op basis van:
 ║  IPBuilding VLAN  (10.10.1.x / 10.10.0.x)                   ║
 ║                                                              ║
 ║   10.10.1.30  IP0200PoE  (24 relay-kanalen)                  ║
-║   10.10.0.40  IP0300PoE  (dimmer-kanalen)                    ║
+║   10.10.1.40  IP0300PoE  (dimmer-kanalen)                    ║
 ║   10.10.1.40  IP0300PoE  (tweede dimmer-module)              ║
 ║   10.10.1.50  IP1100PoE  (ingangsmodule / drukknoppen)       ║
 ╚═══════════════════════════╤══════════════════════════════════╝
@@ -92,7 +94,7 @@ Gekozen op basis van:
 | Module | Functie |
 |--------|---------|
 | `udp_bus.py` | asyncio UDP socket manager; polling + command send + event listen |
-| `payloads/` | encode/decode bibliotheek (relay, dimmer, input) — al gedeeltelijk aanwezig |
+| `payloads/` | encode/decode bibliotheek (relay, dimmer, input) — **aanwezig** (RE + tests) |
 | `device_registry.py` | In-memory model van alle gekende devices met huidige status |
 | `gateway_api.py` | aiohttp server: WebSocket `/ws` + REST `/api/v1/` |
 | `rest_shim.py` | IPBox-compatibele REST op `:30200` (transitie-hulp, optioneel) |
@@ -208,16 +210,20 @@ Stap 4: IPBox fysiek verwijderen uit het netwerk 🎉
 
 ## Roadmap
 
-| Fase | Beschrijving | Afhankelijkheden |
-|------|-------------|-----------------|
-| **1** | UDP protocol volledig decoderen (relay + dimmer + input events) | Lopend RE-traject (Sprint 1–5) |
-| **2** | UDP Bus Manager + device_registry + basis REST shim | Fase 1 voltooid |
-| **3** | WebSocket API server | Fase 2 |
-| **4** | Gateway als HA Add-on (Dockerfile + config.yaml) | Fase 3 |
-| **5** | Companion component (`ipbuilding-open`) | Fase 3 |
-| **6** | Input-events IP1100PoE (button push via WebSocket) | Fase 4 |
-| **7** | Cover / screen entities (relay-paren met interlock) | Fase 5 |
-| **8** | Apple Home / Google Home via HA Matter bridge | Fase 5 + HA Matter configuratie |
+| Fase | Beschrijving | Status (2026-05-22) |
+|------|-------------|---------------------|
+| **1** | UDP-protocol decoderen (relay, dimmer, input `B-…E`) + `gateway/payloads/` | **Voltooid** — Sprint 1–5, zie [RE_STATE.md](../../../resources_and_docs/RE_STATE.md) |
+| **2** | UDP Bus Manager (poll-loop op `10.10.1.1`) + `device_registry` + basis REST-shim (`rest_shim.py`) | **Open** — library: `udp_bus.py`; geen hub-service/registry |
+| **3** | WebSocket API server (`gateway_api.py`, `/ws` + REST `/api/v1/`) | Open |
+| **4** | Gateway als HA Add-on (Dockerfile + `config.yaml`, `host_network`) | Open |
+| **5** | Companion (`ipbuilding-open`) — entiteiten, automations voor knop→actie | Open |
+| **6** | Input-events IP1100PoE naar companion via WebSocket | Open (wire bevestigd in fase 1) |
+| **7** | Cover / screen entities (relay-paren met interlock) | Open |
+| **8** | Apple Home / Google Home via HA Matter bridge | Open |
+
+**Huidige code in dit repo:** `gateway/payloads/`, `gateway/udp_bus.py`, experimenteel `gateway/rest_api.py` (→ `rest_shim.py`). Geen `device_registry.py`, `gateway_api.py`, add-on of companion.
+
+**Volgende implementatiefocus:** Fase 2 (zie [AGENTS.md](../../../AGENTS.md), [README_gateway.md](../../../README_gateway.md)).
 
 ---
 
@@ -241,4 +247,4 @@ pydantic                 # config models + device registry
 | 1 | Is het HA-huis al op het IPBuilding VLAN gerouteerd, of moet VLAN-interface aangemaakt worden? | 🔴 Hoog |
 | 2 | Hoe worden screens/rolluiken gerepresenteerd in het huidige systeem (relay-paren)? | 🟡 Middel |
 | 3 | Welke entities uit `HA-IPBuilding` worden actief gebruikt in jouw installatie? | 🟡 Middel |
-| 4 | UDP: stuurt IP0300PoE commands op dezelfde poort 1001 als polling, of anders? | 🟡 Middel — RE Sprint 4+ |
+| 4 | UDP: stuurt IP0300PoE commands op dezelfde poort 1001 als polling, of anders? | ✅ Bevestigd — zelfde poort 1001 (Sprint 3/4 RE) |

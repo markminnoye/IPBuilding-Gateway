@@ -1,0 +1,55 @@
+version: 1
+name: relay-re-run
+settings:
+  run_name: relay-re-run
+  ipbox_base_url: "http://192.168.0.185:30200/api/v1"
+  capture:
+    interface: "en7"
+    settle_before_steps_seconds: 2
+    settle_after_steps_seconds: 10
+
+steps:
+  - type: inventory_snapshot
+    step_id: inventory_pre
+
+  # Relay 547
+  - type: rest_action
+    step_id: relay_547_on
+    id: 547
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 2
+  - type: rest_action
+    step_id: relay_547_off
+    id: 547
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
+
+  # Relay 557
+  - type: rest_action
+    step_id: relay_557_on
+    id: 557
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 2
+  - type: rest_action
+    step_id: relay_557_off
+    id: 557
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
+
+  # Relay 563
+  - type: rest_action
+    step_id: relay_563_on
+    id: 563
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 2
+  - type: rest_action
+    step_id: relay_563_off
+    id: 563
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2

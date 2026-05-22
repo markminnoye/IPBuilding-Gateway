@@ -7,7 +7,9 @@ alwaysApply: true
 
 ## Purpose
 
-Replace the proprietary IPBox by reverse-engineering controller UDP/1001 and eventually exposing an IPBox-compatible REST API (port 30200) for Home Assistant.
+Replace the proprietary IPBox **hub role on the field bus** with an open central service (UDP/1001 to controllers). **Do not** target an IPBox-compatible REST API on port 30200 as the end product — northbound and product shape: see `docs/superpowers/specs/2026-05-18-gateway-architecture-design.md` (not IPBox REST clone).
+
+**Phase 1 RE is not UDP-only:** map UDP/1001, correlate with IPBox REST (stimulus/reference only) and module HTTP; document IPBox GUI provisioning for later design of the **own** config model.
 
 ## Authoritative docs (read before deep work)
 
@@ -16,20 +18,30 @@ Replace the proprietary IPBox by reverse-engineering controller UDP/1001 and eve
 
 ## External reference
 
-HA integration (REST client patterns): https://github.com/markminnoye/HA-IPBuilding — `custom_components/ipbuilding/api.py`
+Legacy HA integration (IPBox REST — reference only): https://github.com/markminnoye/HA-IPBuilding — future HA path follows northbound architecture decision, not IPBox clone.
 
-## Defaults (lab / prod as documented)
+## Reference topology (documented)
+
+Two L3 domains: **thuis-LAN `192.168.1.0/24`** (internet, HA; IPBox **REST** `:30200` on one NIC) and **IPBuilding-VLAN `10.10.1.x`** (field controllers; **UDP/1001** hub `10.10.1.1` on the other NIC). Same physical IPBox, two Ethernet ports — not a separate “lab network”. Use the actual IPBox host on the home subnet from your router; older repo examples may show `192.168.0.185` from a prior segment.
 
 | Role | IP | Port |
 |------|-----|------|
-| IPBox REST | 10.10.1.1 | 30200 |
-| IP200PoE relays UDP | 10.10.1.30 | 1001 |
-| IP0300PoE dimmers UDP | 10.10.0.40 | 1001 |
+| IPBox REST (thuis-LAN 192.168.1.0/24) | *your IPBox host* (archive example: 192.168.0.185) | 30200 |
+| IPBox on IPBuilding VLAN (field bus) | 10.10.1.1 | UDP/1001 to `10.10.1.x` — second NIC of same unit |
+| IP200PoE / IP0200PoE relays | 10.10.1.30 | 1001 (UDP), 80 (HTTP embedded; zie knowledge §2A) |
+| IP0300PoE dimmers / 0-10V | 10.10.1.40 only | 1001 (UDP), 80 (HTTP; zie knowledge §2B) |
+| IP1100PoE inputs | 10.10.1.50 | 1001 (UDP), 80 (HTTP; zie knowledge §2C) |
 
-Treat lab IPs as configurable in code; do not hardcode secrets.
+Treat IPs as configurable in code; do not hardcode secrets.
 
 ## Working style
 
-- Prefer small, testable steps toward UDP command decode and correlation (timestamps, diffs).
+- Prefer small, testable steps toward protocol understanding and correlation (UDP, REST, HTTP-on-module; timestamps, diffs).
 - Binary captures and PDFs live under `resources_and_docs/`; do not load huge binaries into context unless analyzing a specific slice.
 - This workspace enables the **wireshark-mcp** MCP (see `.cursor/mcp.json`); use it for structured reads/stats on `.pcapng` instead of pulling full captures into the chat.
+
+## Context / tokens
+
+- Keep replies lean; cite paths instead of pasting long knowledge sections.
+- Tiered docs: `docs/context-policy.md` — pull **T1/T2** files on demand; avoid bulk-loading T3 (full pcaps, PDFs).
+- **UniFi:** use the **UniFi Network MCP** for current VLANs, subnets, and switch port native assignments (`unifi_list_networks`, `unifi_get_switch_ports`); see `resources_and_docs/IPBUILDING_KNOWLEDGE.md` §3.3.

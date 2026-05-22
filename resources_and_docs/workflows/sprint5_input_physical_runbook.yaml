@@ -1,0 +1,57 @@
+# Sprint 5 — physical input + IP1100 (no IPBox REST stimulus)
+# Status 2026-05-22: completed manually — see 2026-05-22_sprint5_input_physical_completion.md
+version: 1
+name: sprint5-input-physical
+settings:
+  run_name: sprint5-input-physical
+  ip1100_base_url: "http://10.10.1.50"
+  capture:
+    interface: "en7"
+    bpf_filter: "udp and (host 10.10.1.1 or host 10.10.1.30 or host 10.10.1.40 or host 10.10.1.50)"
+    settle_before_steps_seconds: 5
+    settle_after_steps_seconds: 20
+  correlate_extra_args:
+    - "--verdict-profile"
+    - "input"
+
+outputs:
+  save_inventory_pre_as: "inventory_pre.json"
+
+steps:
+  - type: http_snapshot
+    step_id: getbuttons_pre
+    description: "IP1100 knopmapping vóór fysieke drukken."
+    url: "{ip1100_base_url}/api.html?method=getButtons"
+    save_as: "ip1100_buttons_pre.json"
+    wait_after_seconds: 3
+
+  - type: physical_input
+    step_id: physical_button_a
+    description: "Druk fysieke knop A (kort) — bv. Keuken / eerste Cat5-kabel."
+    label: "Button A"
+    expected_cable: "Cat5"
+    note: "1 korte druk"
+    wait_after_seconds: 8
+
+  - type: physical_input
+    step_id: physical_button_b
+    description: "Druk fysieke knop B (kort)."
+    label: "Button B"
+    expected_cable: "Cat5"
+    note: "1 korte druk"
+    wait_after_seconds: 8
+
+  - type: physical_input
+    step_id: physical_button_c
+    description: "Druk fysieke knop C (kort)."
+    label: "Button C"
+    expected_cable: "Cat5"
+    note: "1 korte druk"
+    wait_after_seconds: 8
+
+  - type: http_snapshot
+    step_id: getbuttons_post
+    description: "IP1100 knopmapping na fysieke drukken."
+    url: "{ip1100_base_url}/api.html?method=getButtons"
+    save_as: "ip1100_buttons_post.json"
+    wait_after_seconds: 2

@@ -20,6 +20,6 @@ GET .../action/action?id=<id>&actionType=ON&value=1
 GET .../action/action?id=<id>&actionType=DIM&value=50
 ```
 
-## Future gateway
+## Future central service
 
-Keep UDP framing and REST compatibility concerns separated (decode layer vs HTTP façade).
+Keep UDP framing (field bus) separate from northbound API (MQTT/Matter/TBD). Do not add IPBox REST `:30200` as product API. `gateway/rest_api.py` is experimental for RE only.

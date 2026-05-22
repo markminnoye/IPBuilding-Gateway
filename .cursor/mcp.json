@@ -3,7 +3,36 @@
     "wireshark-mcp": {
       "command": "uvx",
       "args": ["wireshark-mcp"],
-      "env": {}
+      "env": {
+        "PATH": "/Applications/Wireshark.app/Contents/MacOS:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+      }
+    },
+    "unifi-network": {
+      "command": "op",
+      "args": ["run", "--", "uvx", "unifi-network-mcp@latest"],
+      "env": {
+        "UNIFI_HOST": "192.168.1.1",
+        "UNIFI_USERNAME": "op://Private/Ubiquiti Unifi MCP/username",
+        "UNIFI_PASSWORD": "op://Private/Ubiquiti Unifi MCP/password"
+      }
+    },
+    "unifi-protect": {
+      "command": "op",
+      "args": ["run", "--", "uvx", "unifi-protect-mcp@latest"],
+      "env": {
+        "UNIFI_HOST": "192.168.1.1",
+        "UNIFI_USERNAME": "op://Private/Ubiquiti Unifi MCP/username",
+        "UNIFI_PASSWORD": "op://Private/Ubiquiti Unifi MCP/password"
+      }
+    },
+    "unifi-access": {
+      "command": "op",
+      "args": ["run", "--", "uvx", "unifi-access-mcp@latest"],
+      "env": {
+        "UNIFI_HOST": "192.168.1.1",
+        "UNIFI_USERNAME": "op://Private/Ubiquiti Unifi MCP/username",
+        "UNIFI_PASSWORD": "op://Private/Ubiquiti Unifi MCP/password"
+      }
     }
   }
 }

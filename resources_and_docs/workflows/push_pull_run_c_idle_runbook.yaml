@@ -1,0 +1,23 @@
+# Push/pull investigation - Run C (idle polling window, no stimulus)
+version: 1
+name: push-pull-run-c-idle
+settings:
+  run_name: push-pull-run-c-idle
+  ipbox_base_url: "http://192.168.0.185:30200/api/v1"
+  correlate_extra_args:
+    - "--verdict-profile"
+    - "relay"
+    - "--rest-ip"
+    - "192.168.0.185"
+  capture:
+    interface: "en7"
+    bpf_filter: "udp and (host 10.10.1.1 or host 10.10.1.30 or host 10.10.1.40 or host 10.10.1.50 or host 192.168.0.185) or tcp port 30200 or (tcp port 80 and (host 10.10.1.30 or host 10.10.1.40 or host 10.10.1.50))"
+    settle_before_steps_seconds: 5
+    settle_after_steps_seconds: 150
+
+outputs:
+  save_inventory_pre_as: "inventory_pre.json"
+
+steps:
+  - type: inventory_snapshot
+    step_id: inventory_pre

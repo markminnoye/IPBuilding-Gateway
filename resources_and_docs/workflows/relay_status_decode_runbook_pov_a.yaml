@@ -1,0 +1,93 @@
+version: 1
+name: relay-status-decode-pov-a
+settings:
+  run_name: relay-status-decode-pov-a
+  ipbox_base_url: "http://192.168.0.185:30200/api/v1"
+  capture:
+    interface: "en7"
+    bpf_filter: "udp and (host 10.10.1.1 or host 10.10.1.30 or host 10.10.1.40 or host 10.10.1.50 or host 192.168.0.185)"
+    settle_before_steps_seconds: 2
+    settle_after_steps_seconds: 5
+
+outputs:
+  save_inventory_pre_as: "inventory_pre.json"
+
+steps:
+  - type: inventory_snapshot
+    step_id: inventory_pre
+
+  - type: rest_action
+    step_id: relay_547_off_pre
+    id: 547
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
+  - type: rest_action
+    step_id: relay_547_on
+    id: 547
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 2
+  - type: rest_action
+    step_id: relay_547_off_post
+    id: 547
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
+
+  - type: rest_action
+    step_id: relay_557_off_pre
+    id: 557
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
+  - type: rest_action
+    step_id: relay_557_on
+    id: 557
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 2
+  - type: rest_action
+    step_id: relay_557_off_post
+    id: 557
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
+
+  - type: rest_action
+    step_id: relay_563_off_pre
+    id: 563
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
+  - type: rest_action
+    step_id: relay_563_on
+    id: 563
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 2
+  - type: rest_action
+    step_id: relay_563_off_post
+    id: 563
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
+
+  - type: rest_action
+    step_id: relay_570_off_pre
+    id: 570
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
+  - type: rest_action
+    step_id: relay_570_on
+    id: 570
+    action_type: "ON"
+    value: 1
+    wait_after_seconds: 2
+  - type: rest_action
+    step_id: relay_570_off_post
+    id: 570
+    action_type: "OFF"
+    value: 0
+    wait_after_seconds: 2
