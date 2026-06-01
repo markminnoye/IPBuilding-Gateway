@@ -19,7 +19,7 @@ Last updated: 2026-05-17
 | **Field bus** — UDP/1001, payload encode/decode | Fase 1 RE **voltooid** (2026-05-22) | `gateway/payloads/`, `RE_STATE.md` |
 | **Northbound** — hoe clients (HA, andere) de centrale aanspreken | **Besloten** (2026-05-18 doc) | Dit document = achtergrond |
 
-De experimentele `gateway/rest_api.py` is **alleen** nuttig voor RE-correlatie (REST-stimulus tijdens captures), niet als eindproduct.
+Transitie: `gateway/rest_shim.py` (IPBox `:30200`, optioneel) — geen eindproduct. Oud pad `rest_api.py` is alleen een import-alias; product northbound = `gateway_api.py` (zie 2026-05-18 architectuurdoc).
 
 ## Opties om te vergelijken
 

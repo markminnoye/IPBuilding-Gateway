@@ -1,15 +1,61 @@
-"""Tests for experimental gateway.rest_api."""
+"""Tests for experimental gateway.rest_api (backward-compat alias to rest_shim)."""
+
+import json
+from pathlib import Path
 
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
 from gateway.config import GatewayConfig
+from gateway.device_registry import DeviceRegistry, DeviceType
+from gateway.installation import InstallationConfig
 from gateway.rest_api import create_app
 
 
 @pytest.fixture
-def simulated_app():
-    return create_app(config=GatewayConfig(simulated_mode=True))
+def installation(tmp_path: Path) -> InstallationConfig:
+    data = {
+        "modules": [
+            {
+                "name": "relay_module",
+                "ip": "10.10.1.30",
+                "type": "relay",
+                "channels": [
+                    {"ch": 0, "id": 547},
+                    {"ch": 10, "id": 557},
+                    {"ch": 16, "id": 563},
+                    {"ch": 23, "id": 570},
+                ],
+            },
+            {
+                "name": "dimmer_module",
+                "ip": "10.10.1.40",
+                "type": "dimmer",
+                "channels": [
+                    {"ch": 0, "id": 571},
+                    {"ch": 1, "id": 572},
+                ],
+            },
+        ]
+    }
+    p = tmp_path / "devices.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+    return InstallationConfig.load(p)
+
+
+@pytest.fixture
+def simulated_app(installation: InstallationConfig):
+    cfg = GatewayConfig(
+        simulated_mode=True,
+        installation=installation,
+        field_modules=installation.field_modules(),
+    )
+    from gateway.udp_bus import UDPBus
+    udp = UDPBus(cfg)
+    reg = DeviceRegistry()
+    for mc in installation.modules:
+        reg.register_module(mc.ip, mc.type)
+    return create_app(bus=udp, registry=reg, config=cfg)
 
 
 @pytest.mark.asyncio

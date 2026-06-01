@@ -210,10 +210,10 @@ Stap 4: IPBox fysiek verwijderen uit het netwerk 🎉
 
 ## Roadmap
 
-| Fase | Beschrijving | Status (2026-05-22) |
+| Fase | Beschrijving | Status (2026-06-01) |
 |------|-------------|---------------------|
 | **1** | UDP-protocol decoderen (relay, dimmer, input `B-…E`) + `gateway/payloads/` | **Voltooid** — Sprint 1–5, zie [RE_STATE.md](../../../resources_and_docs/RE_STATE.md) |
-| **2** | UDP Bus Manager (poll-loop op `10.10.1.1`) + `device_registry` + basis REST-shim (`rest_shim.py`) | **Open** — library: `udp_bus.py`; geen hub-service/registry |
+| **2** | UDP Bus Manager (poll-loop op `10.10.1.1`) + `device_registry` + basis REST-shim (`rest_shim.py`) | **In uitvoering** — poll-loop, registry, shim + `main.py` in repo; open: `devices.json` laden, veldtest, commit |
 | **3** | WebSocket API server (`gateway_api.py`, `/ws` + REST `/api/v1/`) | Open |
 | **4** | Gateway als HA Add-on (Dockerfile + `config.yaml`, `host_network`) | Open |
 | **5** | Companion (`ipbuilding-open`) — entiteiten, automations voor knop→actie | Open |
@@ -221,7 +221,7 @@ Stap 4: IPBox fysiek verwijderen uit het netwerk 🎉
 | **7** | Cover / screen entities (relay-paren met interlock) | Open |
 | **8** | Apple Home / Google Home via HA Matter bridge | Open |
 
-**Huidige code in dit repo:** `gateway/payloads/`, `gateway/udp_bus.py`, experimenteel `gateway/rest_api.py` (→ `rest_shim.py`). Geen `device_registry.py`, `gateway_api.py`, add-on of companion.
+**Huidige code in dit repo:** `gateway/payloads/`, `gateway/udp_bus.py` (poll-loop), `gateway/device_registry.py`, `gateway/rest_shim.py` (transitie-REST `:30200`; `rest_api.py` = backward-compat alias). Nog open: `gateway_api.py`, add-on, companion. Zie [README_gateway.md](../../../README_gateway.md).
 
 **Volgende implementatiefocus:** Fase 2 (zie [AGENTS.md](../../../AGENTS.md), [README_gateway.md](../../../README_gateway.md)).
 

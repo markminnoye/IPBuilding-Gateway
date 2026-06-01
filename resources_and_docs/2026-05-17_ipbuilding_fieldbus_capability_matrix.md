@@ -1,6 +1,6 @@
 # IPBuilding field bus capability matrix
 
-Last updated: 2026-05-22
+Last updated: 2026-06-01
 
 **Doel:** wat een **eigen centrale** op UDP/1001 vandaag al kan — **zonder** IPBox REST te hoeven nabootsen.
 
@@ -25,8 +25,10 @@ Northbound en centrale-architectuur: [docs/superpowers/specs/2026-05-18-gateway-
 ## Code references
 
 - `gateway/payloads/` — codecs
-- `gateway/udp_bus.py` — UDP transport
-- `gateway/rest_api.py` — **experimental only** (RE stimulus helper, not product API)
+- `gateway/udp_bus.py` — UDP transport + poll loop
+- `gateway/device_registry.py` — state + input button events from replies
+- `gateway/rest_shim.py` — IPBox `:30200` **transition shim** (not product API); `rest_api.py` re-exports for compat
+- [README_gateway.md](../README_gateway.md) — canonical gateway code status
 
 ## Deprecated naming
 

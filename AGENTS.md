@@ -21,9 +21,11 @@
 | Done | Open |
 |------|------|
 | 5-sprint RE (relay/dimmer/input wire, mirror POV) | Optionele RE: input logical flow IPBox-project (referentie) |
-| Sprint 5 fysieke input (`B-…E`, mirror 7←13) | **Gateway Fase 2+** (UDP bus service, registry, add-on, companion) |
-| `gateway/payloads/` + tests + `udp_bus.py` | Dun provisioning (entiteiten in HA, niet in gateway) |
-| Architectuur northbound (2026-05-18) | Productie add-on + `ipbuilding-open` |
+| Sprint 5 fysieke input (`B-…E`, mirror 7←13) | **Fase 3+** — `gateway_api.py`, add-on, `ipbuilding-open` companion |
+| Fase 2 voltooid (2026-06-01): `devices.json`, poll-loop, registry, REST-shim, veldtest alle checks PASS | Dun provisioning (entiteiten in HA, niet in gateway) |
+| `gateway/payloads/` + tests | Productie add-on + companion WebSocket |
+| Architectuur northbound (2026-05-18) | **Open: relay status poll** — bevestig of relay reageert op `I<ch>` poll en `I<ch><state>` reply geeft; voeg toe aan `_MODULE_POLL` als bevestigd |
+| Veldtest relay/dimmer/input via open hub — 2026-06-01 + **zonder mirror** 2026-06-02 (evidence: `evidence/2026-06-01_gateway_field_test.md`) | **Bind `10.10.1.1`** — optioneel: gateway expliciet op hub-IP wanneer IPBox uit |
 
 **Canonieke RE-status:** [resources_and_docs/RE_STATE.md](resources_and_docs/RE_STATE.md) — Fase 1 RE **afgesloten** 2026-05-22. PCAP-index: [CAPTURES.md](resources_and_docs/CAPTURES.md).
 
@@ -37,8 +39,10 @@
 
 ## Volgende focus (implementatie)
 
-1. **Gateway Fase 2** — asyncio hub op `10.10.1.1`: pollen (`I0000`), relay/dimmer commando’s, input `B-…E` → events naar companion (geen scene-engine in de gateway).
-2. **Companion** — entiteiten (switch, light, button event); knop→actie via HA automations/scenes.
+1. **Gateway Fase 2 afronden** — zie status hieronder; alle checks PASS 2026-06-01
+2. **Bind `10.10.1.1`** (optioneel) — hub-IP op veldbus wanneer IPBox uit; zonder-mirror hub-validatie **PASS 2026-06-02** (events + REST)
+3. **Companion** — entiteiten (switch, light, button event); knop→actie via HA automations/scenes.
+4. **Relay status poll (open RE)** — bevestig of relay reageert op `I<ch>` poll (ipv `P0000`) met `I<ch><state>` reply; als bevestigd: uitbreiden `_MODULE_POLL["relay"]` + `_handle_relay`. Zie [RE_STATE.md unknowns](resources_and_docs/RE_STATE.md).
 3. Captures blijven nuttig bij regressie; standaard mirror **7←15** ([playbook](resources_and_docs/workflows/2026-05-14_relay_run_a_operational_playbook.md)).
 
 **IPBox thuis-LAN (RE-stimulus / archief):** `192.168.0.185` (REST `:30200`, WebConfig). Veld-bus hub: `10.10.1.1`. Zie `IPBUILDING_KNOWLEDGE.md` §3.0.
@@ -90,7 +94,7 @@
 - **T3:** PDFs, volledige pcaps (`captures/` lokaal)
 - **Doc-structuur:** [REORGANIZE_BRIEF.md](resources_and_docs/REORGANIZE_BRIEF.md) — uitgevoerd 2026-05-22 (`workflows/`, `evidence/`, `reference/`, `archive/`)
 
-**Code:** `gateway/payloads/`, `gateway/udp_bus.py`, `ipbuilding_capture_run.py` (RE) — **`gateway/rest_api.py` = experimenteel, geen product-API**
+**Code:** `gateway/payloads/`, `gateway/udp_bus.py`, `gateway/device_registry.py`, `gateway/rest_shim.py` (+ alias `rest_api.py`), `gateway/main.py` — zie [README_gateway.md](README_gateway.md); product-API = `gateway_api.py` (nog open)
 
 ---
 

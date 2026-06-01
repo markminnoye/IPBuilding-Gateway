@@ -1,6 +1,6 @@
 # RE State (canonical)
 
-Last updated: 2026-05-22 (local)
+Last updated: 2026-06-01 (local)
 
 Compacte source of truth voor actuele reverse-engineeringstatus; detailbewijs blijft in de gelinkte evidence.
 
@@ -43,7 +43,7 @@ Compacte source of truth voor actuele reverse-engineeringstatus; detailbewijs bl
 - **Sprint Dimmer GESLAAGD (2026-05-17, offline):** volledige `I0154xxx` decode + value-code mapping; hub commands `S/C<ch><val>1030`. Evidence: [2026-05-17_dimmer_I0154xxx_full_decode.md](evidence/2026-05-17_dimmer_I0154xxx_full_decode.md), `gateway/payloads/dimmer.py`.
 - **Sprint Input GESLAAGD (2026-05-17, offline):** hub poll `I0000`; idle reply `I\x02R…E` 14-byte constant in POV-A. Evidence: [2026-05-17_ip1100_input_payload_decode.md](evidence/2026-05-17_ip1100_input_payload_decode.md), `scripts/input_payload_parser.py`.
 - **Sprint 5 GESLAAGD (2026-05-22, fysieke input):** mirror **7←13** (`10:25.pcapng`): **12×** `B-…E` button events (press/release ~200 ms); poll `I0000` ~2 s; idle 14-byte reply unchanged. Button `id` op wire = substring van `getButtons` hardware-`id`. **Pad:** input→hub `10.10.1.1` alleen; hub→relais/dimmer op aparte mirror (**7←14** in `10:22.pcapng`). **Logische flow** (IPBox project → actie) **niet** gedecodeerd — later; module `func1`/`func2` + WebConfig wizards als referentie. Centrale-IP: niet in module HTTP-export; conventie **`10.10.1.1`**. Evidence: [2026-05-22_sprint5_input_physical_completion.md](evidence/2026-05-22_sprint5_input_physical_completion.md), [2026-05-22_sprint5_input_10-25_session_notes.md](evidence/2026-05-22_sprint5_input_10-25_session_notes.md), `gateway/payloads/input.py`.
-- **Field-bus library (2026-05-17):** `gateway/` — UDP bus + relay/dimmer/input codecs. **Geen product-REST:** `gateway/rest_api.py` is experimenteel (RE-stimulus alleen). Architectuur **goedgekeurd** (2026-05-18): HA Add-on + companion — [2026-05-18-gateway-architecture-design.md](../docs/superpowers/specs/2026-05-18-gateway-architecture-design.md). Code today: field-bus library only; `rest_api.py` ≈ future `rest_shim.py`. Evidence: [README_gateway.md](../README_gateway.md), [field bus matrix](2026-05-17_ipbuilding_fieldbus_capability_matrix.md).
+- **Gateway Fase 2 (2026-06-01, code):** `gateway/udp_bus.py` poll-loop, `device_registry.py`, `rest_shim.py` (IPBox `:30200` transitie, geen product-API), `main.py` entrypoint; `rest_api.py` = alias. Open: `devices.json` in config, veldtest als hub `10.10.1.1`, `gateway_api.py`, add-on + companion. Architectuur: [2026-05-18-gateway-architecture-design.md](../docs/superpowers/specs/2026-05-18-gateway-architecture-design.md). Evidence: [README_gateway.md](../README_gateway.md), [field bus matrix](2026-05-17_ipbuilding_fieldbus_capability_matrix.md).
 
 ## Field bus readiness (northbound-agnostisch)
 
@@ -70,7 +70,7 @@ Zie [2026-05-17_ipbuilding_fieldbus_capability_matrix.md](2026-05-17_ipbuilding_
 
 ## Next 3 actions (post–Fase 1)
 
-1. **Gateway Fase 2** — UDP bus service op `10.10.1.1` (poll, command, input events → companion); **geen** scene/sferen-logica in gateway — zie `AGENTS.md`, knowledge §10.5.
+1. **Gateway Fase 2 afronden** — `devices.json`/config, veldtest hub `10.10.1.1`; poll + registry + REST-shim al in code — zie [README_gateway.md](../README_gateway.md), `AGENTS.md`, knowledge §10.5.
 2. **Companion / HA** — entiteiten + automations voor knop→actie (niet IPBox-project-DB in add-on).
 3. Optioneel RE (uitgesteld): IPBox sferen `…/Configuration/Moods/Index` — §10.6 knowledge; waarschijnlijk overslaan. Scan Modules / UDP 10001 antwoorden blijven laag-prioriteit.
 
@@ -108,9 +108,10 @@ Zie [2026-05-17_ipbuilding_fieldbus_capability_matrix.md](2026-05-17_ipbuilding_
 - `resources_and_docs/evidence/2026-05-17_ip1100_input_payload_decode.md`
 - `resources_and_docs/2026-05-17_ipbuilding_fieldbus_capability_matrix.md`
 - `docs/superpowers/specs/2026-05-18-gateway-architecture-design.md`
-- `gateway/` (field-bus library; `rest_api.py` experimental)
+- `gateway/` (Fase 1 codecs + Fase 2 hub: `udp_bus`, `device_registry`, `rest_shim`; zie README_gateway.md)
 - `scripts/input_payload_parser.py`
 - `resources_and_docs/evidence/2026-05-22_sprint5_input_physical_completion.md`
 - `resources_and_docs/evidence/2026-05-22_sprint5_input_10-25_session_notes.md`
+- `resources_and_docs/reference/2026-06-01_legacy_webservice_protocol_analysis.md` (legacy IPBox webservice `actions.php`; TCP-mnemonics `TGL/CLR/DIM/SET/INF/TAF/TAN` ↔ veldbus `C/T/I/S`; bevestigt `ipcom` als vertaallaag, sferen=centrale-logica, `<pfx>J`/`END` = transport-artefact; bron in `reference/legacy-ipbox-webservice/actions.php`)
 - `/Users/markminnoye/Downloads/10:25.pcapng` (Sprint 5 input; mirror 7←13)
 - `/Users/markminnoye/Downloads/10:22.pcapng` (Sprint 5 relais leg; mirror 7←14)

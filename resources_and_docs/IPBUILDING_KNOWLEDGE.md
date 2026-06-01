@@ -864,7 +864,7 @@ pydantic (modellen)
 
 ### 10.4 IPBox REST (referentie — geen einddoel)
 
-De bestaande IPBox API (`GET /api/v1/comp/items`, `GET /api/v1/action/action`, poort **30200**) wordt gebruikt voor **capture-correlatie** en documentatie. De experimentele `gateway/rest_api.py` in de repo is **geen** productrichting.
+De bestaande IPBox API (`GET /api/v1/comp/items`, `GET /api/v1/action/action`, poort **30200**) wordt gebruikt voor **capture-correlatie** en documentatie. In de repo: `gateway/rest_shim.py` nabootst die API **alleen als transitie-hulp** (legacy HA-IPBuilding); geen product-API — northbound = eigen `gateway_api.py` (zie architectuurdoc 2026-05-18, [README_gateway.md](../README_gateway.md)).
 
 ### 10.5 Gateway vs Home Assistant (geen logica in de gateway)
 

@@ -28,11 +28,31 @@ def _value_code_to_percent(code: str) -> int | None:
     if n == 0:
         return 0
     if n == 99:
+        return 100  # OFF
+    if n == 100:
         return 100
     if 10 <= n <= 90:
         return n
-    if n == 100:
-        return 100
+    if n == 999:
+        return 100  # Soft-AAN / vol vermogen (reply to Sxx991030)
+    if n == 998:
+        return 99
+    if n == 997:
+        return 98
+    if n == 996:
+        return 97
+    if n == 995:
+        return 96
+    if n == 994:
+        return 95
+    if n == 993:
+        return 94
+    if n == 992:
+        return 93
+    if n == 991:
+        return 92
+    if n == 990:
+        return 91
     return n  # best-effort for codes like 150, 170
 
 
