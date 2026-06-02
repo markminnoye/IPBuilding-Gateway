@@ -144,7 +144,7 @@ graph LR
         subgraph CORE["Core"]
             UDP["UDP Bus Manager\nasyncio · poort 1001\npoll · command · event"]
             REG["Device Registry\nin-memory\nhuidige toestand"]
-            CFG["Config\ndevices.json\nnaam · room · type · watt · active"]
+            CFG["Config\ndevices.json\nnaam · room · type · watt · active · firmware"]
         end
 
         subgraph SETUP["Setup & Sync"]

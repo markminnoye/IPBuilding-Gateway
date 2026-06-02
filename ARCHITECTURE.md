@@ -192,6 +192,7 @@ De gateway bewaart een persistente config met alle metadata die de veldbus zelf 
     {
       "ip": "10.10.1.30",
       "type": "relay",              // relay | dimmer | input
+      "firmware": "5.1",            // gelezen via getSysSet bij Discovery; bewaard voor diagnostiek
       "channels": [
         {
           "ch": 0,
@@ -206,6 +207,7 @@ De gateway bewaart een persistente config met alle metadata die de veldbus zelf 
     {
       "ip": "10.10.1.40",
       "type": "dimmer",
+      "firmware": "5.4",
       "channels": [
         {
           "ch": 0,
@@ -220,6 +222,7 @@ De gateway bewaart een persistente config met alle metadata die de veldbus zelf 
     {
       "ip": "10.10.1.50",
       "type": "input",
+      "firmware": "5.2.4",
       "channels": []                // gevuld door Discovery via getButtons
     }
   ],
@@ -237,6 +240,8 @@ De gateway bewaart een persistente config met alle metadata die de veldbus zelf 
 **Vermogen:**
 - `max_watt` = geconfigureerde waarde (theoretisch maximum)
 - `current_watt` = berekend door gateway (`max_watt × dim_level / 100`), meegegeven in elk `state_changed` event — geen apart power-event nodig
+
+**Firmware:** het veld `firmware` per module wordt gelezen via `GET api.html?method=getSysSet` tijdens Discovery en bewaard in `devices.json`. Het wordt meegegeven in elk `device_list` event zodat clients (companion, diagnostiek-tools) de firmwareversie kennen. Wordt automatisch bijgewerkt bij elke herontdekking. Bekende versies uit RE: relay `5.1`, dimmer `5.4`, input `5.2.4` — gedrag van andere versies is onbekend; log altijd de versie bij opstart.
 
 **Initiële import:** tijdens migratie kan `name`, `room`, `semantic_type`, `active` en `max_watt` automatisch ingeladen worden vanuit `GET /general/Configuration/Output` op de IPBox (zolang die nog online is).
 
@@ -278,8 +283,15 @@ sequenceDiagram
 // Gateway → client: knopgebeurtenis
 {"type": "button_event", "id": "2DE341851900001F", "action": "press"}
 
-// Gateway → client: volledige lijst bij verbinding
-{"type": "device_list", "devices": [...]}
+// Gateway → client: volledige lijst bij verbinding (incl. firmware per module)
+{"type": "device_list", "devices": [
+  {"id": "10.10.1.30:relay:0",  "name": "2e SlpK L",  "room": "2e verd",
+   "semantic_type": "light", "active": true, "max_watt": 60,
+   "state": "off", "firmware": "5.1"},
+  {"id": "10.10.1.40:dimmer:0", "name": "Woonkamer",   "room": "Woonkamer",
+   "semantic_type": "light", "active": true, "max_watt": 200,
+   "state": "on", "level": 75, "firmware": "5.4"}
+]}
 
 // Client → gateway: commando's
 {"type": "command", "id": "10.10.1.30:relay:0", "action": "ON"}
