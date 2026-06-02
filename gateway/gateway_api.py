@@ -18,7 +18,7 @@ from gateway.config import GatewayConfig
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.installation import InstallationConfig
 from gateway.payloads import encode_relay_command, encode_dim_command, encode_dim_off
-from gateway.models import RelayAction
+from gateway.models import RelayAction, RelayCommand, DimmerCommand
 from gateway.udp_bus import UDPBus
 
 log = logging.getLogger(__name__)
@@ -251,13 +251,14 @@ class GatewayAPI:
         # Encode the command
         if dtype == DeviceType.RELAY:
             if action == "ON":
-                payload = encode_relay_command(channel, RelayAction.ON)
+                cmd = RelayCommand(channel=channel, action=RelayAction.ON)
             elif action == "OFF":
-                payload = encode_relay_command(channel, RelayAction.OFF)
+                cmd = RelayCommand(channel=channel, action=RelayAction.OFF)
             elif action == "PULSE":
-                payload = encode_relay_command(channel, RelayAction.PULSE)
+                cmd = RelayCommand(channel=channel, action=RelayAction.PULSE)
             else:
                 return False, f"unsupported relay action: {action}"
+            payload = encode_relay_command(cmd)
         elif dtype == DeviceType.DIMMER:
             if action != "DIM":
                 return False, f"unsupported dimmer action: {action}"
@@ -265,7 +266,8 @@ class GatewayAPI:
             if level == 0:
                 payload = encode_dim_off(channel)
             else:
-                payload = encode_dim_command(channel, level)
+                cmd = DimmerCommand(channel=channel, level=level)
+                payload = encode_dim_command(cmd)
         else:
             return False, f"unsupported device type: {dtype.value}"
 

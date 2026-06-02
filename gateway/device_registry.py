@@ -56,11 +56,13 @@ class DeviceRegistry:
         """Associate a module IP with a device type for packet routing."""
         self._module_ip_type[module_ip] = device_type
 
-    def on_state_changed(self, cb: StateChangeCallback) -> None:
+    def on_state_changed(self, cb: StateChangeCallback) -> StateChangeCallback:
         self._state_callbacks.append(cb)
+        return cb
 
-    def on_button_event(self, cb: EventCallback) -> None:
+    def on_button_event(self, cb: EventCallback) -> EventCallback:
         self._event_callbacks.append(cb)
+        return cb
 
     # -- public query API --
 

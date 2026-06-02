@@ -52,8 +52,22 @@ class ChannelConfig:
 
     ch: int
     ipbox_id: int | None = None  # IPBox component ID — shim only, optional
-    description: str = ""
-    group: str = ""
+    # Northbound fields (from devices.json)
+    name: str = ""
+    room: str = ""
+    semantic_type: str = "light"  # light | fan | cover | switch | plug
+    active: bool = True
+    max_watt: int = 0
+
+    @property
+    def description(self) -> str:
+        """Alias for name, for backward compatibility."""
+        return self.name
+
+    @property
+    def group(self) -> str:
+        """Alias for room, for backward compatibility."""
+        return self.room
 
 
 @dataclass
@@ -63,6 +77,7 @@ class ModuleConfig:
     name: str
     ip: str
     type: DeviceType
+    firmware: str = ""  # read via getSysSet during discovery
     channels: list[ChannelConfig] = field(default_factory=list)
 
     @property
@@ -132,6 +147,8 @@ class InstallationConfig:
             if mod_ip in modules_by_ip:
                 raise InstallationError(f"Duplicate module IP: {mod_ip}")
 
+            firmware = mod.get("firmware", "")
+
             channels: list[ChannelConfig] = []
             for ch_entry in mod.get("channels", []):
                 ch = ch_entry.get("ch")
@@ -157,8 +174,11 @@ class InstallationConfig:
                     ChannelConfig(
                         ch=ch,
                         ipbox_id=ipbox_id,
-                        description=ch_entry.get("description", ""),
-                        group=ch_entry.get("group", ""),
+                        name=ch_entry.get("name") or ch_entry.get("description") or f"Ch {ch}",
+                        room=ch_entry.get("room") or ch_entry.get("group") or "",
+                        semantic_type=ch_entry.get("semantic_type", "light"),
+                        active=ch_entry.get("active", True),
+                        max_watt=ch_entry.get("max_watt", 0),
                     )
                 )
 
@@ -166,6 +186,7 @@ class InstallationConfig:
                 name=mod.get("name", mod_ip),
                 ip=mod_ip,
                 type=dtype,
+                firmware=firmware,
                 channels=channels,
             )
             modules.append(mc)
