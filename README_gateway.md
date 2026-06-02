@@ -40,16 +40,46 @@ Do **not** extend IPBox REST parity (scenes, moods, project DB) in `rest_shim`; 
 
 - **`gateway/udp_bus.py`** — async UDP client, background poll loop (`P0000` / `I9900` / `I0000`), packet listeners, `GATEWAY_SIMULATED=1` for tests
 - **`gateway/device_registry.py`** — relay/dimmer state from replies; input button press/release events
-- **`gateway/installation.py`** — loads `devices.json` (via `GATEWAY_DEVICES_FILE` env); provides component ID → (type, ip, channel) maps; derived into `GatewayConfig.field_modules`
-- **`gateway/rest_shim.py`** — transition REST shim (see table above); uses `InstallationConfig` for all lookups (no hardcoded IDs)
+- **`gateway/installation.py`** — loads `devices.json`; `make_entity_id(ip, type, ch)` → `"10.10.1.30:relay:0"`; optional `legacy_id` lookup for shim; derived into `GatewayConfig.field_modules`
+- **`gateway/rest_shim.py`** — transition REST shim (see table above); uses `legacy_id_to_channel()` for IPBox-compatible ID lookup
 - **`gateway/main.py`** — dev entrypoint: starts UDP bus → registry → REST shim on `GATEWAY_REST_HOST`:`GATEWAY_REST_PORT` (default `0.0.0.0:30200`); registers modules from `InstallationConfig` if `devices.json` is loaded
-- **`devices.json`** (repo root) — installation-specific channel ↔ IPBox component IDs; loaded via `GATEWAY_DEVICES_FILE` env or default `./devices.json`
+- **`devices.json`** (repo root) — installation channels with optional `legacy_id` (IPBox comp_id, shim only); loaded via `GATEWAY_DEVICES_FILE` env
+- **`gateway/discovery.py`** — standalone HTTP sweep + optional UDP/10001 probe; see [Discovery tools](#discovery-tools-optional-provisioning) below
+- **`gateway/__main__discover.py`** — CLI: `python -m gateway.discover`
 
 ## Not built yet
 
-- **`gateway_api.py`** — WebSocket `/ws` + own REST `/api/v1/` (product northbound)
+- **`gateway_api.py`** — WebSocket `/ws` + own REST `/api/v1/` (product northbound); uses `entity_id` not `legacy_id`
 - HA add-on packaging, **`ipbuilding-open`** companion
 - Field validation with gateway bound as hub `10.10.1.1` (IPBox off or second NIC); see [veldtest-runbook](resources_and_docs/workflows/2026-06-01_gateway_field_test_runbook.md)
+
+## ID model
+
+| Concept | Format | Stored? | Used by |
+|---------|--------|---------|---------|
+| `entity_id` | `"10.10.1.30:relay:0"` | No — derived from `(ip, type, ch)` | Product API, WebSocket, companion |
+| `legacy_id` | integer `547` | Optional in `devices.json` per channel | REST shim only (HA-IPBuilding transition) |
+
+`legacy_id` disappears when the shim is retired. `entity_id` is always `make_entity_id(ip, type, ch)`.
+
+## Discovery tools (optional provisioning)
+
+| Tool | Requires | Output |
+|------|----------|--------|
+| `python scripts/discover_from_ipbox.py` | IPBox WebConfig + session cookie | Full `devices.json` with `legacy_id` per channel |
+| `python -m gateway.discover` | IPBuilding VLAN access | Draft `devices.json` — no `legacy_id`, channels empty |
+
+```bash
+# Migrate from IPBox (full channels + legacy_id for shim)
+IPBOX_WEB_HOST=http://192.168.0.185 \
+IPBOX_SESSION_COOKIE="ASP.NET_SessionId=<cookie>" \
+python scripts/discover_from_ipbox.py
+
+# Open gateway discovery (no IPBox needed; run RE spike first — see evidence/)
+python -m gateway.discover --range-start 30 --range-end 59
+```
+
+See `resources_and_docs/evidence/2026-06-XX_udp10001_discovery_spike.md` for UDP/10001 RE verdict.
 
 ## Configuration (environment)
 
@@ -70,7 +100,13 @@ python3 -m venv .venv
 PYTHONPATH=. .venv/bin/python -m pytest tests/ -v
 ```
 
-Relevant suites: `test_udp_bus.py`, `test_device_registry.py`, `test_rest_shim.py`, `test_bus_registry_integration.py`, `test_rest_api.py` (alias compatibility).
+Relevant suites: `test_udp_bus.py`, `test_device_registry.py`, `test_rest_shim.py`, `test_bus_registry_integration.py`, `test_rest_api.py` (alias compatibility), `test_installation.py`, `test_discover_from_ipbox.py`, `test_discovery.py`.
+
+Also install `aioresponses` for the discover test:
+
+```bash
+.venv/bin/pip install aioresponses
+```
 
 ## Run locally
 
