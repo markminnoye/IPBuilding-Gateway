@@ -6,7 +6,7 @@
 
 **Productprincipe (2026-05-22):** de gateway is een **dunne veldbus-hub** (pollen, commando’s, `B-…E` doorgeven). **Geen** IPBox-pariteit voor sferen/scenes, knop→actie-regels of andere “slimme” logica in de gateway — dat hoort in **Home Assistant** (scenes, automations, Matter). Minimale mapping (device/kanaal ↔ veldbus) in de companion; geen tweede projectdatabase in de add-on.
 
-**Architectuur (goedgekeurd):** [docs/superpowers/specs/2026-05-18-gateway-architecture-design.md](docs/superpowers/specs/2026-05-18-gateway-architecture-design.md) — **Aanpak C:** HA Add-on `ipbuilding-gateway` + companion `ipbuilding-open` (WebSocket + eigen REST `/api/v1/`); IPBox REST `:30200` alleen als **tijdelijke shim** in transitie. Apple/Google via HA Matter bridge.
+**Architectuur (goedgekeurd):** [`ARCHITECTURE.md`](ARCHITECTURE.md) — deployment-varianten (HA add-on / Docker standalone / ESP32 POC), gateway-config model (naam/room/type/watt/active), northbound-protocol (WS/MQTT/Matter), migratiepad + EEPROM-sync. Vervangt [docs/superpowers/specs/2026-05-18-gateway-architecture-design.md](docs/superpowers/specs/2026-05-18-gateway-architecture-design.md).
 
 **Fase 1 RE (veldbus):** relay, dimmer en input **wire** afgerond (5-sprint plan + Sprint 5 fysieke input). IPBox GUI (wizards, provisioning) deels gedocumenteerd als **referentie**, niet als eindmodel. Zie [RE_STATE.md](resources_and_docs/RE_STATE.md).
 

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IPBuilding Gateway — Architectuurdiagrammen</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      padding: 32px 24px;
+      line-height: 1.6;
+    }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin-bottom: 40px;
+    }
+    .section {
+      margin-bottom: 48px;
+    }
+    .section h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #93c5fd;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+    .section p {
+      color: #94a3b8;
+      font-size: 0.875rem;
+      margin-bottom: 16px;
+      max-width: 720px;
+    }
+    .diagram-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 24px;
+      overflow-x: auto;
+    }
+    .diagram-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+    .tag {
+      display: inline-block;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #64748b;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>IPBuilding Gateway — Architectuurdiagrammen</h1>
+  <p class="subtitle">Brainstorm resultaat · 2026-06-02</p>
+
+  <!-- DIAGRAM 1 -->
+  <div class="section">
+    <h2>1 — Volledig overzicht: deployment-varianten &amp; clients</h2>
+    <p>Drie deployment-vormen van dezelfde gateway — van HA add-on tot ESP32 POC — met alle northbound-protocollen en clients.</p>
+    <div class="diagram-box">
+      <div class="mermaid">
+graph TB
+    subgraph VLAN["🔌 IPBuilding veldbus · UDP/1001 · 10.10.1.x"]
+        direction LR
+        R["IP0200PoE\n24× relay\n10.10.1.30"]
+        D["IP0300PoE\n8× dimmer\n10.10.1.40"]
+        IN["IP1100PoE\nknoppen\n10.10.1.50"]
+    end
+
+    subgraph DA["📦  Deployment A — HA Green / Linux  (primair)"]
+        direction LR
+        GWA["Gateway\nPython · Docker\nHA add-on"]
+        COMP["Companion\nipbuilding-open"]
+        HA["Home Assistant\nentities · automations\nbutton→actie"]
+        GWA -. "WebSocket intern" .-> COMP --> HA
+    end
+
+    subgraph DB["🐳  Deployment B — Standalone"]
+        GWB["Gateway\nPython · Docker\nRPi · NAS · VPS · Linux"]
+    end
+
+    subgraph DC["🔬  Deployment C — ESP32 POC  (toekomstig)"]
+        GWC["Gateway\nC++ firmware\nESP32"]
+    end
+
+    subgraph NB["Northbound adapters · alle deployments"]
+        direction LR
+        WS["WebSocket\nJSON /ws"]
+        MQ["MQTT"]
+        MT["Matter"]
+    end
+
+    subgraph CLI["🏠  Clients"]
+        direction LR
+        AH["Apple Home"]
+        GH["Google Home"]
+        NR["Node-RED\nandere apps"]
+        MHA["HA MQTT\nintegratie"]
+    end
+
+    R & D & IN -->|"UDP/1001"| GWA
+    R & D & IN -->|"UDP/1001"| GWB
+    R & D & IN -->|"UDP/1001"| GWC
+
+    GWA & GWB & GWC --> WS & MQ & MT
+
+    MT --> AH & GH & HA
+    MQ --> NR & MHA
+    WS --> NR
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 2 -->
+  <div class="section">
+    <h2>2 — Interne architectuur van de gateway</h2>
+    <p>De gateway heeft geen automatie-logica. Hij kent devices en hun toestand — niet wat er moet gebeuren als een knop ingedrukt wordt.</p>
+    <div class="diagram-box">
+      <div class="mermaid">
+graph LR
+    subgraph FIELD["Veldmodules · 10.10.1.x"]
+        MOD["IP0200 · IP0300 · IP1100"]
+    end
+
+    subgraph GW["ipbuilding-gateway"]
+        direction TB
+
+        subgraph CORE["Core"]
+            UDP["UDP Bus Manager\nasyncio · poort 1001\npoll · command · event"]
+            REG["Device Registry\nin-memory\nhuidige toestand"]
+            CFG["Config\ndevices.json\nnaam · room · type · watt · active"]
+        end
+
+        subgraph SETUP["Setup & Sync"]
+            DISC["Discovery\nHTTP sweep 10.10.1.30–59\n+ getButtons"]
+            PROV["Provisioning\nEEPROM sync\nknop→relay mapping"]
+        end
+
+        subgraph NB["Northbound adapters"]
+            WS_S["WebSocket /ws"]
+            REST_S["REST /api/v1/"]
+            MQ_S["MQTT"]
+            MT_S["Matter bridge"]
+        end
+
+        UDP <-->|"events / status"| REG
+        CFG --> REG
+        DISC -->|"eerste start + on-demand"| CFG
+        REG --> WS_S & REST_S & MQ_S & MT_S
+    end
+
+    MOD <-->|"UDP/1001\ncommands + events"| UDP
+    MOD -->|"HTTP backupConfig\ngetButtons"| DISC
+    PROV -->|"HTTP saveAutonomy\n→ 10.10.1.50"| MOD
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 3 -->
+  <div class="section">
+    <h2>3 — WebSocket berichtenflow</h2>
+    <p>Realtime push van gateway naar clients. Vermogen (current_watt) zit ingebakken in elk state_changed event — geen apart power-event nodig.</p>
+    <div class="diagram-box">
+      <div class="mermaid">
+sequenceDiagram
+    participant GW as Gateway
+    participant CL as Client (companion / app)
+
+    CL->>GW: WebSocket connect /ws
+    GW-->>CL: device_list · alle devices + huidige toestand
+
+    Note over GW,CL: Realtime push — gateway → client
+    GW-->>CL: state_changed · relay aan · current_watt 60W
+    GW-->>CL: state_changed · dimmer 75% · current_watt 150W
+    GW-->>CL: button_event · knop 2DE34… ingedrukt
+
+    Note over GW,CL: Commando's — client → gateway
+    CL->>GW: command · relay ON
+    CL->>GW: command · dimmer DIM 50%
+    GW-->>CL: state_changed · bevestiging
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 4 -->
+  <div class="section">
+    <h2>4 — Migratiepad &amp; EEPROM-sync</h2>
+    <p>Stapsgewijze overgang van IPBox naar open gateway, zonder onderbreking van de bestaande installatie.</p>
+    <div class="diagram-box">
+      <div class="mermaid">
+flowchart TD
+    A["IPBox nog online"] -->|Stap 1| B["Import uit IPBox\nConfiguration/Output\n→ naam · room · type · watt · active"]
+    B --> C["Gateway config\ndevices.json gevuld"]
+    C -->|Stap 2| D["Gateway add-on actief\nREST shim :30200 aan\nBestaande HA-IPBuilding\nblijft werken"]
+    D -->|Stap 3| E["Companion ipbuilding-open\ninstalleren naast bestaande\n→ nieuwe entities via WS"]
+    E -->|Stap 4| F["Button→actie mapping\ninstellen in companion\n→ HA automations"]
+    F -->|Stap 5| G["EEPROM sync\nCompanion → POST /api/v1/provision/autonomy\n→ saveAutonomy op IP1100PoE\n→ online = offline gedrag"]
+    G -->|Stap 6| H["🎉 IPBox afkoppelen\nREST shim uitzetten\nGateway volledig autonoom"]
+
+    style A fill:#1e3a5f,stroke:#3b82f6,color:#e2e8f0
+    style H fill:#14532d,stroke:#22c55e,color:#e2e8f0
+      </div>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        primaryColor: '#1e3a5f',
+        primaryTextColor: '#e2e8f0',
+        primaryBorderColor: '#3b82f6',
+        lineColor: '#64748b',
+        secondaryColor: '#1e293b',
+        tertiaryColor: '#0f172a',
+        background: '#0f1117',
+        mainBkg: '#1e293b',
+        nodeBorder: '#334155',
+        clusterBkg: '#0f1723',
+        clusterBorder: '#334155',
+        titleColor: '#93c5fd',
+        edgeLabelBackground: '#1e293b',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      },
+      flowchart: { curve: 'basis', padding: 20 },
+      sequence: { actorMargin: 60, messageMargin: 30 },
+    });
+  </script>
+</body>
+</html>

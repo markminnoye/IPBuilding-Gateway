@@ -1,7 +1,10 @@
 # IPBuilding Gateway — Architectuurontwerp
 
+> ⚠️ **Superseded door [`ARCHITECTURE.md`](../../../ARCHITECTURE.md) (2026-06-02).**  
+> Dit document blijft bewaard als historische referentie. Gebruik `ARCHITECTURE.md` als canonical bron.
+
 **Datum:** 2026-05-18 (roadmap bijgewerkt 2026-05-22)  
-**Status:** Goedgekeurd — **Fase 1 (veldbus-RE) voltooid**; implementatie Fase 2+ open  
+**Status:** Superseded — zie ARCHITECTURE.md  
 **Beslissing:** Aanpak C — HA Add-on + Companion Component
 
 ---
