@@ -22,10 +22,10 @@ _STANDARD_INSTALLATION = {
             "ip": "10.10.1.30",
             "type": "relay",
             "channels": [
-                {"ch": 0, "id": 547},
-                {"ch": 10, "id": 557},
-                {"ch": 16, "id": 563},
-                {"ch": 23, "id": 570},
+                {"ch": 0,  "legacy_id": 547},
+                {"ch": 10, "legacy_id": 557},
+                {"ch": 16, "legacy_id": 563},
+                {"ch": 23, "legacy_id": 570},
             ],
         },
         {
@@ -33,8 +33,8 @@ _STANDARD_INSTALLATION = {
             "ip": "10.10.1.40",
             "type": "dimmer",
             "channels": [
-                {"ch": 0, "id": 571},
-                {"ch": 1, "id": 572},
+                {"ch": 0, "legacy_id": 571},
+                {"ch": 1, "legacy_id": 572},
             ],
         },
         {
