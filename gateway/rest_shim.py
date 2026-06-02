@@ -36,21 +36,21 @@ class RESTShim:
         self.app.router.add_get("/api/v1/comp/items", self.get_comp_items)
         self.app.router.add_get("/api/v1/action/action", self.action_action)
 
-    def _lookup_legacy_id(self, legacy_id: int) -> tuple[DeviceType, str, int] | None:
-        """Look up a channel by IPBox legacy_id. Returns (type, module_ip, channel) or None."""
+    def _lookup_ipbox_id(self, ipbox_id: int) -> tuple[DeviceType, str, int] | None:
+        """Look up a channel by IPBox ipbox_id. Returns (type, module_ip, channel) or None."""
         if self.installation is None:
             return None
-        return self.installation.legacy_id_to_channel(legacy_id)
+        return self.installation.ipbox_id_to_channel(ipbox_id)
 
     def _all_items(self) -> list[tuple[int, DeviceType, str, int]]:
-        """Return all (legacy_id, device_type, module_ip, channel) from installation."""
+        """Return all (ipbox_id, device_type, module_ip, channel) from installation."""
         if self.installation is None:
             return []
         result = []
-        for legacy_id in self.installation.all_legacy_ids():
-            entry = self.installation.legacy_id_to_channel(legacy_id)
+        for ipbox_id in self.installation.all_ipbox_ids():
+            entry = self.installation.ipbox_id_to_channel(ipbox_id)
             if entry:
-                result.append((legacy_id, entry[0], entry[1], entry[2]))
+                result.append((ipbox_id, entry[0], entry[1], entry[2]))
         return result
 
     async def get_comp_items(self, request: web.Request) -> web.Response:
@@ -87,7 +87,7 @@ class RESTShim:
         except ValueError:
             raise web.HTTPBadRequest(text="missing or invalid id")
 
-        entry = self._lookup_legacy_id(comp_id)
+        entry = self._lookup_ipbox_id(comp_id)
         if entry is None:
             raise web.HTTPNotFound(text=f"unknown component id {comp_id}")
 

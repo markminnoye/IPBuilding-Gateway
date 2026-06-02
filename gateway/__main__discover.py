@@ -12,8 +12,8 @@ Usage
 
 Output
 ------
-devices.json.discovered — same schema as devices.json, without legacy_id.
-Review, then merge channel/legacy_id data from discover_from_ipbox.py if needed.
+devices.json.discovered — same schema as devices.json, without ipbox_id.
+Review, then merge channel/ipbox_id data from discover_from_ipbox.py if needed.
 """
 import argparse
 import asyncio
@@ -57,7 +57,7 @@ async def run(args: argparse.Namespace) -> None:
         json.dump(draft, fh, indent=2, ensure_ascii=False)
 
     print(f"\nDraft written to: {args.output}")
-    print("NOTE: no legacy_id in output — correct for the open gateway.")
+    print("NOTE: no ipbox_id in output — correct for the open gateway.")
     print("For REST-shim compatibility, run scripts/discover_from_ipbox.py (requires IPBox).")
 
 

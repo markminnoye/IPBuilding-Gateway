@@ -21,10 +21,10 @@ def installation(tmp_path: Path) -> InstallationConfig:
                 "ip": "10.10.1.30",
                 "type": "relay",
                 "channels": [
-                    {"ch": 0,  "legacy_id": 547},
-                    {"ch": 10, "legacy_id": 557},
-                    {"ch": 16, "legacy_id": 563},
-                    {"ch": 23, "legacy_id": 570},
+                    {"ch": 0,  "ipbox_id": 547},
+                    {"ch": 10, "ipbox_id": 557},
+                    {"ch": 16, "ipbox_id": 563},
+                    {"ch": 23, "ipbox_id": 570},
                 ],
             },
             {
@@ -32,8 +32,8 @@ def installation(tmp_path: Path) -> InstallationConfig:
                 "ip": "10.10.1.40",
                 "type": "dimmer",
                 "channels": [
-                    {"ch": 0, "legacy_id": 571},
-                    {"ch": 1, "legacy_id": 572},
+                    {"ch": 0, "ipbox_id": 571},
+                    {"ch": 1, "ipbox_id": 572},
                 ],
             },
         ]

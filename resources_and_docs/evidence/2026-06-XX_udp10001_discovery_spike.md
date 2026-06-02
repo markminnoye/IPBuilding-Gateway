@@ -1,9 +1,15 @@
 # UDP/10001 Discovery Spike — Evidence
 
-**Datum:** 2026-06-XX  
-**Doel:** bevestigen of veldmodules antwoorden op UDP/10001 probe `01 00 00 00`  
-**Tool:** `scripts/udp10001_listen.py`  
-**RE-context:** zie [2026-05-17_scan_modules_udp_payloads.md](../reference/2026-05-17_scan_modules_udp_payloads.md) — IPBox stuurt probe ~elke 10,5 s; geen module-replies op mirror 7←15 waargenomen.
+**Datum:** 2026-06-02  
+**Doel:** valideren of veldmodules antwoorden op UDP/10001 probe `01 00 00 00` en GO-A/GO-B bepalen voor `gateway/discovery.py`.  
+**Tool:** `scripts/udp10001_listen.py`
+
+---
+
+## Context
+
+- RE-hypothese: IPBox/hub stuurt periodiek probes op UDP/10001 naar `233.89.188.1` en `255.255.255.255`.
+- Te valideren: module→hub replies zichtbaar vanaf huidige POV.
 
 ---
 
@@ -12,53 +18,46 @@
 | Parameter | Waarde |
 |-----------|--------|
 | Interface | `en7` (IPBuilding VLAN) |
-| Mirror | 7←15 aan / uit |
-| IPBox actief | ja / nee |
-| Gateway als `10.10.1.1` | ja / nee |
+| Host-IP | `10.10.1.1/24` (`ifconfig en7`) |
+| Route-check | `255.255.255.255` + `233.89.188.1` via `en7` |
+| Socket-bind | `lsof -iUDP:10001` toont listener op UDP/10001 |
+| Captures | `/Users/markminnoye/Downloads/10-51.pcapng`, `/Users/markminnoye/Downloads/10-59.pcapng` |
 
 ---
 
-## Fase 1 — Passieve capture (IPBox draait)
+## Fase 1 — Passief (IPBox aan)
 
+Command:
+
+```bash
+sudo PYTHONPATH=. python3 scripts/udp10001_listen.py --duration 60
 ```
-# Voer uit:
-sudo python scripts/udp10001_listen.py --duration 60
-```
 
-**Output:**
-
-*(plak hier de volledige output van het script)*
+Resultaat: **0 replies** van modules op UDP/10001.
 
 ---
 
-## Fase 2 — Actieve probe (IPBox uit, gateway op 10.10.1.1)
+## Fase 2 — Actieve probe (handmatig)
 
+Command:
+
+```bash
+sudo PYTHONPATH=. python3 scripts/udp10001_listen.py --send-probe --duration 60
 ```
-# Voer uit:
-sudo python scripts/udp10001_listen.py --send-probe --duration 60
-```
 
-**Output:**
+Resultaat: **0 replies** van modules op UDP/10001.
 
-*(plak hier de volledige output van het script)*
+Extra validatie met `tcpdump` bevestigt dat handmatige probes effectief vertrekken vanaf `10.10.1.1:10001` naar:
+- `233.89.188.1:10001`
+- `255.255.255.255:10001`
 
 ---
 
-## Payload-analyse (bij ontvangen antwoorden)
+## Capture-observaties
 
-| Byte offset | Waarde (hex) | Hypothese |
-|-------------|--------------|-----------|
-| 0 | `0x??` | Reply type (vs probe `0x01`) |
-| 1–6 | `??:??:??:??:??:??` | Module MAC? |
-| 7 | `0x??` | Device type code? |
-
-**Correlatie met bekende MACs:**
-
-| IP | MAC | Payload match |
-|----|-----|---------------|
-| `10.10.1.30` | `00:24:77:52:ac:be` | ? |
-| `10.10.1.40` | `00:24:77:52:9e:a8` | ? |
-| `10.10.1.50` | `00:24:77:52:ad:aa` | ? |
+- In beide captures zijn probe-frames zichtbaar met payload `01000000`.
+- Er zijn **geen** zichtbare module→hub UDP/10001 reply-frames.
+- **Nuance:** `10.10.1.2` stuurde ook periodieke probes parallel aan de handmatige probe; dit verklaart extra probe-frames maar verandert de conclusie niet.
 
 ---
 
@@ -66,19 +65,16 @@ sudo python scripts/udp10001_listen.py --send-probe --duration 60
 
 | Scenario | Resultaat |
 |----------|-----------|
-| Fase 1 (passief, IPBox) | ☐ Replies gezien / ☐ Geen replies |
-| Fase 2 (actief, gateway) | ☐ Replies gezien / ☐ Geen replies |
+| Fase 1 (passief) | ✅ 0 replies |
+| Fase 2 (actieve probe) | ✅ 0 replies |
 
-**Go/no-go voor Task 3 (`gateway/discovery.py`):**
+- [ ] **GO-A** — UDP probe primair
+- [x] **GO-B** — HTTP-sweep primair, UDP best-effort/optioneel
 
-- [ ] **GO-A** — Replies bevestigd: UDP/10001 probe primair in gateway CLI
-- [ ] **GO-B** — Geen replies: HTTP-sweep primair; UDP als optionele extra stap
+**Conclusie:** voor `gateway/discovery.py` blijft HTTP-sweep de primaire discovery-route. UDP/10001 blijft optioneel/secundair.
 
 ---
 
-## Impact op fieldbus matrix
+## Impact op matrix
 
-Regel `Module discovery (UDP/10001)` in [`2026-05-17_ipbuilding_fieldbus_capability_matrix.md`](../2026-05-17_ipbuilding_fieldbus_capability_matrix.md):
-
-Huidige status: *"Documented, no mirror replies"*  
-Bijwerken alleen als verdict afwijkt van GO-B.
+Geen inhoudelijke wijziging nodig aan `resources_and_docs/2026-05-17_ipbuilding_fieldbus_capability_matrix.md` (status blijft: discovery gedocumenteerd, geen zichtbare replies op huidige POV).

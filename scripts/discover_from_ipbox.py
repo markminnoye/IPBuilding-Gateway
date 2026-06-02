@@ -1,7 +1,7 @@
 """Migrate-script: generate devices.json draft from IPBox WebConfig.
 
 Calls the IPBox WebConfig wizard endpoints to discover all field modules and
-their channels (including IPBox component IDs stored as ``legacy_id``).
+their channels (including IPBox component IDs stored as ``ipbox_id``).
 
 Usage
 -----
@@ -17,7 +17,7 @@ Cookies, copy the value of ``ASP.NET_SessionId`` and pass it via the env var.
 
 Output
 ------
-devices.json.discovered — same schema as devices.json, with ``legacy_id``
+devices.json.discovered — same schema as devices.json, with ``ipbox_id``
 per channel (the IPBox component ID, used exclusively by rest_shim.py during
 the HA-IPBuilding transition).
 
@@ -94,7 +94,7 @@ async def build_devices_json(
 ) -> dict[str, Any]:
     """Assemble devices.json structure from scan + import results.
 
-    IPBox component IDs are stored as ``legacy_id`` (not ``id``).
+    IPBox component IDs are stored as ``ipbox_id`` (not ``id``).
     The ``id`` field does not exist in the open gateway schema.
     """
     result_modules = []
@@ -108,7 +108,7 @@ async def build_devices_json(
             for ch in relay_channels.get(ip, []):
                 channels.append({
                     "ch": ch["CH"],
-                    "legacy_id": int(ch["id"]),   # IPBox ID — shim only
+                    "ipbox_id": int(ch["id"]),   # IPBox ID — shim only
                     "description": ch.get("Description", ""),
                     "group": ch.get("Group", ""),
                 })
@@ -116,7 +116,7 @@ async def build_devices_json(
             for ch in dimmer_channels.get(ip, []):
                 channels.append({
                     "ch": ch["CH"],
-                    "legacy_id": int(ch["id"]),   # IPBox ID — shim only
+                    "ipbox_id": int(ch["id"]),   # IPBox ID — shim only
                     "description": ch.get("Description", ""),
                     "group": ch.get("Group", ""),
                 })

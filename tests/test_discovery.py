@@ -129,8 +129,8 @@ async def test_http_identify_module_404():
 # build_devices_json_draft
 # ---------------------------------------------------------------------------
 
-def test_build_devices_json_draft_no_legacy_id():
-    """Gateway CLI output bevat nooit een legacy_id — geen IPBox data beschikbaar."""
+def test_build_devices_json_draft_no_ipbox_id():
+    """Gateway CLI output bevat nooit een ipbox_id — geen IPBox data beschikbaar."""
     modules = [
         DiscoveredModule(ip="10.10.1.30", device_type="relay",  firmware="5.1",   mac="00:24:77:52:ac:be"),
         DiscoveredModule(ip="10.10.1.40", device_type="dimmer", firmware="5.4",   mac="00:24:77:52:9e:a8"),
@@ -145,7 +145,7 @@ def test_build_devices_json_draft_no_legacy_id():
 
     for mod in draft["modules"]:
         for ch in mod.get("channels", []):
-            assert "legacy_id" not in ch  # nooit IPBox IDs in CLI output
+            assert "ipbox_id" not in ch  # nooit IPBox IDs in CLI output
             assert "id" not in ch
 
 
@@ -163,7 +163,7 @@ def test_build_devices_json_draft_loads_via_installation_config(tmp_path: Path):
     cfg = InstallationConfig.load(p)
     assert cfg.module_by_ip("10.10.1.30") is not None
     assert cfg.module_by_ip("10.10.1.50") is not None
-    assert cfg.all_legacy_ids() == []  # geen legacy IDs in CLI output
+    assert cfg.all_ipbox_ids() == []  # geen legacy IDs in CLI output
 
 
 def test_build_devices_json_draft_entity_id_derivable():

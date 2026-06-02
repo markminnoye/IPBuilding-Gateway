@@ -70,8 +70,8 @@ async def test_import_dimmer_channels():
 
 
 @pytest.mark.asyncio
-async def test_build_devices_json_uses_legacy_id():
-    """IPBox IDs worden opgeslagen als legacy_id, niet als id."""
+async def test_build_devices_json_uses_ipbox_id():
+    """IPBox IDs worden opgeslagen als ipbox_id, niet als id."""
     result = await build_devices_json(
         modules=SCAN_RESPONSE,
         relay_channels={"10.10.1.30": RELAY_RESPONSE},
@@ -83,13 +83,13 @@ async def test_build_devices_json_uses_legacy_id():
     assert relay["type"] == "relay"
     ch0 = relay["channels"][0]
     assert ch0["ch"] == 0
-    assert ch0["legacy_id"] == 547        # IPBox ID bewaard als legacy_id
+    assert ch0["ipbox_id"] == 547        # IPBox ID bewaard als ipbox_id
     assert "id" not in ch0               # geen 'id' veld
     assert ch0["description"] == "Keuken LED [30.1.1]"
     assert ch0["group"] == "Keuken"
 
     dimmer = next(m for m in result["modules"] if m["ip"] == "10.10.1.40")
-    assert dimmer["channels"][0]["legacy_id"] == 571
+    assert dimmer["channels"][0]["ipbox_id"] == 571
 
     input_mod = next(m for m in result["modules"] if m["ip"] == "10.10.1.50")
     assert input_mod["channels"] == []   # input: geen kanalen via ImportInfo
@@ -97,7 +97,7 @@ async def test_build_devices_json_uses_legacy_id():
 
 @pytest.mark.asyncio
 async def test_build_validates_via_installation_config(tmp_path: Path):
-    """Output moet inlaadbaar zijn via InstallationConfig.load() en legacy_id lookup werken."""
+    """Output moet inlaadbaar zijn via InstallationConfig.load() en ipbox_id lookup werken."""
     from gateway.installation import InstallationConfig
 
     result = await build_devices_json(
@@ -109,8 +109,8 @@ async def test_build_validates_via_installation_config(tmp_path: Path):
     p.write_text(json.dumps(result), encoding="utf-8")
     cfg = InstallationConfig.load(p)
 
-    assert cfg.legacy_id_to_channel(547) is not None
-    assert cfg.legacy_id_to_channel(547)[0].value == "relay"
-    assert cfg.legacy_id_to_channel(571)[0].value == "dimmer"
+    assert cfg.ipbox_id_to_channel(547) is not None
+    assert cfg.ipbox_id_to_channel(547)[0].value == "relay"
+    assert cfg.ipbox_id_to_channel(571)[0].value == "dimmer"
     # entity_id is altijd afleidbaar, niet opgeslagen
     assert cfg.make_entity_id("10.10.1.30", "relay", 0) == "10.10.1.30:relay:0"

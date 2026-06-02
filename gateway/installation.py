@@ -5,7 +5,7 @@ and provides lookups used by RESTShim and the registry wiring in main.py.
 
 ID model
 --------
-- ``legacy_id``  Optional integer per channel — the IPBox component ID
+- ``ipbox_id``  Optional integer per channel — the IPBox component ID
                  (e.g. 547).  Used exclusively by rest_shim.py during the
                  HA-IPBuilding transition.  Will disappear when the shim is
                  retired.
@@ -51,7 +51,7 @@ class ChannelConfig:
     """A single channel on a field module."""
 
     ch: int
-    legacy_id: int | None = None  # IPBox component ID — shim only, optional
+    ipbox_id: int | None = None  # IPBox component ID — shim only, optional
     description: str = ""
     group: str = ""
 
@@ -77,8 +77,8 @@ class InstallationConfig:
 
     modules: list[ModuleConfig] = field(default_factory=list)
 
-    # Derived indices — keyed by legacy_id (IPBox component ID)
-    _legacy_id_to_entry: dict[int, tuple[DeviceType, str, int]] = field(default_factory=dict)
+    # Derived indices — keyed by ipbox_id (IPBox component ID)
+    _ipbox_id_to_entry: dict[int, tuple[DeviceType, str, int]] = field(default_factory=dict)
     # module_ip -> ModuleConfig
     _modules_by_ip: dict[str, ModuleConfig] = field(default_factory=dict)
 
@@ -110,9 +110,9 @@ class InstallationConfig:
     @classmethod
     def _parse(cls, raw: dict) -> InstallationConfig:
         """Parse a devices.json dict into InstallationConfig."""
-        seen_legacy_ids: set[int] = set()
+        seen_ipbox_ids: set[int] = set()
         modules: list[ModuleConfig] = []
-        legacy_id_to_entry: dict[int, tuple[DeviceType, str, int]] = {}
+        ipbox_id_to_entry: dict[int, tuple[DeviceType, str, int]] = {}
         modules_by_ip: dict[str, ModuleConfig] = {}
 
         for mod in raw.get("modules", []):
@@ -140,23 +140,23 @@ class InstallationConfig:
                         f"Channel missing 'ch' int in module {mod_ip}: {ch_entry!r}"
                     )
 
-                legacy_id: int | None = ch_entry.get("legacy_id")
-                if legacy_id is not None:
-                    if not isinstance(legacy_id, int):
+                ipbox_id: int | None = ch_entry.get("ipbox_id")
+                if ipbox_id is not None:
+                    if not isinstance(ipbox_id, int):
                         raise InstallationError(
-                            f"legacy_id must be int in module {mod_ip}: {ch_entry!r}"
+                            f"ipbox_id must be int in module {mod_ip}: {ch_entry!r}"
                         )
-                    if legacy_id in seen_legacy_ids:
+                    if ipbox_id in seen_ipbox_ids:
                         raise InstallationError(
-                            f"Duplicate component id {legacy_id} across modules"
+                            f"Duplicate component id {ipbox_id} across modules"
                         )
-                    seen_legacy_ids.add(legacy_id)
-                    legacy_id_to_entry[legacy_id] = (dtype, mod_ip, ch)
+                    seen_ipbox_ids.add(ipbox_id)
+                    ipbox_id_to_entry[ipbox_id] = (dtype, mod_ip, ch)
 
                 channels.append(
                     ChannelConfig(
                         ch=ch,
-                        legacy_id=legacy_id,
+                        ipbox_id=ipbox_id,
                         description=ch_entry.get("description", ""),
                         group=ch_entry.get("group", ""),
                     )
@@ -172,7 +172,7 @@ class InstallationConfig:
             modules_by_ip[mod_ip] = mc
 
         inst = cls(modules=modules)
-        inst._legacy_id_to_entry = legacy_id_to_entry
+        inst._ipbox_id_to_entry = ipbox_id_to_entry
         inst._modules_by_ip = modules_by_ip
         return inst
 
@@ -185,15 +185,15 @@ class InstallationConfig:
         """Delegate to module-level :func:`make_entity_id`."""
         return make_entity_id(module_ip, device_type, channel)
 
-    def legacy_id_to_channel(
-        self, legacy_id: int
+    def ipbox_id_to_channel(
+        self, ipbox_id: int
     ) -> tuple[DeviceType, str, int] | None:
         """Look up a channel by IPBox legacy ID.
 
         Returns ``(device_type, module_ip, channel)`` or ``None`` if the
-        legacy_id is not known.  Used exclusively by the REST shim.
+        ipbox_id is not known.  Used exclusively by the REST shim.
         """
-        return self._legacy_id_to_entry.get(legacy_id)
+        return self._ipbox_id_to_entry.get(ipbox_id)
 
     def module_by_ip(self, module_ip: str) -> ModuleConfig | None:
         """Return the ModuleConfig for a given IP, or None."""
@@ -206,6 +206,6 @@ class InstallationConfig:
             result[mc.type.value] = mc.ip
         return result
 
-    def all_legacy_ids(self) -> list[int]:
+    def all_ipbox_ids(self) -> list[int]:
         """All known legacy (IPBox component) IDs in installation order."""
-        return list(self._legacy_id_to_entry.keys())
+        return list(self._ipbox_id_to_entry.keys())

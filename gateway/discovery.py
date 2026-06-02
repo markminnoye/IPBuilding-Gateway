@@ -13,7 +13,7 @@ Discovery paths
 
 ID model
 --------
-- No ``legacy_id`` in output — IPBox component IDs are not available from
+- No ``ipbox_id`` in output — IPBox component IDs are not available from
   module HTTP or UDP.  Use ``scripts/discover_from_ipbox.py`` to obtain them.
 - ``entity_id`` is never stored; always derived on-the-fly as
   ``"{ip}:{device_type}:{channel}"`` via :func:`gateway.installation.make_entity_id`.
@@ -190,7 +190,7 @@ def build_devices_json_draft(modules: list[DiscoveredModule]) -> dict[str, Any]:
     ``"{ip}:{device_type}:{channel}"`` via
     :func:`gateway.installation.make_entity_id`.
 
-    For legacy ``legacy_id`` (REST shim compatibility), use
+    For legacy ``ipbox_id`` (REST shim compatibility), use
     ``scripts/discover_from_ipbox.py`` instead.
     """
     return {
