@@ -273,7 +273,7 @@ class GatewayAPI:
 
         # Send and wait for reply
         try:
-            self._bus.send_command(module_ip, payload)
+            await self._bus.send_command(module_ip, payload)
             reply = await self._bus.correlate_reply(
                 module_ip=module_ip,
                 after_ts=self._bus.last_send_ts,
