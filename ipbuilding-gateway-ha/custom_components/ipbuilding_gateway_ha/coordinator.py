@@ -202,7 +202,15 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         msg_type = data.get("type")
         log.debug("WS message: type=%s", msg_type)
 
-        if msg_type == "device_list":
+        if msg_type == "snapshot":
+            # New format: snapshot contains both modules and devices.
+            # The companion only needs devices for entity state.
+            devices = data.get("devices", [])
+            self._data = {dev["id"]: dev for dev in devices}
+            self.async_set_updated_data(self._data)
+            self._notify_all(devices)
+        elif msg_type == "device_list":
+            # Legacy format kept for backward compatibility.
             self._data = {dev["id"]: dev for dev in data.get("devices", [])}
             self.async_set_updated_data(self._data)
             self._notify_all(data.get("devices", []))

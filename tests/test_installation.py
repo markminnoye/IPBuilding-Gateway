@@ -203,6 +203,90 @@ class TestInstallationConfig:
         assert cfg.modules == []
         assert cfg.all_ipbox_ids() == []
 
+    def test_mac_is_parsed(self, tmp_path: Path) -> None:
+        """MAC is normalised and stored on ModuleConfig."""
+        data = {
+            "modules": [
+                {
+                    "name": "relay",
+                    "ip": "10.10.1.30",
+                    "type": "relay",
+                    "mac": "0:24:77:52:ac:be",
+                    "channels": [{"ch": 0}],
+                }
+            ]
+        }
+        p = tmp_path / "mac.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        cfg = InstallationConfig.load(p)
+        relay = cfg.module_by_ip("10.10.1.30")
+        assert relay is not None
+        assert relay.mac == "00:24:77:52:ac:be"
+        assert relay.module_id == "00:24:77:52:ac:be"
+
+    def test_mac_normalisation_formats(self, tmp_path: Path) -> None:
+        """Various MAC formats are normalised to lowercase colon."""
+        cases = [
+            ("0:24:77:52:ac:be", "00:24:77:52:ac:be"),
+            ("00:24:77:52:ac:be", "00:24:77:52:ac:be"),
+            ("00-24-77-52-ac-be", "00:24:77:52:ac:be"),
+            ("0.24.77.52.ac.be", "00:24:77:52:ac:be"),
+        ]
+        for raw, expected in cases:
+            data = {
+                "modules": [
+                    {"ip": "10.10.1.30", "type": "relay", "mac": raw, "channels": [{"ch": 0}]}
+                ]
+            }
+            p = tmp_path / f"mac_{hash(raw)}.json"
+            p.write_text(json.dumps(data), encoding="utf-8")
+            cfg = InstallationConfig.load(p)
+            assert cfg.module_by_ip("10.10.1.30").mac == expected, f"failed for {raw}"
+
+    def test_module_by_mac(self, tmp_path: Path) -> None:
+        """module_by_mac() returns ModuleConfig for a normalised MAC."""
+        data = {
+            "modules": [
+                {"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": [{"ch": 0}]},
+                {"ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:9e:a8", "channels": [{"ch": 0}]},
+            ]
+        }
+        p = tmp_path / "mac.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        cfg = InstallationConfig.load(p)
+
+        relay = cfg.module_by_mac("00:24:77:52:ac:be")
+        assert relay is not None
+        assert relay.ip == "10.10.1.30"
+        assert relay.type == DeviceType.RELAY
+
+        dimmer = cfg.module_by_mac("00:24:77:52:9e:a8")
+        assert dimmer is not None
+        assert dimmer.ip == "10.10.1.40"
+
+        assert cfg.module_by_mac("nonexistent") is None
+
+    def test_duplicate_module_mac_rejected(self, tmp_path: Path) -> None:
+        data = {
+            "modules": [
+                {"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": [{"ch": 0}]},
+                {"ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:ac:be", "channels": [{"ch": 0}]},
+            ]
+        }
+        p = tmp_path / "dup_mac.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        with pytest.raises(InstallationError, match="Duplicate module MAC"):
+            InstallationConfig.load(p)
+
+    def test_module_id_property(self, tmp_path: Path) -> None:
+        """module_id property is an alias for mac."""
+        data = {"modules": [{"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": [{"ch": 0}]}]}
+        p = tmp_path / "mid.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        cfg = InstallationConfig.load(p)
+        mc = cfg.module_by_ip("10.10.1.30")
+        assert mc.module_id == mc.mac == "00:24:77:52:ac:be"
+
 
 class TestResolveEntityId:
     """Tests for _resolve_entity_id — the server-side entity_id resolver."""

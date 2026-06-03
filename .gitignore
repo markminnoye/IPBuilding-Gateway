@@ -37,6 +37,8 @@ __pycache__/
 *.pyc
 probe_output.log
 dimmer_re_manifest.log
+devices.discovered.json
+devices.json.pre-scratch
 captures/
 tmp/
 *.pcapng

@@ -1,4 +1,4 @@
-"""Gateway entrypoint — UDP bus + device registry + REST shim."""
+"""Gateway entrypoint -- UDP bus + device registry + REST shim."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from aiohttp import web
 from gateway.config import GatewayConfig
 from gateway.device_registry import DeviceRegistry
 from gateway.installation import InstallationConfig
+from gateway.module_metadata import ModuleMetadataCache
 from gateway.types import DeviceType
 from gateway.rest_shim import RESTShim
 from gateway.udp_bus import UDPBus
@@ -56,7 +57,15 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
     site = web.TCPSite(runner, cfg.rest_host, cfg.rest_port)
     await site.start()
 
-    api = GatewayAPI(bus, registry, cfg)
+    # Build metadata cache and prefetch getSysSet/getButtons before starting API.
+    meta_cache = ModuleMetadataCache()
+    if cfg.installation:
+        try:
+            await meta_cache.refresh(cfg.installation, timeout=2.0)
+        except Exception:
+            log.warning("Module metadata prefetch failed; cache is empty at startup")
+
+    api = GatewayAPI(bus, registry, cfg, metadata_cache=meta_cache)
     await api.start()
 
     install_info = ""

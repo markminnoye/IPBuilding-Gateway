@@ -1,8 +1,19 @@
 """Northbound product API: WebSocket /ws + REST /api/v1/
 
 Replaces the IPBox REST shim on :30200 as the canonical product API.
-Uses entity_id format (e.g. "10.10.1.30:0") — type is resolved server-side
+Uses entity_id format (e.g. "10.10.1.30-0") — type is resolved server-side
 from installation config, never trusted from the client.
+
+Module vs device model
+----------------------
+- **Module** = physical IPBuilding controller (relay/dimmer/input).
+  Identified by MAC (module_id).  Exposed via GET /api/v1/modules.
+  Runtime metadata (network, button config) fetched via HTTP getSysSet/getButtons
+  and cached in ModuleMetadataCache.
+- **Device** = logical channel (light, fan, switch) on a module.
+  Identified by custom slug or default {module_ip}-{channel}.
+  Exposed via GET /api/v1/devices.
+- WebSocket sends ``snapshot`` on connect (modules + devices together).
 """
 
 from __future__ import annotations
@@ -18,11 +29,13 @@ from aiohttp.web import WebSocketResponse
 from gateway.config import GatewayConfig
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.installation import InstallationConfig
+from gateway.module_metadata import ModuleMetadataCache
 from gateway.payloads import encode_relay_command, encode_dim_command, encode_dim_off
 from gateway.models import RelayAction, RelayCommand, DimmerCommand
 from gateway.udp_bus import UDPBus
 
 log = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -67,10 +80,12 @@ class GatewayAPI:
         bus: UDPBus,
         registry: DeviceRegistry,
         config: GatewayConfig,
+        metadata_cache: ModuleMetadataCache | None = None,
     ) -> None:
         self._bus = bus
         self._registry = registry
         self._cfg = config
+        self._meta_cache = metadata_cache or ModuleMetadataCache()
         self._app: web.Application | None = None
         self._runner: web.AppRunner | None = None
         self._site: web.TCPSite | None = None
@@ -101,6 +116,12 @@ class GatewayAPI:
         self._app.router.add_post(
             "/api/v1/provision/autonomy", self._post_autonomy
         )
+        # Modules resource (module metadata + network config from HTTP cache)
+        self._app.router.add_get("/api/v1/modules", self._get_modules)
+        self._app.router.add_get(
+            "/api/v1/modules/{module_id}", self._get_module
+        )
+        self._app.router.add_post("/api/v1/modules/refresh", self._post_modules_refresh)
 
         # Register registry callbacks
         self._state_cb = self._registry.on_state_changed(self._on_state_changed)
@@ -137,7 +158,7 @@ class GatewayAPI:
     async def _ws_handler(self, request: web.Request) -> WebSocketResponse:
         """Handle WebSocket connections.
 
-        On connect: send device_list (full snapshot).
+        On connect: send snapshot (modules + devices).
         Bidirectional: broadcast state_changed/button_event → client;
         receive command → dispatch.
         """
@@ -149,9 +170,9 @@ class GatewayAPI:
         log.info("WS client connected (total %d)", len(self._ws_clients))
 
         try:
-            # Send device list snapshot on connect
-            device_list = self._build_device_list()
-            await ws.send_json({"type": "device_list", "devices": device_list})
+            # Send snapshot on connect
+            snapshot = self._build_snapshot()
+            await ws.send_json(snapshot)
 
             async for msg in ws:
                 if msg.type == web.WSMsgType.TEXT:
@@ -241,6 +262,36 @@ class GatewayAPI:
         return web.json_response(
             {"ok": False, "error": "not yet implemented"}, status=501
         )
+
+    # -------------------------------------------------------------------------
+    # Module resource (REST)
+    # -------------------------------------------------------------------------
+
+    async def _get_modules(self, request: web.Request) -> web.Response:
+        """GET /api/v1/modules — return all modules with cached metadata."""
+        module_list = self._build_module_list()
+        return web.json_response({"modules": module_list})
+
+    async def _get_module(self, request: web.Request) -> web.Response:
+        """GET /api/v1/modules/{module_id} — single module by MAC."""
+        module_id = request.match_info["module_id"].lower()
+        module_list = self._build_module_list()
+        for m in module_list:
+            if m["id"] == module_id:
+                return web.json_response(m)
+        return web.json_response({"error": "not found"}, status=404)
+
+    async def _post_modules_refresh(self, request: web.Request) -> web.Response:
+        """POST /api/v1/modules/refresh — reload getSysSet/getButtons from all modules."""
+        installation = self._cfg.installation
+        if installation is None:
+            return web.json_response({"error": "no installation loaded"}, status=500)
+        try:
+            await self._meta_cache.refresh(installation, timeout=2.0)
+        except Exception as exc:
+            log.warning("modules refresh failed: %s", exc)
+        module_list = self._build_module_list()
+        return web.json_response({"modules": module_list})
 
     # -------------------------------------------------------------------------
     # Command execution
@@ -342,8 +393,55 @@ class GatewayAPI:
     # Message builders
     # -------------------------------------------------------------------------
 
+    def _build_module_list(self) -> list[dict[str, Any]]:
+        """Build the modules list: config fields + cached network/button metadata."""
+        installation = self._cfg.installation
+        if installation is None:
+            return []
+
+        modules: list[dict[str, Any]] = []
+        for mc in installation.modules:
+            meta = self._meta_cache.get(mc.mac)
+            entry: dict[str, Any] = {
+                "id": mc.mac,
+                "ip": mc.ip,
+                "name": mc.name,
+                "model": mc.model,
+                "type": mc.type.value,
+                "firmware": mc.firmware,
+                "mac": mc.mac,
+            }
+            # Merge cached metadata
+            if meta is not None:
+                entry["network"] = meta.network
+                entry["button"] = meta.button
+                entry["allow"] = meta.allow
+                if meta.buttons is not None:
+                    entry["buttons"] = meta.buttons
+                if meta.fetched_at is not None:
+                    entry["fetched_at"] = meta.fetched_at
+            else:
+                entry["network"] = {}
+                entry["button"] = ""
+                entry["allow"] = ""
+            modules.append(entry)
+
+        return modules
+
+    def _build_snapshot(self) -> dict[str, Any]:
+        """Build the WebSocket snapshot sent on connect."""
+        return {
+            "type": "snapshot",
+            "modules": self._build_module_list(),
+            "devices": self._build_device_list(),
+        }
+
     def _build_device_list(self) -> list[dict[str, Any]]:
-        """Build the device_list snapshot from installation config + registry."""
+        """Build the device list from installation config + registry.
+
+        Removes firmware (module-level, not per-channel). Adds module_id (MAC),
+        module_ip (current), and channel (int).
+        """
         devices = []
         installation = self._cfg.installation
 
@@ -355,13 +453,15 @@ class GatewayAPI:
 
                 device: dict[str, Any] = {
                     "id": ch.id,
+                    "module_id": mc.mac,
+                    "module_ip": mc.ip,
+                    "channel": ch.ch,
                     "name": ch.name or f"Ch {ch.ch}",
                     "room": ch.room,
                     "semantic_type": ch.semantic_type,
                     "device_type": mc.type.value,
                     "active": ch.active,
                     "max_watt": ch.max_watt,
-                    "firmware": mc.firmware,
                 }
 
                 # Attach current state from registry

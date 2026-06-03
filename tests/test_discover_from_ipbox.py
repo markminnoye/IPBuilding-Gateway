@@ -114,4 +114,4 @@ async def test_build_validates_via_installation_config(tmp_path: Path):
     assert cfg.ipbox_id_to_channel(571)[0].value == "dimmer"
     # entity_id is altijd afleidbaar, niet opgeslagen; type zit NIET in het ID
     # (server-side opgezocht via module_by_ip — anti-spoofing)
-    assert cfg.make_entity_id("10.10.1.30", 0) == "10.10.1.30:0"
+    assert cfg.make_entity_id("10.10.1.30", 0) == "10.10.1.30-0"

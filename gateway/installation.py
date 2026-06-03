@@ -15,6 +15,10 @@ ID model
                  external ID — it is always resolved server-side via
                  :meth:`InstallationConfig.module_by_ip`.  Used by the product
                  API (gateway_api.py) and the companion.
+- ``module_id``  Stable module identifier: normalised MAC (lowercase,
+                 colon-separated).  Used as the primary key for the
+                 ``/api/v1/modules`` resource.  IP can change (DHCP);
+                 MAC never does.
 """
 
 from __future__ import annotations
@@ -25,6 +29,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from gateway.types import DeviceType
+
+
+def _normalize_mac(mac: str) -> str:
+    """Normalise a MAC to lowercase colon-separated.
+
+    Handles: ``00:24:77:52:ac:be``, ``0:24:77:52:ac:be``,
+    ``00-24-77-52-ac-be``, ``0.24.77.52.ac.be`` (decimal-dot from
+    module getSysSet ``mac="0.36.119.82.172.190"``).
+    """
+    normalized = mac.lower().replace("-", ":").replace(".", ":")
+    parts = normalized.split(":")
+    return ":".join(f"{int(p, 16):02x}" for p in parts if p)
 
 
 class InstallationError(Exception):
@@ -81,7 +97,13 @@ class ModuleConfig:
     type: DeviceType
     firmware: str = ""  # read via getSysSet during discovery
     model: str = ""    # factory product label, e.g. "IP200PoE"; optional
+    mac: str = ""      # factory MAC (OUI 00:24:77); normalised lowercase
     channels: list[ChannelConfig] = field(default_factory=list)
+
+    @property
+    def module_id(self) -> str:
+        """Module identifier: normalised MAC. Alias for mac field."""
+        return self.mac
 
     @property
     def ip_decimal(self) -> str:
@@ -99,6 +121,8 @@ class InstallationConfig:
     _ipbox_id_to_entry: dict[int, tuple[DeviceType, str, int]] = field(default_factory=dict)
     # module_ip -> ModuleConfig
     _modules_by_ip: dict[str, ModuleConfig] = field(default_factory=dict)
+    # module_id (MAC) -> ModuleConfig
+    _modules_by_mac: dict[str, ModuleConfig] = field(default_factory=dict)
     # device_id -> (DeviceType, module_ip, channel)
     _device_id_to_entry: dict[str, tuple[DeviceType, str, int]] = field(default_factory=dict)
     # (DeviceType, module_ip, channel) -> device_id
@@ -139,6 +163,7 @@ class InstallationConfig:
         device_id_to_entry: dict[str, tuple[DeviceType, str, int]] = {}
         entry_to_device_id: dict[tuple[DeviceType, str, int], str] = {}
         modules_by_ip: dict[str, ModuleConfig] = {}
+        modules_by_mac: dict[str, ModuleConfig] = {}
 
         for mod in raw.get("modules", []):
             mod_type_str = mod.get("type", "")
@@ -158,6 +183,11 @@ class InstallationConfig:
                 raise InstallationError(f"Duplicate module IP: {mod_ip}")
 
             firmware = mod.get("firmware", "")
+            mac_raw = mod.get("mac", "")
+            mac_normalised = _normalize_mac(mac_raw) if mac_raw else ""
+
+            if mac_normalised and mac_normalised in modules_by_mac:
+                raise InstallationError(f"Duplicate module MAC: {mac_normalised}")
 
             channels: list[ChannelConfig] = []
             for ch_entry in mod.get("channels", []):
@@ -212,14 +242,18 @@ class InstallationConfig:
                 type=dtype,
                 firmware=firmware,
                 model=mod.get("model", ""),
+                mac=mac_normalised,
                 channels=channels,
             )
             modules.append(mc)
             modules_by_ip[mod_ip] = mc
+            if mac_normalised:
+                modules_by_mac[mac_normalised] = mc
 
         inst = cls(modules=modules)
         inst._ipbox_id_to_entry = ipbox_id_to_entry
         inst._modules_by_ip = modules_by_ip
+        inst._modules_by_mac = modules_by_mac
         inst._device_id_to_entry = device_id_to_entry
         inst._entry_to_device_id = entry_to_device_id
         return inst
@@ -259,6 +293,10 @@ class InstallationConfig:
     def module_by_ip(self, module_ip: str) -> ModuleConfig | None:
         """Return the ModuleConfig for a given IP, or None."""
         return self._modules_by_ip.get(module_ip)
+
+    def module_by_mac(self, module_mac: str) -> ModuleConfig | None:
+        """Return the ModuleConfig for a given normalised MAC, or None."""
+        return self._modules_by_mac.get(module_mac.lower())
 
     def field_modules(self) -> dict[str, str]:
         """Return a {type: ip} dict for GatewayConfig.field_modules derivation."""

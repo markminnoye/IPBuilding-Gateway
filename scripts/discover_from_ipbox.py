@@ -7,7 +7,7 @@ Usage
 -----
     IPBOX_WEB_HOST=http://192.168.0.185 \\
     IPBOX_SESSION_COOKIE="ASP.NET_SessionId=abc123" \\
-    DISCOVERY_OUTPUT=devices.json.discovered \\
+    DISCOVERY_OUTPUT=devices.discovered.json \\
     python scripts/discover_from_ipbox.py
 
 Auth
@@ -17,11 +17,10 @@ Cookies, copy the value of ``ASP.NET_SessionId`` and pass it via the env var.
 
 Output
 ------
-devices.json.discovered — same schema as devices.json, with ``ipbox_id``
+devices.discovered.json — same schema as devices.json, with ``ipbox_id``
 per channel (the IPBox component ID, used exclusively by rest_shim.py during
-the HA-IPBuilding transition).
-
-Diff against current devices.json, review, then rename to devices.json.
+the HA-IPBuilding transition). This file can overwrite devices.json after
+review (scratch test — no merge with previous config).
 """
 from __future__ import annotations
 
@@ -35,7 +34,7 @@ import aiohttp
 
 BASE_URL = os.getenv("IPBOX_WEB_HOST", "http://192.168.0.185")
 SESSION_COOKIE = os.getenv("IPBOX_SESSION_COOKIE", "")
-OUTPUT_PATH = os.getenv("DISCOVERY_OUTPUT", "devices.json.discovered")
+OUTPUT_PATH = os.getenv("DISCOVERY_OUTPUT", "devices.discovered.json")
 
 TYPE_MAP: dict[str, str] = {
     "Relais": "relay",

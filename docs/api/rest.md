@@ -1,72 +1,68 @@
-# IPBuilding Gateway — REST API
+# IPBuilding Gateway -- REST API
 
 **Base URL:** `http://{{gateway_host}}:{{gateway_port}}`
-**Poort:** `8080` (default)
+**Port:** `8080` (default)
 
-Device-ID formaat: `{module_ip}-{channel}` (bijv. `10.10.1.30-0`) of een optionele custom slug (bijv. `keuken-led`). Device type en fysiek kanaal/IP worden server-side resolved uit `devices.json` — nooit door client meegegeven.
+Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional custom slug (e.g. `keuken-led`). Device type and physical channel/IP are resolved server-side from `devices.json` -- never supplied by the client.
+
+**Module-ID:** the normalised MAC address of a physical controller (`00:24:77:52:ac:be`). Stable across DHCP IP changes.
 
 ---
 
-## GET /api/v1/devices
+## GET /api/v1/modules
 
-**Beschrijving:** Retourneer de volledige device lijst met huidige toestand.
+**Description:** Return all physical field-bus modules with cached network metadata.
 
 **Response 200:**
 ```json
 {
-  "devices": [
+  "modules": [
     {
-      "id": "10.10.1.30-0",
-      "name": "Keuken LED",
-      "room": "Keuken",
-      "semantic_type": "light",
-      "device_type": "relay",
-      "active": true,
-      "max_watt": 60,
-      "state": "off",
-      "current_watt": 0,
-      "firmware": "5.1"
-    },
-    {
-      "id": "10.10.1.40-0",
-      "name": "Woonkamer Dimmer 1",
-      "room": "Woonkamer",
-      "semantic_type": "light",
-      "device_type": "dimmer",
-      "active": true,
-      "max_watt": 200,
-      "state": "on",
-      "level": 75,
-      "current_watt": 150,
-      "firmware": "5.4"
+      "id": "00:24:77:52:ac:be",
+      "ip": "10.10.1.30",
+      "name": "IP0200PoE",
+      "model": "IP0200PoE",
+      "type": "relay",
+      "firmware": "5.1",
+      "mac": "00:24:77:52:ac:be",
+      "network": {
+        "dhcp": "0",
+        "ip": "10.10.1.30",
+        "subnet": "255.255.255.0",
+        "gateway": "10.10.1.1"
+      },
+      "button": "0",
+      "allow": "",
+      "fetched_at": "2026-06-03T18:00:00Z"
     }
   ]
 }
 ```
 
-**Velden per device:**
+**Fields per module:**
 
-| Veld | Type | Beschrijving |
-|------|------|-------------|
-| `id` | string | Device-ID: `{module_ip}-{channel}` of custom slug |
-| `name` | string | Kanaalnaam uit `devices.json` |
-| `room` | string | Ruimte uit configuratie |
-| `semantic_type` | string | `light` (relay/dimmer) of `input` |
-| `device_type` | string | `relay` of `dimmer` of `input` |
-| `active` | boolean | Of kanaal actief is |
-| `max_watt` | integer | Geconfigureerd maximaal vermogen |
-| `state` | string | `on` / `off` / `unknown` |
-| `current_watt` | integer | Actueel verbruik (0 als uit) |
-| `firmware` | string | Firmware versie module |
-| `level` | integer | Dimmer percentage 0–100 (dimmer only) |
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Normalised MAC -- stable module identifier |
+| `ip` | string | Current field-bus IP (may change via DHCP) |
+| `name` | string | Module name from config |
+| `model` | string | Factory model label (e.g. `IP0200PoE`) |
+| `type` | string | `relay` / `dimmer` / `input` |
+| `firmware` | string | Firmware version from `devices.json` |
+| `mac` | string | Same as `id` (explicit for readability) |
+| `network` | object | `dhcp`, `ip`, `subnet`, `gateway` from getSysSet |
+| `button` | string | HTTP security setting |
+| `allow` | string | HTTP access policy |
+| `buttons` | array | Input button config (type=input only, from getButtons) |
+| `fetched_at` | string | ISO 8601 timestamp of last getSysSet fetch |
 
 ---
 
-## GET /api/v1/devices/{device_id}
+## GET /api/v1/modules/{module_id}
 
-**Beschrijving:** Retourneer één device op basis van device-ID.
+**Description:** Return a single module by MAC-based module_id.
 
-**Response 200:** zie `devices[0]` structuur hierboven (of `devices[1]` voor een dimmer).
+**Response 200:** single module object (same shape as above).
 
 **Response 404:**
 ```json
@@ -75,26 +71,82 @@ Device-ID formaat: `{module_ip}-{channel}` (bijv. `10.10.1.30-0`) of een optione
 
 ---
 
-## GET /api/v1/devices/{device_id} (Voorbeeld Dimmer)
+## POST /api/v1/modules/refresh
 
-**Beschrijving:** Retourneer één dimmer op basis van device-ID.
+**Description:** Re-fetch getSysSet (and getButtons for input modules) from all field modules. Updates the in-memory cache.
+
+**Request body:** `{}`
+
+**Response 200:** full `{ "modules": [...] }` with refreshed data.
+
+---
+
+## GET /api/v1/devices
+
+**Description:** Return the full device list with current state.
 
 **Response 200:**
 ```json
 {
-  "id": "10.10.1.40-0",
-  "name": "Woonkamer Dimmer 1",
-  "room": "Woonkamer",
-  "semantic_type": "light",
-  "device_type": "dimmer",
-  "active": true,
-  "max_watt": 200,
-  "state": "on",
-  "level": 75,
-  "current_watt": 150,
-  "firmware": "5.4"
+  "devices": [
+    {
+      "id": "10.10.1.30-0",
+      "module_id": "00:24:77:52:ac:be",
+      "module_ip": "10.10.1.30",
+      "channel": 0,
+      "name": "Keuken LED",
+      "room": "Keuken",
+      "semantic_type": "light",
+      "device_type": "relay",
+      "active": true,
+      "max_watt": 60,
+      "state": "off",
+      "current_watt": 0
+    },
+    {
+      "id": "10.10.1.40-0",
+      "module_id": "00:24:77:52:9e:a8",
+      "module_ip": "10.10.1.40",
+      "channel": 0,
+      "name": "Living",
+      "room": "Gelijkvloers",
+      "semantic_type": "light",
+      "device_type": "dimmer",
+      "active": true,
+      "max_watt": 200,
+      "state": "on",
+      "level": 75,
+      "current_watt": 150
+    }
+  ]
 }
 ```
+
+**Fields per device:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Device-ID: `{module_ip}-{channel}` or custom slug |
+| `module_id` | string | Parent module MAC (stable, use for grouping) |
+| `module_ip` | string | Current module IP (mutable, use for display) |
+| `channel` | integer | Channel index on the module |
+| `name` | string | Channel name from `devices.json` |
+| `room` | string | Room from config |
+| `semantic_type` | string | `light` / `fan` / `switch` |
+| `device_type` | string | `relay` / `dimmer` / `input` |
+| `active` | boolean | Whether channel is active |
+| `max_watt` | integer | Configured maximum power |
+| `state` | string | `on` / `off` / `unknown` |
+| `current_watt` | integer | Current consumption (0 when off) |
+| `level` | integer | Dimmer percentage 0-100 (dimmer only) |
+
+---
+
+## GET /api/v1/devices/{device_id}
+
+**Description:** Return a single device by device-ID.
+
+**Response 200:** see `devices[0]` structure above.
 
 **Response 404:**
 ```json
@@ -105,11 +157,11 @@ Device-ID formaat: `{module_ip}-{channel}` (bijv. `10.10.1.30-0`) of een optione
 
 ## POST /api/v1/devices/{device_id}/command
 
-**Beschrijving:** Stuur een commando naar een relay of dimmer kanaal.
+**Description:** Send a command to a relay or dimmer channel.
 
 **Request headers:** `Content-Type: application/json`
 
-**Request body — Relay:**
+**Request body -- Relay:**
 ```json
 {"action": "ON"}
 {"action": "OFF"}
@@ -117,18 +169,18 @@ Device-ID formaat: `{module_ip}-{channel}` (bijv. `10.10.1.30-0`) of een optione
 {"action": "TOGGLE"}
 ```
 
-**Request body — Dimmer:**
+**Request body -- Dimmer:**
 ```json
 {"action": "DIM", "value": 75}
 ```
 
-| Action | Geldig voor | Value |
-|--------|-------------|-------|
-| `ON` | Relay | — |
-| `OFF` | Relay | — |
-| `PULSE` | Relay | — |
-| `TOGGLE` | Relay | — |
-| `DIM` | Dimmer | `0–100` (0 = uit) |
+| Action | Valid for | Value |
+|--------|-----------|-------|
+| `ON` | Relay | -- |
+| `OFF` | Relay | -- |
+| `PULSE` | Relay | -- |
+| `TOGGLE` | Relay | -- |
+| `DIM` | Dimmer | `0-100` (0 = off) |
 
 **Response 200:**
 ```json
@@ -143,14 +195,13 @@ Device-ID formaat: `{module_ip}-{channel}` (bijv. `10.10.1.30-0`) of een optione
 **Response 422** (unsupported action):
 ```json
 {"ok": false, "error": "unsupported relay action: FOO"}
-{"ok": false, "error": "unsupported device type: input"}
 ```
 
 ---
 
 ## POST /api/v1/provision/autonomy
 
-**Beschrijving:** EEPROM sync triggeren naar IP1100PoE (saveAutonomy). Stub — niet geimplementeerd (Fase 8).
+**Description:** EEPROM sync to IP1100PoE (saveAutonomy). Stub -- not implemented (Fase 8).
 
 **Request body:** `{}`
 
@@ -161,7 +212,8 @@ Device-ID formaat: `{module_ip}-{channel}` (bijv. `10.10.1.30-0`) of een optione
 
 ---
 
-Zie ook:
-- [`websocket.md`](websocket.md) — WebSocket message catalog
-- [`ipbuilding-gateway.postman_collection.json`](ipbuilding-gateway.postman_collection.json) — importeerbaar in RapidAPI for Mac
-- [`ARCHITECTURE.md`](../../ARCHITECTURE.md) — architectuur context
+See also:
+- [`websocket.md`](websocket.md) -- WebSocket message catalog
+- [`modules.md`](modules.md) -- Module resource reference
+- [`ipbuilding-gateway.postman_collection.json`](ipbuilding-gateway.postman_collection.json) -- importable in RapidAPI for Mac
+- [`ARCHITECTURE.md`](../../ARCHITECTURE.md) -- architecture context

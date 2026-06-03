@@ -7,6 +7,59 @@
   },
   "item": [
     {
+      "name": "Modules",
+      "item": [
+        {
+          "name": "List modules",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/modules",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "modules"]
+            },
+            "description": "Return all physical field-bus modules with firmware, MAC, and cached network metadata.\n\n**Response 200:** `{\"modules\": [{\"id\": \"00:24:77:52:ac:be\", \"ip\": \"10.10.1.30\", ...}]}`"
+          },
+          "response": []
+        },
+        {
+          "name": "Get module",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/modules/{{module_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "modules", "{{module_id}}"]
+            },
+            "description": "Return a single module by its MAC-based module_id.\n\n**Response 200:** single module object.\n\n**Response 404:** `{\"error\": \"not found\"}`"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh modules",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {"mode": "raw", "raw": "{}"},
+            "url": {
+              "raw": "{{base_url}}/api/v1/modules/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "modules", "refresh"]
+            },
+            "description": "Re-fetch getSysSet and getButtons from all field modules. Updates in-memory metadata cache.\n\n**Response 200:** `{\"modules\": [...]}`"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Devices",
       "item": [
         {
