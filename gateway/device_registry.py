@@ -142,11 +142,17 @@ class DeviceRegistry:
             new_state = parsed["state"]
             new_code = parsed["state_code"]
             old = self._relay_states.get(key)
-            old_state = old.state if old else "unknown"
-            self._relay_states[key] = RelayState(state=new_state, state_code=new_code)
-            if old_state != new_state:
-                log.info("Relay %s ch%d: %s -> %s", module_ip, ch, old_state, new_state)
-                self._fire_state_changed(key, old_state, RelayState(state=new_state, state_code=new_code))
+            new_rs = RelayState(state=new_state, state_code=new_code)
+            self._relay_states[key] = new_rs
+            if old is None or old.state != new_state:
+                log.info(
+                    "Relay %s ch%d: %s -> %s",
+                    module_ip,
+                    ch,
+                    old.state if old else "unknown",
+                    new_state,
+                )
+                self._fire_state_changed(key, old, new_rs)
         elif family == "relay_reply_candidate":
             pass  # pulse echo, no state change
 
@@ -166,13 +172,19 @@ class DeviceRegistry:
             new_level = parsed.get("level_percent")
             new_code = parsed.get("internal_value_code", "")
             old = self._dimmer_states.get(key)
-            old_level = old.level_percent if old else None
-            self._dimmer_states[key] = DimmerState(
+            new_ds = DimmerState(
                 level_percent=new_level, internal_value_code=new_code
             )
-            if old_level != new_level:
-                log.info("Dimmer %s ch%d: %s -> %s%%", module_ip, ch, old_level, new_level)
-                self._fire_state_changed(key, old_level, DimmerState(level_percent=new_level, internal_value_code=new_code))
+            self._dimmer_states[key] = new_ds
+            if old is None or old.level_percent != new_level:
+                log.info(
+                    "Dimmer %s ch%d: %s -> %s%%",
+                    module_ip,
+                    ch,
+                    old.level_percent if old else None,
+                    new_level,
+                )
+                self._fire_state_changed(key, old, new_ds)
 
     def _handle_input(self, module_ip: str, data: bytes) -> None:
         parsed = decode_input_payload(data)

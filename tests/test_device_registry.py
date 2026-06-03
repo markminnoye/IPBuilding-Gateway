@@ -52,12 +52,12 @@ class TestRelayState:
 
         reg.handle_packet(_make_pkt("10.10.1.30", b"I00000100"))
         assert len(changes) == 1
-        assert changes[0][1] == "unknown"
+        assert changes[0][1] is None
         assert changes[0][2].state == "on"
 
         reg.handle_packet(_make_pkt("10.10.1.30", b"I00000000"))
         assert len(changes) == 2
-        assert changes[1][1] == "on"
+        assert changes[1][1].state == "on"
         assert changes[1][2].state == "off"
 
     def test_relay_same_state_no_callback(self):
@@ -152,7 +152,7 @@ class TestDimmerState:
 
         reg.handle_packet(_make_pkt("10.10.1.40", b"I0154099"))
         assert len(changes) == 2
-        assert changes[1][1] == 30
+        assert changes[1][1].level_percent == 30
         assert changes[1][2].level_percent == 100
 
 
