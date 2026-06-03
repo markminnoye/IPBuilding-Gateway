@@ -339,8 +339,18 @@ def parse_backup_config_body(text: str) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def channels_from_backup_config(data: dict[str, Any]) -> list[dict[str, Any]]:
-    """Build channel draft entries from backup ``channels[]`` (relay/dimmer)."""
+def channels_from_backup_config(
+    data: dict[str, Any],
+    *,
+    module_type: str = "relay",
+) -> list[dict[str, Any]]:
+    """Build channel draft entries from backup ``channels[]`` (relay/dimmer).
+
+    Adds ``active: True``, ``semantic_type: "light"``, and a default
+    ``max_watt`` (200 for dimmer, 60 otherwise) so discovery output is
+    immediately loadable without manual edits.
+    """
+    default_watt = 200 if module_type == "dimmer" else 60
     out: list[dict[str, Any]] = []
     raw = data.get("channels")
     if not isinstance(raw, list):
@@ -363,6 +373,9 @@ def channels_from_backup_config(data: dict[str, Any]) -> list[dict[str, Any]]:
             "ch": ch_num,
             "name": name or f"Ch {ch_num}",
             "room": room,
+            "semantic_type": "light",
+            "active": True,
+            "max_watt": default_watt,
         })
     return out
 
@@ -381,7 +394,9 @@ def apply_backup_config(module: DiscoveredModule, data: dict[str, Any]) -> None:
             module.device_type = mapped
 
     if module.device_type in ("relay", "dimmer"):
-        module.channels = channels_from_backup_config(data)
+        module.channels = channels_from_backup_config(
+            data, module_type=module.device_type,
+        )
 
 
 # -----------------------------------------------------------------------

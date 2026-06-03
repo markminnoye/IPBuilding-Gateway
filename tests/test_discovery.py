@@ -496,7 +496,29 @@ def test_channels_from_backup_config_skips_empty_slots():
     data = parse_backup_config_body(RELAY_BACKUP_JSON)
     channels = channels_from_backup_config(data)
     assert len(channels) == 1
-    assert channels[0] == {"ch": 0, "name": "Keuken LED", "room": "Keuken"}
+    assert channels[0]["ch"] == 0
+    assert channels[0]["name"] == "Keuken LED"
+    assert channels[0]["room"] == "Keuken"
+    assert channels[0]["active"] is True
+    assert channels[0]["semantic_type"] == "light"
+    assert channels[0]["max_watt"] == 60  # relay default
+
+
+def test_channels_from_backup_config_dimmer_max_watt():
+    dimmer_json = json.dumps({
+        "device": {"refNr": "IP0300PoE"},
+        "channels": [{"id": 0, "descr": "Living", "gr": "Gelijkvloers"}],
+    })
+    data = parse_backup_config_body(dimmer_json)
+    channels = channels_from_backup_config(data, module_type="dimmer")
+    assert channels[0]["max_watt"] == 200
+
+
+def test_channels_from_backup_config_relay_max_watt():
+    channels = channels_from_backup_config(
+        parse_backup_config_body(RELAY_BACKUP_JSON), module_type="relay",
+    )
+    assert channels[0]["max_watt"] == 60
 
 
 def test_apply_backup_config_sets_model_and_channels():
