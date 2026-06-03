@@ -32,4 +32,4 @@ schema:
 boot: auto
 auto_update: false
 watchdog: application
-image: ghcr.io/markminnoye/ipbuilding-gateway
+image: ghcr.io/markminnoye/{arch}-ipbuilding-gateway
