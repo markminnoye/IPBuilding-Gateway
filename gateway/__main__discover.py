@@ -22,8 +22,8 @@ Usage
 
 Output
 ------
-devices.json.discovered — same schema as devices.json, without ipbox_id.
-Review, then merge channel/ipbox_id data from discover_from_ipbox.py if needed.
+devices.discovered.json — same schema as devices.json, without ipbox_id.
+No merge with previous config — this file IS the new devices.json after review.
 """
 import argparse
 import asyncio
@@ -32,6 +32,7 @@ import sys
 
 from gateway.discovery import (
     build_devices_json_draft,
+    detect_mac_ip_changes,
     discover_modules,
     probe_udp10001,
 )
@@ -88,6 +89,22 @@ async def run(args: argparse.Namespace) -> None:
             f"fw={m.firmware}{mac_info}{ch_info}"
         )
 
+    # MAC IP-change detection against baseline
+    baseline = None
+    baseline_path = args.baseline.strip() if args.baseline else None
+    if baseline_path:
+        from gateway.installation import InstallationConfig, InstallationError
+        try:
+            baseline = InstallationConfig.load(baseline_path)
+        except InstallationError as exc:
+            print(f"warning: could not load baseline {baseline_path}: {exc}", file=sys.stderr)
+
+    for change in detect_mac_ip_changes(all_modules, baseline):
+        print(
+            f"WARNING: Module {change.mac} IP changed "
+            f"{change.old_ip} → {change.new_ip}; device ids may need review"
+        )
+
     draft = build_devices_json_draft(all_modules)
     with open(args.output, "w", encoding="utf-8") as fh:
         json.dump(draft, fh, indent=2, ensure_ascii=False)
@@ -101,8 +118,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Discover IPBuilding field modules (ARP-first + HTTP, or HTTP-only)"
     )
-    parser.add_argument("--output", default="devices.json.discovered",
-                        help="Output path (default: devices.json.discovered)")
+    parser.add_argument("--output", default="devices.discovered.json",
+                        help="Output path (default: devices.discovered.json)")
     parser.add_argument("--subnet", default="10.10.1",
                         help="Subnet prefix (default: 10.10.1)")
     parser.add_argument("--range-start", type=int, default=30,
@@ -123,6 +140,8 @@ def main() -> None:
                         help="Also send UDP/10001 probe (requires GO-A spike verdict)")
     parser.add_argument("--udp-duration", type=int, default=30,
                         help="UDP probe listen duration in seconds (default: 30)")
+    parser.add_argument("--baseline", type=str, default="devices.json",
+                        help="Existing devices.json for MAC IP-change comparison (default: devices.json; pass '' to skip)")
     args = parser.parse_args()
     if args.range_end < args.range_start:
         print("error: range-end must be >= range-start", file=sys.stderr)
