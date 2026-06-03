@@ -15,7 +15,7 @@ PYTHONPATH=. python3 gateway/__main__discover.py [--options]
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--output` | `devices.json.discovered` | Output path |
+| `--output` | `devices.discovered.json` | Output path |
 | `--subnet` | `10.10.1` | Subnet prefix |
 | `--range-start` | `30` | Start of IP range (inclusive) |
 | `--range-end` | `59` | End of IP range (inclusive) |
@@ -25,8 +25,9 @@ PYTHONPATH=. python3 gateway/__main__discover.py [--options]
 | `--no-arp` | — | Skip ARP-first; use HTTP-only sweep |
 | `--udp-probe` | — | Also send UDP/10001 probe (opt-in) |
 | `--udp-duration` | `30` | UDP probe listen duration in seconds |
+| `--baseline` | `devices.json` | Existing config for MAC IP-change detection; pass `''` to skip |
 
-**Output:** `devices.json.discovered` — same schema as `devices.json`, without `ipbox_id` (open gateway, no IPBox dependency).
+**Output:** `devices.discovered.json` — same schema as `devices.json`, without `ipbox_id` (open gateway, no IPBox dependency). Can overwrite `devices.json` after review (scratch test — no merge).
 
 **Flow:**
 1. Ping-sweep range → populate kernel ARP cache
@@ -49,7 +50,7 @@ Full migration including `ipbox_id` per channel for REST shim compatibility.
 |----------|---------|-------------|
 | `IPBOX_WEB_HOST` | `http://192.168.0.185` | IPBox WebConfig base URL |
 | `IPBOX_SESSION_COOKIE` | `ASP.NET_SessionId=abc123` | Browser session cookie |
-| `DISCOVERY_OUTPUT` | `devices.json.discovered` | Output path (optional) |
+| `DISCOVERY_OUTPUT` | `devices.discovered.json` | Output path (optional) |
 
 **Usage:**
 ```bash
@@ -66,7 +67,7 @@ python3 scripts/discover_from_ipbox.py
 3. For each dimmer: `POST /general/Hardware/Dim/ImportDimInfo` → channel list with `id` (ipbox_id)
 4. Assemble `devices.json` with `ipbox_id` per channel
 
-**Output:** `devices.json.discovered` — full schema with `ipbox_id` for REST shim compatibility.
+**Output:** `devices.discovered.json` — full schema with `ipbox_id` for REST shim compatibility. Can overwrite `devices.json` after review.
 
 **Exit code:** `1` if `IPBOX_SESSION_COOKIE` is not set.
 
@@ -106,4 +107,39 @@ python3 scripts/arp_discover_spike.py [--options]
 | Verify ARP cache state manually | `arp_discover_spike.py` |
 | HA add-on runtime discovery | `gateway.discover` via config flow (future) |
 
-Both `gateway.discover` and `discover_from_ipbox.py` output `devices.json.discovered` — diff, review, rename to `devices.json`.
+Both `gateway.discover` and `discover_from_ipbox.py` output `devices.discovered.json` — review, then overwrite `devices.json` (scratch test — no merge/diff).
+
+---
+
+## `scripts/validate_devices_json.py` — config validator
+
+Validates `devices.json` against scratch-test success criteria.
+
+```bash
+PYTHONPATH=. python scripts/validate_devices_json.py devices.json [--expect-channels N]
+```
+
+**Checks:**
+- Every module has a non-empty `mac` field
+- No duplicate MACs across modules
+- Active channel count matches `--expect-channels` if provided
+
+**Exit codes:** `0` = pass, `1` = errors (per-error line on stderr)
+
+---
+
+## Discovery scratch test workflow
+
+**Purpose:** Prove gateway + companion work from pure discovery-generated `devices.json` without IPBox dependency.
+
+**Runbook:** [`resources_and_docs/workflows/2026-06-03_discovery_scratch_test_runbook.md`](resources_and_docs/workflows/2026-06-03_discovery_scratch_test_runbook.md)
+
+**Summary:**
+1. `cp devices.json devices.json.pre-scratch`
+2. `PYTHONPATH=. python -m gateway.discover --baseline devices.json --output devices.discovered.json`
+3. Review `devices.discovered.json` — fix `semantic_type: fan` for ventilatie channels, encoding issues, etc.
+4. `PYTHONPATH=. python scripts/validate_devices_json.py devices.discovered.json --expect-channels 28`
+5. `cp devices.discovered.json devices.json`
+6. Gateway smoke: `curl localhost:8080/api/v1/devices | jq '.devices | length'` → 28
+7. WebSocket: connect to `ws://localhost:8080/ws` — first message must be `type: snapshot`
+8. HA companion: reload, verify entity count + names from discovery
