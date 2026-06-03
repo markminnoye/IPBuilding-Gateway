@@ -1,6 +1,6 @@
 # IPBuilding Gateway — Architectuur
 
-**Versie:** 2026-06-02  
+**Versie:** 2026-06-02 (update Fase 3+5 ✅)  
 **Status:** Goedgekeurd (vervangt [docs/superpowers/specs/2026-05-18-gateway-architecture-design.md](docs/superpowers/specs/2026-05-18-gateway-architecture-design.md))  
 **Doelgroep:** ontwikkelaars, AI-agenten, integratie-partners
 
@@ -41,7 +41,7 @@ De propriëtaire **IPBox** (IP0000X) vervangen door een open, zelfbeheerde gatew
 - Python 3.11+ (HA add-on en standalone Docker/RPi) — primaire implementatie
 - C++ ESP-IDF (ESP32 POC) — toekomstig, zelfde northbound-protocol
 
-### 2.2 `ipbuilding-open` — de companion (HA custom component)
+### 2.2 `ipbuilding-gateway-ha` — de companion (HA custom component)
 
 **Verantwoordelijkheid:** HA-specifieke laag. Vertaalt het gateway-protocol naar HA-entities en beheert de knop→actie-mapping.
 
@@ -81,7 +81,7 @@ graph TB
     subgraph DA["📦 Deployment A — HA Green / Linux (primair)"]
         direction LR
         GWA["Gateway\nPython · Docker\nHA add-on"]
-        COMP["Companion\nipbuilding-open"]
+        COMP["Companion\nipbuilding-gateway-ha"]
         HA["Home Assistant\nentities · automations\nbutton→actie"]
         GWA -. "WebSocket intern" .-> COMP --> HA
     end
@@ -274,10 +274,10 @@ sequenceDiagram
 
 ```jsonc
 // Gateway → client: toestandswijziging
-{"type": "state_changed", "id": "10.10.1.30:relay:0",
+{"type": "state_changed", "id": "10.10.1.30:0",
  "state": "on", "max_watt": 60, "current_watt": 60}
 
-{"type": "state_changed", "id": "10.10.1.40:dimmer:0",
+{"type": "state_changed", "id": "10.10.1.40:0",
  "state": "on", "level": 75, "max_watt": 200, "current_watt": 150}
 
 // Gateway → client: knopgebeurtenis
@@ -285,22 +285,23 @@ sequenceDiagram
 
 // Gateway → client: volledige lijst bij verbinding (incl. firmware per module)
 {"type": "device_list", "devices": [
-  {"id": "10.10.1.30:relay:0",  "name": "2e SlpK L",  "room": "2e verd",
+  {"id": "10.10.1.30:0",  "name": "2e SlpK L",  "room": "2e verd",
    "semantic_type": "light", "active": true, "max_watt": 60,
    "state": "off", "firmware": "5.1"},
-  {"id": "10.10.1.40:dimmer:0", "name": "Woonkamer",   "room": "Woonkamer",
+  {"id": "10.10.1.40:0", "name": "Woonkamer",   "room": "Woonkamer",
    "semantic_type": "light", "active": true, "max_watt": 200,
    "state": "on", "level": 75, "firmware": "5.4"}
 ]}
 
 // Client → gateway: commando's
-{"type": "command", "id": "10.10.1.30:relay:0", "action": "ON"}
-{"type": "command", "id": "10.10.1.40:dimmer:0", "action": "DIM", "value": 75}
-{"type": "command", "id": "10.10.1.30:relay:0", "action": "OFF"}
+{"type": "command", "id": "10.10.1.30:0", "action": "ON"}
+{"type": "command", "id": "10.10.1.40:0", "action": "DIM", "value": 75}
+{"type": "command", "id": "10.10.1.30:0", "action": "OFF"}
 ```
 
-**Entity-ID formaat:** `"{module_ip}:{device_type}:{channel}"` — deterministisch afgeleid, nooit opgeslagen.  
-Voorbeeld: `"10.10.1.30:relay:0"`, `"10.10.1.40:dimmer:0"`
+**Entity-ID formaat:** `"{module_ip}:{channel}"` — deterministisch afgeleid, nooit opgeslagen.  
+Het device type is **niet** onderdeel van de ID: de gateway leidt het altijd af van de module-config (type-spoofing door clients is structureel onmogelijk).  
+Voorbeeld: `"10.10.1.30:0"`, `"10.10.1.40:0"`
 
 ---
 
@@ -311,7 +312,7 @@ flowchart TD
     A["IPBox nog online"] -->|Stap 1| B["Import uit IPBox\nConfiguration/Output\n→ naam · room · type · watt · active"]
     B --> C["Gateway config\ndevices.json gevuld"]
     C -->|Stap 2| D["Gateway add-on actief\nREST shim :30200 aan\nBestaande HA-IPBuilding\nblijft werken"]
-    D -->|Stap 3| E["Companion ipbuilding-open\ninstalleren naast bestaande\n→ nieuwe entities via WS"]
+    D -->|Stap 3| E["Companion ipbuilding-gateway-ha\ninstalleren naast bestaande\n→ nieuwe entities via WS"]
     E -->|Stap 4| F["Button→actie mapping\ninstellen in companion\n→ HA automations"]
     F -->|Stap 5| G["EEPROM sync\nCompanion POST /api/v1/provision/autonomy\n→ Gateway → saveAutonomy op IP1100PoE\n→ online = offline gedrag"]
     G -->|Stap 6| H["🎉 IPBox afkoppelen\nREST shim uitzetten\nGateway volledig autonoom"]
@@ -340,10 +341,10 @@ Companion (HA) → POST /api/v1/provision/autonomy
 |---|---|---|
 | **1** | UDP-protocol RE: relay, dimmer, input `B-…E` + `gateway/payloads/` | ✅ Voltooid |
 | **2** | UDP Bus Manager, Device Registry, REST-shim, veldtest | ✅ Voltooid (2026-06-02) |
-| **3** | WebSocket API server `gateway_api.py` + REST `/api/v1/` | 🔲 Open |
+| **3** | WebSocket API server `gateway_api.py` + REST `/api/v1/` | ✅ Voltooid (2026-06-02) |
 | **4** | Gateway als HA add-on (Dockerfile + `config.yaml`) | 🔲 Open |
-| **5** | Companion `ipbuilding-open` — entities, automations | 🔲 Open |
-| **6** | Input-events IP1100PoE naar companion via WS | 🔲 Open |
+| **5** | Companion `ipbuilding-gateway-ha` — entities, automations | ✅ Voltooid (2026-06-02) |
+| **6** | Input-events IP1100PoE naar companion via WS | ✅ Verpakt in Fase 5 |
 | **7** | Discovery wizard + config-import vanuit IPBox | 🔲 Open |
 | **8** | EEPROM-sync (`/api/v1/provision/autonomy`) | 🔲 Open |
 | **9** | MQTT adapter | 🔲 Open |

@@ -52,12 +52,16 @@ class IPBuildingLight(LightEntity):
         self._device = device
         self._coordinator = coordinator
         self._entity_id = device["id"]
+        self._semantic_type: str = device.get("semantic_type", "light")
+        # True when the gateway exposes a brightness level (dimmer module).
+        # Determined from the initial device_list snapshot — not from entity_id.
+        self._is_dimmer: bool = "level" in device
         self._attr_unique_id = device["id"]
         self._attr_device_info = {
             "identifiers": {(DOMAIN, device["id"])},
             "name": device.get("name", device["id"]),
             "manufacturer": "IPBuilding",
-            "model": device.get("device_type", "unknown"),
+            "model": device.get("semantic_type", "light"),
         }
         # Store the update callback so the entity can be notified
         self._on_update: Callable[[dict], None] | None = None
@@ -86,10 +90,8 @@ class IPBuildingLight(LightEntity):
         is_on = state.get("state") in ("on", "ON")
         self._attr_is_on = is_on
 
-        # Dimmer-specific: extract brightness level
-        # The device type is encoded in entity_id as "ip:type:ch"
-        is_dimmer = self._entity_id.split(":")[1] == "dimmer" if ":" in self._entity_id else False
-        if "level" in state and is_dimmer:
+        # Dimmer-specific: extract brightness level when the device is a dimmer module.
+        if self._is_dimmer and "level" in state:
             level = state.get("level")
             if level is not None:
                 self._attr_brightness = round(255 * level / 100)

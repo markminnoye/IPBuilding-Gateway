@@ -53,12 +53,12 @@ class TestRelayState:
         reg.handle_packet(_make_pkt("10.10.1.30", b"I00000100"))
         assert len(changes) == 1
         assert changes[0][1] == "unknown"
-        assert changes[0][2] == "on"
+        assert changes[0][2].state == "on"
 
         reg.handle_packet(_make_pkt("10.10.1.30", b"I00000000"))
         assert len(changes) == 2
         assert changes[1][1] == "on"
-        assert changes[1][2] == "off"
+        assert changes[1][2].state == "off"
 
     def test_relay_same_state_no_callback(self):
         reg = _registry_with_modules()
@@ -94,7 +94,7 @@ class TestDimmerState:
         reg = _registry_with_modules()
         reg.handle_packet(_make_pkt("10.10.1.40", b"I0154030"))
 
-        key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", -1)
+        key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 0)
         state = reg.get_dimmer_state(key)
         assert state is not None
         assert state.level_percent == 30
@@ -104,10 +104,41 @@ class TestDimmerState:
         reg = _registry_with_modules()
         reg.handle_packet(_make_pkt("10.10.1.40", b"I0154000"))
 
-        key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", -1)
+        key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 0)
         state = reg.get_dimmer_state(key)
         assert state is not None
         assert state.level_percent == 0
+
+    def test_dimmer_channel_from_reply_code(self):
+        """Reply I0154130 must land on channel 1 with level 30, not 130%.
+
+        Regression for the channel-prefixed value code (Bureau dimmer ch1).
+        """
+        reg = _registry_with_modules()
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0154130"))
+
+        ch1 = reg.get_dimmer_state(DeviceKey(DeviceType.DIMMER, "10.10.1.40", 1))
+        assert ch1 is not None
+        assert ch1.level_percent == 30
+        assert ch1.internal_value_code == "130"
+        # ch0 must remain untouched
+        assert reg.get_dimmer_state(DeviceKey(DeviceType.DIMMER, "10.10.1.40", 0)) is None
+
+    def test_dimmer_idle_heartbeat_no_state_change(self):
+        """The I0154999 idle heartbeat must not create or overwrite state."""
+        reg = _registry_with_modules()
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda key, old, new: changes.append((key, old, new)))
+
+        # Set a real level on ch1, then send idle heartbeats.
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0154155"))  # ch1 -> 55%
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0154999"))
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0154999"))
+
+        ch1 = reg.get_dimmer_state(DeviceKey(DeviceType.DIMMER, "10.10.1.40", 1))
+        assert ch1 is not None
+        assert ch1.level_percent == 55  # unchanged by the heartbeats
+        assert len(changes) == 1  # only the real setpoint fired
 
     def test_dimmer_change_fires_callback(self):
         reg = _registry_with_modules()
@@ -117,12 +148,12 @@ class TestDimmerState:
         reg.handle_packet(_make_pkt("10.10.1.40", b"I0154030"))
         assert len(changes) == 1
         assert changes[0][1] is None
-        assert changes[0][2] == 30
+        assert changes[0][2].level_percent == 30
 
         reg.handle_packet(_make_pkt("10.10.1.40", b"I0154099"))
         assert len(changes) == 2
         assert changes[1][1] == 30
-        assert changes[1][2] == 100
+        assert changes[1][2].level_percent == 100
 
 
 class TestInputEvents:

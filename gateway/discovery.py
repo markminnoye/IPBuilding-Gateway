@@ -16,7 +16,9 @@ ID model
 - No ``ipbox_id`` in output — IPBox component IDs are not available from
   module HTTP or UDP.  Use ``scripts/discover_from_ipbox.py`` to obtain them.
 - ``entity_id`` is never stored; always derived on-the-fly as
-  ``"{ip}:{device_type}:{channel}"`` via :func:`gateway.installation.make_entity_id`.
+  ``"{ip}:{channel}"`` via :func:`gateway.installation.make_entity_id`.
+  The device type is NOT encoded in the entity_id — it is resolved server-side
+  from the installation config.
 
 CLI
 ---
@@ -187,8 +189,8 @@ def build_devices_json_draft(modules: list[DiscoveredModule]) -> dict[str, Any]:
 
     Channels are empty — the open gateway does not require IPBox component IDs.
     ``entity_id`` is never stored; always derived on-the-fly as
-    ``"{ip}:{device_type}:{channel}"`` via
-    :func:`gateway.installation.make_entity_id`.
+    ``"{ip}:{channel}"`` via :func:`gateway.installation.make_entity_id`.
+    The device type is resolved server-side, never encoded in the entity_id.
 
     For legacy ``ipbox_id`` (REST shim compatibility), use
     ``scripts/discover_from_ipbox.py`` instead.

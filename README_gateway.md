@@ -10,7 +10,7 @@ We are building an **open replacement for the IPBox hub role** on the field bus 
 |-------|------------------------|
 | **Fase 1 — wire + codecs** | **Done** — RE Sprint 1–5; `gateway/payloads/` + tests |
 | **Fase 2 — hub service** | **In progress** — poll-loop, `device_registry`, `rest_shim` (dev entrypoint wired in `main.py`) |
-| **Fase 3+ — northbound** | **Open** — WebSocket `/ws`, HA add-on, `ipbuilding-open` companion |
+| **Fase 3+ — northbound** | **Done** — WebSocket `/ws` + REST `/api/v1/` in `gateway_api.py`; PAW/GetAPI docs in [`docs/api/`](docs/api/) |
 
 Architecture: [Gateway architecture design](docs/superpowers/specs/2026-05-18-gateway-architecture-design.md). Canonical RE status: [RE_STATE.md](resources_and_docs/RE_STATE.md).
 
@@ -25,7 +25,7 @@ Both modules exist; they are **not** two different APIs.
 | **`gateway/rest_shim.py`** | **Canonical implementation.** IPBox-compatible REST on `:30200` (`/api/v1/comp/items`, `/api/v1/action/action`) for **transition only** — lets existing [HA-IPBuilding](https://github.com/markminnoye/HA-IPBuilding) talk to the open hub while the companion is built. Wired to `UDPBus` + `DeviceRegistry`. |
 | **`gateway/rest_api.py`** | **Backward-compat alias** — re-exports `RESTShim` as `RESTApp` and `create_app` so older imports and `tests/test_rest_api.py` keep working. No separate logic. |
 
-The name **shim** (not `rest_api`) signals intent from the architecture spec: this layer is a **temporary bridge**, not the product northbound API. The product API is **`gateway_api.py`** (own REST `/api/v1/` + WebSocket `/ws`) — not started yet.
+The name **shim** (not `rest_api`) signals intent from the architecture spec: this layer is a **temporary bridge**, not the product northbound API. The product API is **`gateway_api.py`** (own REST `/api/v1/` + WebSocket `/ws`) — implemented. API docs for RapidAPI for Mac and GetAPI: [`docs/api/README.md`](docs/api/).
 
 Do **not** extend IPBox REST parity (scenes, moods, project DB) in `rest_shim`; that stays in HA.
 
@@ -47,11 +47,11 @@ Do **not** extend IPBox REST parity (scenes, moods, project DB) in `rest_shim`; 
 - **`gateway/discovery.py`** — standalone HTTP sweep + optional UDP/10001 probe; see [Discovery tools](#discovery-tools-optional-provisioning) below
 - **`gateway/__main__discover.py`** — CLI: `python -m gateway.discover`
 
-## Not built yet
+## What exists today
 
-- **`gateway_api.py`** — WebSocket `/ws` + own REST `/api/v1/` (product northbound); uses `entity_id` not `ipbox_id`
-- HA add-on packaging, **`ipbuilding-open`** companion
-- Field validation with gateway bound as hub `10.10.1.1` (IPBox off or second NIC); see [veldtest-runbook](resources_and_docs/workflows/2026-06-01_gateway_field_test_runbook.md)
+- **`gateway_api.py`** — WebSocket `/ws` + REST `/api/v1/` (product northbound); uses `entity_id` not `ipbox_id`; see [`docs/api/`](docs/api/) for PAW/GetAPI import
+- **`ipbuilding-gateway-ha/`** — Home Assistant companion (switch, light, button, sensor entities); WebSocket coordinator
+- HA add-on packaging, **EEPROM sync** (Fase 8) still open
 
 ## ID model
 

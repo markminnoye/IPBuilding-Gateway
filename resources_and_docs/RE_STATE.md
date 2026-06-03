@@ -1,6 +1,6 @@
 # RE State (canonical)
 
-Last updated: 2026-06-01 (local)
+Last updated: 2026-06-02 (local)
 
 Compacte source of truth voor actuele reverse-engineeringstatus; detailbewijs blijft in de gelinkte evidence.
 
@@ -33,7 +33,7 @@ Compacte source of truth voor actuele reverse-engineeringstatus; detailbewijs bl
 
   **Aanbeveling standaard-POV: 7←15** is de enige die alle field bus-apparaten toont. POV B/C limiteren zichtbaarheid tot hun respectievelijke poort-apparaat en zijn niet geschikt voor algemeen gebruik. Evidence: `captures/sprint4_pov_comparison_20260517T012600Z/pov_{a,b,c}_7x{15,14,12}.pcapng`.
 
-- **Sprint 3 GESLAAGD (2026-05-17):** capture `01:01.pcapng` (2161 frames, 100s, mirror `7←12`, dimmer `10.10.1.40`). Hard requirement Rx>0 voor alle devicepairs — bevestigd voor `10.10.1.50` (50/50), `10.10.1.40` (11/11), `10.10.1.30` (7/7). Dimmer gebruikt **geen `J`-separator**; hub→dimmer prefix-byte is een compound (0x35/0x43/0x53/0x4b/0x53/0x53/0x43/0x4b/0x53/0x43) dat kanaal+richting combineert. Hub→dimmer command: `S0301030` = DIM 30% kanaal 03; `S0991030` = DIM 99%; `C0991030` = OFF kanaal 09. Dimmer→hub reply: **`I0154030`** / **`I0154099`** / **`I0154000`** — vast `I01` prefix (device type dimmer), `540` constant (dimmer family), `030/099/000` = interne waarde-code. Correlatie: `I0154030` = DIM 30% (suffix `030`), `I0154099` = DIM 99%, `I0154000` = OFF. Interne waarde `030` betekent niet rechtstreeks 30% — soft-AAN (default 15%) en soft-UIT (default 70%) uit §12.3 kalibreren de fysieke output. Reply timing: 24.7ms na hub→dimmer frame (< 500ms). Evidence: `/Users/markminnoye/Downloads/01:01.pcapng`.
+- **Sprint 3 GESLAAGD (2026-05-17):** capture `01:01.pcapng` (2161 frames, 100s, mirror `7←12`, dimmer `10.10.1.40`). Hard requirement Rx>0 voor alle devicepairs — bevestigd voor `10.10.1.50` (50/50), `10.10.1.40` (11/11), `10.10.1.30` (7/7). Dimmer gebruikt **geen `J`-separator**; hub→dimmer prefix-byte is een compound (0x35/0x43/0x53/0x4b/0x53/0x53/0x43/0x4b/0x53/0x43) dat kanaal+richting combineert. Hub→dimmer command: `S0301030` = DIM 30% kanaal 0; `S0991030` = DIM 100% kanaal 0; `C0991030` = OFF kanaal 0. Dimmer→hub reply: **`I0154<C><VV>`** — vast `I01` prefix (device type dimmer), `54` constant (dimmer family), gevolgd door **`<C>` kanaalcijfer + `<VV>` waarde-code**. **Correctie 2026-06-03 (live test Bureau ch1):** de 3 cijfers na `I0154` zijn `<kanaal><waarde-code>`, niet één waarde-code — dat leek enkel te kloppen voor kanaal 0 (`030/099/000`). Kanaal 1: `I0154130`=30%, `I0154199`=100%, `I0154100`=uit; `I0154999`=idle/poll (geen setpoint). Waarde-code `00`=uit, `10..98`=%, `99`=100%. Decode van `130` als 130% was een bug (gefixt in `gateway/payloads/dimmer.py`; live geverifieerd via WebSocket — [2026-06-03_dimmer_decode_fix_websocket_test.md](evidence/2026-06-03_dimmer_decode_fix_websocket_test.md)). Soft-AAN (default 15%) en soft-UIT (default 70%) uit §12.3 kalibreren de fysieke output t.o.v. het setpoint. Reply timing: 24.7ms na hub→dimmer frame (< 500ms). Evidence: `/Users/markminnoye/Downloads/01:01.pcapng`.
 - **Scan Modules wizard (2026-05-17):** WebConfig **POST** `/general/Wizards/Modules/ScanForModules` (sessie vereist, lege request body) retourneert `application/json` met array van modules: `IP`, `Mac` (dec. bytes), `IsNew`, `Type`, `Version`. Bevestigde response: relay `10.10.1.30` (fw 5.1), dimmer `10.10.1.40` (fw 5.4), input `10.10.1.50` (fw 5.2.4). Alle drie in scan; dimmer ontbrak in eerdere capture. Stap 2: `GET Step2?ip=…&type=Relais|Dim` + **POST** `…/ImportRelayInfo|ImportDimInfo`. Veld-bus capture (`captures/2026-05-17T210800Z_scan_modules/`): **UDP/10001** probe `01000000` van `10.10.1.1` naar `255.255.255.255` + `233.89.188.1` (~10,5 s); geen 10001-replies op mirror. Overzicht + roadmap: [2026-05-17_RE_WIZARDS_PLAN.md](reference/2026-05-17_RE_WIZARDS_PLAN.md).
 - **IPBox WebConfig relay provisioning (2026-05-18):** HAR `01-36.har` + pcap `01:36.pcapng`. `POST /general/Hardware/Relais/ImportRelayInfo` body: `ip=10.10.1.30` — retourneert JSON-array van 24 kanalen (`id/descr/gr/status/pulse/lock/lockTimer`). `POST /general/Hardware/Relais/UpdateRelay` body: `ip=10.10.1.30&outputs=[{ID,CH,Description,Group,Pulse,Lock,LockTimer},…]&updateModule=1` — 24 kanalen, `ID` = REST comp/item ID (547–570). **Geen directe HTTP naar relaymodule** vanuit browser; IPBox proxyt naar veldbus UDP/1001. HTML-index bevat modulelijst inline. Bevestigt dat WebConfig-GUI-laag (`/general/Hardware/Relais/…`) en REST-API-laag (`/api/v1/…`) **twee aparte lagen** zijn. Documentatie: IPBUILDING_KNOWLEDGE.md §5.6. Evidence: `01-36.har` entries 5797 + 6136.
 - **Step3 kanaalnaam-save (2026-05-17):** "Bewaar"-knop in Step3 (relay `10.10.1.30`) triggert **24 parallelle HTTP GETs** naar `10.10.1.30/api.html?method=saveOutput` — één per kanaal. Elk request bevat `ds` (display naam `Keuken LED [30.1.1]`), `gr` (groep), `pulse`, `lock` (8-char hex lock-bits), `lockTimer` (minuten), `ch` (index). **Geen** POST naar IPBox; geen UDP-burst. Bevestigd in pcap `captures/RE_WIZARDS_2026-05-17T214000Z_step3_save/21:40.pcapng` (1245 pakketten, 37s). HAR `21-40.har` had preserve-log uit → geen POSTs zichtbaar.
@@ -44,6 +44,7 @@ Compacte source of truth voor actuele reverse-engineeringstatus; detailbewijs bl
 - **Sprint Input GESLAAGD (2026-05-17, offline):** hub poll `I0000`; idle reply `I\x02R…E` 14-byte constant in POV-A. Evidence: [2026-05-17_ip1100_input_payload_decode.md](evidence/2026-05-17_ip1100_input_payload_decode.md), `scripts/input_payload_parser.py`.
 - **Sprint 5 GESLAAGD (2026-05-22, fysieke input):** mirror **7←13** (`10:25.pcapng`): **12×** `B-…E` button events (press/release ~200 ms); poll `I0000` ~2 s; idle 14-byte reply unchanged. Button `id` op wire = substring van `getButtons` hardware-`id`. **Pad:** input→hub `10.10.1.1` alleen; hub→relais/dimmer op aparte mirror (**7←14** in `10:22.pcapng`). **Logische flow** (IPBox project → actie) **niet** gedecodeerd — later; module `func1`/`func2` + WebConfig wizards als referentie. Centrale-IP: niet in module HTTP-export; conventie **`10.10.1.1`**. Evidence: [2026-05-22_sprint5_input_physical_completion.md](evidence/2026-05-22_sprint5_input_physical_completion.md), [2026-05-22_sprint5_input_10-25_session_notes.md](evidence/2026-05-22_sprint5_input_10-25_session_notes.md), `gateway/payloads/input.py`.
 - **Gateway Fase 2 (2026-06-01, code):** `gateway/udp_bus.py` poll-loop, `device_registry.py`, `rest_shim.py` (IPBox `:30200` transitie, geen product-API), `main.py` entrypoint; `rest_api.py` = alias. Open: `devices.json` in config, veldtest als hub `10.10.1.1`, `gateway_api.py`, add-on + companion. Architectuur: [2026-05-18-gateway-architecture-design.md](../docs/superpowers/specs/2026-05-18-gateway-architecture-design.md). Evidence: [README_gateway.md](../README_gateway.md), [field bus matrix](2026-05-17_ipbuilding_fieldbus_capability_matrix.md).
+- **Relay poll `I<ch>` (2026-06-02, lab):** `I0000`/`I0010`/`I0016`/`I0023` → altijd `I000000000` (10-byte echo, geen `I<CH><state>`). `P0000` → `P000000000` (pulse keep-alive). IPBox idle Run C: hub→relay alleen `pJP0000`, nooit `I<ch>`. **Geen** wijziging `_MODULE_POLL["relay"]`. Status `I<CH><state>` alleen na `S`/`C` (Sprint 1). Evidence: [2026-06-02_relay_poll_i_ch_test.md](evidence/2026-06-02_relay_poll_i_ch_test.md), `scripts/test_relay_poll.py`.
 
 ## Field bus readiness (northbound-agnostisch)
 
@@ -58,7 +59,7 @@ Zie [2026-05-17_ipbuilding_fieldbus_capability_matrix.md](2026-05-17_ipbuilding_
 - **Discovery:** UDP/10001 en WS-Discovery (UDP/698) both get no visible module replies on mirror 7←15 — replies mogelijk via intern IPBox-pad.
 - **Step3 save:** exact POST-body naar `api.html?method=saveOutput` (nog) niet bevestigd — pcap toont enkel de URL-query-string per kanaal; HTTP POST-variant (als die bestaat) is onbekend.
 - **Scan Modules:** exact JSON response van `POST ScanForModules` — HAR miste de body ondanks `Content-Length: 190`; response semantiek (module lijst met IP/MAC/type/version/isNew) is afgeleid maar niet hard bevestigd.
-- **Input logical flow:** exacte mapping knop-ID → actielijst op centrale (meerdere uitgangen/scenes mogelijk; architectuurdoel gedocumenteerd incl. mermaid slave/autonoom). Wire + intentie: [2026-05-22_sprint5_input_physical_completion.md](evidence/2026-05-22_sprint5_input_physical_completion.md) § Architectuurdoel; IPBox-projectregels nog open §Logical flow.
+- **Input logical flow:** exacte mapping knop-ID → actielijst op centrale (IPBox-project; architectuurdoel: logica in HA). Wire: [2026-05-22_sprint5_input_physical_completion.md](evidence/2026-05-22_sprint5_input_physical_completion.md).
 - **Input centrale IP:** geen configureerbaar hub-IP in `getSysSet`/`backupConfig`; hardcoded `10.10.1.1` vs learned-from-poll niet wire-bewezen.
 - **Autonomous mode:** input→relay/dimmer direct pad niet gecaptured (centrale uit, LED knipperend).
 
@@ -68,11 +69,11 @@ Zie [2026-05-17_ipbuilding_fieldbus_capability_matrix.md](2026-05-17_ipbuilding_
 - Zonder expliciete direction-check ontstaat regressierisico naar fout-negatieve "geen reply"-conclusies. Evidence: `resources_and_docs/evidence/2026-05-04_relay_payload_correlation.md`.
 - Dual-homed padkeuze (**thuis-IP van de IPBox voor REST** vs **`10.10.1.1` op het IPBuilding-VLAN voor UDP/1001**) kan correlatie vertroebelen als de runcontext niet expliciet vastligt. Evidence: `resources_and_docs/IPBUILDING_KNOWLEDGE.md` §3.0.
 
-## Next 3 actions (post–Fase 1)
+## Next 3 actions (post–Fase 2)
 
-1. **Gateway Fase 2 afronden** — `devices.json`/config, veldtest hub `10.10.1.1`; poll + registry + REST-shim al in code — zie [README_gateway.md](../README_gateway.md), `AGENTS.md`, knowledge §10.5.
-2. **Companion / HA** — entiteiten + automations voor knop→actie (niet IPBox-project-DB in add-on).
-3. Optioneel RE (uitgesteld): IPBox sferen `…/Configuration/Moods/Index` — §10.6 knowledge; waarschijnlijk overslaan. Scan Modules / UDP 10001 antwoorden blijven laag-prioriteit.
+1. **`gateway_api.py`** — WebSocket `/ws` + REST `/api/v1/`; zie [ARCHITECTURE.md](../ARCHITECTURE.md).
+2. **Companion / HA add-on** — `ipbuilding-open` entiteiten + automations (knop→actie niet in gateway).
+3. Optioneel RE (uitgesteld): IPBox sferen, Scan Modules UDP 10001 antwoorden — laag-prioriteit.
 
 ## Evidence pointers
 
@@ -112,6 +113,8 @@ Zie [2026-05-17_ipbuilding_fieldbus_capability_matrix.md](2026-05-17_ipbuilding_
 - `scripts/input_payload_parser.py`
 - `resources_and_docs/evidence/2026-05-22_sprint5_input_physical_completion.md`
 - `resources_and_docs/evidence/2026-05-22_sprint5_input_10-25_session_notes.md`
+- `resources_and_docs/evidence/2026-06-02_relay_poll_i_ch_test.md` (relay `I<ch>` poll negative; `P0000` baseline confirmed)
+- `scripts/test_relay_poll.py`
 - `resources_and_docs/reference/2026-06-01_legacy_webservice_protocol_analysis.md` (legacy IPBox webservice `actions.php`; TCP-mnemonics `TGL/CLR/DIM/SET/INF/TAF/TAN` ↔ veldbus `C/T/I/S`; bevestigt `ipcom` als vertaallaag, sferen=centrale-logica, `<pfx>J`/`END` = transport-artefact; bron in `reference/legacy-ipbox-webservice/actions.php`)
 - `/Users/markminnoye/Downloads/10:25.pcapng` (Sprint 5 input; mirror 7←13)
 - `/Users/markminnoye/Downloads/10:22.pcapng` (Sprint 5 relais leg; mirror 7←14)

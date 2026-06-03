@@ -148,8 +148,9 @@ Voorbeeld-response opgeslagen: `captures/http_snapshots/2026-05-03_IP0200PoE_10.
 
 Op mirror-bron `12` (capture op `en7`) zijn bij getimede DIM/OFF-REST-stappen herhaalbare UDP/1001 payloads gezien met vaste 8-byte ASCII-vorm:
 
-- patroon: `I0154xxx`
-- voorbeelden: `I0154100`, `I0154130`, `I0154170`, `I0154199`, `I0154999`
+- patroon: `I0154<C><VV>` — de 3 cijfers = **`<kanaal><waarde-code>`** (correctie 2026-06-03)
+- voorbeelden (kanaal 1, Bureau): `I0154130`=30%, `I0154170`=70%, `I0154199`=100%, `I0154100`=uit; `I0154999`=idle/poll
+- waarde-code `<VV>`: `00`=uit, `10..98`=%, `99`=100%; alleen kanaal 0 leek vroeger te kloppen omdat het leidende cijfer dan `0` is
 - in deze capture-POV is alleen `10.10.1.40 -> 192.168.0.185` zichtbaar; geen omgekeerde UDP/1001-stroom.
 
 Dit is bruikbaar als **observed payload shape** voor correlatie, maar nog geen volledig command-schema. Zie:

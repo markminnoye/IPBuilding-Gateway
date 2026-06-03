@@ -64,7 +64,7 @@ B-...E  (release) →  EVENT  10.10.1.50 button 2f8185190000df: release
 
 ## Open punen
 
-- **Relay status poll**: bevestig of relay reageert op `I<ch>` poll (ipv `P0000`) met `I<ch><state>` reply; als bevestigd: uitbreiden `_MODULE_POLL["relay"]`. Zie AGENTS.md.
+- **Relay status poll (GESLOTEN 2026-06-02):** `I<ch>` poll geeft geen kanaalstatus reply — relay antwoordt met `I000000000` (echo, geen `I<CH><state>`). `P0000` is de enige functionele poll voor relay. Bewijs: `scripts/test_relay_poll.py` + `evidence/2026-06-02_relay_poll_i_ch_test.md`.
 - **Bind als `10.10.1.1`**: 2026-06-02 bevestigd dat hub werkt met gateway op ander IP; optioneel nog: expliciet `GATEWAY_BIND_IP=10.10.1.1` + `ping 10.10.1.1` wanneer IPBox uit is.
 - **Dimmer channel-awareness**: dimmer store state onder `ch-1` (laatst gezien kanaal); verbetering van kanaaltracking is toekomstig werk.
 - **Discovery M4**: zie plan [fase_2_gateway_afronden_204fe6a1.plan.md](../.cursor/plans/fase_2_gateway_afronden_204fe6a1.plan.md)

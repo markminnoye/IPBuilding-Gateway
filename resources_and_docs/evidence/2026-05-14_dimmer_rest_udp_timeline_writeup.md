@@ -8,7 +8,7 @@ Bron-pcaps en manifests staan typisch onder `captures/` (lokaal, vaak `.gitignor
 - **Controller:** `10.10.1.40` (dimmer / Bureau-kanaal in eerdere runs).
 - **Mirror:** destination **7** ← source **12** (dimmer switchpoort — niet **11**).
 - **Zichtbare UDP-richting:** in de gedocumenteerde POVs vooral **`10.10.1.40` → `192.168.0.185`** (home-been IPBox); terug **`192.168.0.185` → `10.10.1.40`** niet gezien op mirror 12 / `en7` exports.
-- **Payload-familie:** 8 ASCII bytes `I0154xxx` (kanaal `1` impliciet in prefix `I0154`).
+- **Payload-familie:** 8 ASCII bytes `I0154<C><VV>` — de 3 cijfers na `I0154` zijn **`<kanaal><waarde-code>`**, niet één waarde. Deze runs gebruikten kanaal `1` (Bureau), dus de leidende `1` in `130/170/199/100` is het **kanaalcijfer**, niet impliciet in het `I0154`-prefix. Waarde-code: `00`=uit, `10..98`=%, `99`=100%; `999`=idle/poll. Gecorrigeerd 2026-06-03, zie [2026-05-17_dimmer_I0154xxx_full_decode.md](2026-05-17_dimmer_I0154xxx_full_decode.md).
 
 ## Run A — staged subagent (`dimmer_udp.pcapng`)
 

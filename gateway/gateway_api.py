@@ -1,7 +1,8 @@
 """Northbound product API: WebSocket /ws + REST /api/v1/
 
 Replaces the IPBox REST shim on :30200 as the canonical product API.
-Uses entity_id format (e.g. "10.10.1.30:relay:0") instead of ipbox_id.
+Uses entity_id format (e.g. "10.10.1.30:0") — type is resolved server-side
+from installation config, never trusted from the client.
 """
 
 from __future__ import annotations
@@ -28,26 +29,37 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _parse_entity_id(entity_id: str) -> tuple[str, DeviceType, int] | None:
-    """Parse entity_id into (module_ip, device_type, channel)."""
-    parts = entity_id.split(":")
-    if len(parts) != 3:
+def _resolve_entity_id(
+    entity_id: str, installation: InstallationConfig | None
+) -> tuple[str, DeviceType, int] | None:
+    """Resolve entity_id into (module_ip, device_type, channel).
+
+    The device type is looked up from the installation config — never derived
+    from the entity_id string itself.  This prevents clients from spoofing
+    the device type (e.g. sending "10.10.1.30:dimmer:0" to a relay module).
+
+    Returns None if the entity_id is malformed or the module is unknown.
+    """
+    if installation is None:
         return None
-    module_ip, dtype_str, ch_str = parts
+    parts = entity_id.split(":")
+    if len(parts) != 2:
+        return None
+    module_ip, ch_str = parts
     try:
-        dtype = DeviceType(dtype_str)
         channel = int(ch_str)
-        return (module_ip, dtype, channel)
     except ValueError:
         return None
-
-
-def _entity_id_to_key(entity_id: str) -> DeviceKey | None:
-    parsed = _parse_entity_id(entity_id)
-    if parsed is None:
+    mc = installation.module_by_ip(module_ip)
+    if mc is None:
         return None
-    module_ip, dtype, channel = parsed
-    return DeviceKey(dtype, module_ip, channel)
+    return (module_ip, mc.type, channel)
+
+
+def _build_entity_id(request: web.Request) -> str:
+    """Reconstruct canonical entity_id from REST path segments."""
+    mi = request.match_info
+    return f"{mi['module_ip']}:{mi['channel']}"
 
 
 # ---------------------------------------------------------------------------
@@ -91,8 +103,13 @@ class GatewayAPI:
         self._app = web.Application()
         self._app.router.add_get("/ws", self._ws_handler)
         self._app.router.add_get("/api/v1/devices", self._get_devices)
+        self._app.router.add_get(
+            "/api/v1/devices/{module_ip}/{channel}",
+            self._get_device,
+        )
         self._app.router.add_post(
-            "/api/v1/devices/{entity_id}/command", self._post_command
+            "/api/v1/devices/{module_ip}/{channel}/command",
+            self._post_command,
         )
         self._app.router.add_post(
             "/api/v1/provision/autonomy", self._post_autonomy
@@ -119,16 +136,10 @@ class GatewayAPI:
             self._runner = None
             self._site = None
         if self._state_cb is not None:
-            self._registry._state_callbacks[:] = [
-                cb for cb in self._registry._state_callbacks
-                if cb is not self._state_cb
-            ]
+            self._registry.unregister_state_changed(self._state_cb)
             self._state_cb = None
         if self._button_cb is not None:
-            self._registry._event_callbacks[:] = [
-                cb for cb in self._registry._event_callbacks
-                if cb is not self._button_cb
-            ]
+            self._registry.unregister_button_event(self._button_cb)
             self._button_cb = None
         log.info("GatewayAPI stopped")
 
@@ -143,7 +154,7 @@ class GatewayAPI:
         Bidirectional: broadcast state_changed/button_event → client;
         receive command → dispatch.
         """
-        ws = web.WebSocketResponse()
+        ws = web.WebSocketResponse(heartbeat=30)
         await ws.prepare(request)
 
         async with self._ws_lock:
@@ -204,9 +215,18 @@ class GatewayAPI:
         device_list = self._build_device_list()
         return web.json_response({"devices": device_list})
 
+    async def _get_device(self, request: web.Request) -> web.Response:
+        """GET /api/v1/devices/{module_ip}/{channel} — return single device."""
+        entity_id = _build_entity_id(request)
+        devices = self._build_device_list()
+        for d in devices:
+            if d["id"] == entity_id:
+                return web.json_response(d)
+        return web.json_response({"error": "not found"}, status=404)
+
     async def _post_command(self, request: web.Request) -> web.Response:
-        """POST /api/v1/devices/{entity_id}/command — send a command."""
-        entity_id = request.match_info["entity_id"]
+        """POST /api/v1/devices/{module_ip}/{channel}/command — send a command."""
+        entity_id = _build_entity_id(request)
         try:
             body = await request.json()
         except Exception:
@@ -242,10 +262,10 @@ class GatewayAPI:
     async def _execute_command(
         self, entity_id: str, action: str, value: Any
     ) -> tuple[bool, str | None]:
-        """Parse entity_id, encode and send the UDP command, wait for reply."""
-        parsed = _parse_entity_id(entity_id)
+        """Resolve entity_id, encode and send the UDP command, wait for reply."""
+        parsed = _resolve_entity_id(entity_id, self._cfg.installation)
         if parsed is None:
-            return False, f"invalid entity_id: {entity_id}"
+            return False, f"unknown or invalid entity_id: {entity_id}"
         module_ip, dtype, channel = parsed
 
         # Encode the command
@@ -256,6 +276,8 @@ class GatewayAPI:
                 cmd = RelayCommand(channel=channel, action=RelayAction.OFF)
             elif action == "PULSE":
                 cmd = RelayCommand(channel=channel, action=RelayAction.PULSE)
+            elif action == "TOGGLE":
+                cmd = RelayCommand(channel=channel, action=RelayAction.TOGGLE)
             else:
                 return False, f"unsupported relay action: {action}"
             payload = encode_relay_command(cmd)
@@ -274,6 +296,10 @@ class GatewayAPI:
         # Send and wait for reply
         try:
             await self._bus.send_command(module_ip, payload)
+            # For dimmer commands, track the channel so that the next status
+            # reply (which carries no channel) is stored under the correct key.
+            if dtype == DeviceType.DIMMER and action == "DIM":
+                self._registry.track_dimmer_channel(module_ip, channel)
             reply = await self._bus.correlate_reply(
                 module_ip=module_ip,
                 after_ts=self._bus.last_send_ts,
@@ -340,7 +366,7 @@ class GatewayAPI:
                 if not ch.active:
                     continue
 
-                entity_id = f"{mc.ip}:{mc.type.value}:{ch.ch}"
+                entity_id = f"{mc.ip}:{ch.ch}"
                 device: dict[str, Any] = {
                     "id": entity_id,
                     "name": ch.name or f"Ch {ch.ch}",
@@ -393,7 +419,7 @@ class GatewayAPI:
         if ch_config is None:
             return None
 
-        entity_id = f"{key.module_ip}:{key.device_type.value}:{key.channel}"
+        entity_id = f"{key.module_ip}:{key.channel}"
         max_watt = ch_config.max_watt
 
         if key.device_type == DeviceType.RELAY:

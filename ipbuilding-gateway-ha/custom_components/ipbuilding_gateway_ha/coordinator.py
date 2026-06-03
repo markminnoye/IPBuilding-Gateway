@@ -42,13 +42,15 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         hass: HomeAssistant,
         entry: ConfigEntry,
     ) -> None:
-        self._host = str(entry.data.get(CONF_API_HOST, entry.data.get(CONF_HOST, "")))
-        self._port = int(entry.data.get(CONF_API_PORT, entry.data.get(CONF_PORT, DEFAULT_API_PORT)))
+        self._host = str(entry.data.get(CONF_API_HOST, ""))
+        self._port = int(entry.data.get(CONF_API_PORT, DEFAULT_API_PORT))
         self._ws_url = f"ws://{self._host}:{self._port}/ws"
         self._ws: aiohttp.ClientWebSocketResponse | None = None
         self._ws_session: aiohttp.ClientSession | None = None
         self._ws_connected = asyncio.Event()
         self._receive_task: asyncio.Task[None] | None = None
+        self._reconnect_task: asyncio.Task[None] | None = None
+        self._stop_event = asyncio.Event()
         self._reconnect_delay = RECONNECT_BASE_DELAY
         # Per-entity listeners: entity_id -> [callback(state)]
         self._listeners: dict[str, list[Callable[[dict], None]]] = {}
@@ -108,7 +110,7 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Close the WebSocket and session."""
         if self._ws is not None:
             try:
-                self._ws.close()
+                await self._ws.close()
             except Exception:
                 pass
             self._ws = None
@@ -122,28 +124,38 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def start(self) -> None:
         """Start the WebSocket receive loop with reconnect logic."""
+        self._stop_event.clear()
         if not await self._async_connect():
             # Schedule reconnect
-            asyncio.create_task(self._reconnect_loop())
+            self._reconnect_task = asyncio.create_task(self._reconnect_loop())
             return
 
         self._receive_task = asyncio.create_task(self._receive_loop())
 
     async def stop(self) -> None:
         """Stop the receive loop and close the connection."""
+        self._stop_event.set()
         if self._receive_task is not None:
             self._receive_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._receive_task
             self._receive_task = None
+        if self._reconnect_task is not None:
+            self._reconnect_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._reconnect_task
+            self._reconnect_task = None
         await self._close_ws_session()
 
     async def _reconnect_loop(self) -> None:
         """Attempt to reconnect with exponential backoff."""
-        while True:
+        while not self._stop_event.is_set():
             await asyncio.sleep(self._reconnect_delay)
+            if self._stop_event.is_set():
+                break
             if await self._async_connect():
                 self._receive_task = asyncio.create_task(self._receive_loop())
+                self._reconnect_task = None
                 return
             self._reconnect_delay = min(
                 self._reconnect_delay * RECONNECT_BACKOFF_MULT,
@@ -173,7 +185,7 @@ class IPBuildingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         await self._close_ws_session()
         # Schedule reconnect
-        asyncio.create_task(self._reconnect_loop())
+        self._reconnect_task = asyncio.create_task(self._reconnect_loop())
 
     # -------------------------------------------------------------------------
     # Message handling

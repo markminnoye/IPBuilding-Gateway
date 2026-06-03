@@ -1,0 +1,465 @@
+{
+  "info": {
+    "_postman_id": "ipbuilding-gateway-v1",
+    "name": "IPBuilding Gateway",
+    "description": "Northbound REST API for the IPBuilding open field-bus gateway.\n\n## Base URL\n{{base_url}}\n\n## Entity ID format\nAll device identifiers use the format `{module_ip}:{channel}` (e.g. `10.10.1.30:0`).  The device type (relay/dimmer) is resolved server-side from `devices.json` and is never part of the client-supplied ID — this prevents type-spoofing.\n\n## Device types\n- **Relay** — supports actions: `ON`, `OFF`, `PULSE`\n- **Dimmer** — supports action: `DIM` with integer `value` 0–100\n\n## Responses\n- `GET /api/v1/devices` returns `{\"devices\": [...]}`\n- Command POST returns `{\"ok\": true}` on success, `{\"ok\": false, \"error\": \"...\"}` on failure\n- Unknown entity_id → HTTP 404\n- Missing action → HTTP 400\n- Unsupported action → HTTP 422\n\n## WebSocket\nWebSocket endpoint at `/ws` for real-time `state_changed` and `button_event` messages — see `docs/api/websocket.md`.  WebSocket requests are not included in this collection (Postman/PAW export limitation).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Devices",
+      "item": [
+        {
+          "name": "List devices",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "devices"]
+            },
+            "description": "Return the full device list with current state.\n\n**Response 200:**\n```json\n{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30:0\",\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0,\n      \"firmware\": \"5.1\"\n    },\n    {\n      \"id\": \"10.10.1.40:0\",\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150,\n      \"firmware\": \"5.4\"\n    }\n  ]\n}\n```"
+          },
+          "response": [
+            {
+              "id": "list-devices-200",
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/devices",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "devices"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30:0\",\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0,\n      \"firmware\": \"5.1\"\n    },\n    {\n      \"id\": \"10.10.1.40:0\",\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150,\n      \"firmware\": \"5.4\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get device",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}"]
+            },
+            "description": "Return a single device by `{module_ip}:{channel}`.\n\n**Response 200** — device JSON (same shape as in `List devices`).\n\n**Response 404** — `{\"error\": \"not found\"}`"
+          },
+          "response": [
+            {
+              "id": "get-device-200",
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"10.10.1.30:0\",\n  \"name\": \"Keuken LED\",\n  \"room\": \"Keuken\",\n  \"semantic_type\": \"light\",\n  \"active\": true,\n  \"max_watt\": 60,\n  \"state\": \"off\",\n  \"current_watt\": 0,\n  \"firmware\": \"5.1\"\n}"
+            },
+            {
+              "id": "get-device-404",
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"not found\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Commands",
+      "item": [
+        {
+          "name": "Relay ON",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+            },
+            "description": "Switch a relay channel on.\n\n**Request body:**\n```json\n{\"action\": \"ON\"}\n```\n\n**Response 200:** `{\"ok\": true}`\n\n**Response 422** — unsupported action:\n```json\n{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}\n```"
+          },
+          "response": [
+            {
+              "id": "relay-on-200",
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\"ok\": true}"
+            },
+            {
+              "id": "relay-on-422",
+              "name": "422 Unprocessable Entity",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}"
+            }
+          ]
+        },
+        {
+          "name": "Relay OFF",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+            },
+            "description": "Switch a relay channel off.\n\n**Request body:**\n```json\n{\"action\": \"OFF\"}\n```"
+          },
+          "response": [
+            {
+              "id": "relay-off-200",
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\"ok\": true}"
+            }
+          ]
+        },
+        {
+          "name": "Relay PULSE",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+            },
+            "description": "Send a pulse (brief on→off) on a relay channel.\n\n**Request body:**\n```json\n{\"action\": \"PULSE\"}\n```"
+          },
+          "response": [
+            {
+              "id": "relay-pulse-200",
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\"ok\": true}"
+            }
+          ]
+        },
+        {
+          "name": "Relay TOGGLE",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+            },
+            "description": "Toggle relay state: ON→OFF or OFF→ON based on current state.\\n\\n**Request body:**\\n```json\\n{\"action\": \"TOGGLE\"}\\n```"
+          },
+          "response": [
+            {
+              "id": "relay-toggle-200",
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\"ok\": true}"
+            }
+          ]
+        },
+        {
+          "name": "Dimmer DIM",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+            },
+            "description": "Set dimmer level (0–100). 0 is off.\n\n**Request body:**\n```json\n{\"action\": \"DIM\", \"value\": 75}\n```\n\n**Response 200:** `{\"ok\": true}`\n\n**Response 422** — wrong device type or unsupported action."
+          },
+          "response": [
+            {
+              "id": "dimmer-dim-200",
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\"ok\": true}"
+            },
+            {
+              "id": "dimmer-dim-422",
+              "name": "422 Unprocessable Entity",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\"ok\": false, \"error\": \"unsupported device type: input\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Provisioning",
+      "item": [
+        {
+          "name": "Provision autonomy",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/provision/autonomy",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "provision", "autonomy"]
+            },
+            "description": "Trigger EEPROM sync to IP1100PoE (saveAutonomy).  Stub — not yet implemented (Fase 8).\n\n**Request body:** `{}`\n\n**Response 501:** `{\"ok\": false, \"error\": \"not yet implemented\"}`"
+          },
+          "response": [
+            {
+              "id": "autonomy-501",
+              "name": "501 Not Implemented",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/provision/autonomy",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v1", "provision", "autonomy"]
+                }
+              },
+              "status": "Not Implemented",
+              "code": 501,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\"ok\": false, \"error\": \"not yet implemented\"}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

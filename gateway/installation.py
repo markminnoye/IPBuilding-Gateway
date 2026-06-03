@@ -9,9 +9,11 @@ ID model
                  (e.g. 547).  Used exclusively by rest_shim.py during the
                  HA-IPBuilding transition.  Will disappear when the shim is
                  retired.
-- ``entity_id``  Deterministic string derived from (module_ip, device_type,
-                 channel): ``"10.10.1.30:relay:0"``.  Never stored; always
-                 computed via :func:`make_entity_id`.  Used by the product
+- ``entity_id``  Deterministic string derived from (module_ip, channel):
+                 ``"10.10.1.30:0"``.  Never stored; always computed via
+                 :func:`make_entity_id`.  The device type is NOT part of the
+                 external ID — it is always resolved server-side via
+                 :meth:`InstallationConfig.module_by_ip`.  Used by the product
                  API (gateway_api.py) and the companion.
 """
 
@@ -29,21 +31,20 @@ class InstallationError(Exception):
     """Raised when devices.json is missing, invalid, or inconsistent."""
 
 
-def make_entity_id(
-    module_ip: str,
-    device_type: str | DeviceType,
-    channel: int,
-) -> str:
+def make_entity_id(module_ip: str, channel: int) -> str:
     """Derive a stable, fieldbus-native entity ID.
 
-    Format: ``'{module_ip}:{device_type}:{channel}'``
-    Example: ``'10.10.1.30:relay:0'``
+    Format: ``'{module_ip}:{channel}'``
+    Example: ``'10.10.1.30:0'``
+
+    The device type is intentionally omitted — it is a module-level attribute
+    resolved server-side via :meth:`InstallationConfig.module_by_ip`, never
+    supplied by the client.  This prevents type-spoofing.
 
     This value is **never stored** — it is always computed from the fieldbus
     address.  It is the primary identifier for the open gateway product API.
     """
-    dt = device_type.value if isinstance(device_type, DeviceType) else device_type
-    return f"{module_ip}:{dt}:{channel}"
+    return f"{module_ip}:{channel}"
 
 
 @dataclass
@@ -197,14 +198,9 @@ class InstallationConfig:
         inst._modules_by_ip = modules_by_ip
         return inst
 
-    def make_entity_id(
-        self,
-        module_ip: str,
-        device_type: str | DeviceType,
-        channel: int,
-    ) -> str:
+    def make_entity_id(self, module_ip: str, channel: int) -> str:
         """Delegate to module-level :func:`make_entity_id`."""
-        return make_entity_id(module_ip, device_type, channel)
+        return make_entity_id(module_ip, channel)
 
     def ipbox_id_to_channel(
         self, ipbox_id: int

@@ -48,7 +48,7 @@ async def test_poll_reply_updates_relay_state():
     assert state is not None
     assert state.state == "on"
     assert len(changes) >= 1
-    assert changes[0][2] == "on"
+    assert changes[0][2].state == "on"
 
 
 @pytest.mark.asyncio
@@ -63,7 +63,7 @@ async def test_poll_reply_updates_dimmer_state():
     await asyncio.sleep(0.12)
     await bus.stop()
 
-    key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", -1)
+    key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 0)
     state = reg.get_dimmer_state(key)
     assert state is not None
     assert state.level_percent == 30

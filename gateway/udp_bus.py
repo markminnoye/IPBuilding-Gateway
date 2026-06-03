@@ -15,7 +15,8 @@ log = logging.getLogger(__name__)
 
 ReplyCallback = Callable[["UDPPacket"], None]
 
-# Poll payloads per module type (confirmed in RE Sprint 1-5)
+# Poll payloads per module type (RE Sprint 1-5 + relay I<ch> poll test 2026-06-02)
+# Relay: P0000 only — I<ch> returns I000000000 echo, not I<CH><state>; status after S/C commands
 _POLL_RELAY = b"P0000"
 _POLL_DIMMER = b"I9900"
 _POLL_INPUT = b"I0000"
@@ -48,6 +49,7 @@ class UDPBus:
         self._simulated_replies: dict[bytes, bytes] = {}
         self._listeners: list[ReplyCallback] = []
         self._poll_task: asyncio.Task[None] | None = None
+        self.last_send_ts: float = 0.0  # monotonic ts of last send_command
 
     def add_listener(self, cb: ReplyCallback) -> None:
         """Register a callback invoked for every inbound packet."""
@@ -71,10 +73,14 @@ class UDPBus:
                 local_addr=(self.config.bind_ip, 0),
             )
         self._poll_task = asyncio.create_task(self._poll_loop())
+        if self.config.installation:
+            modules_list = [f"{mc.type.value}:{mc.ip}" for mc in self.config.installation.modules]
+        else:
+            modules_list = [f"{k}:{v}" for k, v in self.config.field_modules.items()]
         log.info(
             "UDPBus started  poll_interval=%.1fs  modules=%s  simulated=%s",
             self.config.poll_interval_s,
-            list(self.config.field_modules.keys()),
+            modules_list,
             self.config.simulated_mode,
         )
 
@@ -100,14 +106,24 @@ class UDPBus:
             raise
 
     async def _poll_all_modules(self) -> None:
-        for module_type, module_ip in self.config.field_modules.items():
-            poll_payload = _MODULE_POLL.get(module_type)
-            if not poll_payload:
-                continue
-            try:
-                await self.send_command(module_ip, poll_payload)
-            except Exception:
-                log.warning("Poll failed for %s (%s)", module_type, module_ip, exc_info=True)
+        if self.config.installation:
+            for mc in self.config.installation.modules:
+                poll_payload = _MODULE_POLL.get(mc.type.value)
+                if not poll_payload:
+                    continue
+                try:
+                    await self.send_command(mc.ip, poll_payload)
+                except Exception:
+                    log.warning("Poll failed for %s (%s)", mc.type.value, mc.ip, exc_info=True)
+        else:
+            for module_type, module_ip in self.config.field_modules.items():
+                poll_payload = _MODULE_POLL.get(module_type)
+                if not poll_payload:
+                    continue
+                try:
+                    await self.send_command(module_ip, poll_payload)
+                except Exception:
+                    log.warning("Poll failed for %s (%s)", module_type, module_ip, exc_info=True)
 
     def register_simulated_reply(self, command: bytes, reply: bytes) -> None:
         self._simulated_replies[command] = reply
@@ -125,12 +141,14 @@ class UDPBus:
                     dst_port=0,
                     monotonic_ts=time.monotonic(),
                 )
+                self.last_send_ts = time.monotonic()
                 await self._queue.put(pkt)
                 self._notify_listeners(pkt)
             return
         if not self._transport:
             raise RuntimeError("UDPBus not started")
         self._transport.sendto(payload, (module_ip, dst_port))
+        self.last_send_ts = time.monotonic()
 
     async def listen_for_replies(self) -> AsyncIterator[UDPPacket]:
         while True:

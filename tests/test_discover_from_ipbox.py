@@ -112,5 +112,6 @@ async def test_build_validates_via_installation_config(tmp_path: Path):
     assert cfg.ipbox_id_to_channel(547) is not None
     assert cfg.ipbox_id_to_channel(547)[0].value == "relay"
     assert cfg.ipbox_id_to_channel(571)[0].value == "dimmer"
-    # entity_id is altijd afleidbaar, niet opgeslagen
-    assert cfg.make_entity_id("10.10.1.30", "relay", 0) == "10.10.1.30:relay:0"
+    # entity_id is altijd afleidbaar, niet opgeslagen; type zit NIET in het ID
+    # (server-side opgezocht via module_by_ip — anti-spoofing)
+    assert cfg.make_entity_id("10.10.1.30", 0) == "10.10.1.30:0"

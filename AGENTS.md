@@ -21,11 +21,12 @@
 | Done | Open |
 |------|------|
 | 5-sprint RE (relay/dimmer/input wire, mirror POV) | Optionele RE: input logical flow IPBox-project (referentie) |
-| Sprint 5 fysieke input (`B-…E`, mirror 7←13) | **Fase 3+** — `gateway_api.py`, add-on, `ipbuilding-open` companion |
+| Sprint 5 fysieke input (`B-…E`, mirror 7←13) | **Fase 3** — `gateway_api.py` ✅ + **Fase 5** — `ipbuilding-gateway-ha` ✅ |
 | Fase 2 voltooid (2026-06-01): `devices.json`, poll-loop, registry, REST-shim, veldtest alle checks PASS | Dun provisioning (entiteiten in HA, niet in gateway) |
 | `gateway/payloads/` + tests | Productie add-on + companion WebSocket |
-| Architectuur northbound (2026-05-18) | **Open: relay status poll** — bevestig of relay reageert op `I<ch>` poll en `I<ch><state>` reply geeft; voeg toe aan `_MODULE_POLL` als bevestigd |
-| Veldtest relay/dimmer/input via open hub — 2026-06-01 + **zonder mirror** 2026-06-02 (evidence: `evidence/2026-06-01_gateway_field_test.md`) | **Bind `10.10.1.1`** — optioneel: gateway expliciet op hub-IP wanneer IPBox uit |
+| Architectuur northbound (2026-05-18) | **Bind `10.10.1.1`** — optioneel: gateway expliciet op hub-IP wanneer IPBox uit |
+| **Relay status poll RE (2026-06-02):** Scenario B — `I<ch>` geen kanaalstatus; `P0000` blijft poll; status alleen na `S`/`C`. Bewijs: `scripts/test_relay_poll.py`, `evidence/2026-06-02_relay_poll_i_ch_test.md` | |
+| Veldtest relay/dimmer/input via open hub — 2026-06-01 + **zonder mirror** 2026-06-02 (evidence: `evidence/2026-06-01_gateway_field_test.md`) | |
 
 **Canonieke RE-status:** [resources_and_docs/RE_STATE.md](resources_and_docs/RE_STATE.md) — Fase 1 RE **afgesloten** 2026-05-22. PCAP-index: [CAPTURES.md](resources_and_docs/CAPTURES.md).
 
@@ -39,11 +40,11 @@
 
 ## Volgende focus (implementatie)
 
-1. **Gateway Fase 2 afronden** — zie status hieronder; alle checks PASS 2026-06-01
-2. **Bind `10.10.1.1`** (optioneel) — hub-IP op veldbus wanneer IPBox uit; zonder-mirror hub-validatie **PASS 2026-06-02** (events + REST)
-3. **Companion** — entiteiten (switch, light, button event); knop→actie via HA automations/scenes.
-4. **Relay status poll (open RE)** — bevestig of relay reageert op `I<ch>` poll (ipv `P0000`) met `I<ch><state>` reply; als bevestigd: uitbreiden `_MODULE_POLL["relay"]` + `_handle_relay`. Zie [RE_STATE.md unknowns](resources_and_docs/RE_STATE.md).
-3. Captures blijven nuttig bij regressie; standaard mirror **7←15** ([playbook](resources_and_docs/workflows/2026-05-14_relay_run_a_operational_playbook.md)).
+1. **Fase 3 — `gateway_api.py`** — WebSocket `/ws` + REST `/api/v1/` (product northbound) ✅
+2. **`ipbuilding-gateway-ha`** — entiteiten (switch, light, button, sensor); knop→actie via HA automations/scenes ✅
+3. **HA add-on** — packaging zodra companion stabiel is (Dockerfile + `config.yaml`)
+4. **Bind `10.10.1.1`** (optioneel) — gateway expliciet op hub-IP wanneer IPBox uit; zonder-mirror hub-validatie **PASS 2026-06-02**
+5. Captures bij regressie; standaard mirror **7←15** ([playbook](resources_and_docs/workflows/2026-05-14_relay_run_a_operational_playbook.md))
 
 **IPBox thuis-LAN (RE-stimulus / archief):** `192.168.0.185` (REST `:30200`, WebConfig). Veld-bus hub: `10.10.1.1`. Zie `IPBUILDING_KNOWLEDGE.md` §3.0.
 
@@ -90,14 +91,14 @@
 - **Index:** [resources_and_docs/README.md](resources_and_docs/README.md) (volledig), [docs/README.md](docs/README.md) (specs/plans)
 - **T0:** `AGENTS.md`, `docs/context-policy.md`
 - **T1:** `IPBUILDING_KNOWLEDGE.md` (sectie-gewijs)
-- **T2:** `RE_STATE.md`, `CAPTURES.md`, sprint5 completion, gateway-architectuur, fieldbus matrix, capture workflows
+- **T2:** `RE_STATE.md`, `CAPTURES.md`, sprint5 completion, gateway-architectuur, fieldbus matrix, capture workflows, [`docs/api/`](docs/api/) — northbound REST (Postman v2.1) + WS message catalog for PAW/GetAPI
 - **T3:** PDFs, volledige pcaps (`captures/` lokaal)
 - **Doc-structuur:** [REORGANIZE_BRIEF.md](resources_and_docs/REORGANIZE_BRIEF.md) — uitgevoerd 2026-05-22 (`workflows/`, `evidence/`, `reference/`, `archive/`)
 
-**Code:** `gateway/payloads/`, `gateway/udp_bus.py`, `gateway/device_registry.py`, `gateway/rest_shim.py` (+ alias `rest_api.py`), `gateway/main.py` — zie [README_gateway.md](README_gateway.md); product-API = `gateway_api.py` (nog open)
+**Code:** `gateway/payloads/`, `gateway/udp_bus.py`, `gateway/device_registry.py`, `gateway/rest_shim.py` (+ alias `rest_api.py`), `gateway/main.py`, `gateway/gateway_api.py` — zie [README_gateway.md](README_gateway.md).
 
 ---
 
 ## Einddoel
 
-**IPBuilding Gateway** HA Add-on: UDP/1001 veldbus-hub; WebSocket naar **ipbuilding-open**; optionele REST-shim `:30200` in transitie. Scenes/logica in HA, niet in de gateway. Netwerk: HA Green + VLAN trunk (architectuurdoc § Netwerkconstraint).
+**IPBuilding Gateway** HA Add-on: UDP/1001 veldbus-hub; WebSocket naar **`ipbuilding-gateway-ha`**; optionele REST-shim `:30200` in transitie. Scenes/logica in HA, niet in de gateway. Netwerk: HA Green + VLAN trunk (architectuurdoc § Netwerkconstraint).

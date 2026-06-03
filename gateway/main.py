@@ -15,6 +15,7 @@ from gateway.installation import InstallationConfig
 from gateway.types import DeviceType
 from gateway.rest_shim import RESTShim
 from gateway.udp_bus import UDPBus
+from gateway.gateway_api import GatewayAPI
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +56,9 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
     site = web.TCPSite(runner, cfg.rest_host, cfg.rest_port)
     await site.start()
 
+    api = GatewayAPI(bus, registry, cfg)
+    await api.start()
+
     install_info = ""
     if cfg.installation:
         module_summary = ", ".join(
@@ -62,9 +66,11 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         )
         install_info = f"  install={module_summary}"
     log.info(
-        "IPBuilding Gateway started  rest=%s:%d  poll=%.1fs  simulated=%s%s",
+        "IPBuilding Gateway started  rest=%s:%d  api=%s:%d  poll=%.1fs  simulated=%s%s",
         cfg.rest_host,
         cfg.rest_port,
+        cfg.api_host,
+        cfg.api_port,
         cfg.poll_interval_s,
         cfg.simulated_mode,
         install_info,
@@ -84,6 +90,7 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
     finally:
         log.info("Shutting down…")
         await runner.cleanup()
+        await api.stop()
         await bus.stop()
         log.info("Gateway stopped")
 

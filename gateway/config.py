@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 
 from gateway.installation import InstallationConfig, InstallationError
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -14,6 +17,8 @@ class GatewayConfig:
     hub_port: int = 1001
     rest_host: str = "0.0.0.0"
     rest_port: int = 30200
+    api_host: str = "0.0.0.0"
+    api_port: int = 8080
     bind_ip: str = "0.0.0.0"
     reply_timeout_ms: int = 500
     poll_interval_s: float = 2.0
@@ -34,8 +39,8 @@ class GatewayConfig:
         devices_file = os.getenv("GATEWAY_DEVICES_FILE", "./devices.json")
         try:
             installation = InstallationConfig.load(devices_file)
-        except InstallationError:
-            pass  # Fall back to env defaults
+        except InstallationError as exc:
+            log.warning("Failed to load devices.json (%s) - falling back to env defaults: %s", devices_file, exc)
 
         if installation is None:
             modules = {
@@ -51,6 +56,8 @@ class GatewayConfig:
             hub_port=int(os.getenv("GATEWAY_HUB_PORT", "1001")),
             rest_host=os.getenv("GATEWAY_REST_HOST", "0.0.0.0"),
             rest_port=int(os.getenv("GATEWAY_REST_PORT", "30200")),
+            api_host=os.getenv("GATEWAY_API_HOST", "0.0.0.0"),
+            api_port=int(os.getenv("GATEWAY_API_PORT", "8080")),
             bind_ip=os.getenv("GATEWAY_BIND_IP", "0.0.0.0"),
             reply_timeout_ms=int(os.getenv("GATEWAY_REPLY_TIMEOUT_MS", "500")),
             poll_interval_s=float(os.getenv("GATEWAY_POLL_INTERVAL", "2.0")),

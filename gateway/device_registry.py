@@ -48,6 +48,7 @@ class DeviceRegistry:
 
     _relay_states: dict[DeviceKey, RelayState] = field(default_factory=dict)
     _dimmer_states: dict[DeviceKey, DimmerState] = field(default_factory=dict)
+    _dimmer_last_channel: dict[str, int] = field(default_factory=dict)  # ip → last commanded channel
     _state_callbacks: list[StateChangeCallback] = field(default_factory=list)
     _event_callbacks: list[EventCallback] = field(default_factory=list)
     _module_ip_type: dict[str, DeviceType] = field(default_factory=dict)
@@ -60,9 +61,15 @@ class DeviceRegistry:
         self._state_callbacks.append(cb)
         return cb
 
+    def unregister_state_changed(self, cb: StateChangeCallback) -> None:
+        self._state_callbacks = [c for c in self._state_callbacks if c is not cb]
+
     def on_button_event(self, cb: EventCallback) -> EventCallback:
         self._event_callbacks.append(cb)
         return cb
+
+    def unregister_button_event(self, cb: EventCallback) -> None:
+        self._event_callbacks = [c for c in self._event_callbacks if c is not cb]
 
     # -- public query API --
 
@@ -71,6 +78,15 @@ class DeviceRegistry:
 
     def get_dimmer_state(self, key: DeviceKey) -> DimmerState | None:
         return self._dimmer_states.get(key)
+
+    def track_dimmer_channel(self, module_ip: str, channel: int) -> None:
+        """Remember the last commanded channel for a dimmer module.
+
+        Status replies normally encode the channel as the leading digit of
+        the value code (decoded in :func:`decode_dimmer_payload`), so this is
+        only a fallback for replies where the channel cannot be resolved.
+        """
+        self._dimmer_last_channel[module_ip] = channel
 
     def all_relay_states(self) -> dict[DeviceKey, RelayState]:
         return dict(self._relay_states)
@@ -130,7 +146,7 @@ class DeviceRegistry:
             self._relay_states[key] = RelayState(state=new_state, state_code=new_code)
             if old_state != new_state:
                 log.info("Relay %s ch%d: %s -> %s", module_ip, ch, old_state, new_state)
-                self._fire_state_changed(key, old_state, new_state)
+                self._fire_state_changed(key, old_state, RelayState(state=new_state, state_code=new_code))
         elif family == "relay_reply_candidate":
             pass  # pulse echo, no state change
 
@@ -140,7 +156,12 @@ class DeviceRegistry:
             return
         family = parsed.get("family")
         if family == "dimmer_status_reply":
-            ch = parsed.get("channel", -1)
+            # The reply encodes the channel as the leading digit of the value
+            # code (e.g. I0154130 → channel 1).  Fall back to the last
+            # commanded channel only if the decoder could not resolve it.
+            ch = parsed.get("channel")
+            if ch is None:
+                ch = self._dimmer_last_channel.get(module_ip, 0)
             key = DeviceKey(DeviceType.DIMMER, module_ip, ch)
             new_level = parsed.get("level_percent")
             new_code = parsed.get("internal_value_code", "")
@@ -151,7 +172,7 @@ class DeviceRegistry:
             )
             if old_level != new_level:
                 log.info("Dimmer %s ch%d: %s -> %s%%", module_ip, ch, old_level, new_level)
-                self._fire_state_changed(key, old_level, new_level)
+                self._fire_state_changed(key, old_level, DimmerState(level_percent=new_level, internal_value_code=new_code))
 
     def _handle_input(self, module_ip: str, data: bytes) -> None:
         parsed = decode_input_payload(data)

@@ -1,6 +1,6 @@
 # IPBuilding field bus capability matrix
 
-Last updated: 2026-06-01
+Last updated: 2026-06-02
 
 **Doel:** wat een **eigen centrale** op UDP/1001 vandaag al kan — **zonder** IPBox REST te hoeven nabootsen.
 
@@ -9,11 +9,12 @@ Northbound en centrale-architectuur: [docs/superpowers/specs/2026-05-18-gateway-
 | Capability | Veld-bus status | Evidence |
 |------------|-----------------|----------|
 | Relay ON/OFF | Confirmed encode/decode | Sprint 1, `gateway/payloads/relay.py` |
-| Relay pulse + echo reply | Confirmed | `P0000` / `P000000000` |
-| Relay status read | Confirmed | `I<channel><state>` |
+| Relay pulse + echo reply | Confirmed | `P0000` / `P000000000` (hub poll baseline) |
+| Relay hub poll `I<ch>` | **Not supported** | `I0000` etc. → `I000000000` echo only — [2026-06-02_relay_poll_i_ch_test.md](evidence/2026-06-02_relay_poll_i_ch_test.md) |
+| Relay status read | Confirmed (post-command) | `I<channel><state>` after `S`/`C` only — not via poll |
 | Dimmer DIM 0–100 (command) | Confirmed | `S<ch><val>1030` |
 | Dimmer OFF | Confirmed | `C<ch>991030` |
-| Dimmer status read | Confirmed | `I0154xxx` |
+| Dimmer status read | Confirmed | `I0154<C><VV>` (kanaal + waarde-code; live test 2026-06-03) |
 | Input hub poll | Confirmed | `I0000` |
 | Input idle status reply | Confirmed | 14-byte `I\x02R…E` |
 | Input button event (`B-…E`) | Confirmed encode/decode | Sprint 5, `gateway/payloads/input.py` |
