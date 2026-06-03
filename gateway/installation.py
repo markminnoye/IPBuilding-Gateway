@@ -79,6 +79,7 @@ class ModuleConfig:
     ip: str
     type: DeviceType
     firmware: str = ""  # read via getSysSet during discovery
+    model: str = ""    # factory product label, e.g. "IP200PoE"; optional
     channels: list[ChannelConfig] = field(default_factory=list)
 
     @property
@@ -188,6 +189,7 @@ class InstallationConfig:
                 ip=mod_ip,
                 type=dtype,
                 firmware=firmware,
+                model=mod.get("model", ""),
                 channels=channels,
             )
             modules.append(mc)

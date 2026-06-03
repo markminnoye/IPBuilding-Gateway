@@ -108,6 +108,7 @@ If you use the collection via **Remote URL** (raw GitHub link), delete the old i
 | [`ipbuilding-gateway.postman_collection.json`](ipbuilding-gateway.postman_collection.json) | REST requests, v2.1 |
 | [`environments/local.postman_environment.json`](environments/local.postman_environment.json) | Environment variables |
 | [`websocket.md`](websocket.md) | WebSocket message catalog and PAW setup |
+| [`discovery.md`](discovery.md) | CLI reference for all discovery tools |
 | [`tests/test_api_docs.py`](../../tests/test_api_docs.py) | Contract test (runs in CI) |
 
 For architecture context, see [`ARCHITECTURE.md`](../../ARCHITECTURE.md) §6 (WebSocket) and §5 (REST API).

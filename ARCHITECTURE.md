@@ -1,6 +1,6 @@
 # IPBuilding Gateway — Architectuur
 
-**Versie:** 2026-06-02 (update Fase 3+5 ✅)  
+**Versie:** 2026-06-03 (update §4.1 Discovery + ARP-first ✅)  
 **Status:** Goedgekeurd (vervangt [docs/superpowers/specs/2026-05-18-gateway-architecture-design.md](docs/superpowers/specs/2026-05-18-gateway-architecture-design.md))  
 **Doelgroep:** ontwikkelaars, AI-agenten, integratie-partners
 
@@ -33,7 +33,7 @@ De propriëtaire **IPBox** (IP0000X) vervangen door een open, zelfbeheerde gatew
 | UDP/1001 pollen, commando's sturen, events ontvangen | Knop→actie beslissen |
 | Device Registry bijhouden (huidige toestand) | HA-entities aanmaken |
 | Config lezen/schrijven (naam, room, type, watt, active) | Sferen of scenes beheren |
-| Discovery: HTTP-sweep + `getButtons` op modules | IPBox REST nabootsen (enkel shim, tijdelijk) |
+| Discovery: ARP-first (ping → ARP cache → OUI 00:24:77) + HTTP getSysSet + getButtons | IPBox REST nabootsen (enkel shim, tijdelijk) |
 | Northbound: WS, REST, MQTT, Matter adapters | Button-mapping opslaan |
 | Provisioning: EEPROM-sync doorgeven aan input-module | — |
 
@@ -146,7 +146,7 @@ graph LR
         end
 
         subgraph SETUP["Setup & Sync"]
-            DISC["Discovery\nHTTP sweep 10.10.1.30–59\n+ getButtons"]
+            DISC["Discovery\nARP-first (ping → ARP)\nOUI 00:24:77 → HTTP getSysSet\n+ getButtons on IP1100PoE"]
             PROV["Provisioning\nEEPROM sync\nknop→relay mapping"]
         end
 
@@ -175,10 +175,55 @@ graph LR
 | `udp_bus.py` | `gateway/udp_bus.py` | asyncio UDP socket; polling (2s), command send, event listen |
 | `device_registry.py` | `gateway/device_registry.py` | In-memory state van alle devices; update bij elk event |
 | `installation.py` | `gateway/installation.py` | Laadt en valideert `devices.json`; levert entity-IDs |
-| `discovery.py` | `gateway/discovery.py` | HTTP-sweep modules; `getButtons` op IP1100PoE |
+| `discovery.py` | `gateway/discovery.py` | ARP-sweep → OUI 00:24:77 filter → HTTP getSysSet/getButtons; configureerbare range; no ipbox_id |
 | `gateway_api.py` | `gateway/gateway_api.py` | aiohttp server: WS `/ws` + REST `/api/v1/` *(Fase 3)* |
 | `rest_shim.py` | `gateway/rest_shim.py` | IPBox-compatibele REST `:30200` *(tijdelijk, transitie)* |
 | `payloads/` | `gateway/payloads/` | encode/decode relay, dimmer, input — **aanwezig en getest** |
+
+### 4.1 Module discovery — ARP-first + HTTP identify
+
+Discovery start bij eerste opstart of op aanvraag (`python -m gateway.discover`).
+
+```
+Ping sweep (configureerbare range)
+  → kernel ARP cache vullen
+  → parse arp -an / proc/net/arp
+  → filter veldmodule-OUI 00:24:77
+  → exclude hub IPBox OUI 00:30:18
+  → HTTP getSysSet op elke candidate
+  → build devices.json draft
+```
+
+**Standaard range:** `10.10.1.30–59` — matcht IPBox Scan Modules-gedrag.
+Gebruiker configureert `--subnet`, `--range-start`, `--range-end` (CLI of toekomstige add-on options).
+
+**OUI-filter:**
+
+| OUI | Apparaat |
+|-----|----------|
+| `00:24:77` | Veldmodule (relay / dimmer / input) |
+| `00:30:18` | IPBox hub — **uitsluiten** van discovery |
+
+**Python (HA add-on / standalone):** ping-sweep via async subprocess; kernel-ARP via `arp -an` (macOS) of `/proc/net/arp` (Linux).
+
+**ESP32 (toekomstig, zie §12):** zelfde algoritme via lwIP `etharp_request()` per IP — geen `arp-scan` of mDNS nodig voor IPBuilding-modules.
+
+**Type/firmware:** HTTP `getSysSet` + `backupConfig` op elke ARP-gevonden module.
+Type: `devtype`, dan `getSysSet` `name` of `butLines` → input, anders `backupConfig` `device.refNr` → `_MODEL_TO_TYPE` (`IP0200PoE` → relay, `IP0300PoE` → dimmer, `IP1100PoE` → input).
+Firmware via `firm`/`firmware` (indien in getSysSet).
+`model` en `mac` uit getSysSet; kanaallabels (`name`/`room`) uit `backupConfig` `channels[]` (relay/dimmer). CLI: `--no-backup-config` om alleen getSysSet te gebruiken.
+
+**UDP/10001:** secundair, GO-B verdict (geen betrouwbare replies op huidige POV).
+
+**Evidence:** [2026-06-03 ARP discovery spike](resources_and_docs/evidence/2026-06-03_arp_discover_spike.md) — veldtest bevestigt `.30/.40/.50` via ARP in ~20s over /24.
+
+**CLI:**
+
+```bash
+python -m gateway.discover --range-start 30 --range-end 59
+python -m gateway.discover --range-start 1 --range-end 254
+python -m gateway.discover --no-arp   # fallback: enkel HTTP-sweep
+```
 
 ---
 
@@ -192,6 +237,7 @@ De gateway bewaart een persistente config met alle metadata die de veldbus zelf 
     {
       "ip": "10.10.1.30",
       "type": "relay",              // relay | dimmer | input
+      "model": "IP200PoE",          // factory product label uit getSysSet; optioneel
       "firmware": "5.1",            // gelezen via getSysSet bij Discovery; bewaard voor diagnostiek
       "channels": [
         {
@@ -345,7 +391,7 @@ Companion (HA) → POST /api/v1/provision/autonomy
 | **4** | Gateway als HA add-on (Dockerfile + `config.yaml`) | 🔲 Open |
 | **5** | Companion `ipbuilding-gateway-ha` — entities, automations | ✅ Voltooid (2026-06-02) |
 | **6** | Input-events IP1100PoE naar companion via WS | ✅ Verpakt in Fase 5 |
-| **7** | Discovery wizard + config-import vanuit IPBox | 🔲 Open |
+| **7** | Discovery: ARP-first + HTTP identify + optionele IPBox-import (deels geïmplementeerd) | 🔲 Open |
 | **8** | EEPROM-sync (`/api/v1/provision/autonomy`) | 🔲 Open |
 | **9** | MQTT adapter | 🔲 Open |
 | **10** | Matter bridge | 🔲 Open |
@@ -365,3 +411,4 @@ Companion (HA) → POST /api/v1/provision/autonomy
 | [`resources_and_docs/2026-05-17_ipbuilding_fieldbus_capability_matrix.md`](resources_and_docs/2026-05-17_ipbuilding_fieldbus_capability_matrix.md) | Veldbus capabilities (northbound-agnostisch) |
 | [`gateway/`](gateway/) | Huidige implementatie (Fase 1 + 2) |
 | [`docs/architecture-diagrams.html`](docs/architecture-diagrams.html) | Gerenderde diagrammen (lokale browser) |
+| [`resources_and_docs/evidence/2026-06-03_arp_discover_spike.md`](resources_and_docs/evidence/2026-06-03_arp_discover_spike.md) | ARP-first discovery spike: OUI 00:24:77, ping-sweep, veldtest |

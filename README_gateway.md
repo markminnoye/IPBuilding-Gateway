@@ -77,9 +77,12 @@ python scripts/discover_from_ipbox.py
 
 # Open gateway discovery (no IPBox needed; run RE spike first — see evidence/)
 python -m gateway.discover --range-start 30 --range-end 59
+python -m gateway.discover --no-arp   # HTTP-only fallback
 ```
 
-See `resources_and_docs/evidence/2026-06-XX_udp10001_discovery_spike.md` for UDP/10001 RE verdict.
+**ARP-first discovery** (default since 2026-06-03):
+ping-sweep → ARP OUI `00:24:77` → HTTP `getSysSet` + `backupConfig` → `model`/`type` from `device.refNr`, channel labels from `channels[]`; `--no-backup-config` for getSysSet-only.
+See [`resources_and_docs/evidence/2026-06-03_arp_discover_spike.md`](resources_and_docs/evidence/2026-06-03_arp_discover_spike.md) for field-test evidence.
 
 ## Configuration (environment)
 
