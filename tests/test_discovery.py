@@ -9,9 +9,11 @@ import pytest
 from gateway.discovery import (
     MODULE_IP_RANGE,
     DiscoveredModule,
+    IpChange,
     apply_backup_config,
     build_devices_json_draft,
     channels_from_backup_config,
+    detect_mac_ip_changes,
     device_type_from_fields,
     device_type_from_ref_nr,
     http_identify_module,
@@ -206,6 +208,55 @@ def test_normalize_mac_dash_separated():
 
 def test_normalize_mac_uppercase():
     assert normalize_mac("00:24:77:52:AC:BE") == "00:24:77:52:ac:be"
+
+
+# ---------------------------------------------------------------------------
+# detect_mac_ip_changes
+# ---------------------------------------------------------------------------
+
+def test_detect_mac_ip_changes_reports_dhcp_move(tmp_path):
+    baseline_json = tmp_path / "devices.json"
+    baseline_json.write_text(
+        '{"modules":[{"ip":"10.10.1.30","type":"relay","mac":"00:24:77:52:ac:be","channels":[]}]}',
+        encoding="utf-8",
+    )
+    from gateway.installation import InstallationConfig
+    baseline = InstallationConfig.load(baseline_json)
+    discovered = [
+        DiscoveredModule(ip="10.10.1.35", device_type="relay", mac="00:24:77:52:ac:be"),
+    ]
+    changes = detect_mac_ip_changes(discovered, baseline)
+    assert changes == [
+        IpChange(mac="00:24:77:52:ac:be", old_ip="10.10.1.30", new_ip="10.10.1.35"),
+    ]
+
+
+def test_detect_mac_ip_changes_empty_when_ip_unchanged(tmp_path):
+    baseline_json = tmp_path / "devices.json"
+    baseline_json.write_text(
+        '{"modules":[{"ip":"10.10.1.30","type":"relay","mac":"00:24:77:52:ac:be","channels":[]}]}',
+        encoding="utf-8",
+    )
+    from gateway.installation import InstallationConfig
+    baseline = InstallationConfig.load(baseline_json)
+    discovered = [
+        DiscoveredModule(ip="10.10.1.30", device_type="relay", mac="00:24:77:52:ac:be"),
+    ]
+    assert detect_mac_ip_changes(discovered, baseline) == []
+
+
+def test_detect_mac_ip_changes_skips_modules_without_mac(tmp_path):
+    baseline_json = tmp_path / "devices.json"
+    baseline_json.write_text('{"modules":[]}', encoding="utf-8")
+    from gateway.installation import InstallationConfig
+    baseline = InstallationConfig.load(baseline_json)
+    discovered = [DiscoveredModule(ip="10.10.1.30", device_type="relay", mac="")]
+    assert detect_mac_ip_changes(discovered, baseline) == []
+
+
+def test_detect_mac_ip_changes_empty_when_no_baseline():
+    discovered = [DiscoveredModule(ip="10.10.1.35", device_type="relay", mac="00:24:77:52:ac:be")]
+    assert detect_mac_ip_changes(discovered, None) == []
 
 
 # ---------------------------------------------------------------------------

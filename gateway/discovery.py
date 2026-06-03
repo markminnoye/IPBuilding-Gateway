@@ -24,7 +24,7 @@ ID model
 
 CLI
 ---
-    python -m gateway.discover [--output devices.json.discovered]
+    python -m gateway.discover [--output devices.discovered.json]
                                [--subnet 10.10.1]
                                [--range-start 30] [--range-end 59]
                                [--no-arp]          # force HTTP-only sweep
@@ -99,6 +99,15 @@ class DiscoveredModule:
     channels: list[dict[str, Any]] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class IpChange:
+    """A MAC-keyed IP address change between two discovery runs."""
+
+    mac: str
+    old_ip: str
+    new_ip: str
+
+
 # ---------------------------------------------------------------------------
 # MAC utilities
 # ---------------------------------------------------------------------------
@@ -121,6 +130,30 @@ def is_field_module_mac(mac: str) -> bool:
 
 def is_ipbox_hub_mac(mac: str) -> bool:
     return normalize_mac(mac).startswith(f"{IPBOX_HUB_OUI}:")
+
+
+def detect_mac_ip_changes(
+    modules: list[DiscoveredModule],
+    baseline: "InstallationConfig | None",  # type: ignore[name-defined] # lazy to avoid circular import
+) -> list[IpChange]:
+    """Compare discovered module IPs against a MAC-keyed baseline config.
+
+    Returns a list of :class:`IpChange` for every module whose MAC is known
+    in the baseline but whose current IP differs from the stored IP.
+    """
+    if baseline is None:
+        return []
+    changes: list[IpChange] = []
+    for mod in modules:
+        if not mod.mac:
+            continue
+        mac = normalize_mac(mod.mac)
+        existing = baseline.module_by_mac(mac)
+        if existing is None:
+            continue
+        if existing.ip != mod.ip:
+            changes.append(IpChange(mac=mac, old_ip=existing.ip, new_ip=mod.ip))
+    return changes
 
 
 # ---------------------------------------------------------------------------
