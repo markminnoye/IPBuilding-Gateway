@@ -98,9 +98,7 @@ async def async_setup_entry(
     sensors = []
     for entity_id, device in devices.items():
         # Only expose power sensors for relay and dimmer devices.
-        # The device type is encoded in the entity_id as "ip:type:ch"
-        parts = entity_id.split(":")
-        device_type = parts[1] if len(parts) == 3 else None
+        device_type = device.get("device_type")
         if device_type in ("relay", "dimmer"):
             sensors.append(IPBuildingPowerSensor(device, coordinator))
 

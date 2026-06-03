@@ -184,8 +184,8 @@ def test_build_devices_json_draft_entity_id_derivable():
     relay = draft["modules"][0]
     # entity_id veld bestaat NIET in de output (wordt on-the-fly afgeleid)
     assert "entity_id" not in relay
-    # maar is altijd berekend als '10.10.1.30:0' voor ch 0 (type niet in de ID)
-    assert make_entity_id(relay["ip"], 0) == "10.10.1.30:0"
+    # maar is altijd berekend als '10.10.1.30-0' voor ch 0 (type niet in de ID)
+    assert make_entity_id(relay["ip"], 0) == "10.10.1.30-0"
 
 
 # ---------------------------------------------------------------------------

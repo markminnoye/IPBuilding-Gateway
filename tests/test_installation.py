@@ -90,12 +90,12 @@ class TestInstallationLoad:
 
     def test_entity_id_derivation(self, valid_devices_json: Path) -> None:
         cfg = InstallationConfig.load(valid_devices_json)
-        assert cfg.make_entity_id("10.10.1.30", 0) == "10.10.1.30:0"
-        assert cfg.make_entity_id("10.10.1.40", 1) == "10.10.1.40:1"
+        assert cfg.make_entity_id("10.10.1.30", 0) == "10.10.1.30-0"
+        assert cfg.make_entity_id("10.10.1.40", 1) == "10.10.1.40-1"
 
     def test_module_level_make_entity_id(self) -> None:
-        assert make_entity_id("10.10.1.30", 0) == "10.10.1.30:0"
-        assert make_entity_id("10.10.1.50", 3) == "10.10.1.50:3"
+        assert make_entity_id("10.10.1.30", 0) == "10.10.1.30-0"
+        assert make_entity_id("10.10.1.50", 3) == "10.10.1.50-3"
 
     def test_ipbox_id_lookup_still_works(self, valid_devices_json: Path) -> None:
         cfg = InstallationConfig.load(valid_devices_json)
@@ -209,7 +209,7 @@ class TestResolveEntityId:
 
     def test_valid_relay_entity_id(self, valid_devices_json: Path) -> None:
         cfg = InstallationConfig.load(valid_devices_json)
-        result = _resolve_entity_id("10.10.1.30:0", cfg)
+        result = _resolve_entity_id("10.10.1.30-0", cfg)
         assert result is not None
         module_ip, dtype, channel = result
         assert module_ip == "10.10.1.30"
@@ -218,27 +218,16 @@ class TestResolveEntityId:
 
     def test_valid_dimmer_entity_id(self, valid_devices_json: Path) -> None:
         cfg = InstallationConfig.load(valid_devices_json)
-        result = _resolve_entity_id("10.10.1.40:1", cfg)
+        result = _resolve_entity_id("10.10.1.40-1", cfg)
         assert result is not None
         module_ip, dtype, channel = result
         assert module_ip == "10.10.1.40"
         assert dtype == DeviceType.DIMMER
         assert channel == 1
 
-    def test_type_spoofing_is_rejected(self, valid_devices_json: Path) -> None:
-        """A client cannot spoof the device type — it is always resolved from config."""
+    def test_unknown_device_id_rejected(self, valid_devices_json: Path) -> None:
         cfg = InstallationConfig.load(valid_devices_json)
-        # Old-format entity_id with embedded type is now a malformed ID (3 parts instead of 2)
-        assert _resolve_entity_id("10.10.1.30:relay:0", cfg) is None
-        assert _resolve_entity_id("10.10.1.30:dimmer:0", cfg) is None
-
-    def test_unknown_module_ip_rejected(self, valid_devices_json: Path) -> None:
-        cfg = InstallationConfig.load(valid_devices_json)
-        assert _resolve_entity_id("10.10.1.99:0", cfg) is None
-
-    def test_malformed_channel_rejected(self, valid_devices_json: Path) -> None:
-        cfg = InstallationConfig.load(valid_devices_json)
-        assert _resolve_entity_id("10.10.1.30:abc", cfg) is None
+        assert _resolve_entity_id("10.10.1.99-0", cfg) is None
 
     def test_none_installation_rejected(self) -> None:
-        assert _resolve_entity_id("10.10.1.30:0", None) is None
+        assert _resolve_entity_id("10.10.1.30-0", None) is None

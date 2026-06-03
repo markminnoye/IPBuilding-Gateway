@@ -32,34 +32,21 @@ log = logging.getLogger(__name__)
 def _resolve_entity_id(
     entity_id: str, installation: InstallationConfig | None
 ) -> tuple[str, DeviceType, int] | None:
-    """Resolve entity_id into (module_ip, device_type, channel).
+    """Resolve entity_id (device_id) into (module_ip, device_type, channel).
 
     The device type is looked up from the installation config — never derived
     from the entity_id string itself.  This prevents clients from spoofing
-    the device type (e.g. sending "10.10.1.30:dimmer:0" to a relay module).
+    the device type.
 
-    Returns None if the entity_id is malformed or the module is unknown.
+    Returns None if the entity_id is unknown.
     """
     if installation is None:
         return None
-    parts = entity_id.split(":")
-    if len(parts) != 2:
+    entry = installation.device_id_to_entry(entity_id)
+    if entry is None:
         return None
-    module_ip, ch_str = parts
-    try:
-        channel = int(ch_str)
-    except ValueError:
-        return None
-    mc = installation.module_by_ip(module_ip)
-    if mc is None:
-        return None
-    return (module_ip, mc.type, channel)
-
-
-def _build_entity_id(request: web.Request) -> str:
-    """Reconstruct canonical entity_id from REST path segments."""
-    mi = request.match_info
-    return f"{mi['module_ip']}:{mi['channel']}"
+    dtype, module_ip, channel = entry
+    return (module_ip, dtype, channel)
 
 
 # ---------------------------------------------------------------------------
@@ -104,11 +91,11 @@ class GatewayAPI:
         self._app.router.add_get("/ws", self._ws_handler)
         self._app.router.add_get("/api/v1/devices", self._get_devices)
         self._app.router.add_get(
-            "/api/v1/devices/{module_ip}/{channel}",
+            "/api/v1/devices/{device_id}",
             self._get_device,
         )
         self._app.router.add_post(
-            "/api/v1/devices/{module_ip}/{channel}/command",
+            "/api/v1/devices/{device_id}/command",
             self._post_command,
         )
         self._app.router.add_post(
@@ -216,17 +203,17 @@ class GatewayAPI:
         return web.json_response({"devices": device_list})
 
     async def _get_device(self, request: web.Request) -> web.Response:
-        """GET /api/v1/devices/{module_ip}/{channel} — return single device."""
-        entity_id = _build_entity_id(request)
+        """GET /api/v1/devices/{device_id} — return single device."""
+        device_id = request.match_info["device_id"]
         devices = self._build_device_list()
         for d in devices:
-            if d["id"] == entity_id:
+            if d["id"] == device_id:
                 return web.json_response(d)
         return web.json_response({"error": "not found"}, status=404)
 
     async def _post_command(self, request: web.Request) -> web.Response:
-        """POST /api/v1/devices/{module_ip}/{channel}/command — send a command."""
-        entity_id = _build_entity_id(request)
+        """POST /api/v1/devices/{device_id}/command — send a command."""
+        device_id = request.match_info["device_id"]
         try:
             body = await request.json()
         except Exception:
@@ -239,7 +226,7 @@ class GatewayAPI:
                 {"ok": False, "error": "missing 'action'"}, status=400
             )
 
-        ok, error = await self._execute_command(entity_id, action, value)
+        ok, error = await self._execute_command(device_id, action, value)
         if ok:
             return web.json_response({"ok": True})
         else:
@@ -366,12 +353,12 @@ class GatewayAPI:
                 if not ch.active:
                     continue
 
-                entity_id = f"{mc.ip}:{ch.ch}"
                 device: dict[str, Any] = {
-                    "id": entity_id,
+                    "id": ch.id,
                     "name": ch.name or f"Ch {ch.ch}",
                     "room": ch.room,
                     "semantic_type": ch.semantic_type,
+                    "device_type": mc.type.value,
                     "active": ch.active,
                     "max_watt": ch.max_watt,
                     "firmware": mc.firmware,
@@ -419,14 +406,16 @@ class GatewayAPI:
         if ch_config is None:
             return None
 
-        entity_id = f"{key.module_ip}:{key.channel}"
+        device_id = installation.entry_to_device_id(key.device_type, key.module_ip, key.channel)
+        if device_id is None:
+            return None
         max_watt = ch_config.max_watt
 
         if key.device_type == DeviceType.RELAY:
             assert isinstance(new, RelayState)
             return {
                 "type": "state_changed",
-                "id": entity_id,
+                "id": device_id,
                 "state": new.state,
                 "max_watt": max_watt,
                 "current_watt": max_watt if new.state == "on" else 0,
@@ -436,7 +425,7 @@ class GatewayAPI:
             level = new.level_percent
             return {
                 "type": "state_changed",
-                "id": entity_id,
+                "id": device_id,
                 "state": "on" if (level and level > 0) else "off",
                 "level": level,
                 "max_watt": max_watt,

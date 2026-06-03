@@ -3,7 +3,7 @@
 **Base URL:** `http://{{gateway_host}}:{{gateway_port}}`
 **Poort:** `8080` (default)
 
-Entity-ID formaat: `{module_ip}:{channel}` (bijv. `10.10.1.30:0`). Device type wordt server-side resolved uit `devices.json` — nooit door client meegegeven.
+Device-ID formaat: `{module_ip}-{channel}` (bijv. `10.10.1.30-0`) of een optionele custom slug (bijv. `keuken-led`). Device type en fysiek kanaal/IP worden server-side resolved uit `devices.json` — nooit door client meegegeven.
 
 ---
 
@@ -16,10 +16,11 @@ Entity-ID formaat: `{module_ip}:{channel}` (bijv. `10.10.1.30:0`). Device type w
 {
   "devices": [
     {
-      "id": "10.10.1.30:0",
+      "id": "10.10.1.30-0",
       "name": "Keuken LED",
       "room": "Keuken",
       "semantic_type": "light",
+      "device_type": "relay",
       "active": true,
       "max_watt": 60,
       "state": "off",
@@ -27,10 +28,11 @@ Entity-ID formaat: `{module_ip}:{channel}` (bijv. `10.10.1.30:0`). Device type w
       "firmware": "5.1"
     },
     {
-      "id": "10.10.1.40:0",
+      "id": "10.10.1.40-0",
       "name": "Woonkamer Dimmer 1",
       "room": "Woonkamer",
       "semantic_type": "light",
+      "device_type": "dimmer",
       "active": true,
       "max_watt": 200,
       "state": "on",
@@ -46,10 +48,11 @@ Entity-ID formaat: `{module_ip}:{channel}` (bijv. `10.10.1.30:0`). Device type w
 
 | Veld | Type | Beschrijving |
 |------|------|-------------|
-| `id` | string | Entity-ID: `{module_ip}:{channel}` |
+| `id` | string | Device-ID: `{module_ip}-{channel}` of custom slug |
 | `name` | string | Kanaalnaam uit `devices.json` |
 | `room` | string | Ruimte uit configuratie |
 | `semantic_type` | string | `light` (relay/dimmer) of `input` |
+| `device_type` | string | `relay` of `dimmer` of `input` |
 | `active` | boolean | Of kanaal actief is |
 | `max_watt` | integer | Geconfigureerd maximaal vermogen |
 | `state` | string | `on` / `off` / `unknown` |
@@ -59,11 +62,11 @@ Entity-ID formaat: `{module_ip}:{channel}` (bijv. `10.10.1.30:0`). Device type w
 
 ---
 
-## GET /api/v1/devices/{module_ip}/{channel}
+## GET /api/v1/devices/{device_id}
 
-**Beschrijving:** Retourneer één device op basis van entity-ID.
+**Beschrijving:** Retourneer één device op basis van device-ID.
 
-**Response 200:** zie `devices[0]` structuur hierboven.
+**Response 200:** zie `devices[0]` structuur hierboven (of `devices[1]` voor een dimmer).
 
 **Response 404:**
 ```json
@@ -72,7 +75,35 @@ Entity-ID formaat: `{module_ip}:{channel}` (bijv. `10.10.1.30:0`). Device type w
 
 ---
 
-## POST /api/v1/devices/{module_ip}/{channel}/command
+## GET /api/v1/devices/{device_id} (Voorbeeld Dimmer)
+
+**Beschrijving:** Retourneer één dimmer op basis van device-ID.
+
+**Response 200:**
+```json
+{
+  "id": "10.10.1.40-0",
+  "name": "Woonkamer Dimmer 1",
+  "room": "Woonkamer",
+  "semantic_type": "light",
+  "device_type": "dimmer",
+  "active": true,
+  "max_watt": 200,
+  "state": "on",
+  "level": 75,
+  "current_watt": 150,
+  "firmware": "5.4"
+}
+```
+
+**Response 404:**
+```json
+{"error": "not found"}
+```
+
+---
+
+## POST /api/v1/devices/{device_id}/command
 
 **Beschrijving:** Stuur een commando naar een relay of dimmer kanaal.
 

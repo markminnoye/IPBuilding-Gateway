@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "ipbuilding-gateway-v1",
     "name": "IPBuilding Gateway",
-    "description": "Northbound REST API for the IPBuilding open field-bus gateway.\n\n## Base URL\n{{base_url}}\n\n## Entity ID format\nAll device identifiers use the format `{module_ip}:{channel}` (e.g. `10.10.1.30:0`).  The device type (relay/dimmer) is resolved server-side from `devices.json` and is never part of the client-supplied ID — this prevents type-spoofing.\n\n## Device types\n- **Relay** — supports actions: `ON`, `OFF`, `PULSE`\n- **Dimmer** — supports action: `DIM` with integer `value` 0–100\n\n## Responses\n- `GET /api/v1/devices` returns `{\"devices\": [...]}`\n- Command POST returns `{\"ok\": true}` on success, `{\"ok\": false, \"error\": \"...\"}` on failure\n- Unknown entity_id → HTTP 404\n- Missing action → HTTP 400\n- Unsupported action → HTTP 422\n\n## WebSocket\nWebSocket endpoint at `/ws` for real-time `state_changed` and `button_event` messages — see `docs/api/websocket.md`.  WebSocket requests are not included in this collection (Postman/PAW export limitation).",
+    "description": "Northbound REST API for the IPBuilding open field-bus gateway.\n\n## Base URL\n{{base_url}}\n\n## Entity ID format\nAll device identifiers use the format `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or a custom slug (e.g. `keuken-led`).  The device type (relay/dimmer) is resolved server-side from `devices.json` and is never part of the client-supplied ID — this prevents type-spoofing.\n\n## Device types\n- **Relay** — supports actions: `ON`, `OFF`, `PULSE`\n- **Dimmer** — supports action: `DIM` with integer `value` 0–100\n\n## Responses\n- `GET /api/v1/devices` returns `{\"devices\": [...]}`\n- Command POST returns `{\"ok\": true}` on success, `{\"ok\": false, \"error\": \"...\"}` on failure\n- Unknown entity_id → HTTP 404\n- Missing action → HTTP 400\n- Unsupported action → HTTP 422\n\n## WebSocket\nWebSocket endpoint at `/ws` for real-time `state_changed` and `button_event` messages — see `docs/api/websocket.md`.  WebSocket requests are not included in this collection (Postman/PAW export limitation).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -20,7 +20,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "devices"]
             },
-            "description": "Return the full device list with current state.\n\n**Response 200:**\n```json\n{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30:0\",\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0,\n      \"firmware\": \"5.1\"\n    },\n    {\n      \"id\": \"10.10.1.40:0\",\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150,\n      \"firmware\": \"5.4\"\n    }\n  ]\n}\n```"
+            "description": "Return the full device list with current state.\n\n**Response 200:**\n```json\n{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30-0\",\n      \"device_type\": \"relay\",\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0,\n      \"firmware\": \"5.1\"\n    },\n    {\n      \"id\": \"10.10.1.40-0\",\n      \"device_type\": \"dimmer\",\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150,\n      \"firmware\": \"5.4\"\n    }\n  ]\n}\n```"
           },
           "response": [
             {
@@ -43,7 +43,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30:0\",\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0,\n      \"firmware\": \"5.1\"\n    },\n    {\n      \"id\": \"10.10.1.40:0\",\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150,\n      \"firmware\": \"5.4\"\n    }\n  ]\n}"
+              "body": "{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30-0\",\n      \"device_type\": \"relay\",\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0,\n      \"firmware\": \"5.1\"\n    },\n    {\n      \"id\": \"10.10.1.40-0\",\n      \"device_type\": \"dimmer\",\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150,\n      \"firmware\": \"5.4\"\n    }\n  ]\n}"
             }
           ]
         },
@@ -54,11 +54,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}",
+              "raw": "{{base_url}}/api/v1/devices/{{device_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}"]
+              "path": ["api", "v1", "devices", "{{device_id}}"]
             },
-            "description": "Return a single device by `{module_ip}:{channel}`.\n\n**Response 200** — device JSON (same shape as in `List devices`).\n\n**Response 404** — `{\"error\": \"not found\"}`"
+            "description": "Return a single device by `{device_id}`.\n\n**Response 200** — device JSON (same shape as in `List devices`).\n\n**Response 404** — `{\"error\": \"not found\"}`"
           },
           "response": [
             {
@@ -68,9 +68,9 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}",
+                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}"]
+                  "path": ["api", "v1", "devices", "{{device_id}}"]
                 }
               },
               "status": "OK",
@@ -81,7 +81,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"10.10.1.30:0\",\n  \"name\": \"Keuken LED\",\n  \"room\": \"Keuken\",\n  \"semantic_type\": \"light\",\n  \"active\": true,\n  \"max_watt\": 60,\n  \"state\": \"off\",\n  \"current_watt\": 0,\n  \"firmware\": \"5.1\"\n}"
+              "body": "{\n  \"id\": \"10.10.1.30-0\",\n      \"device_type\": \"relay\",\n  \"name\": \"Keuken LED\",\n  \"room\": \"Keuken\",\n  \"semantic_type\": \"light\",\n  \"active\": true,\n  \"max_watt\": 60,\n  \"state\": \"off\",\n  \"current_watt\": 0,\n  \"firmware\": \"5.1\"\n}"
             },
             {
               "id": "get-device-404",
@@ -90,9 +90,9 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}",
+                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}"]
+                  "path": ["api", "v1", "devices", "{{device_id}}"]
                 }
               },
               "status": "Not Found",
@@ -124,9 +124,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+              "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+              "path": ["api", "v1", "devices", "{{device_id}}", "command"]
             },
             "description": "Switch a relay channel on.\n\n**Request body:**\n```json\n{\"action\": \"ON\"}\n```\n\n**Response 200:** `{\"ok\": true}`\n\n**Response 422** — unsupported action:\n```json\n{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}\n```"
           },
@@ -143,9 +143,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
                 }
               },
               "status": "OK",
@@ -170,9 +170,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
                 }
               },
               "status": "Unprocessable Entity",
@@ -199,9 +199,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+              "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+              "path": ["api", "v1", "devices", "{{device_id}}", "command"]
             },
             "description": "Switch a relay channel off.\n\n**Request body:**\n```json\n{\"action\": \"OFF\"}\n```"
           },
@@ -218,9 +218,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
                 }
               },
               "status": "OK",
@@ -247,9 +247,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+              "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+              "path": ["api", "v1", "devices", "{{device_id}}", "command"]
             },
             "description": "Send a pulse (brief on→off) on a relay channel.\n\n**Request body:**\n```json\n{\"action\": \"PULSE\"}\n```"
           },
@@ -266,9 +266,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
                 }
               },
               "status": "OK",
@@ -295,9 +295,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+              "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+              "path": ["api", "v1", "devices", "{{device_id}}", "command"]
             },
             "description": "Toggle relay state: ON→OFF or OFF→ON based on current state.\\n\\n**Request body:**\\n```json\\n{\"action\": \"TOGGLE\"}\\n```"
           },
@@ -314,9 +314,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
                 }
               },
               "status": "OK",
@@ -343,9 +343,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+              "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+              "path": ["api", "v1", "devices", "{{device_id}}", "command"]
             },
             "description": "Set dimmer level (0–100). 0 is off.\n\n**Request body:**\n```json\n{\"action\": \"DIM\", \"value\": 75}\n```\n\n**Response 200:** `{\"ok\": true}`\n\n**Response 422** — wrong device type or unsupported action."
           },
@@ -362,9 +362,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
                 }
               },
               "status": "OK",
@@ -389,9 +389,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{module_ip}}/{{channel}}/command",
+                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{module_ip}}", "{{channel}}", "command"]
+                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
                 }
               },
               "status": "Unprocessable Entity",

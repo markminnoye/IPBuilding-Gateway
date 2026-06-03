@@ -15,8 +15,8 @@ COLLECTION_PATH = ROOT / "docs/api/ipbuilding-gateway.postman_collection.json"
 
 EXPECTED_ROUTES: set[tuple[str, str]] = {
     ("GET", "/api/v1/devices"),
-    ("GET", "/api/v1/devices/{module_ip}/{channel}"),
-    ("POST", "/api/v1/devices/{module_ip}/{channel}/command"),
+    ("GET", "/api/v1/devices/{device_id}"),
+    ("POST", "/api/v1/devices/{device_id}/command"),
     ("POST", "/api/v1/provision/autonomy"),
 }
 

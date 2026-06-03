@@ -34,8 +34,8 @@ class InstallationError(Exception):
 def make_entity_id(module_ip: str, channel: int) -> str:
     """Derive a stable, fieldbus-native entity ID.
 
-    Format: ``'{module_ip}:{channel}'``
-    Example: ``'10.10.1.30:0'``
+    Format: ``'{module_ip}-{channel}'``
+    Example: ``'10.10.1.30-0'``
 
     The device type is intentionally omitted — it is a module-level attribute
     resolved server-side via :meth:`InstallationConfig.module_by_ip`, never
@@ -44,7 +44,7 @@ def make_entity_id(module_ip: str, channel: int) -> str:
     This value is **never stored** — it is always computed from the fieldbus
     address.  It is the primary identifier for the open gateway product API.
     """
-    return f"{module_ip}:{channel}"
+    return f"{module_ip}-{channel}"
 
 
 @dataclass
@@ -53,6 +53,7 @@ class ChannelConfig:
 
     ch: int
     ipbox_id: int | None = None  # IPBox component ID — shim only, optional
+    id: str = ""  # Unified device ID (defaulting to {ip}-{ch} or custom slug)
     # Northbound fields (from devices.json)
     name: str = ""
     room: str = ""
@@ -98,6 +99,10 @@ class InstallationConfig:
     _ipbox_id_to_entry: dict[int, tuple[DeviceType, str, int]] = field(default_factory=dict)
     # module_ip -> ModuleConfig
     _modules_by_ip: dict[str, ModuleConfig] = field(default_factory=dict)
+    # device_id -> (DeviceType, module_ip, channel)
+    _device_id_to_entry: dict[str, tuple[DeviceType, str, int]] = field(default_factory=dict)
+    # (DeviceType, module_ip, channel) -> device_id
+    _entry_to_device_id: dict[tuple[DeviceType, str, int], str] = field(default_factory=dict)
 
     @classmethod
     def load(
@@ -128,8 +133,11 @@ class InstallationConfig:
     def _parse(cls, raw: dict) -> InstallationConfig:
         """Parse a devices.json dict into InstallationConfig."""
         seen_ipbox_ids: set[int] = set()
+        seen_device_ids: set[str] = set()
         modules: list[ModuleConfig] = []
         ipbox_id_to_entry: dict[int, tuple[DeviceType, str, int]] = {}
+        device_id_to_entry: dict[str, tuple[DeviceType, str, int]] = {}
+        entry_to_device_id: dict[tuple[DeviceType, str, int], str] = {}
         modules_by_ip: dict[str, ModuleConfig] = {}
 
         for mod in raw.get("modules", []):
@@ -172,10 +180,24 @@ class InstallationConfig:
                     seen_ipbox_ids.add(ipbox_id)
                     ipbox_id_to_entry[ipbox_id] = (dtype, mod_ip, ch)
 
+                # Read or default the device_id
+                device_id = ch_entry.get("id")
+                if not device_id:
+                    device_id = f"{mod_ip}-{ch}"
+
+                if device_id in seen_device_ids:
+                    raise InstallationError(
+                        f"Duplicate device id {device_id!r} across modules"
+                    )
+                seen_device_ids.add(device_id)
+                device_id_to_entry[device_id] = (dtype, mod_ip, ch)
+                entry_to_device_id[(dtype, mod_ip, ch)] = device_id
+
                 channels.append(
                     ChannelConfig(
                         ch=ch,
                         ipbox_id=ipbox_id,
+                        id=device_id,
                         name=ch_entry.get("name") or ch_entry.get("description") or f"Ch {ch}",
                         room=ch_entry.get("room") or ch_entry.get("group") or "",
                         semantic_type=ch_entry.get("semantic_type", "light"),
@@ -198,7 +220,27 @@ class InstallationConfig:
         inst = cls(modules=modules)
         inst._ipbox_id_to_entry = ipbox_id_to_entry
         inst._modules_by_ip = modules_by_ip
+        inst._device_id_to_entry = device_id_to_entry
+        inst._entry_to_device_id = entry_to_device_id
         return inst
+
+    def device_id_to_entry(
+        self, device_id: str
+    ) -> tuple[DeviceType, str, int] | None:
+        """Look up a channel by unified device ID.
+
+        Returns ``(device_type, module_ip, channel)`` or ``None``.
+        """
+        return self._device_id_to_entry.get(device_id)
+
+    def entry_to_device_id(
+        self, device_type: DeviceType, module_ip: str, channel: int
+    ) -> str | None:
+        """Look up the unified device ID for a given channel entry.
+
+        Returns the device ID string or ``None``.
+        """
+        return self._entry_to_device_id.get((device_type, module_ip, channel))
 
     def make_entity_id(self, module_ip: str, channel: int) -> str:
         """Delegate to module-level :func:`make_entity_id`."""

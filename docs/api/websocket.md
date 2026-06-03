@@ -29,10 +29,11 @@ On connect, the gateway immediately sends a `device_list` snapshot.
   "type": "device_list",
   "devices": [
     {
-      "id": "10.10.1.30:0",
+      "id": "10.10.1.30-0",
       "name": "Keuken LED",
       "room": "Keuken",
       "semantic_type": "light",
+      "device_type": "relay",
       "active": true,
       "max_watt": 60,
       "state": "off",
@@ -40,10 +41,11 @@ On connect, the gateway immediately sends a `device_list` snapshot.
       "firmware": "5.1"
     },
     {
-      "id": "10.10.1.40:0",
+      "id": "10.10.1.40-0",
       "name": "Woonkamer Dimmer 1",
       "room": "Woonkamer",
       "semantic_type": "light",
+      "device_type": "dimmer",
       "active": true,
       "max_watt": 200,
       "state": "on",
@@ -60,7 +62,7 @@ On connect, the gateway immediately sends a `device_list` snapshot.
 ```json
 {
   "type": "state_changed",
-  "id": "10.10.1.30:0",
+  "id": "10.10.1.30-0",
   "state": "on",
   "max_watt": 60,
   "current_watt": 60
@@ -72,7 +74,7 @@ On connect, the gateway immediately sends a `device_list` snapshot.
 ```json
 {
   "type": "state_changed",
-  "id": "10.10.1.40:0",
+  "id": "10.10.1.40-0",
   "state": "on",
   "level": 75,
   "max_watt": 200,
@@ -99,15 +101,15 @@ Possible `action` values: `press`, `release`, `long_press` (firmware-dependent).
 ### `command` — relay
 
 ```json
-{"type": "command", "id": "10.10.1.30:0", "action": "ON"}
-{"type": "command", "id": "10.10.1.30:0", "action": "OFF"}
-{"type": "command", "id": "10.10.1.30:0", "action": "PULSE"}
+{"type": "command", "id": "10.10.1.30-0", "action": "ON"}
+{"type": "command", "id": "10.10.1.30-0", "action": "OFF"}
+{"type": "command", "id": "10.10.1.30-0", "action": "PULSE"}
 ```
 
 ### `command` — dimmer
 
 ```json
-{"type": "command", "id": "10.10.1.40:0", "action": "DIM", "value": 75}
+{"type": "command", "id": "10.10.1.40-0", "action": "DIM", "value": 75}
 ```
 
 ---
@@ -117,8 +119,8 @@ Possible `action` values: `press`, `release`, `long_press` (firmware-dependent).
 ### `command_result`
 
 ```json
-{"type": "command_result", "id": "10.10.1.30:0", "ok": true, "error": null}
-{"type": "command_result", "id": "10.10.1.30:0", "ok": false, "error": "unknown entity_id: 10.10.1.99:0"}
+{"type": "command_result", "id": "10.10.1.30-0", "ok": true, "error": null}
+{"type": "command_result", "id": "10.10.1.30-0", "ok": false, "error": "unknown device_id: 10.10.1.99-0"}
 ```
 
 ---
@@ -129,24 +131,24 @@ Save these as **example messages** on the `/ws` WebSocket request for quick reus
 
 **Relay ON:**
 ```json
-{"type": "command", "id": "10.10.1.30:0", "action": "ON"}
+{"type": "command", "id": "10.10.1.30-0", "action": "ON"}
 ```
 
 **Relay OFF:**
 ```json
-{"type": "command", "id": "10.10.1.30:0", "action": "OFF"}
+{"type": "command", "id": "10.10.1.30-0", "action": "OFF"}
 ```
 
 **Dimmer DIM 75:**
 ```json
-{"type": "command", "id": "10.10.1.40:0", "action": "DIM", "value": 75}
+{"type": "command", "id": "10.10.1.40-0", "action": "DIM", "value": 75}
 ```
 
 ---
 
-## Entity ID format
+## Device ID format
 
-All `id` values use `{module_ip}:{channel}` (e.g. `10.10.1.30:0`). The device type is resolved server-side from `devices.json` and is never part of the client-supplied ID. This prevents clients from spoofing device type (e.g. sending a DIM command to a relay module).
+All `id` values use `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or a custom slug (e.g. `keuken-led`). The device type is resolved server-side from `devices.json` and is never part of the client-supplied ID. This prevents clients from spoofing device type (e.g. sending a DIM command to a relay module).
 
 ---
 

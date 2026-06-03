@@ -22,15 +22,14 @@ REST API documentation for the IPBuilding open field-bus gateway. Import once an
 3. Set values:
    - `gateway_host` — IP of your gateway (e.g. `192.168.1.x` or `localhost`)
    - `gateway_port` — gateway API port (default `8080`)
-   - `module_ip` — example relay module IP (`10.10.1.30`)
-   - `channel` — channel number to test (e.g. `0`)
+   - `device_id` — example device ID (default `10.10.1.30-0` or a slug)
 4. Activate the environment from the dropdown at the bottom-left
 
 ### Test the API
 
 1. Expand **Devices** → **List devices** → press **Send**
 2. You should receive a `200 OK` with a `devices` array
-3. Expand **Commands** → **Relay ON** → adjust `module_ip` and `channel` in the path if needed → **Send**
+3. Expand **Commands** → **Relay ON** → adjust `device_id` in the path if needed → **Send**
 
 ### WebSocket (real-time)
 
@@ -51,7 +50,7 @@ GetAPI can import Postman Collections directly.
 2. Select `docs/api/ipbuilding-gateway.postman_collection.json`
 3. The same requests and structure appear as in RapidAPI for Mac
 4. Set environment variables manually in GetAPI's environment editor:
-   - `gateway_host`, `gateway_port`, `module_ip`, `channel`, `base_url`
+   - `gateway_host`, `gateway_port`, `device_id`, `base_url`
 
 WebSocket support in GetAPI is documented but collection export is not yet available ([GetAPI issue #148](https://github.com/Get-API-App/Issue-Tracker/issues/148)). For real-time testing, use RapidAPI for Mac's WebSocket request.
 

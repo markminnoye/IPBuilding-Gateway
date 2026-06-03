@@ -90,9 +90,7 @@ async def async_setup_entry(
     buttons = []
     for entity_id, device in devices.items():
         # Only create buttons for input channels.
-        # The device type is encoded in the entity_id as "ip:type:ch"
-        parts = entity_id.split(":")
-        device_type = parts[1] if len(parts) == 3 else None
+        device_type = device.get("device_type")
         if device_type == "input":
             hardware_id = device["id"]
             name = device.get("name")
