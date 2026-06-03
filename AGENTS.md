@@ -83,6 +83,29 @@
 | **binary-analysis-patterns** | Payload-structuur, parsers |
 | **network-engineer** | VLAN, mirror POV |
 | **async-python-patterns** | asyncio veldbus + gateway service |
+| **home-assistant-custom-integration** | companion, config flow, entities |
+| **home-assistant-integrations-addons** | add-on, Supervisor, ha-mcp |
+| **home-assistant-entities-services** | services, entity_id, device registry |
+| **home-assistant-automation-scripts** | automations, scripts, scenes (logica in HA) |
+| **home-assistant-dashboards-cards** | Lovelace, dashboards |
+| **home-assistant-esphome** | ESPHome (indien relevant) |
+| **home-assistant-awtrix** | AWTRIX (indien relevant) |
+
+Bron HA-skills: [bradsjm/hassio-addons](https://github.com/bradsjm/hassio-addons) (`addon-opencode/skills/`).
+
+---
+
+## Documentation Priority
+
+1. Documentation tools (e.g., `ha_get_domain_docs()`).
+2. Official Web Site ([https://www.home-assistant.io/docs/](https://www.home-assistant.io/docs/))
+3. Github Repository ([home-assistant/home-assistant.io](https://github.com/home-assistant/home-assistant.io))
+4. Search tools
+
+## Search and Freshness
+
+- Assume your knowledge may be out of date.
+- When versions, current behavior, or external facts matter, verify them with search tools instead of assuming.
 
 ---
 

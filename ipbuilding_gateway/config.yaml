@@ -1,0 +1,35 @@
+name: IPBuilding Gateway
+version: "1.0.0"
+slug: ipbuilding_gateway
+description: Open IPBuilding field-bus gateway (UDP/1001) — replaces proprietary IPBox hub
+url: https://github.com/markminnoye/IPBuilding-Gateway
+startup: application
+init: false
+arch:
+  - aarch64
+  - amd64
+map:
+  - addon_config
+ports:
+  8080/tcp: null
+  30200/tcp: null
+host_network: true
+privileged: []
+options:
+  hub_ip: 10.10.1.1
+  poll_interval: 2.0
+  api_port: 8080
+  rest_shim_enabled: false
+  log_level: info
+  devices_file: /data/devices.json
+schema:
+  hub_ip: str
+  poll_interval: float
+  api_port: port
+  rest_shim_enabled: bool
+  log_level: list(debug|info|warning|error)
+  devices_file: str
+boot: auto
+auto_update: false
+watchdog: application
+image: ghcr.io/markminnoye/ipbuilding-gateway

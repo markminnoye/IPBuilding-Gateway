@@ -9,8 +9,10 @@ We are building an **open replacement for the IPBox hub role** on the field bus 
 | Layer | Status (2026-06-01) |
 |-------|------------------------|
 | **Fase 1 — wire + codecs** | **Done** — RE Sprint 1–5; `gateway/payloads/` + tests |
-| **Fase 2 — hub service** | **In progress** — poll-loop, `device_registry`, `rest_shim` (dev entrypoint wired in `main.py`) |
-| **Fase 3+ — northbound** | **Done** — WebSocket `/ws` + REST `/api/v1/` in `gateway_api.py`; PAW/GetAPI docs in [`docs/api/`](docs/api/) |
+| **Fase 2 — hub service** | **Done** — poll-loop, `device_registry`, `rest_shim`; entrypoint in `main.py` |
+| **Fase 3 — northbound** | **Done** — WebSocket `/ws` + REST `/api/v1/` in `gateway_api.py`; PAW/GetAPI docs in [`docs/api/`](docs/api/) |
+| **Fase 4 — HA add-on** | **Done** — CI publish naar ghcr.io (GitHub Actions multi-arch); install via Add-on Store; `host_network: true`; REST shim opt-in via `GATEWAY_REST_SHIM_ENABLED`; Supervisor auto-discovery in companion |
+| **Fase 5 — companion** | **Done** — entities (switch, light, button, sensor); WebSocket coordinator; Supervisor auto-detection |
 
 Architecture: [Gateway architecture design](docs/superpowers/specs/2026-05-18-gateway-architecture-design.md). Canonical RE status: [RE_STATE.md](resources_and_docs/RE_STATE.md).
 
@@ -50,8 +52,9 @@ Do **not** extend IPBox REST parity (scenes, moods, project DB) in `rest_shim`; 
 ## What exists today
 
 - **`gateway_api.py`** — WebSocket `/ws` + REST `/api/v1/` (product northbound); uses `entity_id` not `ipbox_id`; see [`docs/api/`](docs/api/) for PAW/GetAPI import
-- **`ipbuilding-gateway-ha/`** — Home Assistant companion (switch, light, button, sensor entities); WebSocket coordinator
-- HA add-on packaging, **EEPROM sync** (Fase 8) still open
+- **`ipbuilding-gateway-ha/`** — Home Assistant companion (switch, light, button, sensor entities); WebSocket coordinator; Supervisor auto-detection
+- **`ipbuilding_gateway/`** — HA Supervisor add-on (Docker, `config.yaml`, `host_network: true`); persistent `/data/devices.json`; REST shim opt-in; see [`ipbuilding_gateway/DOCS.md`](ipbuilding_gateway/DOCS.md)
+- **EEPROM sync** (Fase 8) still open
 
 ## ID model
 
@@ -91,7 +94,10 @@ See [`resources_and_docs/evidence/2026-06-03_arp_discover_spike.md`](resources_a
 | `GATEWAY_HUB_IP` | `10.10.1.1` | Documented hub address (modules send replies here) |
 | `GATEWAY_RELAY_IP` / `GATEWAY_DIMMER_IP` / `GATEWAY_INPUT_IP` | `.30` / `.40` / `.50` | Fallback module targets (used when `GATEWAY_DEVICES_FILE` is not set) |
 | `GATEWAY_POLL_INTERVAL` | `2.0` | Seconds between poll rounds |
-| `GATEWAY_REST_HOST` / `GATEWAY_REST_PORT` | `0.0.0.0` / `30200` | REST shim listen address |
+| `GATEWAY_REST_HOST` / `GATEWAY_REST_PORT` | `0.0.0.0` / `30200` | REST shim listen address (shim is **disabled by default** — set `GATEWAY_REST_SHIM_ENABLED=1` to enable) |
+| `GATEWAY_REST_SHIM_ENABLED` | `0` | Enable the IPBox REST shim on `:30200` (for migration only) |
+| `GATEWAY_API_PORT` | `8080` | Product northbound REST + WebSocket port |
+| `GATEWAY_LOG_LEVEL` | `INFO` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `GATEWAY_DEVICES_FILE` | `./devices.json` | Path to installation config; if set, `field_modules` is derived from it and env IP overrides are ignored |
 | `GATEWAY_SIMULATED` | off | `1` / `true` — no real UDP socket; in-process reply simulation for dev/tests |
 
@@ -119,7 +125,7 @@ Also install `aioresponses` for the discover test:
 GATEWAY_SIMULATED=1 PYTHONPATH=. .venv/bin/python -m gateway
 ```
 
-**Against the field bus** (host must be reachable as hub `10.10.1.1`, modules on `10.10.1.x`):
+**Against the field bus** (host on `10.10.1.x` with reachability to modules; `10.10.1.1` hub IP optional — see `ipbuilding_gateway/DOCS.md`):
 
 ```bash
 PYTHONPATH=. .venv/bin/python -m gateway

@@ -51,11 +51,14 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
     bus.add_listener(registry.handle_packet)
     await bus.start()
 
-    shim = RESTShim(bus, registry, cfg)
-    runner = web.AppRunner(shim.app)
-    await runner.setup()
-    site = web.TCPSite(runner, cfg.rest_host, cfg.rest_port)
-    await site.start()
+    shim_runner = None
+    if cfg.rest_shim_enabled:
+        shim = RESTShim(bus, registry, cfg)
+        shim_runner = web.AppRunner(shim.app)
+        await shim_runner.setup()
+        site = web.TCPSite(shim_runner, cfg.rest_host, cfg.rest_port)
+        await site.start()
+        log.info("REST shim enabled on %s:%d", cfg.rest_host, cfg.rest_port)
 
     # Build metadata cache and prefetch getSysSet/getButtons before starting API.
     meta_cache = ModuleMetadataCache()
@@ -75,9 +78,10 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         )
         install_info = f"  install={module_summary}"
     log.info(
-        "IPBuilding Gateway started  rest=%s:%d  api=%s:%d  poll=%.1fs  simulated=%s%s",
+        "IPBuilding Gateway started  rest=%s:%d  shim_enabled=%s  api=%s:%d  poll=%.1fs  simulated=%s%s",
         cfg.rest_host,
         cfg.rest_port,
+        cfg.rest_shim_enabled,
         cfg.api_host,
         cfg.api_port,
         cfg.poll_interval_s,
@@ -98,19 +102,23 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         await stop_event.wait()
     finally:
         log.info("Shutting down…")
-        await runner.cleanup()
+        if shim_runner:
+            await shim_runner.cleanup()
         await api.stop()
         await bus.stop()
         log.info("Gateway stopped")
 
 
 def main() -> None:
+    cfg = GatewayConfig.from_env()
+    log_level_name = cfg.log_level.upper() if hasattr(cfg, 'log_level') else 'INFO'
+    numeric_level = getattr(logging, log_level_name, logging.INFO)
     logging.basicConfig(
-        level=logging.INFO,
+        level=numeric_level,
         format="%(asctime)s %(levelname)-5s %(name)s  %(message)s",
         datefmt="%H:%M:%S",
     )
-    asyncio.run(run_gateway())
+    asyncio.run(run_gateway(cfg))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,35 @@
+# builder.yaml — triggers for the HA add-on build
+#
+# How versioning works:
+# - The image tag is always derived from config.yaml's `version` field.
+# - On push to main:         image tagged with :latest AND :<version>
+# - On git tag v<semver>:    image tagged with :<semver> (strip the leading 'v')
+# - On pull_request:         build only, no push (validates Dockerfile + context)
+#
+# Before tagging a release:
+#   1. Bump `version:` in ipbuilding_gateway/config.yaml  (e.g. 1.0.0 → 1.0.1)
+#   2. Commit and push
+#   3. Tag that commit with the same version:  git tag v1.0.1 && git push --tags
+#   4. CI will build and push :1.0.1
+#
+# Required repository settings:
+#   GitHub Actions → Workflow permissions → "Read and write permissions"
+#   Packages → ghcr.io package visibility → Public  (after first successful run)
+
+name: Build add-on
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*.*.*"
+  pull_request:
+
+jobs:
+  build-app:
+    uses: ./.github/workflows/build-app.yaml
+    with:
+      app: ipbuilding_gateway
+      publish: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit

@@ -17,12 +17,14 @@ class GatewayConfig:
     hub_port: int = 1001
     rest_host: str = "0.0.0.0"
     rest_port: int = 30200
+    rest_shim_enabled: bool = False
     api_host: str = "0.0.0.0"
     api_port: int = 8080
     bind_ip: str = "0.0.0.0"
     reply_timeout_ms: int = 500
     poll_interval_s: float = 2.0
     simulated_mode: bool = False
+    log_level: str = "INFO"
     field_modules: dict[str, str] = field(
         default_factory=lambda: {
             "relay": "10.10.1.30",
@@ -56,12 +58,14 @@ class GatewayConfig:
             hub_port=int(os.getenv("GATEWAY_HUB_PORT", "1001")),
             rest_host=os.getenv("GATEWAY_REST_HOST", "0.0.0.0"),
             rest_port=int(os.getenv("GATEWAY_REST_PORT", "30200")),
+            rest_shim_enabled=os.getenv("GATEWAY_REST_SHIM_ENABLED", "0").lower() in ("1", "true", "yes"),
             api_host=os.getenv("GATEWAY_API_HOST", "0.0.0.0"),
             api_port=int(os.getenv("GATEWAY_API_PORT", "8080")),
             bind_ip=os.getenv("GATEWAY_BIND_IP", "0.0.0.0"),
             reply_timeout_ms=int(os.getenv("GATEWAY_REPLY_TIMEOUT_MS", "500")),
             poll_interval_s=float(os.getenv("GATEWAY_POLL_INTERVAL", "2.0")),
             simulated_mode=os.getenv("GATEWAY_SIMULATED", "").lower() in ("1", "true", "yes"),
+            log_level=os.getenv("GATEWAY_LOG_LEVEL", "INFO").upper(),
             field_modules=modules,
             installation=installation,
         )

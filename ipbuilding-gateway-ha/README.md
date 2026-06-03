@@ -17,7 +17,7 @@ HA custom component voor de **ipbuilding-gateway** (Fase 3 product-API op `8080`
 ```
 IPBuilding veldbus (UDP/1001)
   └── ipbuilding-gateway (Python)
-        ├── REST :30200  (IPBox shim — transitie, Fase 1-2)
+        ├── REST :30200  (IPBox shim — transitie, Fase 1-2; disabled by default)
         ├── WebSocket /ws  (product northbound, Fase 3)  ←── ipbuilding-gateway-ha
         └── REST /api/v1/  (product northbound, Fase 3)
   └── ipbuilding-gateway-ha (HA custom component)
@@ -28,6 +28,17 @@ IPBuilding veldbus (UDP/1001)
               ├── button     (IP1100PoE fysieke knop → HA events)
               └── sensor     (current_watt per kanaal)
 ```
+
+## Auto-detectie (HA add-on)
+
+Wanneer de `ipbuilding_gateway` HA add-on actief is, detecteert de companion deze automatisch via de HA Supervisor API — geen handmatige invoer van host/poort nodig.
+
+```
+HA Add-on draait → companion ziet ipbuilding_gateway in Supervisor
+→ automatisch 127.0.0.1:8080 → gateway bereikbaar → entities
+```
+
+**Handmatig (standalone Docker / remote):** host + poort invullen in de config flow.
 
 ## Entity ID formaat
 

@@ -388,7 +388,7 @@ Companion (HA) → POST /api/v1/provision/autonomy
 | **1** | UDP-protocol RE: relay, dimmer, input `B-…E` + `gateway/payloads/` | ✅ Voltooid |
 | **2** | UDP Bus Manager, Device Registry, REST-shim, veldtest | ✅ Voltooid (2026-06-02) |
 | **3** | WebSocket API server `gateway_api.py` + REST `/api/v1/` | ✅ Voltooid (2026-06-02) |
-| **4** | Gateway als HA add-on (Dockerfile + `config.yaml`) | 🔲 Open |
+| **4** | Gateway als HA add-on (Dockerfile + `config.yaml` + Supervisor companion auto-discovery) | 🔲 In uitvoering |
 | **5** | Companion `ipbuilding-gateway-ha` — entities, automations | ✅ Voltooid (2026-06-02) |
 | **6** | Input-events IP1100PoE naar companion via WS | ✅ Verpakt in Fase 5 |
 | **7** | Discovery: ARP-first + HTTP identify + optionele IPBox-import (deels geïmplementeerd) | 🔲 Open |
