@@ -104,6 +104,7 @@ class GatewayAPI:
         """Start the aiohttp API server and register registry callbacks."""
         self._app = web.Application()
         self._app.router.add_get("/ws", self._ws_handler)
+        self._app.router.add_get("/health", self._get_health)
         self._app.router.add_get("/api/v1/devices", self._get_devices)
         self._app.router.add_get(
             "/api/v1/devices/{device_id}",
@@ -217,6 +218,10 @@ class GatewayAPI:
     # -------------------------------------------------------------------------
     # REST handlers
     # -------------------------------------------------------------------------
+
+    async def _get_health(self, request: web.Request) -> web.Response:
+        """GET /health — liveness probe for HA Supervisor watchdog."""
+        return web.json_response({"status": "ok"})
 
     async def _get_devices(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices — return full device list as JSON."""
