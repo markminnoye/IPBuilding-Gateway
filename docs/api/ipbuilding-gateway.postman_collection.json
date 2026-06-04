@@ -1,162 +1,422 @@
 {
   "info": {
-    "_postman_id": "ipbuilding-gateway-v1",
+    "_postman_id": "550e8400-e29b-41d4-a716-446655440000",
     "name": "IPBuilding Gateway",
-    "description": "Northbound REST API for the IPBuilding open field-bus gateway.\n\n## Base URL\n{{base_url}}\n\n## Entity ID format\nAll device identifiers use the format `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or a custom slug (e.g. `keuken-led`).  The device type (relay/dimmer) is resolved server-side from `devices.json` and is never part of the client-supplied ID — this prevents type-spoofing.\n\n## Device types\n- **Relay** — supports actions: `ON`, `OFF`, `PULSE`\n- **Dimmer** — supports action: `DIM` with integer `value` 0–100\n\n## Responses\n- `GET /api/v1/devices` returns `{\"devices\": [...]}`\n- Command POST returns `{\"ok\": true}` on success, `{\"ok\": false, \"error\": \"...\"}` on failure\n- Unknown entity_id → HTTP 404\n- Missing action → HTTP 400\n- Unsupported action → HTTP 422\n\n## WebSocket\nWebSocket endpoint at `/ws` for real-time `state_changed` and `button_event` messages — see `docs/api/websocket.md`.  WebSocket requests are not included in this collection (Postman/PAW export limitation).",
+    "description": "# IPBuilding Gateway — REST API (v0.0.4)\n\nOpen field-bus gateway for IPBuilding controllers (relay / dimmer / input modules on UDP/1001). This collection exercises the product northbound REST API exposed by the gateway add-on on port `8080`.\n\n## Base URL\n\n```\n{{base_url}}/api/{{apiVersion}}\n```\n\n| Variable | Default | Description |\n|----------|---------|-------------|\n| `base_url` | `http://homeassistant.local:8080` | Gateway host (HA add-on: `http://[HOST]:[PORT:8080]`) |\n| `apiVersion` | `v1` | API version — currently only `v1` is shipped |\n| `module_id` | `00:24:77:52:ac:be` | Stable MAC-based module identifier (lower-case, colon-separated) |\n| `device_id` | `10.10.1.30-0` | Logical channel ID — `{module_ip}-{channel}` or a custom slug |\n\n## Device-ID format\n\nLogical channel IDs use the form `{module_ip}-{channel}` (e.g. `10.10.1.30-0` for the first channel of the relay at `10.10.1.30`). A custom slug from `devices.json` (e.g. `keuken-led`) is also accepted wherever `{device_id}` is used.\n\n## Device-type resolution (server-side only)\n\nThe gateway **resolves** the device type (`relay` / `dimmer` / `input`) from the installation config (`devices.json`) on every request. Clients never supply a device type and cannot spoof it: sending `{\"action\": \"DIM\"}` to a relay `device_id` yields `422 unsupported device type: relay`, not a `DIM` payload on the field bus.\n\n## Response shapes\n\n**Success envelope** (command results, forced discovery):\n\n```json\n{\"ok\": true}\n```\n\n**Resource envelopes** wrap the payload in a named key:\n\n```json\n{\"modules\": [...]}\n{\"devices\": [...]}\n```\n\n**Error envelope** (command results):\n\n```json\n{\"ok\": false, \"error\": \"<reason>\"}\n```\n\n**Not-found envelope** (resource lookups):\n\n```json\n{\"error\": \"not found\"}\n```\n\n## HTTP status code conventions\n\n| Code | Meaning | Example |\n|------|---------|---------|\n| `200` | OK | Command accepted; resource returned |\n| `400` | Missing or malformed input | `{\"ok\": false, \"error\": \"missing 'action'\"}` |\n| `404` | Unknown entity | `{\"error\": \"not found\"}` (module_id or device_id not in registry) |\n| `422` | Unsupported action / device-type mismatch | `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` |\n| `501` | Endpoint reserved, not yet implemented | `{\"ok\": false, \"error\": \"not yet implemented\"}` (Fase 8) |\n\n## See also\n\n- [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) — full REST reference\n- [`docs/api/websocket.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/websocket.md) — WebSocket `/ws` message catalog (real-time state push + command)\n- [`ARCHITECTURE.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/ARCHITECTURE.md) — northbound protocol design\n",
+    "version": "0.0.4",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "apiVersion",
+      "value": "v1",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "noauth"
+  },
+  "protocolProfileBehavior": {
+    "disableBodyPruning": true,
+    "followRedirects": false
   },
   "item": [
     {
       "name": "Modules",
+      "description": "Physical field-bus controllers. Each module is identified by its stable MAC address (`module_id`) and exposes cached `getSysSet` network metadata plus, for input modules, `getButtons` button configuration. Modules are looked up server-side; the gateway never trusts IP-based identity (DHCP can change IPs at any time). Runtime-only fields `last_seen` and `last_seen_source` are populated by the passive ARP monitor — see [`docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md) for the write policy.\n",
       "item": [
         {
           "name": "List modules",
-          "event": [],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
             "url": {
-              "raw": "{{base_url}}/api/v1/modules",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "modules"]
+              "raw": "{{base_url}}/api/{{apiVersion}}/modules",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "modules"
+              ]
             },
-            "description": "Return all physical field-bus modules with firmware, MAC, and cached network metadata.\n\n**Response 200:** `{\"modules\": [{\"id\": \"00:24:77:52:ac:be\", \"ip\": \"10.10.1.30\", ...}]}`"
+            "description": "Return every physical field-bus module with cached network metadata. The list is built from the in-memory `InstallationConfig` (loaded from `devices.json`) merged with the latest HTTP `getSysSet` / `getButtons` data from each module.\n\n**Path:** `GET /api/{{apiVersion}}/modules`\n\n**Response 200 — modules array** (one entry per physical controller):\n\n```json\n{\n  \"modules\": [\n    {\n      \"id\": \"00:24:77:52:ac:be\",\n      \"ip\": \"10.10.1.30\",\n      \"name\": \"IP0200PoE\",\n      \"model\": \"IP0200PoE\",\n      \"type\": \"relay\",\n      \"firmware\": \"5.1\",\n      \"mac\": \"00:24:77:52:ac:be\",\n      \"network\": {\n        \"dhcp\": \"0\",\n        \"ip\": \"10.10.1.30\",\n        \"subnet\": \"255.255.255.0\",\n        \"gateway\": \"10.10.1.1\"\n      },\n      \"button\": \"0\",\n      \"allow\": \"\",\n      \"fetched_at\": \"2026-06-04T18:00:00Z\",\n      \"last_seen\": \"2026-06-04T20:15:00Z\",\n      \"last_seen_source\": \"arp\"\n    }\n  ]\n}\n```\n\n`last_seen` and `last_seen_source` are **runtime-only** — never persisted to `devices.json`. They are filled by the passive ARP monitor (`source: \"arp\"`), HTTP `getSysSet` calls (`source: \"http\"`), or UDP activity on port 1001 (`source: \"udp\"`). When the cache has never seen the module, both fields are absent.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) for the full field reference and [`docs/api/websocket.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/websocket.md) for real-time updates over `/ws`.\n"
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 — modules list",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/{{apiVersion}}/modules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "modules"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"modules\": [\n    {\n      \"id\": \"00:24:77:52:ac:be\",\n      \"ip\": \"10.10.1.30\",\n      \"name\": \"IP0200PoE\",\n      \"model\": \"IP0200PoE\",\n      \"type\": \"relay\",\n      \"firmware\": \"5.1\",\n      \"mac\": \"00:24:77:52:ac:be\",\n      \"network\": {\n        \"dhcp\": \"0\",\n        \"ip\": \"10.10.1.30\",\n        \"subnet\": \"255.255.255.0\",\n        \"gateway\": \"10.10.1.1\"\n      },\n      \"button\": \"0\",\n      \"allow\": \"\",\n      \"fetched_at\": \"2026-06-04T18:00:00Z\",\n      \"last_seen\": \"2026-06-04T20:15:00Z\",\n      \"last_seen_source\": \"arp\"\n    }\n  ]\n}"
+            }
+          ]
         },
         {
           "name": "Get module",
-          "event": [],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
             "url": {
-              "raw": "{{base_url}}/api/v1/modules/{{module_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "modules", "{{module_id}}"]
+              "raw": "{{base_url}}/api/{{apiVersion}}/modules/{{module_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "modules",
+                "{{module_id}}"
+              ]
             },
-            "description": "Return a single module by its MAC-based module_id.\n\n**Response 200:** single module object.\n\n**Response 404:** `{\"error\": \"not found\"}`"
+            "description": "Return a single module by its MAC-based `module_id` (lower-case, colon-separated). The lookup is case-insensitive — the gateway normalises the MAC before comparison, so `00:24:77:52:AC:BE` and `00:24:77:52:ac:be` resolve to the same record.\n\n**Path:** `GET /api/{{apiVersion}}/modules/{module_id}`\n\n**Path parameters:**\n\n| Name | Type | Description |\n|------|------|-------------|\n| `module_id` | string | Normalised MAC address, e.g. `00:24:77:52:ac:be` |\n\n**Response 200** — single module object, same shape as the entries in the list endpoint. Runtime `last_seen` and `last_seen_source` are included when the ARP monitor has observed the module.\n\n**Response 404** — `{\"error\": \"not found\"}` when the MAC is not in the installation config.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 — single module",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/{{apiVersion}}/modules/{{module_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "modules",
+                    "{{module_id}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"00:24:77:52:ac:be\",\n  \"ip\": \"10.10.1.30\",\n  \"name\": \"IP0200PoE\",\n  \"model\": \"IP0200PoE\",\n  \"type\": \"relay\",\n  \"firmware\": \"5.1\",\n  \"mac\": \"00:24:77:52:ac:be\",\n  \"network\": {\n    \"dhcp\": \"0\",\n    \"ip\": \"10.10.1.30\",\n    \"subnet\": \"255.255.255.0\",\n    \"gateway\": \"10.10.1.1\"\n  },\n  \"button\": \"0\",\n  \"allow\": \"\",\n  \"fetched_at\": \"2026-06-04T18:00:00Z\",\n  \"last_seen\": \"2026-06-04T20:15:00Z\",\n  \"last_seen_source\": \"arp\"\n}"
+            },
+            {
+              "name": "404 — module not in registry",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/{{apiVersion}}/modules/00:24:77:99:99:99",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "modules",
+                    "00:24:77:99:99:99"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\"error\": \"not found\"}"
+            }
+          ]
         },
         {
           "name": "Refresh modules",
-          "event": [],
           "request": {
             "method": "POST",
             "header": [
-              {"key": "Content-Type", "value": "application/json"}
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
             ],
-            "body": {"mode": "raw", "raw": "{}"},
-            "url": {
-              "raw": "{{base_url}}/api/v1/modules/refresh",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "modules", "refresh"]
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
             },
-            "description": "Re-fetch getSysSet and getButtons from all field modules. Updates in-memory metadata cache.\n\n**Response 200:** `{\"modules\": [...]}`"
+            "url": {
+              "raw": "{{base_url}}/api/{{apiVersion}}/modules/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "modules",
+                "refresh"
+              ]
+            },
+            "description": "Force a synchronous refresh of the module metadata cache. The gateway will re-fetch `getSysSet` from every module in the installation and `getButtons` from input modules. The HTTP timeout per module is `2.0 s` by default.\n\n**Path:** `POST /api/{{apiVersion}}/modules/refresh`\n\n**Request body:** empty JSON object `{}` (no parameters). The Content-Type header is required by aiohttp's JSON parser.\n\n**Response 200** — same envelope as `GET /api/v1/modules`, with `fetched_at` timestamps advanced to the moment of refresh and `last_seen` / `last_seen_source` reflecting the most recent observation.\n\nUse this endpoint after on-device reconfiguration (DHCP, subnet, button mapping) to surface the changes immediately. The companion (`ipbuilding-gateway-ha`) refreshes the cache on its own cycle; manual calls are useful for debugging or one-off tests.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 — refreshed modules list",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/{{apiVersion}}/modules/refresh",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "modules",
+                    "refresh"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"modules\": [\n    {\n      \"id\": \"00:24:77:52:ac:be\",\n      \"ip\": \"10.10.1.30\",\n      \"name\": \"IP0200PoE\",\n      \"model\": \"IP0200PoE\",\n      \"type\": \"relay\",\n      \"firmware\": \"5.1\",\n      \"mac\": \"00:24:77:52:ac:be\",\n      \"network\": {\n        \"dhcp\": \"0\",\n        \"ip\": \"10.10.1.30\",\n        \"subnet\": \"255.255.255.0\",\n        \"gateway\": \"10.10.1.1\"\n      },\n      \"button\": \"0\",\n      \"allow\": \"\",\n      \"fetched_at\": \"2026-06-04T20:16:42Z\",\n      \"last_seen\": \"2026-06-04T20:16:42Z\",\n      \"last_seen_source\": \"http\"\n    }\n  ]\n}"
+            }
+          ]
         }
       ]
     },
     {
       "name": "Devices",
+      "description": "Logical channels (lights, fans, switches) that map onto physical modules. Each device is identified by a `device_id` in the form `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or by a custom slug from `devices.json`. Devices carry the channel's current state — relay `on`/`off` or dimmer `level` — as reported by the in-memory `DeviceRegistry`.\n",
       "item": [
         {
           "name": "List devices",
-          "event": [],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
             "url": {
-              "raw": "{{base_url}}/api/v1/devices",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices"]
+              "raw": "{{base_url}}/api/{{apiVersion}}/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "devices"
+              ]
             },
-            "description": "Return the full device list with current state.\n\n**Response 200:**\n```json\n{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30-0\",\n      \"device_type\": \"relay\",\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0,\n      \"firmware\": \"5.1\"\n    },\n    {\n      \"id\": \"10.10.1.40-0\",\n      \"device_type\": \"dimmer\",\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150,\n      \"firmware\": \"5.4\"\n    }\n  ]\n}\n```"
+            "description": "Return every logical device (active channels only) with its current runtime state.\n\n**Path:** `GET /api/{{apiVersion}}/devices`\n\n**Response 200** — devices array, joined with the parent module's MAC and current IP:\n\n```json\n{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30-0\",\n      \"module_id\": \"00:24:77:52:ac:be\",\n      \"module_ip\": \"10.10.1.30\",\n      \"channel\": 0,\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"device_type\": \"relay\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0\n    },\n    {\n      \"id\": \"10.10.1.40-0\",\n      \"module_id\": \"00:24:77:52:9e:a8\",\n      \"module_ip\": \"10.10.1.40\",\n      \"channel\": 0,\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"device_type\": \"dimmer\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150\n    }\n  ]\n}\n```\n\nInactive channels (`active: false` in `devices.json`) are filtered out. Dimmer entries include `level` (0–100) and a derived `current_watt` (`max_watt * level // 100`); relay entries include a binary `current_watt` (`max_watt` when on, else `0`).\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) for the field reference and [`docs/api/websocket.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/websocket.md) for the `snapshot` and `state_changed` push messages.\n"
           },
           "response": [
             {
-              "id": "list-devices-200",
-              "name": "200 OK",
+              "name": "200 — devices list",
               "originalRequest": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices"]
+                  "raw": "{{base_url}}/api/{{apiVersion}}/devices",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "devices"
+                  ]
                 }
               },
               "status": "OK",
               "code": 200,
+              "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30-0\",\n      \"device_type\": \"relay\",\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0,\n      \"firmware\": \"5.1\"\n    },\n    {\n      \"id\": \"10.10.1.40-0\",\n      \"device_type\": \"dimmer\",\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150,\n      \"firmware\": \"5.4\"\n    }\n  ]\n}"
+              "body": "{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30-0\",\n      \"module_id\": \"00:24:77:52:ac:be\",\n      \"module_ip\": \"10.10.1.30\",\n      \"channel\": 0,\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"device_type\": \"relay\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0\n    },\n    {\n      \"id\": \"10.10.1.40-0\",\n      \"module_id\": \"00:24:77:52:9e:a8\",\n      \"module_ip\": \"10.10.1.40\",\n      \"channel\": 0,\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"device_type\": \"dimmer\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150\n    }\n  ]\n}"
             }
           ]
         },
         {
           "name": "Get device",
-          "event": [],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
             "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{device_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{device_id}}"]
+              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "devices",
+                "{{device_id}}"
+              ]
             },
-            "description": "Return a single device by `{device_id}`.\n\n**Response 200** — device JSON (same shape as in `List devices`).\n\n**Response 404** — `{\"error\": \"not found\"}`"
+            "description": "Return a single device (logical channel) by its `device_id`. The ID is either `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or a custom slug from `devices.json` (e.g. `keuken-led`).\n\n**Path:** `GET /api/{{apiVersion}}/devices/{device_id}`\n\n**Path parameters:**\n\n| Name | Type | Description |\n|------|------|-------------|\n| `device_id` | string | `{module_ip}-{channel}` or a configured slug |\n\n**Response 200** — single device object, same shape as the entries in the list endpoint. Includes the most recent state from the in-memory `DeviceRegistry` (relay: `state` + `current_watt`; dimmer: `level` + derived `current_watt`).\n\n**Response 404** — `{\"error\": \"not found\"}` when the device_id is not in the installation config.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "id": "get-device-200",
-              "name": "200 OK",
+              "name": "200 — single device",
               "originalRequest": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{device_id}}"]
+                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "devices",
+                    "10.10.1.30-0"
+                  ]
                 }
               },
               "status": "OK",
               "code": 200,
+              "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"10.10.1.30-0\",\n      \"device_type\": \"relay\",\n  \"name\": \"Keuken LED\",\n  \"room\": \"Keuken\",\n  \"semantic_type\": \"light\",\n  \"active\": true,\n  \"max_watt\": 60,\n  \"state\": \"off\",\n  \"current_watt\": 0,\n  \"firmware\": \"5.1\"\n}"
+              "body": "{\n  \"id\": \"10.10.1.30-0\",\n  \"module_id\": \"00:24:77:52:ac:be\",\n  \"module_ip\": \"10.10.1.30\",\n  \"channel\": 0,\n  \"name\": \"Keuken LED\",\n  \"room\": \"Keuken\",\n  \"semantic_type\": \"light\",\n  \"device_type\": \"relay\",\n  \"active\": true,\n  \"max_watt\": 60,\n  \"state\": \"off\",\n  \"current_watt\": 0\n}"
             },
             {
-              "id": "get-device-404",
-              "name": "404 Not Found",
+              "name": "404 — device not in registry",
               "originalRequest": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{device_id}}"]
+                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.99-0",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "devices",
+                    "10.10.1.99-0"
+                  ]
                 }
               },
               "status": "Not Found",
               "code": 404,
+              "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"error\": \"not found\"\n}"
+              "body": "{\"error\": \"not found\"}"
             }
           ]
         }
@@ -164,45 +424,71 @@
     },
     {
       "name": "Commands",
+      "description": "Send actions to relay or dimmer channels. The gateway resolves the `device_id` to its physical module + channel and then encodes the right field-bus command. Device type is determined server-side from `devices.json` — clients cannot spoof it.\n\n| Action | Valid for | Extra fields | Status on success |\n|--------|-----------|--------------|-------------------|\n| `ON` | relay | — | `200 {\"ok\": true}` |\n| `OFF` | relay | — | `200 {\"ok\": true}` |\n| `PULSE` | relay | — | `200 {\"ok\": true}` |\n| `TOGGLE` | relay | — | `200 {\"ok\": true}` |\n| `DIM` | dimmer | `value` (0–100, `0` = off) | `200 {\"ok\": true}` |\n",
       "item": [
         {
           "name": "Relay ON",
-          "event": [],
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json"
+                "value": "application/json",
+                "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+            "body": {
+              "mode": "raw",
+              "raw": "{\"action\":\"ON\"}"
             },
-            "description": "Switch a relay channel on.\n\n**Request body:**\n```json\n{\"action\": \"ON\"}\n```\n\n**Response 200:** `{\"ok\": true}`\n\n**Response 422** — unsupported action:\n```json\n{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}\n```"
+            "url": {
+              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}/command",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "devices",
+                "{{device_id}}",
+                "command"
+              ]
+            },
+            "description": "Switch the relay channel identified by `{{device_id}}` ON.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"ON\"}\n```\n\n**Path parameters:**\n\n| Name | Type | Description |\n|------|------|-------------|\n| `device_id` | string | `{module_ip}-{channel}` or a configured slug, e.g. `10.10.1.30-0` |\n\n**Response 200** — `{\"ok\": true}`. The relay should report its new state over the WebSocket `state_changed` message within the next poll cycle.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}` when the body lacks an `action` field.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` when the action verb is not one of `ON` / `OFF` / `PULSE` / `TOGGLE` for a relay channel.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "id": "relay-on-200",
-              "name": "200 OK",
+              "name": "200 — command accepted",
               "originalRequest": {
                 "method": "POST",
                 "header": [
                   {
                     "key": "Content-Type",
-                    "value": "application/json"
+                    "value": "application/json",
+                    "type": "text"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"action\":\"ON\"}"
+                },
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "devices",
+                    "10.10.1.30-0",
+                    "command"
+                  ]
                 }
               },
               "status": "OK",
               "code": 200,
+              "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",
@@ -212,24 +498,37 @@
               "body": "{\"ok\": true}"
             },
             {
-              "id": "relay-on-422",
-              "name": "422 Unprocessable Entity",
+              "name": "422 — unsupported action",
               "originalRequest": {
                 "method": "POST",
                 "header": [
                   {
                     "key": "Content-Type",
-                    "value": "application/json"
+                    "value": "application/json",
+                    "type": "text"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"action\":\"FOO\"}"
+                },
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "devices",
+                    "10.10.1.30-0",
+                    "command"
+                  ]
                 }
               },
               "status": "Unprocessable Entity",
               "code": 422,
+              "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",
@@ -242,42 +541,67 @@
         },
         {
           "name": "Relay OFF",
-          "event": [],
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json"
+                "value": "application/json",
+                "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+            "body": {
+              "mode": "raw",
+              "raw": "{\"action\":\"OFF\"}"
             },
-            "description": "Switch a relay channel off.\n\n**Request body:**\n```json\n{\"action\": \"OFF\"}\n```"
+            "url": {
+              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}/command",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "devices",
+                "{{device_id}}",
+                "command"
+              ]
+            },
+            "description": "Switch the relay channel identified by `{{device_id}}` OFF.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"OFF\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "id": "relay-off-200",
-              "name": "200 OK",
+              "name": "200 — command accepted",
               "originalRequest": {
                 "method": "POST",
                 "header": [
                   {
                     "key": "Content-Type",
-                    "value": "application/json"
+                    "value": "application/json",
+                    "type": "text"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"action\":\"OFF\"}"
+                },
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "devices",
+                    "10.10.1.30-0",
+                    "command"
+                  ]
                 }
               },
               "status": "OK",
               "code": 200,
+              "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",
@@ -290,42 +614,67 @@
         },
         {
           "name": "Relay PULSE",
-          "event": [],
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json"
+                "value": "application/json",
+                "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+            "body": {
+              "mode": "raw",
+              "raw": "{\"action\":\"PULSE\"}"
             },
-            "description": "Send a pulse (brief on→off) on a relay channel.\n\n**Request body:**\n```json\n{\"action\": \"PULSE\"}\n```"
+            "url": {
+              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}/command",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "devices",
+                "{{device_id}}",
+                "command"
+              ]
+            },
+            "description": "Send a short PULSE to the relay channel identified by `{{device_id}}`. Pulse duration is fixed by the IP0200PoE firmware (typically 1 s ON / 1 s OFF).\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"PULSE\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "id": "relay-pulse-200",
-              "name": "200 OK",
+              "name": "200 — command accepted",
               "originalRequest": {
                 "method": "POST",
                 "header": [
                   {
                     "key": "Content-Type",
-                    "value": "application/json"
+                    "value": "application/json",
+                    "type": "text"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"action\":\"PULSE\"}"
+                },
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "devices",
+                    "10.10.1.30-0",
+                    "command"
+                  ]
                 }
               },
               "status": "OK",
               "code": 200,
+              "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",
@@ -338,42 +687,67 @@
         },
         {
           "name": "Relay TOGGLE",
-          "event": [],
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json"
+                "value": "application/json",
+                "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+            "body": {
+              "mode": "raw",
+              "raw": "{\"action\":\"TOGGLE\"}"
             },
-            "description": "Toggle relay state: ON→OFF or OFF→ON based on current state.\\n\\n**Request body:**\\n```json\\n{\"action\": \"TOGGLE\"}\\n```"
+            "url": {
+              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}/command",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "devices",
+                "{{device_id}}",
+                "command"
+              ]
+            },
+            "description": "Flip the relay channel identified by `{{device_id}}` (ON → OFF, OFF → ON). The gateway reads the latest known state from the `DeviceRegistry` to decide which way to flip; if the state is unknown, the firmware default of \"switch ON\" is sent.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"TOGGLE\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "id": "relay-toggle-200",
-              "name": "200 OK",
+              "name": "200 — command accepted",
               "originalRequest": {
                 "method": "POST",
                 "header": [
                   {
                     "key": "Content-Type",
-                    "value": "application/json"
+                    "value": "application/json",
+                    "type": "text"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"action\":\"TOGGLE\"}"
+                },
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "devices",
+                    "10.10.1.30-0",
+                    "command"
+                  ]
                 }
               },
               "status": "OK",
               "code": 200,
+              "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",
@@ -386,42 +760,67 @@
         },
         {
           "name": "Dimmer DIM",
-          "event": [],
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json"
+                "value": "application/json",
+                "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+            "body": {
+              "mode": "raw",
+              "raw": "{\"action\": \"DIM\", \"value\": 75}"
             },
-            "description": "Set dimmer level (0–100). 0 is off.\n\n**Request body:**\n```json\n{\"action\": \"DIM\", \"value\": 75}\n```\n\n**Response 200:** `{\"ok\": true}`\n\n**Response 422** — wrong device type or unsupported action."
+            "url": {
+              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}/command",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "devices",
+                "{{device_id}}",
+                "command"
+              ]
+            },
+            "description": "Set the dimmer channel identified by `{{device_id}}` to a specific level. The `value` field is an integer percentage between `0` and `100` (`0` = OFF, encoded as a special \"dim off\" payload rather than a 0% level).\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"DIM\", \"value\": 75}\n```\n\n**Response 200** — `{\"ok\": true}`. The dimmer confirms the new level on the next status reply (tracked under the correct channel via the gateway's dimmer channel tracker).\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported dimmer action: FOO\"}` when the action is not `DIM`, or `{\"ok\": false, \"error\": \"unsupported device type: input\"}` when the device_id resolves to a non-dimmer channel (relay / input).\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "id": "dimmer-dim-200",
-              "name": "200 OK",
+              "name": "200 — command accepted",
               "originalRequest": {
                 "method": "POST",
                 "header": [
                   {
                     "key": "Content-Type",
-                    "value": "application/json"
+                    "value": "application/json",
+                    "type": "text"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"action\": \"DIM\", \"value\": 75}"
+                },
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.40-0/command",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "devices",
+                    "10.10.1.40-0",
+                    "command"
+                  ]
                 }
               },
               "status": "OK",
               "code": 200,
+              "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",
@@ -431,24 +830,37 @@
               "body": "{\"ok\": true}"
             },
             {
-              "id": "dimmer-dim-422",
-              "name": "422 Unprocessable Entity",
+              "name": "422 — DIM sent to non-dimmer device",
               "originalRequest": {
                 "method": "POST",
                 "header": [
                   {
                     "key": "Content-Type",
-                    "value": "application/json"
+                    "value": "application/json",
+                    "type": "text"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"action\": \"DIM\", \"value\": 50}"
+                },
                 "url": {
-                  "raw": "{{base_url}}/api/v1/devices/{{device_id}}/command",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "devices", "{{device_id}}", "command"]
+                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.50-0/command",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "devices",
+                    "10.10.1.50-0",
+                    "command"
+                  ]
                 }
               },
               "status": "Unprocessable Entity",
               "code": 422,
+              "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",
@@ -462,46 +874,171 @@
       ]
     },
     {
-      "name": "Provisioning",
+      "name": "Discovery",
+      "description": "Runtime auto-discovery. The gateway normally uses a passive ARP monitor to track new, changed, and removed modules on the field bus. This folder exposes a single synchronous trigger that forces a full sweep on demand — useful from operator dashboards, scripted provisioning flows, or after physical reconfiguration. The forced sweep ignores the `passive_arp_monitor` and `auto_discover_on_start` toggles and is always available.\n\nSee [`docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md) for the full write policy and design rationale.\n",
       "item": [
         {
-          "name": "Provision autonomy",
-          "event": [],
+          "name": "Force discovery sweep",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json"
+                "value": "application/json",
+                "type": "text"
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/provision/autonomy",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "provision", "autonomy"]
+              "raw": "{{base_url}}/api/{{apiVersion}}/discover",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "discover"
+              ]
             },
-            "description": "Trigger EEPROM sync to IP1100PoE (saveAutonomy).  Stub — not yet implemented (Fase 8).\n\n**Request body:** `{}`\n\n**Response 501:** `{\"ok\": false, \"error\": \"not yet implemented\"}`"
+            "description": "Trigger a synchronous ARP-first + HTTP identify sweep of the field bus. The endpoint blocks until the sweep completes (typically 5–30 s, depending on `discovery_range_end` and `http_timeout_s`). The endpoint is always available regardless of the `passive_arp_monitor` and `auto_discover_on_start` toggles.\n\n**Path:** `POST /api/{{apiVersion}}/discover`\n\n**Request body:** none. The body is optional — the gateway accepts an empty body or `{}`. (Mark the request in Postman as having no body; do not send a JSON object unless you want to log a parser warning.)\n\n**Response 200** — discovery summary:\n\n```json\n{\n  \"ok\": true,\n  \"added\": [\"00:24:77:52:ac:be\"],\n  \"changed\": [],\n  \"removed\": [],\n  \"duration_ms\": 2341\n}\n```\n\n| Field | Type | Description |\n|-------|------|-------------|\n| `ok` | boolean | `true` if the sweep completed (even when no changes were detected) |\n| `added` | array of MAC strings | Modules newly discovered — written to `devices.json` with `active: false, room: \"Unconfigured\"` |\n| `changed` | array of MAC strings | Modules whose firmware version or IP changed (IP changes update the runtime registry only) |\n| `removed` | array of MAC strings | Modules not seen for the configured threshold — runtime marker only, **not** removed from `devices.json` |\n| `duration_ms` | integer | Total sweep time in milliseconds |\n\nA `discovery_completed` event with the same payload is also broadcast on the WebSocket `/ws` channel for any connected clients (companion, dashboards).\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) and the runtime auto-discovery design spec linked above.\n"
           },
           "response": [
             {
-              "id": "autonomy-501",
-              "name": "501 Not Implemented",
+              "name": "200 — sweep completed with changes",
               "originalRequest": {
                 "method": "POST",
                 "header": [
                   {
                     "key": "Content-Type",
-                    "value": "application/json"
+                    "value": "application/json",
+                    "type": "text"
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/provision/autonomy",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "provision", "autonomy"]
+                  "raw": "{{base_url}}/api/{{apiVersion}}/discover",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "discover"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"ok\": true,\n  \"added\": [\"00:24:77:52:ac:be\"],\n  \"changed\": [],\n  \"removed\": [],\n  \"duration_ms\": 2341\n}"
+            },
+            {
+              "name": "200 — sweep completed, no changes",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/{{apiVersion}}/discover",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "discover"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\"ok\": true, \"added\": [], \"changed\": [], \"removed\": [], \"duration_ms\": 512}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Provisioning",
+      "description": "Operator-driven provisioning flows. The gateway owns a small set of actions that push persistent state to module EEPROM (autonomy tables, button mapping). These endpoints are wired up in the router but most are scheduled for Fase 8 of the implementation roadmap; the autonomy endpoint is currently a stub that returns `501 not yet implemented` so the contract is locked in.\n",
+      "item": [
+        {
+          "name": "Provision autonomy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{apiVersion}}/provision/autonomy",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "provision",
+                "autonomy"
+              ]
+            },
+            "description": "Reserved endpoint for syncing the `autonomy` (input button → action) table to an IP1100PoE module's EEPROM via the `saveAutonomy` HTTP call. The route is wired and the response contract is locked, but the implementation lands in Fase 8. Today the endpoint always returns `501 not yet implemented` so that clients can already be coded against the final shape.\n\n**Path:** `POST /api/{{apiVersion}}/provision/autonomy`\n\n**Request body:** `{}` (reserved; the body is accepted but ignored by the stub).\n\n**Response 501** — `{\"ok\": false, \"error\": \"not yet implemented\"}`.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+          },
+          "response": [
+            {
+              "name": "501 — not yet implemented",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/{{apiVersion}}/provision/autonomy",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "provision",
+                    "autonomy"
+                  ]
                 }
               },
               "status": "Not Implemented",
               "code": 501,
+              "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",

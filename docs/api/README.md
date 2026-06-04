@@ -88,6 +88,20 @@ flowchart LR
 
 If you use the collection via **Remote URL** (raw GitHub link), delete the old import and re-import the updated Remote URL after `git pull`.
 
+### Collection versioning
+
+The Postman collection's `info.version` mirrors the add-on release version
+defined in `ipbuilding_gateway/config.yaml`. When you bump the add-on
+version (e.g. from `0.0.4` to `0.0.5`), also bump:
+
+- `docs/api/ipbuilding-gateway.postman_collection.json` → `info.version`
+- This `README.md` → "Files" table if the schema URL changes
+- `tests/test_api_docs.py` → `EXPECTED_ROUTES` if routes are added/removed
+
+The collection-level variable `{{apiVersion}}` (default `v1`) lets
+you preview future v2 endpoints by changing the variable in Postman
+without editing URLs. Currently only `v1` is served by the gateway.
+
 ---
 
 ## Out of scope
