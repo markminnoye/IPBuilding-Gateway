@@ -9,6 +9,7 @@ import sys
 
 from aiohttp import web
 
+from gateway.auto_discovery import DiscoveryOrchestrator
 from gateway.config import GatewayConfig
 from gateway.device_registry import DeviceRegistry
 from gateway.installation import InstallationConfig
@@ -69,6 +70,20 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
             log.warning("Module metadata prefetch failed; cache is empty at startup")
 
     api = GatewayAPI(bus, registry, cfg, metadata_cache=meta_cache)
+
+    # Start runtime auto-discovery orchestrator after API is ready
+    orchestrator: DiscoveryOrchestrator | None = None
+    if cfg.discovery:
+        devices_file = os.getenv("GATEWAY_DEVICES_FILE", "./devices.json")
+        orchestrator = DiscoveryOrchestrator(
+            config=cfg.discovery,
+            devices_file=devices_file,
+            broadcast=api._broadcast,
+            installation=cfg.installation,
+        )
+        await orchestrator.start()
+
+    api.set_orchestrator(orchestrator)
     await api.start()
 
     install_info = ""
@@ -102,6 +117,8 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         await stop_event.wait()
     finally:
         log.info("Shutting down…")
+        if orchestrator:
+            await orchestrator.stop()
         if shim_runner:
             await shim_runner.cleanup()
         await api.stop()

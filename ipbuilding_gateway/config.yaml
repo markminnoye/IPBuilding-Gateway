@@ -1,5 +1,5 @@
 name: IPBuilding Gateway
-version: "0.0.3"
+version: "0.0.4"
 slug: ipbuilding_gateway
 description: Open IPBuilding field-bus gateway (UDP/1001) — replaces proprietary IPBox hub
 url: https://github.com/markminnoye/IPBuilding-Gateway
@@ -22,6 +22,13 @@ options:
   rest_shim_enabled: false
   log_level: info
   devices_file: /data/devices.json
+  discovery_subnet: 10.10.1
+  discovery_range_start: 0
+  discovery_range_end: 254
+  auto_discover_on_start: false
+  passive_arp_monitor: true
+  arp_poll_interval_s: 30.0
+  http_timeout_s: 2.0
 schema:
   hub_ip: str
   poll_interval: float
@@ -29,6 +36,13 @@ schema:
   rest_shim_enabled: bool
   log_level: list(debug|info|warning|error)
   devices_file: str
+  discovery_subnet: str
+  discovery_range_start: int
+  discovery_range_end: int
+  auto_discover_on_start: bool
+  passive_arp_monitor: bool
+  arp_poll_interval_s: float
+  http_timeout_s: float
 boot: auto
 auto_update: false
 watchdog: "http://[HOST]:[PORT:8080]/health"

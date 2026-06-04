@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import os
 from dataclasses import dataclass, field
@@ -9,6 +10,54 @@ from dataclasses import dataclass, field
 from gateway.installation import InstallationConfig, InstallationError
 
 log = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Discovery config
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class DiscoveryConfig:
+    """Runtime auto-discovery behaviour (optional, loaded from env)."""
+
+    subnet: str = "10.10.1"
+    range_start: int = 0
+    range_end: int = 254
+    arp_poll_interval_s: float = 30.0
+    passive_arp_monitor: bool = True
+    auto_discover_on_start: bool = False
+    http_timeout_s: float = 2.0
+    lock_timeout_s: float = 15.0
+    removed_after_n_polls: int = 3
+
+    @classmethod
+    def from_env(cls) -> "DiscoveryConfig":
+        return cls(
+            subnet=os.getenv("GATEWAY_DISCOVERY_SUBNET", "10.10.1"),
+            range_start=int(os.getenv("GATEWAY_DISCOVERY_RANGE_START", "0")),
+            range_end=int(os.getenv("GATEWAY_DISCOVERY_RANGE_END", "254")),
+            arp_poll_interval_s=float(os.getenv("GATEWAY_ARP_POLL_INTERVAL_S", "30.0")),
+            passive_arp_monitor=os.getenv("GATEWAY_PASSIVE_ARP_MONITOR", "1").lower()
+                in ("1", "true", "yes"),
+            auto_discover_on_start=os.getenv("GATEWAY_AUTO_DISCOVER_ON_START", "0").lower()
+                in ("1", "true", "yes"),
+            http_timeout_s=float(os.getenv("GATEWAY_HTTP_TIMEOUT_S", "2.0")),
+        )
+
+    def hub_ip_in_subnet(self, hub_ip: str) -> bool:
+        """Return True if hub_ip is in the discovery subnet."""
+        try:
+            hub = ipaddress.ip_address(hub_ip)
+            net = ipaddress.ip_network(self.subnet + ".0/24", strict=False)
+            return hub in net
+        except ValueError:
+            return False
+
+
+# ---------------------------------------------------------------------------
+# Gateway config
+# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -34,6 +83,8 @@ class GatewayConfig:
     )
     # Installation configuration; if set, field_modules is derived from it
     installation: InstallationConfig | None = None
+    # Discovery configuration (optional; loaded from env)
+    discovery: DiscoveryConfig = field(default_factory=DiscoveryConfig)
 
     @classmethod
     def from_env(cls) -> GatewayConfig:
@@ -53,8 +104,18 @@ class GatewayConfig:
         else:
             modules = installation.field_modules()
 
+        discovery = DiscoveryConfig.from_env()
+        hub_ip = os.getenv("GATEWAY_HUB_IP", "10.10.1.1")
+        if not discovery.hub_ip_in_subnet(hub_ip):
+            log.warning(
+                "hub_ip %s is outside discovery_subnet %s — "
+                "passive ARP monitor may not detect this hub on the field bus",
+                hub_ip,
+                discovery.subnet,
+            )
+
         return cls(
-            hub_ip=os.getenv("GATEWAY_HUB_IP", "10.10.1.1"),
+            hub_ip=hub_ip,
             hub_port=int(os.getenv("GATEWAY_HUB_PORT", "1001")),
             rest_host=os.getenv("GATEWAY_REST_HOST", "0.0.0.0"),
             rest_port=int(os.getenv("GATEWAY_REST_PORT", "30200")),
@@ -68,4 +129,5 @@ class GatewayConfig:
             log_level=os.getenv("GATEWAY_LOG_LEVEL", "INFO").upper(),
             field_modules=modules,
             installation=installation,
+            discovery=discovery,
         )

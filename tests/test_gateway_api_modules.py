@@ -164,3 +164,59 @@ class TestBuildSnapshot:
         module_ids = {m["id"] for m in snapshot["modules"]}
         device_module_ids = {d["module_id"] for d in snapshot["devices"]}
         assert device_module_ids <= module_ids, "all device.module_id values must appear in modules list"
+
+
+class TestLastSeenFields:
+    """Module resource includes last_seen / last_seen_source runtime fields."""
+
+    def test_module_list_includes_last_seen_when_set(self) -> None:
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay",
+                "mac": "00:24:77:52:ac:be",
+                "firmware": "5.1",
+                "channels": [],
+            }
+        ])
+        # Set runtime-only fields on the ModuleConfig
+        inst.modules[0].last_seen = "2026-06-04T18:00:00Z"
+        inst.modules[0].last_seen_source = "arp"
+
+        api = _make_api(inst)
+        modules = api._build_module_list()
+
+        assert len(modules) == 1
+        assert modules[0]["last_seen"] == "2026-06-04T18:00:00Z"
+        assert modules[0]["last_seen_source"] == "arp"
+
+    def test_module_list_excludes_last_seen_when_not_set(self) -> None:
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay",
+                "mac": "00:24:77:52:ac:be",
+                "firmware": "5.1",
+                "channels": [],
+            }
+        ])
+        # last_seen is None by default
+        api = _make_api(inst)
+        modules = api._build_module_list()
+
+        assert "last_seen" not in modules[0]
+        assert "last_seen_source" not in modules[0]
+
+
+class TestDiscoveryEndpoint:
+    """POST /api/v1/discover endpoint (orchestrator must be set)."""
+
+    @pytest.mark.asyncio
+    async def test_discover_returns_503_when_no_orchestrator(self) -> None:
+        inst = _make_installation([
+            {"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": []}
+        ])
+        api = _make_api(inst)
+        # No orchestrator set
+        request = MagicMock()
+        request.match_info = {}
+        response = await api._post_discover(request)
+        assert response.status == 503

@@ -6,7 +6,7 @@ Open veldbus-hub voor IPBuilding relais, dimmers en drukknoppen via **UDP/1001**
 
 - **UDP/1001 veldbus** — praat rechtstreeks met IP0200PoE, IP0300PoE en IP1100PoE
 - **WebSocket + REST northbound API** — productie-protocol op `8080`
-- **Auto-discovery** — ARP-first module detectie
+- **Auto-discovery** — runtime init-sweep (vult `devices.json` met `active: false`), passieve ARP-monitor (30 s interval, detecteert nieuwe/verwijderde modules), geforceerde discovery via `POST /api/v1/discover`
 - **IPBox migratie-shim** — REST compatibiliteit op `30200` (opt-in)
 - **Supervisor integratie** — add-on beheer, auto-update, logs
 
@@ -76,6 +76,13 @@ Bekijk logs voor de opstartstatus:
 | `rest_shim_enabled` | `false` | IPBox REST shim op poort `30200` (enkel migratie) |
 | `log_level` | `info` | Log niveau: `debug`, `info`, `warning`, `error` |
 | `devices_file` | `/data/devices.json` | Pad naar installatie configuratie |
+| `discovery_subnet` | `10.10.1` | Subnet voor ARP-sweep en passieve monitor |
+| `discovery_range_start` | `0` | Start van IP-range voor init-sweep (0 = volledige /24) |
+| `discovery_range_end` | `254` | Eind van IP-range voor init-sweep |
+| `auto_discover_on_start` | `false` | Init-sweep draaien bij eerste start (vult lege `devices.json`) |
+| `passive_arp_monitor` | `true` | Passieve ARP-monitor inschakelen (30 s poll interval) |
+| `arp_poll_interval_s` | `30.0` | Interval voor passieve ARP-polling in seconden |
+| `http_timeout_s` | `2.0` | Timeout voor HTTP getSysSet calls tijdens discovery |
 
 ---
 
@@ -128,7 +135,15 @@ Zoek naar `[run.sh]` — als die ontbreekt is `devices.json` niet geladen.
 
 `devices.json` ontbreekt of is incompleet. Genereer opnieuw met de discovery CLI.
 
-### UDP polling werkt niet
+### Companion ziet "unconfigured" entities
+
+Nieuwe modules die via de passieve ARP-monitor worden gevonden worden in `devices.json` geschreven met `active: false` en `room: "Unconfigured"`. De companion toont deze entities als "unconfigured". Om ze te activeren:
+
+1. **Option A (handmatig):** bewerk `devices.json` via Samba/SFTP — zet `active: true` en vul `name`/`room` in.
+2. **Option B (API):** roep `POST /api/v1/discover` aan — doet een volledige HTTP-identificatie; firmware-updates worden weggeschreven maar naam/kamer niet automatisch.
+3. **Option C (toekomstig companion-workstream):** companion leert `active: false` / `room: "Unconfigured"` herkennen en toont een "Configureer" UI in HA.
+
+UDP polling werkt niet
 
 - `host_network: true` is vereist — check `config.yaml`
 - HA heeft een **IP adres op `10.10.1.x`** nodig

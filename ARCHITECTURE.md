@@ -37,6 +37,14 @@ De propriëtaire **IPBox** (IP0000X) vervangen door een open, zelfbeheerde gatew
 | Northbound: WS, REST, MQTT, Matter adapters | Button-mapping opslaan |
 | Provisioning: EEPROM-sync doorgeven aan input-module | — |
 
+**Write-policy (`devices.json`):**
+- Nieuwe modules (via init-sweep of forced discovery) → `devices.json` met `active: false`, `room: "Unconfigured"`.
+- Verloren modules → enkel markeren als unreachable in runtime registry; **niet** automatisch verwijderen uit `devices.json`.
+- IP-wijziging (DHCP) → runtime WebSocket `device_ip_changed`; `devices.json` ongewijzigd.
+- Firmware-wijziging → `devices.json` updated (één regel) + `device_firmware_changed` WS event.
+- Writes naar `devices.json` gaan altijd via `AtomicWriter` (tempfile + `os.replace` + `fcntl.flock`, 15 s lock-timeout).
+- `last_seen` / `last_seen_source` zijn **runtime-only** velden — niet gepersisteerd naar `devices.json`.
+
 **Talen/runtimes:**
 - Python 3.11+ (HA add-on en standalone Docker/RPi) — primaire implementatie
 - C++ ESP-IDF (ESP32 POC) — toekomstig, zelfde northbound-protocol
@@ -180,9 +188,45 @@ graph LR
 | `rest_shim.py` | `gateway/rest_shim.py` | IPBox-compatibele REST `:30200` *(tijdelijk, transitie)* |
 | `payloads/` | `gateway/payloads/` | encode/decode relay, dimmer, input — **aanwezig en getest** |
 
-### 4.1 Module discovery — ARP-first + HTTP identify
+### 4.1 Module discovery — ARP-first + HTTP identify + passive ARP monitor
 
-Discovery start bij eerste opstart of op aanvraag (`python -m gateway.discover`).
+Discovery starts at first boot (init-sweep) or on-demand (`POST /api/v1/discover`).
+
+The runtime auto-discovery system has three coordinated parts:
+
+**Init-sweep** (first boot, optional via `auto_discover_on_start`):
+```
+Empty devices.json detected at startup
+  → ARP ping-sweep over discovery_subnet/range
+  → parse arp -an / proc/net/arp
+  → filter OUI 00:24:77
+  → exclude OUI 00:30:18 (IPBox hub)
+  → HTTP getSysSet + backupConfig per candidate
+  → write devices.json with active:false, room:"Unconfigured"
+```
+
+**Passive ARP monitor** (always running when `passive_arp_monitor: true`):
+```
+Every arp_poll_interval_s (default 30 s):
+  → read kernel ARP table
+  → diff against known MACs
+  → emit device_added / device_removed / device_ip_changed
+  → module marked "removed" after removed_after_n_polls (default 3)
+```
+No HTTP calls are made for existing modules during passive monitoring — firmware check only on init/forced discovery.
+
+**Forced discovery** (`POST /api/v1/discover`):
+```
+ARP-sweep + HTTP getSysSet + backupConfig (all modules, regardless of toggles)
+  → new modules written to devices.json (active:false)
+  → firmware changes written to devices.json + device_firmware_changed WS event
+  → IP changes emitted as device_ip_changed (devices.json unchanged)
+```
+
+**Standaard range:** `10.10.1.30–59` — matcht IPBox Scan Modules-gedrag.
+Gebruiker configureert `discovery_subnet`, `discovery_range_start`, `discovery_range_end` (CLI or add-on options).
+
+**OUI-filter:**
 
 ```
 Ping sweep (configureerbare range)

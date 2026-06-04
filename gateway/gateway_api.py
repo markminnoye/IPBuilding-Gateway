@@ -95,6 +95,8 @@ class GatewayAPI:
         # Registry callbacks — stored so we can unregister on stop
         self._state_cb: Any = None
         self._button_cb: Any = None
+        # Discovery orchestrator (set after construction via set_orchestrator)
+        self._orchestrator: Any = None
 
     # -------------------------------------------------------------------------
     # Lifecycle
@@ -123,6 +125,8 @@ class GatewayAPI:
             "/api/v1/modules/{module_id}", self._get_module
         )
         self._app.router.add_post("/api/v1/modules/refresh", self._post_modules_refresh)
+        # Runtime auto-discovery
+        self._app.router.add_post("/api/v1/discover", self._post_discover)
 
         # Register registry callbacks
         self._state_cb = self._registry.on_state_changed(self._on_state_changed)
@@ -137,6 +141,10 @@ class GatewayAPI:
             self._cfg.api_host,
             self._cfg.api_port,
         )
+
+    def set_orchestrator(self, orchestrator: Any) -> None:
+        """Set the discovery orchestrator (called by main.py after construction)."""
+        self._orchestrator = orchestrator
 
     async def stop(self) -> None:
         """Stop the server and clean up registry callbacks."""
@@ -298,6 +306,22 @@ class GatewayAPI:
         module_list = self._build_module_list()
         return web.json_response({"modules": module_list})
 
+    async def _post_discover(self, request: web.Request) -> web.Response:
+        """POST /api/v1/discover — run forced discovery (ARP-sweep + HTTP identify).
+
+        Works regardless of passive_arp_monitor / auto_discover_on_start toggles.
+        Writes new modules to devices.json with active:false; updates firmware on
+        existing modules.
+        """
+        if self._orchestrator is None:
+            return web.json_response({"ok": False, "error": "orchestrator not available"}, status=503)
+        try:
+            result = await self._orchestrator.run_forced_discovery()
+            return web.json_response(result)
+        except Exception as exc:
+            log.exception("POST /api/v1/discover failed")
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
     # -------------------------------------------------------------------------
     # Command execution
     # -------------------------------------------------------------------------
@@ -416,6 +440,11 @@ class GatewayAPI:
                 "firmware": mc.firmware,
                 "mac": mc.mac,
             }
+            # Runtime-only fields (not persisted to devices.json)
+            if mc.last_seen is not None:
+                entry["last_seen"] = mc.last_seen
+            if mc.last_seen_source:
+                entry["last_seen_source"] = mc.last_seen_source
             # Merge cached metadata
             if meta is not None:
                 entry["network"] = meta.network

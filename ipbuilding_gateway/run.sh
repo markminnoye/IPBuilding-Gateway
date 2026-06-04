@@ -98,9 +98,27 @@ GATEWAY_LOG_LEVEL=$(json_str_or "log_level" "info")
 export GATEWAY_DEVICES_FILE
 GATEWAY_DEVICES_FILE=$(json_str_or "devices_file" "/data/devices.json")
 
-# ── Discover at startup? (Phase 4 = false; future Phase 7) ──────────────────
-export GATEWAY_AUTO_DISCOVER
-GATEWAY_AUTO_DISCOVER="0"
+# ── Discovery / auto-discovery ───────────────────────────────────────────────
+export GATEWAY_DISCOVERY_SUBNET
+GATEWAY_DISCOVERY_SUBNET=$(json_str_or "discovery_subnet" "10.10.1")
+
+export GATEWAY_DISCOVERY_RANGE_START
+GATEWAY_DISCOVERY_RANGE_START=$(json_int_or "discovery_range_start" "0")
+
+export GATEWAY_DISCOVERY_RANGE_END
+GATEWAY_DISCOVERY_RANGE_END=$(json_int_or "discovery_range_end" "254")
+
+export GATEWAY_AUTO_DISCOVER_ON_START
+GATEWAY_AUTO_DISCOVER_ON_START=$(json_bool "auto_discover_on_start")
+
+export GATEWAY_PASSIVE_ARP_MONITOR
+GATEWAY_PASSIVE_ARP_MONITOR=$(json_bool "passive_arp_monitor")
+
+export GATEWAY_ARP_POLL_INTERVAL_S
+GATEWAY_ARP_POLL_INTERVAL_S=$(json_str_or "arp_poll_interval_s" "30.0")
+
+export GATEWAY_HTTP_TIMEOUT_S
+GATEWAY_HTTP_TIMEOUT_S=$(json_str_or "http_timeout_s" "2.0")
 
 # ── Simulated mode (default off) ─────────────────────────────────────────────
 # Set GATEWAY_SIMULATED=1 to run without field hardware during development
@@ -112,6 +130,13 @@ echo "[run.sh] GATEWAY_API_PORT=$GATEWAY_API_PORT"
 echo "[run.sh] GATEWAY_DEVICES_FILE=$GATEWAY_DEVICES_FILE"
 echo "[run.sh] GATEWAY_REST_SHIM_ENABLED=$GATEWAY_REST_SHIM_ENABLED"
 echo "[run.sh] GATEWAY_LOG_LEVEL=$GATEWAY_LOG_LEVEL"
+echo "[run.sh] GATEWAY_DISCOVERY_SUBNET=$GATEWAY_DISCOVERY_SUBNET"
+echo "[run.sh] GATEWAY_DISCOVERY_RANGE_START=$GATEWAY_DISCOVERY_RANGE_START"
+echo "[run.sh] GATEWAY_DISCOVERY_RANGE_END=$GATEWAY_DISCOVERY_RANGE_END"
+echo "[run.sh] GATEWAY_AUTO_DISCOVER_ON_START=$GATEWAY_AUTO_DISCOVER_ON_START"
+echo "[run.sh] GATEWAY_PASSIVE_ARP_MONITOR=$GATEWAY_PASSIVE_ARP_MONITOR"
+echo "[run.sh] GATEWAY_ARP_POLL_INTERVAL_S=$GATEWAY_ARP_POLL_INTERVAL_S"
+echo "[run.sh] GATEWAY_HTTP_TIMEOUT_S=$GATEWAY_HTTP_TIMEOUT_S"
 
 # Apply log level
 export PYTHON_LOG_LEVEL

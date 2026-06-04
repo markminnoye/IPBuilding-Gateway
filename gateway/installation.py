@@ -87,6 +87,35 @@ class ChannelConfig:
         """Alias for room, for backward compatibility."""
         return self.room
 
+    def to_dict(self) -> dict:
+        """Serialize to dict for devices.json."""
+        d: dict = {
+            "ch": self.ch,
+            "name": self.name,
+            "room": self.room,
+            "semantic_type": self.semantic_type,
+            "active": self.active,
+            "max_watt": self.max_watt,
+        }
+        if self.ipbox_id is not None:
+            d["ipbox_id"] = self.ipbox_id
+        if self.id:
+            d["id"] = self.id
+        return d
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ChannelConfig":
+        return cls(
+            ch=data["ch"],
+            ipbox_id=data.get("ipbox_id"),
+            id=data.get("id", ""),
+            name=data.get("name", data.get("description", "")),
+            room=data.get("room", data.get("group", "")),
+            semantic_type=data.get("semantic_type", "light"),
+            active=data.get("active", True),
+            max_watt=data.get("max_watt", 0),
+        )
+
 
 @dataclass
 class ModuleConfig:
@@ -99,6 +128,9 @@ class ModuleConfig:
     model: str = ""    # factory product label, e.g. "IP200PoE"; optional
     mac: str = ""      # factory MAC (OUI 00:24:77); normalised lowercase
     channels: list[ChannelConfig] = field(default_factory=list)
+    # Runtime-only fields — NOT serialized to devices.json
+    last_seen: str | None = None       # ISO timestamp of last ARP/HTTP contact
+    last_seen_source: str = ""         # "arp" | "http" | "udp"
 
     @property
     def module_id(self) -> str:
@@ -109,6 +141,31 @@ class ModuleConfig:
     def ip_decimal(self) -> str:
         """Return the last octet of the IP as an integer (e.g. '30' from '10.10.1.30')."""
         return self.ip.rsplit(".", 1)[-1]
+
+    def to_dict(self) -> dict:
+        """Serialize to dict for devices.json, excluding runtime-only fields."""
+        return {
+            "name": self.name,
+            "ip": self.ip,
+            "type": self.type.value,
+            "firmware": self.firmware,
+            "model": self.model,
+            "mac": self.mac,
+            "channels": [c.to_dict() for c in self.channels],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ModuleConfig":
+        """Reconstruct from a devices.json dict entry, skipping runtime fields."""
+        return cls(
+            name=data.get("name", data.get("ip", "")),
+            ip=data["ip"],
+            type=DeviceType(data["type"]),
+            firmware=data.get("firmware", ""),
+            model=data.get("model", ""),
+            mac=data.get("mac", ""),
+            channels=[ChannelConfig.from_dict(c) for c in data.get("channels", [])],
+        )
 
 
 @dataclass
