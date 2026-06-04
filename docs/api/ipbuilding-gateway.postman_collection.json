@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "550e8400-e29b-41d4-a716-446655440000",
     "name": "IPBuilding Gateway",
-    "description": "# IPBuilding Gateway — REST API (v0.0.4)\n\nOpen field-bus gateway for IPBuilding controllers (relay / dimmer / input modules on UDP/1001). This collection exercises the product northbound REST API exposed by the gateway add-on on port `8080`.\n\n## Base URL\n\n```\n{{base_url}}/api/{{apiVersion}}\n```\n\n| Variable | Default | Description |\n|----------|---------|-------------|\n| `base_url` | `http://homeassistant.local:8080` | Gateway host (HA add-on: `http://[HOST]:[PORT:8080]`) |\n| `apiVersion` | `v1` | API version — currently only `v1` is shipped |\n| `module_id` | `00:24:77:52:ac:be` | Stable MAC-based module identifier (lower-case, colon-separated) |\n| `device_id` | `10.10.1.30-0` | Logical channel ID — `{module_ip}-{channel}` or a custom slug |\n\n## Device-ID format\n\nLogical channel IDs use the form `{module_ip}-{channel}` (e.g. `10.10.1.30-0` for the first channel of the relay at `10.10.1.30`). A custom slug from `devices.json` (e.g. `keuken-led`) is also accepted wherever `{device_id}` is used.\n\n## Device-type resolution (server-side only)\n\nThe gateway **resolves** the device type (`relay` / `dimmer` / `input`) from the installation config (`devices.json`) on every request. Clients never supply a device type and cannot spoof it: sending `{\"action\": \"DIM\"}` to a relay `device_id` yields `422 unsupported device type: relay`, not a `DIM` payload on the field bus.\n\n## Response shapes\n\n**Success envelope** (command results, forced discovery):\n\n```json\n{\"ok\": true}\n```\n\n**Resource envelopes** wrap the payload in a named key:\n\n```json\n{\"modules\": [...]}\n{\"devices\": [...]}\n```\n\n**Error envelope** (command results):\n\n```json\n{\"ok\": false, \"error\": \"<reason>\"}\n```\n\n**Not-found envelope** (resource lookups):\n\n```json\n{\"error\": \"not found\"}\n```\n\n## HTTP status code conventions\n\n| Code | Meaning | Example |\n|------|---------|---------|\n| `200` | OK | Command accepted; resource returned |\n| `400` | Missing or malformed input | `{\"ok\": false, \"error\": \"missing 'action'\"}` |\n| `404` | Unknown entity | `{\"error\": \"not found\"}` (module_id or device_id not in registry) |\n| `422` | Unsupported action / device-type mismatch | `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` |\n| `501` | Endpoint reserved, not yet implemented | `{\"ok\": false, \"error\": \"not yet implemented\"}` (Fase 8) |\n\n## See also\n\n- [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) — full REST reference\n- [`docs/api/websocket.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/websocket.md) — WebSocket `/ws` message catalog (real-time state push + command)\n- [`ARCHITECTURE.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/ARCHITECTURE.md) — northbound protocol design\n",
+    "description": "# IPBuilding Gateway — REST API (v0.0.4)\n\nOpen field-bus gateway for IPBuilding controllers (relay / dimmer / input modules on UDP/1001). This collection exercises the product northbound REST API exposed by the gateway add-on on port `8080`.\n\n## Base URL\n\n```\n{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}\n```\n\n| Variable | Default | Description |\n|----------|---------|-------------|\n| `base_url` | `http://homeassistant.local:8080` | Gateway host (HA add-on: `http://[HOST]:[PORT:8080]`) |\n| `apiVersion` | `v1` | API version — currently only `v1` is shipped |\n| `module_id` | `00:24:77:52:ac:be` | Stable MAC-based module identifier (lower-case, colon-separated) |\n| `device_id` | `10.10.1.30-0` | Logical channel ID — `{module_ip}-{channel}` or a custom slug |\n\n## Device-ID format\n\nLogical channel IDs use the form `{module_ip}-{channel}` (e.g. `10.10.1.30-0` for the first channel of the relay at `10.10.1.30`). A custom slug from `devices.json` (e.g. `keuken-led`) is also accepted wherever `{device_id}` is used.\n\n## Device-type resolution (server-side only)\n\nThe gateway **resolves** the device type (`relay` / `dimmer` / `input`) from the installation config (`devices.json`) on every request. Clients never supply a device type and cannot spoof it: sending `{\"action\": \"DIM\"}` to a relay `device_id` yields `422 unsupported device type: relay`, not a `DIM` payload on the field bus.\n\n## Response shapes\n\n**Success envelope** (command results, forced discovery):\n\n```json\n{\"ok\": true}\n```\n\n**Resource envelopes** wrap the payload in a named key:\n\n```json\n{\"modules\": [...]}\n{\"devices\": [...]}\n```\n\n**Error envelope** (command results):\n\n```json\n{\"ok\": false, \"error\": \"<reason>\"}\n```\n\n**Not-found envelope** (resource lookups):\n\n```json\n{\"error\": \"not found\"}\n```\n\n## HTTP status code conventions\n\n| Code | Meaning | Example |\n|------|---------|---------|\n| `200` | OK | Command accepted; resource returned |\n| `400` | Missing or malformed input | `{\"ok\": false, \"error\": \"missing 'action'\"}` |\n| `404` | Unknown entity | `{\"error\": \"not found\"}` (module_id or device_id not in registry) |\n| `422` | Unsupported action / device-type mismatch | `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` |\n| `501` | Endpoint reserved, not yet implemented | `{\"ok\": false, \"error\": \"not yet implemented\"}` (Fase 8) |\n\n## See also\n\n- [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) — full REST reference\n- [`docs/api/websocket.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/websocket.md) — WebSocket `/ws` message catalog (real-time state push + command)\n- [`ARCHITECTURE.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/ARCHITECTURE.md) — northbound protocol design\n",
     "version": "0.0.4",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -10,7 +10,26 @@
     {
       "key": "apiVersion",
       "value": "v1",
-      "type": "string"
+      "type": "string",
+      "description": "API path segment. v1 is the only version currently served by the gateway."
+    },
+    {
+      "key": "gateway_host",
+      "value": "localhost",
+      "type": "string",
+      "description": "Hostname of the gateway. Override per-environment via Postman environment variables (recommended) or edit this default."
+    },
+    {
+      "key": "gateway_port",
+      "value": "8080",
+      "type": "string",
+      "description": "HTTP port of the gateway northbound API. Default 8080."
+    },
+    {
+      "key": "default_device_id",
+      "value": "10.10.1.30-0",
+      "type": "string",
+      "description": "Pre-filled device id for the Commands folder. Format: {module_ip}-{channel}. Edit or override via environment if your installation uses different addresses."
     }
   ],
   "auth": {
@@ -37,9 +56,10 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/modules",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -62,9 +82,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/modules",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -98,9 +118,10 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/modules/{{module_id}}",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/{{module_id}}",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -124,9 +145,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/modules/{{module_id}}",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/{{module_id}}",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -159,9 +180,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/modules/00:24:77:99:99:99",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/00:24:77:99:99:99",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -200,9 +221,10 @@
               "raw": "{}"
             },
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/modules/refresh",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/refresh",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -230,9 +252,9 @@
                   "raw": "{}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/modules/refresh",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/refresh",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -273,9 +295,10 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/devices",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -298,9 +321,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/devices",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -334,9 +357,10 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{device_id}}",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -360,9 +384,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -395,9 +419,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.99-0",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.99-0",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -442,19 +466,20 @@
               "raw": "{\"action\":\"ON\"}"
             },
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}/command",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "devices",
-                "{{device_id}}",
+                "{{default_device_id}}",
                 "command"
               ]
             },
-            "description": "Switch the relay channel identified by `{{device_id}}` ON.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"ON\"}\n```\n\n**Path parameters:**\n\n| Name | Type | Description |\n|------|------|-------------|\n| `device_id` | string | `{module_ip}-{channel}` or a configured slug, e.g. `10.10.1.30-0` |\n\n**Response 200** — `{\"ok\": true}`. The relay should report its new state over the WebSocket `state_changed` message within the next poll cycle.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}` when the body lacks an `action` field.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` when the action verb is not one of `ON` / `OFF` / `PULSE` / `TOGGLE` for a relay channel.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Switch the relay channel identified by `{{default_device_id}}` ON.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"ON\"}\n```\n\n**Path parameters:**\n\n| Name | Type | Description |\n|------|------|-------------|\n| `device_id` | string | `{module_ip}-{channel}` or a configured slug, e.g. `10.10.1.30-0` |\n\n**Response 200** — `{\"ok\": true}`. The relay should report its new state over the WebSocket `state_changed` message within the next poll cycle.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}` when the body lacks an `action` field.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` when the action verb is not one of `ON` / `OFF` / `PULSE` / `TOGGLE` for a relay channel.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
@@ -473,9 +498,9 @@
                   "raw": "{\"action\":\"ON\"}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -513,9 +538,9 @@
                   "raw": "{\"action\":\"FOO\"}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -555,19 +580,20 @@
               "raw": "{\"action\":\"OFF\"}"
             },
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}/command",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "devices",
-                "{{device_id}}",
+                "{{default_device_id}}",
                 "command"
               ]
             },
-            "description": "Switch the relay channel identified by `{{device_id}}` OFF.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"OFF\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Switch the relay channel identified by `{{default_device_id}}` OFF.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"OFF\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
@@ -586,9 +612,9 @@
                   "raw": "{\"action\":\"OFF\"}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -628,19 +654,20 @@
               "raw": "{\"action\":\"PULSE\"}"
             },
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}/command",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "devices",
-                "{{device_id}}",
+                "{{default_device_id}}",
                 "command"
               ]
             },
-            "description": "Send a short PULSE to the relay channel identified by `{{device_id}}`. Pulse duration is fixed by the IP0200PoE firmware (typically 1 s ON / 1 s OFF).\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"PULSE\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Send a short PULSE to the relay channel identified by `{{default_device_id}}`. Pulse duration is fixed by the IP0200PoE firmware (typically 1 s ON / 1 s OFF).\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"PULSE\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
@@ -659,9 +686,9 @@
                   "raw": "{\"action\":\"PULSE\"}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -701,19 +728,20 @@
               "raw": "{\"action\":\"TOGGLE\"}"
             },
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}/command",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "devices",
-                "{{device_id}}",
+                "{{default_device_id}}",
                 "command"
               ]
             },
-            "description": "Flip the relay channel identified by `{{device_id}}` (ON → OFF, OFF → ON). The gateway reads the latest known state from the `DeviceRegistry` to decide which way to flip; if the state is unknown, the firmware default of \"switch ON\" is sent.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"TOGGLE\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Flip the relay channel identified by `{{default_device_id}}` (ON → OFF, OFF → ON). The gateway reads the latest known state from the `DeviceRegistry` to decide which way to flip; if the state is unknown, the firmware default of \"switch ON\" is sent.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"TOGGLE\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
@@ -732,9 +760,9 @@
                   "raw": "{\"action\":\"TOGGLE\"}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -774,19 +802,20 @@
               "raw": "{\"action\": \"DIM\", \"value\": 75}"
             },
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/devices/{{device_id}}/command",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "devices",
-                "{{device_id}}",
+                "{{default_device_id}}",
                 "command"
               ]
             },
-            "description": "Set the dimmer channel identified by `{{device_id}}` to a specific level. The `value` field is an integer percentage between `0` and `100` (`0` = OFF, encoded as a special \"dim off\" payload rather than a 0% level).\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"DIM\", \"value\": 75}\n```\n\n**Response 200** — `{\"ok\": true}`. The dimmer confirms the new level on the next status reply (tracked under the correct channel via the gateway's dimmer channel tracker).\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported dimmer action: FOO\"}` when the action is not `DIM`, or `{\"ok\": false, \"error\": \"unsupported device type: input\"}` when the device_id resolves to a non-dimmer channel (relay / input).\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Set the dimmer channel identified by `{{default_device_id}}` to a specific level. The `value` field is an integer percentage between `0` and `100` (`0` = OFF, encoded as a special \"dim off\" payload rather than a 0% level).\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"DIM\", \"value\": 75}\n```\n\n**Response 200** — `{\"ok\": true}`. The dimmer confirms the new level on the next status reply (tracked under the correct channel via the gateway's dimmer channel tracker).\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported dimmer action: FOO\"}` when the action is not `DIM`, or `{\"ok\": false, \"error\": \"unsupported device type: input\"}` when the device_id resolves to a non-dimmer channel (relay / input).\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
@@ -805,9 +834,9 @@
                   "raw": "{\"action\": \"DIM\", \"value\": 75}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.40-0/command",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.40-0/command",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -845,9 +874,9 @@
                   "raw": "{\"action\": \"DIM\", \"value\": 50}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/devices/10.10.1.50-0/command",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.50-0/command",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -889,9 +918,10 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/discover",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/discover",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -914,9 +944,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/discover",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/discover",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -948,9 +978,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/discover",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/discover",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",
@@ -994,9 +1024,10 @@
               "raw": "{}"
             },
             "url": {
-              "raw": "{{base_url}}/api/{{apiVersion}}/provision/autonomy",
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/provision/autonomy",
               "host": [
-                "{{base_url}}"
+                "{{gateway_host}}",
+                "{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -1024,9 +1055,9 @@
                   "raw": "{}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/api/{{apiVersion}}/provision/autonomy",
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/provision/autonomy",
                   "host": [
-                    "{{base_url}}"
+                    "{{gateway_host}}:{{gateway_port}}"
                   ],
                   "path": [
                     "api",

@@ -20,15 +20,28 @@ EXPECTED_ROUTES: set[tuple[str, str]] = {
     ("POST", "/api/{apiVersion}/modules/refresh"),
     ("GET", "/api/{apiVersion}/devices"),
     ("GET", "/api/{apiVersion}/devices/{device_id}"),
-    ("POST", "/api/{apiVersion}/devices/{device_id}/command"),
+    # Commands folder uses {{default_device_id}} (collection-level default)
+    # instead of the generic {{device_id}} — both should be accepted as
+    # the same logical route.
+    ("POST", "/api/{apiVersion}/devices/{default_device_id}/command"),
     ("POST", "/api/{apiVersion}/discover"),
     ("POST", "/api/{apiVersion}/provision/autonomy"),
+}
+
+# Aliases that the test accepts as equivalent (e.g. {default_device_id} when
+# a folder-level default replaces the generic name).
+ROUTE_ALIASES: dict[str, set[str]] = {
+    "/api/{apiVersion}/devices/{default_device_id}/command": {
+        "/api/{apiVersion}/devices/{device_id}/command",
+    },
 }
 
 V21_SCHEMA_SUFFIX = "v2.1.0/collection.json"
 
 POST_ROUTES_WITH_BODY: set[str] = {
     "/api/{apiVersion}/modules/refresh",
+    # Commands folder uses {default_device_id} — accepted as equivalent.
+    "/api/{apiVersion}/devices/{default_device_id}/command",
     "/api/{apiVersion}/devices/{device_id}/command",
     "/api/{apiVersion}/provision/autonomy",
 }
@@ -107,7 +120,13 @@ def test_collection_uses_postman_v21_schema(collection: dict) -> None:
 
 def test_collection_covers_all_gateway_rest_routes(collection: dict) -> None:
     routes = set(_iter_requests(collection["item"]))
-    assert EXPECTED_ROUTES <= routes, f"missing routes: {EXPECTED_ROUTES - routes}"
+    # Accept alias routes (e.g. {default_device_id} in place of {device_id})
+    # by expanding the set with all alias pairs.
+    expanded = set(routes)
+    for route in routes:
+        expanded.update(ROUTE_ALIASES.get(route, set()))
+    missing = EXPECTED_ROUTES - expanded
+    assert not missing, f"missing routes: {missing}"
 
 
 def test_collection_has_no_legacy_v1_requests_key(collection: dict) -> None:
