@@ -124,7 +124,10 @@ def test_collection_covers_all_gateway_rest_routes(collection: dict) -> None:
     # by expanding the set with all alias pairs.
     expanded = set(routes)
     for route in routes:
-        expanded.update(ROUTE_ALIASES.get(route, set()))
+        # route is (method, path); ROUTE_ALIASES is keyed by path strings.
+        path = route[1]
+        for alias_path in ROUTE_ALIASES.get(path, []):
+            expanded.add((route[0], alias_path))
     missing = EXPECTED_ROUTES - expanded
     assert not missing, f"missing routes: {missing}"
 

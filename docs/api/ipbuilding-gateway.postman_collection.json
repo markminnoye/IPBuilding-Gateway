@@ -58,8 +58,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -120,8 +119,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/{{module_id}}",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -223,8 +221,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/refresh",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -297,8 +294,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -359,8 +355,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{device_id}}",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -468,8 +463,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -582,8 +576,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -656,8 +649,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -730,8 +722,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -804,8 +795,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -920,8 +910,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/discover",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
@@ -1026,8 +1015,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/provision/autonomy",
               "host": [
-                "{{gateway_host}}",
-                "{{gateway_port}}"
+                "{{gateway_host}}:{{gateway_port}}"
               ],
               "path": [
                 "api",
