@@ -105,7 +105,7 @@ python3 scripts/arp_discover_spike.py [--options]
 | Fresh install, no IPBox | `gateway.discover` (ARP-first) |
 | Migrating from IPBox, want `ipbox_id` | `discover_from_ipbox.py` |
 | Verify ARP cache state manually | `arp_discover_spike.py` |
-| HA add-on runtime discovery | `gateway.discover` via config flow (future) |
+| HA add-on runtime discovery | `POST /api/v1/discover` (REST or WebSocket) -- see `rest.md` and `websocket.md` |
 
 Both `gateway.discover` and `discover_from_ipbox.py` output `devices.discovered.json` — review, then overwrite `devices.json` (scratch test — no merge/diff).
 

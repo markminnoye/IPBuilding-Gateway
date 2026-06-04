@@ -154,9 +154,93 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
 
 Possible `action` values: `press`, `release`, `long_press` (firmware-dependent).
 
+### `device_added` -- new module detected
+
+Emitted by the passive ARP monitor or after a forced/init discovery sweep. The module has been written to `devices.json` with `active: false` and `room: "Unconfigured"`.
+
+```json
+{
+  "type": "device_added",
+  "id": "00:24:77:52:ac:be",
+  "ip": "10.10.1.55",
+  "type": "unknown",
+  "model": "",
+  "firmware": "",
+  "mac": "00:24:77:52:ac:be",
+  "first_seen": "2026-06-04T20:15:00Z",
+  "last_seen": "2026-06-04T20:15:00Z",
+  "source": "arp"
+}
+```
+
+### `device_removed` -- module not seen for N polls
+
+Emitted after `removed_after_n_polls` (default 3) consecutive ARP polls without seeing this MAC. The module remains in `devices.json`; it is marked `unreachable` in the runtime registry.
+
+```json
+{
+  "type": "device_removed",
+  "id": "00:24:77:52:ac:be",
+  "last_seen": "2026-06-04T19:58:00Z"
+}
+```
+
+### `device_ip_changed` -- DHCP IP change detected
+
+Emitted when a known MAC is seen on a different IP. The runtime registry is updated; `devices.json` is NOT modified.
+
+```json
+{
+  "type": "device_ip_changed",
+  "id": "00:24:77:52:ac:be",
+  "old_ip": "10.10.1.30",
+  "new_ip": "10.10.1.42"
+}
+```
+
+### `device_firmware_changed` -- firmware version changed
+
+Emitted after HTTP identify detects a different firmware version than stored in `devices.json`. The `devices.json` is updated atomically.
+
+```json
+{
+  "type": "device_firmware_changed",
+  "id": "00:24:77:52:ac:be",
+  "old_firmware": "5.1",
+  "new_firmware": "5.2"
+}
+```
+
+### `discovery_completed` -- init or forced sweep finished
+
+Emitted after a forced sweep (`POST /api/v1/discover` or WS `discover` message) or an init sweep completes.
+
+```json
+{
+  "type": "discovery_completed",
+  "trigger": "forced",
+  "added": ["00:24:77:52:ac:be"],
+  "changed": ["00:24:77:52:9e:a8"],
+  "removed": [],
+  "duration_ms": 2341
+}
+```
+
+`trigger`: `"init" | "passive" | "forced"`.
+
 ---
 
 ## Client -> Gateway messages
+
+### `discover` -- force discovery sweep
+
+Trigger the same ARP-first + HTTP discovery as `POST /api/v1/discover`. Ignores toggles.
+
+```json
+{"type": "discover"}
+```
+
+The gateway responds with a `discovery_completed` event (see below).
 
 ### `command` -- relay
 

@@ -53,6 +53,16 @@ IPBOX_SESSION_COOKIE="ASP.NET_SessionId=<cookie>" \
 python scripts/discover_from_ipbox.py
 ```
 
+> **Let op:** dit pad is voor **andere eigenaren** met een oudere IPBox/centrale
+> waarvan de WebConfig de modules kent. Op de huidige IPBox (WebConfig v1.8.4.3,
+> ASP.NET MVC 4.0) antwoordt `ScanForModules` met een **lege array** — de
+> scan-resultaten worden pas daarna asynchroon via SignalR `loadingHub` naar
+> de browser gestuurd. Als het script eindigt met `0 modules` of een lege
+> `devices.json`: open `http://<ipbox>/general/Wizards/Modules/Index` in een
+> browser, klik **"Start scan"**, wijs minimaal één module toe, en draai
+> daarna dit script opnieuw. Voor je eigen installatie is
+> `python -m gateway.discover` (zie hierboven) het productiepad.
+
 ### 4. Start
 
 **Settings → Add-ons → IPBuilding Gateway → Start**

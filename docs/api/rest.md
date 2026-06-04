@@ -55,6 +55,8 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
 | `allow` | string | HTTP access policy |
 | `buttons` | array | Input button config (type=input only, from getButtons) |
 | `fetched_at` | string | ISO 8601 timestamp of last getSysSet fetch |
+| `last_seen` | string | ISO 8601 timestamp of most recent ARP or UDP activity (runtime-only, not in `devices.json`) |
+| `last_seen_source` | string | How `last_seen` was last updated: `arp`, `udp`, or `http` (runtime-only) |
 
 ---
 
@@ -195,6 +197,38 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
 **Response 422** (unsupported action):
 ```json
 {"ok": false, "error": "unsupported relay action: FOO"}
+```
+
+---
+
+## POST /api/v1/discover
+
+**Description:** Trigger a forced discovery sweep (ARP-first + HTTP identify). Ignores the `passive_arp_monitor` and `auto_discover_on_start` toggles. Always available.
+
+**Request body:** `{}`
+
+**Response 200:**
+```json
+{
+  "ok": true,
+  "added": ["00:24:77:52:ac:be"],
+  "changed": [],
+  "removed": [],
+  "duration_ms": 2341
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | `true` if sweep completed |
+| `added` | array of MAC strings | Modules newly discovered (written to `devices.json` with `active: false`) |
+| `changed` | array of MAC strings | Modules where firmware or IP changed |
+| `removed` | array of MAC strings | Modules not seen after N polls (runtime-only; not removed from `devices.json`) |
+| `duration_ms` | integer | Time taken for the full sweep in milliseconds |
+
+**Response 200 (no changes):**
+```json
+{"ok": true, "added": [], "changed": [], "removed": [], "duration_ms": 512}
 ```
 
 ---
