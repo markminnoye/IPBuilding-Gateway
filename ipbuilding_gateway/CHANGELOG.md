@@ -3,6 +3,11 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.3] - 2026-06-04
+
+### Fixed
+- Container failed to start with `exec: "./run.sh": permission denied` (v0.0.2). The git index had `run.sh` stored as `100644` (not executable), so the Docker COPY layer lacked the executable bit. Marked `run.sh` executable in the index, added explicit `RUN chmod +x ./run.sh` in the Dockerfile as a defence-in-depth, and removed `--no-preserve=mode,ownership` from `prepare-build.sh` so staged files keep their modes.
+
 ## [0.0.2] - 2026-06-04
 
 ### Fixed

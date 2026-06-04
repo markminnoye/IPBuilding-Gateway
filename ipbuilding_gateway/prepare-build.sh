@@ -18,6 +18,6 @@ echo "[prepare-build] Removing old staging copy..."
 rm -rf "$REPO_ROOT/ipbuilding_gateway/gateway" || true
 
 echo "[prepare-build] Copying gateway/ from repo-root to add-on folder..."
-cp -r --no-preserve=mode,ownership "$REPO_ROOT/gateway" "$REPO_ROOT/ipbuilding_gateway/gateway"
+cp -r "$REPO_ROOT/gateway" "$REPO_ROOT/ipbuilding_gateway/gateway"
 
 echo "[prepare-build] Done — $(find "$REPO_ROOT/ipbuilding_gateway/gateway" -type f | wc -l) files staged"

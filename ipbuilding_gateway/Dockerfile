@@ -12,6 +12,7 @@ COPY gateway/ ./gateway/
 
 # Supervisor options JSON → env vars script
 COPY run.sh .
+RUN chmod +x ./run.sh
 
 # Persistent data directory (mapped via addon_config)
 RUN mkdir -p /data
