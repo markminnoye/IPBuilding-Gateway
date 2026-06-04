@@ -2,15 +2,15 @@
 #
 # How versioning works:
 # - The image tag is always derived from config.yaml's `version` field.
-# - On push to main:         image tagged with :latest AND :<version>
-# - On git tag v<semver>:    image tagged with :<semver> (strip the leading 'v')
-# - On pull_request:         build only, no push (validates Dockerfile + context)
+# - On git tag v<semver>:    build and push :<semver> (strip the leading 'v')
+# - Push to main / PR:       no build (releases only via tags)
 #
 # Before tagging a release:
-#   1. Bump `version:` in ipbuilding_gateway/config.yaml  (e.g. 1.0.0 → 1.0.1)
-#   2. Commit and push
-#   3. Tag that commit with the same version:  git tag v1.0.1 && git push --tags
-#   4. CI will build and push :1.0.1
+#   1. Bump `version:` in ipbuilding_gateway/config.yaml  (e.g. 0.0.1 → 0.0.2)
+#   2. Update ipbuilding_gateway/CHANGELOG.md (see .cursor/rules/release-process.mdc)
+#   3. Commit and push
+#   4. Tag that commit:  git tag v0.0.2 && git push --tags
+#   5. CI will build and push :0.0.2
 #
 # Required repository settings:
 #   GitHub Actions → Workflow permissions → "Read and write permissions"
@@ -20,16 +20,13 @@ name: Build add-on
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*.*.*"
-  pull_request:
 
 jobs:
   build-app:
     uses: ./.github/workflows/build-app.yaml
     with:
       app: ipbuilding_gateway
-      publish: ${{ github.event_name != 'pull_request' }}
+      publish: true
     secrets: inherit

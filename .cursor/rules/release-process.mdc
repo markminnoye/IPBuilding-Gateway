@@ -1,0 +1,38 @@
+---
+description: Release tagging — codex-review, CHANGELOG, and version bump before git tag
+globs:
+  - ipbuilding_gateway/config.yaml
+  - ipbuilding_gateway/CHANGELOG.md
+  - .github/workflows/builder.yaml
+---
+
+# Release process — IPBuilding Gateway
+
+## Trigger
+
+Apply when the user or task involves:
+
+- `git tag v*.*.*`
+- "nieuwe release", "tag een nieuwe versie", "bumper versie"
+- Changing `version:` in `ipbuilding_gateway/config.yaml`
+
+## Verplichte flow vóór `git tag`
+
+1. Run `/codex-review` (skill: `BenedictKing/codex-review`) on uncommitted changes or the latest commit.
+   - Confirm the generated CHANGELOG entry matches the intended change.
+2. Update `ipbuilding_gateway/CHANGELOG.md` with the entry under the correct version section.
+3. Bump `version:` in `ipbuilding_gateway/config.yaml` (semver; pre-1.0 uses `0.x.y`).
+4. Commit: `release: v<X>.<Y>.<Z>` (conventional commit).
+5. Tag: `git tag v<X>.<Y>.<Z>` and `git push --tags`.
+6. CI (tags only) builds and publishes to `ghcr.io`.
+
+## Wat NIET
+
+- Do not rely on push to `main` for builds — `builder.yaml` runs only on `v*.*.*` tags.
+- Do not expect PR CI builds for the add-on image.
+
+## Codex-review (lokaal, niet in CI)
+
+The BenedictKing/codex-review skill is a local editor tool (Node + Codex CLI + OpenAI key), not suitable for GitHub Actions.
+
+Install: `npx skills add https://github.com/BenedictKing/codex-review --skill codex-review`
