@@ -30,8 +30,8 @@
 .vibe/
 .windsurf/
 .zencoder/
-/skills
-skills-lock.json
+.agents/
+.cursor/
 
 # Third-party install PDFs at the repo root or one directory deep (not for
 # git — large binaries, no diff). PDFs that ARE part of the documentation

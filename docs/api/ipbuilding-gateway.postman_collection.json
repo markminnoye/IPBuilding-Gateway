@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "550e8400-e29b-41d4-a716-446655440000",
     "name": "IPBuilding Gateway",
-    "description": "# IPBuilding Gateway — REST API (v0.0.4)\n\nOpen field-bus gateway for IPBuilding controllers (relay / dimmer / input modules on UDP/1001). This collection exercises the product northbound REST API exposed by the gateway add-on on port `8080`.\n\n## Base URL\n\n```\n{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}\n```\n\n| Variable | Default | Description |\n|----------|---------|-------------|\n| `base_url` | `http://homeassistant.local:8080` | Gateway host (HA add-on: `http://[HOST]:[PORT:8080]`) |\n| `apiVersion` | `v1` | API version — currently only `v1` is shipped |\n| `module_id` | `00:24:77:52:ac:be` | Stable MAC-based module identifier (lower-case, colon-separated) |\n| `device_id` | `10.10.1.30-0` | Logical channel ID — `{module_ip}-{channel}` or a custom slug |\n\n## Device-ID format\n\nLogical channel IDs use the form `{module_ip}-{channel}` (e.g. `10.10.1.30-0` for the first channel of the relay at `10.10.1.30`). A custom slug from `devices.json` (e.g. `keuken-led`) is also accepted wherever `{device_id}` is used.\n\n## Device-type resolution (server-side only)\n\nThe gateway **resolves** the device type (`relay` / `dimmer` / `input`) from the installation config (`devices.json`) on every request. Clients never supply a device type and cannot spoof it: sending `{\"action\": \"DIM\"}` to a relay `device_id` yields `422 unsupported device type: relay`, not a `DIM` payload on the field bus.\n\n## Response shapes\n\n**Success envelope** (command results, forced discovery):\n\n```json\n{\"ok\": true}\n```\n\n**Resource envelopes** wrap the payload in a named key:\n\n```json\n{\"modules\": [...]}\n{\"devices\": [...]}\n```\n\n**Error envelope** (command results):\n\n```json\n{\"ok\": false, \"error\": \"<reason>\"}\n```\n\n**Not-found envelope** (resource lookups):\n\n```json\n{\"error\": \"not found\"}\n```\n\n## HTTP status code conventions\n\n| Code | Meaning | Example |\n|------|---------|---------|\n| `200` | OK | Command accepted; resource returned |\n| `400` | Missing or malformed input | `{\"ok\": false, \"error\": \"missing 'action'\"}` |\n| `404` | Unknown entity | `{\"error\": \"not found\"}` (module_id or device_id not in registry) |\n| `422` | Unsupported action / device-type mismatch | `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` |\n| `501` | Endpoint reserved, not yet implemented | `{\"ok\": false, \"error\": \"not yet implemented\"}` (Fase 8) |\n\n## See also\n\n- [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) — full REST reference\n- [`docs/api/websocket.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/websocket.md) — WebSocket `/ws` message catalog (real-time state push + command)\n- [`ARCHITECTURE.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/ARCHITECTURE.md) — northbound protocol design\n",
+    "description": "# IPBuilding Gateway \u2014 REST API (v0.0.4)\n\nOpen field-bus gateway for IPBuilding controllers (relay / dimmer / input modules on UDP/1001). This collection exercises the product northbound REST API exposed by the gateway add-on on port `8080`.\n\n## Base URL\n\n```\n{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}\n```\n\n| Variable | Default | Description |\n|----------|---------|-------------|\n| `base_url` | `http://homeassistant.local:8080` | Gateway host (HA add-on: `http://[HOST]:[PORT:8080]`) |\n| `apiVersion` | `v1` | API version \u2014 currently only `v1` is shipped |\n| `module_id` | `00:24:77:52:ac:be` | Stable MAC-based module identifier (lower-case, colon-separated) |\n| `device_id` | `10.10.1.30-0` | Logical channel ID \u2014 `{module_ip}-{channel}` or a custom slug |\n\n## Device-ID format\n\nLogical channel IDs use the form `{module_ip}-{channel}` (e.g. `10.10.1.30-0` for the first channel of the relay at `10.10.1.30`). A custom slug from `devices.json` (e.g. `keuken-led`) is also accepted wherever `{device_id}` is used.\n\n## Device-type resolution (server-side only)\n\nThe gateway **resolves** the device type (`relay` / `dimmer` / `input`) from the installation config (`devices.json`) on every request. Clients never supply a device type and cannot spoof it: sending `{\"action\": \"DIM\"}` to a relay `device_id` yields `422 unsupported device type: relay`, not a `DIM` payload on the field bus.\n\n## Response shapes\n\n**Success envelope** (command results, forced discovery):\n\n```json\n{\"ok\": true}\n```\n\n**Resource envelopes** wrap the payload in a named key:\n\n```json\n{\"modules\": [...]}\n{\"devices\": [...]}\n```\n\n**Error envelope** (command results):\n\n```json\n{\"ok\": false, \"error\": \"<reason>\"}\n```\n\n**Not-found envelope** (resource lookups):\n\n```json\n{\"error\": \"not found\"}\n```\n\n## HTTP status code conventions\n\n| Code | Meaning | Example |\n|------|---------|---------|\n| `200` | OK | Command accepted; resource returned |\n| `400` | Missing or malformed input | `{\"ok\": false, \"error\": \"missing 'action'\"}` |\n| `404` | Unknown entity | `{\"error\": \"not found\"}` (module_id or device_id not in registry) |\n| `422` | Unsupported action / device-type mismatch | `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` |\n| `501` | Endpoint reserved, not yet implemented | `{\"ok\": false, \"error\": \"not yet implemented\"}` (Fase 8) |\n\n## See also\n\n- [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) \u2014 full REST reference\n- [`docs/api/websocket.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/websocket.md) \u2014 WebSocket `/ws` message catalog (real-time state push + command)\n- [`ARCHITECTURE.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/ARCHITECTURE.md) \u2014 northbound protocol design\n",
     "version": "0.0.4",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -42,7 +42,7 @@
   "item": [
     {
       "name": "Modules",
-      "description": "Physical field-bus controllers. Each module is identified by its stable MAC address (`module_id`) and exposes cached `getSysSet` network metadata plus, for input modules, `getButtons` button configuration. Modules are looked up server-side; the gateway never trusts IP-based identity (DHCP can change IPs at any time). Runtime-only fields `last_seen` and `last_seen_source` are populated by the passive ARP monitor — see [`docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md) for the write policy.\n",
+      "description": "Physical field-bus controllers. Each module is identified by its stable MAC address (`module_id`) and exposes cached `getSysSet` network metadata plus, for input modules, `getButtons` button configuration. Modules are looked up server-side; the gateway never trusts IP-based identity (DHCP can change IPs at any time). Runtime-only fields `last_seen` and `last_seen_source` are populated by the passive ARP monitor \u2014 see [`docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md) for the write policy.\n",
       "item": [
         {
           "name": "List modules",
@@ -58,19 +58,21 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "modules"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Return every physical field-bus module with cached network metadata. The list is built from the in-memory `InstallationConfig` (loaded from `devices.json`) merged with the latest HTTP `getSysSet` / `getButtons` data from each module.\n\n**Path:** `GET /api/{{apiVersion}}/modules`\n\n**Response 200 — modules array** (one entry per physical controller):\n\n```json\n{\n  \"modules\": [\n    {\n      \"id\": \"00:24:77:52:ac:be\",\n      \"ip\": \"10.10.1.30\",\n      \"name\": \"IP0200PoE\",\n      \"model\": \"IP0200PoE\",\n      \"type\": \"relay\",\n      \"firmware\": \"5.1\",\n      \"mac\": \"00:24:77:52:ac:be\",\n      \"network\": {\n        \"dhcp\": \"0\",\n        \"ip\": \"10.10.1.30\",\n        \"subnet\": \"255.255.255.0\",\n        \"gateway\": \"10.10.1.1\"\n      },\n      \"button\": \"0\",\n      \"allow\": \"\",\n      \"fetched_at\": \"2026-06-04T18:00:00Z\",\n      \"last_seen\": \"2026-06-04T20:15:00Z\",\n      \"last_seen_source\": \"arp\"\n    }\n  ]\n}\n```\n\n`last_seen` and `last_seen_source` are **runtime-only** — never persisted to `devices.json`. They are filled by the passive ARP monitor (`source: \"arp\"`), HTTP `getSysSet` calls (`source: \"http\"`), or UDP activity on port 1001 (`source: \"udp\"`). When the cache has never seen the module, both fields are absent.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) for the full field reference and [`docs/api/websocket.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/websocket.md) for real-time updates over `/ws`.\n"
+            "description": "Return every physical field-bus module with cached network metadata. The list is built from the in-memory `InstallationConfig` (loaded from `devices.json`) merged with the latest HTTP `getSysSet` / `getButtons` data from each module.\n\n**Path:** `GET /api/{{apiVersion}}/modules`\n\n**Response 200 \u2014 modules array** (one entry per physical controller):\n\n```json\n{\n  \"modules\": [\n    {\n      \"id\": \"00:24:77:52:ac:be\",\n      \"ip\": \"10.10.1.30\",\n      \"name\": \"IP0200PoE\",\n      \"model\": \"IP0200PoE\",\n      \"type\": \"relay\",\n      \"firmware\": \"5.1\",\n      \"mac\": \"00:24:77:52:ac:be\",\n      \"network\": {\n        \"dhcp\": \"0\",\n        \"ip\": \"10.10.1.30\",\n        \"subnet\": \"255.255.255.0\",\n        \"gateway\": \"10.10.1.1\"\n      },\n      \"button\": \"0\",\n      \"allow\": \"\",\n      \"fetched_at\": \"2026-06-04T18:00:00Z\",\n      \"last_seen\": \"2026-06-04T20:15:00Z\",\n      \"last_seen_source\": \"arp\"\n    }\n  ]\n}\n```\n\n`last_seen` and `last_seen_source` are **runtime-only** \u2014 never persisted to `devices.json`. They are filled by the passive ARP monitor (`source: \"arp\"`), HTTP `getSysSet` calls (`source: \"http\"`), or UDP activity on port 1001 (`source: \"udp\"`). When the cache has never seen the module, both fields are absent.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) for the full field reference and [`docs/api/websocket.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/websocket.md) for real-time updates over `/ws`.\n"
           },
           "response": [
             {
-              "name": "200 — modules list",
+              "name": "200 \u2014 modules list",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -83,13 +85,15 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
                     "{{apiVersion}}",
                     "modules"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -119,20 +123,22 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/{{module_id}}",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "modules",
                 "{{module_id}}"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Return a single module by its MAC-based `module_id` (lower-case, colon-separated). The lookup is case-insensitive — the gateway normalises the MAC before comparison, so `00:24:77:52:AC:BE` and `00:24:77:52:ac:be` resolve to the same record.\n\n**Path:** `GET /api/{{apiVersion}}/modules/{module_id}`\n\n**Path parameters:**\n\n| Name | Type | Description |\n|------|------|-------------|\n| `module_id` | string | Normalised MAC address, e.g. `00:24:77:52:ac:be` |\n\n**Response 200** — single module object, same shape as the entries in the list endpoint. Runtime `last_seen` and `last_seen_source` are included when the ARP monitor has observed the module.\n\n**Response 404** — `{\"error\": \"not found\"}` when the MAC is not in the installation config.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Return a single module by its MAC-based `module_id` (lower-case, colon-separated). The lookup is case-insensitive \u2014 the gateway normalises the MAC before comparison, so `00:24:77:52:AC:BE` and `00:24:77:52:ac:be` resolve to the same record.\n\n**Path:** `GET /api/{{apiVersion}}/modules/{module_id}`\n\n**Path parameters:**\n\n| Name | Type | Description |\n|------|------|-------------|\n| `module_id` | string | Normalised MAC address, e.g. `00:24:77:52:ac:be` |\n\n**Response 200** \u2014 single module object, same shape as the entries in the list endpoint. Runtime `last_seen` and `last_seen_source` are included when the ARP monitor has observed the module.\n\n**Response 404** \u2014 `{\"error\": \"not found\"}` when the MAC is not in the installation config.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "name": "200 — single module",
+              "name": "200 \u2014 single module",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -145,14 +151,16 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/{{module_id}}",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
                     "{{apiVersion}}",
                     "modules",
                     "{{module_id}}"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -167,7 +175,7 @@
               "body": "{\n  \"id\": \"00:24:77:52:ac:be\",\n  \"ip\": \"10.10.1.30\",\n  \"name\": \"IP0200PoE\",\n  \"model\": \"IP0200PoE\",\n  \"type\": \"relay\",\n  \"firmware\": \"5.1\",\n  \"mac\": \"00:24:77:52:ac:be\",\n  \"network\": {\n    \"dhcp\": \"0\",\n    \"ip\": \"10.10.1.30\",\n    \"subnet\": \"255.255.255.0\",\n    \"gateway\": \"10.10.1.1\"\n  },\n  \"button\": \"0\",\n  \"allow\": \"\",\n  \"fetched_at\": \"2026-06-04T18:00:00Z\",\n  \"last_seen\": \"2026-06-04T20:15:00Z\",\n  \"last_seen_source\": \"arp\"\n}"
             },
             {
-              "name": "404 — module not in registry",
+              "name": "404 \u2014 module not in registry",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -180,14 +188,16 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/00:24:77:99:99:99",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
                     "{{apiVersion}}",
                     "modules",
                     "00:24:77:99:99:99"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "Not Found",
@@ -221,20 +231,22 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/refresh",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "modules",
                 "refresh"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Force a synchronous refresh of the module metadata cache. The gateway will re-fetch `getSysSet` from every module in the installation and `getButtons` from input modules. The HTTP timeout per module is `2.0 s` by default.\n\n**Path:** `POST /api/{{apiVersion}}/modules/refresh`\n\n**Request body:** empty JSON object `{}` (no parameters). The Content-Type header is required by aiohttp's JSON parser.\n\n**Response 200** — same envelope as `GET /api/v1/modules`, with `fetched_at` timestamps advanced to the moment of refresh and `last_seen` / `last_seen_source` reflecting the most recent observation.\n\nUse this endpoint after on-device reconfiguration (DHCP, subnet, button mapping) to surface the changes immediately. The companion (`ipbuilding-gateway-ha`) refreshes the cache on its own cycle; manual calls are useful for debugging or one-off tests.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Force a synchronous refresh of the module metadata cache. The gateway will re-fetch `getSysSet` from every module in the installation and `getButtons` from input modules. The HTTP timeout per module is `2.0 s` by default.\n\n**Path:** `POST /api/{{apiVersion}}/modules/refresh`\n\n**Request body:** empty JSON object `{}` (no parameters). The Content-Type header is required by aiohttp's JSON parser.\n\n**Response 200** \u2014 same envelope as `GET /api/v1/modules`, with `fetched_at` timestamps advanced to the moment of refresh and `last_seen` / `last_seen_source` reflecting the most recent observation.\n\nUse this endpoint after on-device reconfiguration (DHCP, subnet, button mapping) to surface the changes immediately. The companion (`ipbuilding-gateway-ha`) refreshes the cache on its own cycle; manual calls are useful for debugging or one-off tests.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "name": "200 — refreshed modules list",
+              "name": "200 \u2014 refreshed modules list",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -251,14 +263,16 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/refresh",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
                     "{{apiVersion}}",
                     "modules",
                     "refresh"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -278,7 +292,7 @@
     },
     {
       "name": "Devices",
-      "description": "Logical channels (lights, fans, switches) that map onto physical modules. Each device is identified by a `device_id` in the form `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or by a custom slug from `devices.json`. Devices carry the channel's current state — relay `on`/`off` or dimmer `level` — as reported by the in-memory `DeviceRegistry`.\n",
+      "description": "Logical channels (lights, fans, switches) that map onto physical modules. Each device is identified by a `device_id` in the form `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or by a custom slug from `devices.json`. Devices carry the channel's current state \u2014 relay `on`/`off` or dimmer `level` \u2014 as reported by the in-memory `DeviceRegistry`.\n",
       "item": [
         {
           "name": "List devices",
@@ -294,19 +308,21 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "devices"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Return every logical device (active channels only) with its current runtime state.\n\n**Path:** `GET /api/{{apiVersion}}/devices`\n\n**Response 200** — devices array, joined with the parent module's MAC and current IP:\n\n```json\n{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30-0\",\n      \"module_id\": \"00:24:77:52:ac:be\",\n      \"module_ip\": \"10.10.1.30\",\n      \"channel\": 0,\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"device_type\": \"relay\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0\n    },\n    {\n      \"id\": \"10.10.1.40-0\",\n      \"module_id\": \"00:24:77:52:9e:a8\",\n      \"module_ip\": \"10.10.1.40\",\n      \"channel\": 0,\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"device_type\": \"dimmer\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150\n    }\n  ]\n}\n```\n\nInactive channels (`active: false` in `devices.json`) are filtered out. Dimmer entries include `level` (0–100) and a derived `current_watt` (`max_watt * level // 100`); relay entries include a binary `current_watt` (`max_watt` when on, else `0`).\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) for the field reference and [`docs/api/websocket.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/websocket.md) for the `snapshot` and `state_changed` push messages.\n"
+            "description": "Return every logical device (active channels only) with its current runtime state.\n\n**Path:** `GET /api/{{apiVersion}}/devices`\n\n**Response 200** \u2014 devices array, joined with the parent module's MAC and current IP:\n\n```json\n{\n  \"devices\": [\n    {\n      \"id\": \"10.10.1.30-0\",\n      \"module_id\": \"00:24:77:52:ac:be\",\n      \"module_ip\": \"10.10.1.30\",\n      \"channel\": 0,\n      \"name\": \"Keuken LED\",\n      \"room\": \"Keuken\",\n      \"semantic_type\": \"light\",\n      \"device_type\": \"relay\",\n      \"active\": true,\n      \"max_watt\": 60,\n      \"state\": \"off\",\n      \"current_watt\": 0\n    },\n    {\n      \"id\": \"10.10.1.40-0\",\n      \"module_id\": \"00:24:77:52:9e:a8\",\n      \"module_ip\": \"10.10.1.40\",\n      \"channel\": 0,\n      \"name\": \"Woonkamer Dimmer 1\",\n      \"room\": \"Woonkamer\",\n      \"semantic_type\": \"light\",\n      \"device_type\": \"dimmer\",\n      \"active\": true,\n      \"max_watt\": 200,\n      \"state\": \"on\",\n      \"level\": 75,\n      \"current_watt\": 150\n    }\n  ]\n}\n```\n\nInactive channels (`active: false` in `devices.json`) are filtered out. Dimmer entries include `level` (0\u2013100) and a derived `current_watt` (`max_watt * level // 100`); relay entries include a binary `current_watt` (`max_watt` when on, else `0`).\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) for the field reference and [`docs/api/websocket.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/websocket.md) for the `snapshot` and `state_changed` push messages.\n"
           },
           "response": [
             {
-              "name": "200 — devices list",
+              "name": "200 \u2014 devices list",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -319,13 +335,15 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
                     "{{apiVersion}}",
                     "devices"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -355,20 +373,22 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{device_id}}",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "devices",
                 "{{device_id}}"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Return a single device (logical channel) by its `device_id`. The ID is either `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or a custom slug from `devices.json` (e.g. `keuken-led`).\n\n**Path:** `GET /api/{{apiVersion}}/devices/{device_id}`\n\n**Path parameters:**\n\n| Name | Type | Description |\n|------|------|-------------|\n| `device_id` | string | `{module_ip}-{channel}` or a configured slug |\n\n**Response 200** — single device object, same shape as the entries in the list endpoint. Includes the most recent state from the in-memory `DeviceRegistry` (relay: `state` + `current_watt`; dimmer: `level` + derived `current_watt`).\n\n**Response 404** — `{\"error\": \"not found\"}` when the device_id is not in the installation config.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Return a single device (logical channel) by its `device_id`. The ID is either `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or a custom slug from `devices.json` (e.g. `keuken-led`).\n\n**Path:** `GET /api/{{apiVersion}}/devices/{device_id}`\n\n**Path parameters:**\n\n| Name | Type | Description |\n|------|------|-------------|\n| `device_id` | string | `{module_ip}-{channel}` or a configured slug |\n\n**Response 200** \u2014 single device object, same shape as the entries in the list endpoint. Includes the most recent state from the in-memory `DeviceRegistry` (relay: `state` + `current_watt`; dimmer: `level` + derived `current_watt`).\n\n**Response 404** \u2014 `{\"error\": \"not found\"}` when the device_id is not in the installation config.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "name": "200 — single device",
+              "name": "200 \u2014 single device",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -381,14 +401,16 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
                     "{{apiVersion}}",
                     "devices",
                     "10.10.1.30-0"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -403,7 +425,7 @@
               "body": "{\n  \"id\": \"10.10.1.30-0\",\n  \"module_id\": \"00:24:77:52:ac:be\",\n  \"module_ip\": \"10.10.1.30\",\n  \"channel\": 0,\n  \"name\": \"Keuken LED\",\n  \"room\": \"Keuken\",\n  \"semantic_type\": \"light\",\n  \"device_type\": \"relay\",\n  \"active\": true,\n  \"max_watt\": 60,\n  \"state\": \"off\",\n  \"current_watt\": 0\n}"
             },
             {
-              "name": "404 — device not in registry",
+              "name": "404 \u2014 device not in registry",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -416,14 +438,16 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.99-0",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
                     "{{apiVersion}}",
                     "devices",
                     "10.10.1.99-0"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "Not Found",
@@ -443,7 +467,7 @@
     },
     {
       "name": "Commands",
-      "description": "Send actions to relay or dimmer channels. The gateway resolves the `device_id` to its physical module + channel and then encodes the right field-bus command. Device type is determined server-side from `devices.json` — clients cannot spoof it.\n\n| Action | Valid for | Extra fields | Status on success |\n|--------|-----------|--------------|-------------------|\n| `ON` | relay | — | `200 {\"ok\": true}` |\n| `OFF` | relay | — | `200 {\"ok\": true}` |\n| `PULSE` | relay | — | `200 {\"ok\": true}` |\n| `TOGGLE` | relay | — | `200 {\"ok\": true}` |\n| `DIM` | dimmer | `value` (0–100, `0` = off) | `200 {\"ok\": true}` |\n",
+      "description": "Send actions to relay or dimmer channels. The gateway resolves the `device_id` to its physical module + channel and then encodes the right field-bus command. Device type is determined server-side from `devices.json` \u2014 clients cannot spoof it.\n\n| Action | Valid for | Extra fields | Status on success |\n|--------|-----------|--------------|-------------------|\n| `ON` | relay | \u2014 | `200 {\"ok\": true}` |\n| `OFF` | relay | \u2014 | `200 {\"ok\": true}` |\n| `PULSE` | relay | \u2014 | `200 {\"ok\": true}` |\n| `TOGGLE` | relay | \u2014 | `200 {\"ok\": true}` |\n| `DIM` | dimmer | `value` (0\u2013100, `0` = off) | `200 {\"ok\": true}` |\n",
       "item": [
         {
           "name": "Relay ON",
@@ -463,7 +487,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
@@ -471,13 +495,15 @@
                 "devices",
                 "{{default_device_id}}",
                 "command"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Switch the relay channel identified by `{{default_device_id}}` ON.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"ON\"}\n```\n\n**Path parameters:**\n\n| Name | Type | Description |\n|------|------|-------------|\n| `device_id` | string | `{module_ip}-{channel}` or a configured slug, e.g. `10.10.1.30-0` |\n\n**Response 200** — `{\"ok\": true}`. The relay should report its new state over the WebSocket `state_changed` message within the next poll cycle.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}` when the body lacks an `action` field.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` when the action verb is not one of `ON` / `OFF` / `PULSE` / `TOGGLE` for a relay channel.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Switch the relay channel identified by `{{default_device_id}}` ON.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"ON\"}\n```\n\n**Path parameters:**\n\n| Name | Type | Description |\n|------|------|-------------|\n| `device_id` | string | `{module_ip}-{channel}` or a configured slug, e.g. `10.10.1.30-0` |\n\n**Response 200** \u2014 `{\"ok\": true}`. The relay should report its new state over the WebSocket `state_changed` message within the next poll cycle.\n\n**Response 400** \u2014 `{\"ok\": false, \"error\": \"missing 'action'\"}` when the body lacks an `action` field.\n\n**Response 422** \u2014 `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` when the action verb is not one of `ON` / `OFF` / `PULSE` / `TOGGLE` for a relay channel.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "name": "200 — command accepted",
+              "name": "200 \u2014 command accepted",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -494,7 +520,7 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
@@ -502,7 +528,9 @@
                     "devices",
                     "10.10.1.30-0",
                     "command"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -517,7 +545,7 @@
               "body": "{\"ok\": true}"
             },
             {
-              "name": "422 — unsupported action",
+              "name": "422 \u2014 unsupported action",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -534,7 +562,7 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
@@ -542,7 +570,9 @@
                     "devices",
                     "10.10.1.30-0",
                     "command"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "Unprocessable Entity",
@@ -576,7 +606,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
@@ -584,13 +614,15 @@
                 "devices",
                 "{{default_device_id}}",
                 "command"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Switch the relay channel identified by `{{default_device_id}}` OFF.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"OFF\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Switch the relay channel identified by `{{default_device_id}}` OFF.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"OFF\"}\n```\n\n**Response 200** \u2014 `{\"ok\": true}`.\n\n**Response 400** \u2014 `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** \u2014 `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "name": "200 — command accepted",
+              "name": "200 \u2014 command accepted",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -607,7 +639,7 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
@@ -615,7 +647,9 @@
                     "devices",
                     "10.10.1.30-0",
                     "command"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -649,7 +683,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
@@ -657,13 +691,15 @@
                 "devices",
                 "{{default_device_id}}",
                 "command"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Send a short PULSE to the relay channel identified by `{{default_device_id}}`. Pulse duration is fixed by the IP0200PoE firmware (typically 1 s ON / 1 s OFF).\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"PULSE\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Send a short PULSE to the relay channel identified by `{{default_device_id}}`. Pulse duration is fixed by the IP0200PoE firmware (typically 1 s ON / 1 s OFF).\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"PULSE\"}\n```\n\n**Response 200** \u2014 `{\"ok\": true}`.\n\n**Response 400** \u2014 `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** \u2014 `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "name": "200 — command accepted",
+              "name": "200 \u2014 command accepted",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -680,7 +716,7 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
@@ -688,7 +724,9 @@
                     "devices",
                     "10.10.1.30-0",
                     "command"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -722,7 +760,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
@@ -730,13 +768,15 @@
                 "devices",
                 "{{default_device_id}}",
                 "command"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Flip the relay channel identified by `{{default_device_id}}` (ON → OFF, OFF → ON). The gateway reads the latest known state from the `DeviceRegistry` to decide which way to flip; if the state is unknown, the firmware default of \"switch ON\" is sent.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"TOGGLE\"}\n```\n\n**Response 200** — `{\"ok\": true}`.\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Flip the relay channel identified by `{{default_device_id}}` (ON \u2192 OFF, OFF \u2192 ON). The gateway reads the latest known state from the `DeviceRegistry` to decide which way to flip; if the state is unknown, the firmware default of \"switch ON\" is sent.\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"TOGGLE\"}\n```\n\n**Response 200** \u2014 `{\"ok\": true}`.\n\n**Response 400** \u2014 `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\n**Response 422** \u2014 `{\"ok\": false, \"error\": \"unsupported relay action: FOO\"}` for unknown verbs.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "name": "200 — command accepted",
+              "name": "200 \u2014 command accepted",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -753,7 +793,7 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.30-0/command",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
@@ -761,7 +801,9 @@
                     "devices",
                     "10.10.1.30-0",
                     "command"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -795,7 +837,7 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/{{default_device_id}}/command",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
@@ -803,13 +845,15 @@
                 "devices",
                 "{{default_device_id}}",
                 "command"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Set the dimmer channel identified by `{{default_device_id}}` to a specific level. The `value` field is an integer percentage between `0` and `100` (`0` = OFF, encoded as a special \"dim off\" payload rather than a 0% level).\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"DIM\", \"value\": 75}\n```\n\n**Response 200** — `{\"ok\": true}`. The dimmer confirms the new level on the next status reply (tracked under the correct channel via the gateway's dimmer channel tracker).\n\n**Response 422** — `{\"ok\": false, \"error\": \"unsupported dimmer action: FOO\"}` when the action is not `DIM`, or `{\"ok\": false, \"error\": \"unsupported device type: input\"}` when the device_id resolves to a non-dimmer channel (relay / input).\n\n**Response 400** — `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Set the dimmer channel identified by `{{default_device_id}}` to a specific level. The `value` field is an integer percentage between `0` and `100` (`0` = OFF, encoded as a special \"dim off\" payload rather than a 0% level).\n\n**Path:** `POST /api/{{apiVersion}}/devices/{device_id}/command`\n\n**Request body:**\n\n```json\n{\"action\": \"DIM\", \"value\": 75}\n```\n\n**Response 200** \u2014 `{\"ok\": true}`. The dimmer confirms the new level on the next status reply (tracked under the correct channel via the gateway's dimmer channel tracker).\n\n**Response 422** \u2014 `{\"ok\": false, \"error\": \"unsupported dimmer action: FOO\"}` when the action is not `DIM`, or `{\"ok\": false, \"error\": \"unsupported device type: input\"}` when the device_id resolves to a non-dimmer channel (relay / input).\n\n**Response 400** \u2014 `{\"ok\": false, \"error\": \"missing 'action'\"}`.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "name": "200 — command accepted",
+              "name": "200 \u2014 command accepted",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -826,7 +870,7 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.40-0/command",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
@@ -834,7 +878,9 @@
                     "devices",
                     "10.10.1.40-0",
                     "command"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -849,7 +895,7 @@
               "body": "{\"ok\": true}"
             },
             {
-              "name": "422 — DIM sent to non-dimmer device",
+              "name": "422 \u2014 DIM sent to non-dimmer device",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -866,7 +912,7 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/devices/10.10.1.50-0/command",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
@@ -874,7 +920,9 @@
                     "devices",
                     "10.10.1.50-0",
                     "command"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "Unprocessable Entity",
@@ -894,7 +942,7 @@
     },
     {
       "name": "Discovery",
-      "description": "Runtime auto-discovery. The gateway normally uses a passive ARP monitor to track new, changed, and removed modules on the field bus. This folder exposes a single synchronous trigger that forces a full sweep on demand — useful from operator dashboards, scripted provisioning flows, or after physical reconfiguration. The forced sweep ignores the `passive_arp_monitor` and `auto_discover_on_start` toggles and is always available.\n\nSee [`docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md) for the full write policy and design rationale.\n",
+      "description": "Runtime auto-discovery. The gateway normally uses a passive ARP monitor to track new, changed, and removed modules on the field bus. This folder exposes a single synchronous trigger that forces a full sweep on demand \u2014 useful from operator dashboards, scripted provisioning flows, or after physical reconfiguration. The forced sweep ignores the `passive_arp_monitor` and `auto_discover_on_start` toggles and is always available.\n\nSee [`docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md) for the full write policy and design rationale.\n",
       "item": [
         {
           "name": "Force discovery sweep",
@@ -910,19 +958,21 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/discover",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "discover"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Trigger a synchronous ARP-first + HTTP identify sweep of the field bus. The endpoint blocks until the sweep completes (typically 5–30 s, depending on `discovery_range_end` and `http_timeout_s`). The endpoint is always available regardless of the `passive_arp_monitor` and `auto_discover_on_start` toggles.\n\n**Path:** `POST /api/{{apiVersion}}/discover`\n\n**Request body:** none. The body is optional — the gateway accepts an empty body or `{}`. (Mark the request in Postman as having no body; do not send a JSON object unless you want to log a parser warning.)\n\n**Response 200** — discovery summary:\n\n```json\n{\n  \"ok\": true,\n  \"added\": [\"00:24:77:52:ac:be\"],\n  \"changed\": [],\n  \"removed\": [],\n  \"duration_ms\": 2341\n}\n```\n\n| Field | Type | Description |\n|-------|------|-------------|\n| `ok` | boolean | `true` if the sweep completed (even when no changes were detected) |\n| `added` | array of MAC strings | Modules newly discovered — written to `devices.json` with `active: false, room: \"Unconfigured\"` |\n| `changed` | array of MAC strings | Modules whose firmware version or IP changed (IP changes update the runtime registry only) |\n| `removed` | array of MAC strings | Modules not seen for the configured threshold — runtime marker only, **not** removed from `devices.json` |\n| `duration_ms` | integer | Total sweep time in milliseconds |\n\nA `discovery_completed` event with the same payload is also broadcast on the WebSocket `/ws` channel for any connected clients (companion, dashboards).\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) and the runtime auto-discovery design spec linked above.\n"
+            "description": "Trigger a synchronous ARP-first + HTTP identify sweep of the field bus. The endpoint blocks until the sweep completes (typically 5\u201330 s, depending on `discovery_range_end` and `http_timeout_s`). The endpoint is always available regardless of the `passive_arp_monitor` and `auto_discover_on_start` toggles.\n\n**Path:** `POST /api/{{apiVersion}}/discover`\n\n**Request body:** none. The body is optional \u2014 the gateway accepts an empty body or `{}`. (Mark the request in Postman as having no body; do not send a JSON object unless you want to log a parser warning.)\n\n**Response 200** \u2014 discovery summary:\n\n```json\n{\n  \"ok\": true,\n  \"added\": [\"00:24:77:52:ac:be\"],\n  \"changed\": [],\n  \"removed\": [],\n  \"duration_ms\": 2341\n}\n```\n\n| Field | Type | Description |\n|-------|------|-------------|\n| `ok` | boolean | `true` if the sweep completed (even when no changes were detected) |\n| `added` | array of MAC strings | Modules newly discovered \u2014 written to `devices.json` with `active: false, room: \"Unconfigured\"` |\n| `changed` | array of MAC strings | Modules whose firmware version or IP changed (IP changes update the runtime registry only) |\n| `removed` | array of MAC strings | Modules not seen for the configured threshold \u2014 runtime marker only, **not** removed from `devices.json` |\n| `duration_ms` | integer | Total sweep time in milliseconds |\n\nA `discovery_completed` event with the same payload is also broadcast on the WebSocket `/ws` channel for any connected clients (companion, dashboards).\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md) and the runtime auto-discovery design spec linked above.\n"
           },
           "response": [
             {
-              "name": "200 — sweep completed with changes",
+              "name": "200 \u2014 sweep completed with changes",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -935,13 +985,15 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/discover",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
                     "{{apiVersion}}",
                     "discover"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -956,7 +1008,7 @@
               "body": "{\n  \"ok\": true,\n  \"added\": [\"00:24:77:52:ac:be\"],\n  \"changed\": [],\n  \"removed\": [],\n  \"duration_ms\": 2341\n}"
             },
             {
-              "name": "200 — sweep completed, no changes",
+              "name": "200 \u2014 sweep completed, no changes",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -969,13 +1021,15 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/discover",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
                     "{{apiVersion}}",
                     "discover"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "OK",
@@ -1015,20 +1069,22 @@
             "url": {
               "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/provision/autonomy",
               "host": [
-                "{{gateway_host}}:{{gateway_port}}"
+                "{{gateway_host}}"
               ],
               "path": [
                 "api",
                 "{{apiVersion}}",
                 "provision",
                 "autonomy"
-              ]
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
             },
-            "description": "Reserved endpoint for syncing the `autonomy` (input button → action) table to an IP1100PoE module's EEPROM via the `saveAutonomy` HTTP call. The route is wired and the response contract is locked, but the implementation lands in Fase 8. Today the endpoint always returns `501 not yet implemented` so that clients can already be coded against the final shape.\n\n**Path:** `POST /api/{{apiVersion}}/provision/autonomy`\n\n**Request body:** `{}` (reserved; the body is accepted but ignored by the stub).\n\n**Response 501** — `{\"ok\": false, \"error\": \"not yet implemented\"}`.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
+            "description": "Reserved endpoint for syncing the `autonomy` (input button \u2192 action) table to an IP1100PoE module's EEPROM via the `saveAutonomy` HTTP call. The route is wired and the response contract is locked, but the implementation lands in Fase 8. Today the endpoint always returns `501 not yet implemented` so that clients can already be coded against the final shape.\n\n**Path:** `POST /api/{{apiVersion}}/provision/autonomy`\n\n**Request body:** `{}` (reserved; the body is accepted but ignored by the stub).\n\n**Response 501** \u2014 `{\"ok\": false, \"error\": \"not yet implemented\"}`.\n\nSee [`docs/api/rest.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/api/rest.md).\n"
           },
           "response": [
             {
-              "name": "501 — not yet implemented",
+              "name": "501 \u2014 not yet implemented",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -1045,14 +1101,16 @@
                 "url": {
                   "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/provision/autonomy",
                   "host": [
-                    "{{gateway_host}}:{{gateway_port}}"
+                    "{{gateway_host}}"
                   ],
                   "path": [
                     "api",
                     "{{apiVersion}}",
                     "provision",
                     "autonomy"
-                  ]
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
                 }
               },
               "status": "Not Implemented",

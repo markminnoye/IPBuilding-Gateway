@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "skills": {
+    "async-python-patterns": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/async-python-patterns/SKILL.md",
+      "computedHash": "6212aa28da2c7ffc63050064212bdfd752e4bdbff223d6b7fda09a2cfeaaac30"
+    },
+    "binary-analysis-patterns": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/binary-analysis-patterns/SKILL.md",
+      "computedHash": "a97efe5f02dddde66736f6f95ec3c28fdd91fba2cd0e2e22fb2031ad9b9abf1f"
+    },
+    "home-assistant-automation-scripts": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "skillPath": "addon-opencode/skills/home-assistant-automation-scripts/SKILL.md",
+      "computedHash": "cc7d160870a9b6dbc5a571172894a1e007d30708a1c00ec7cd1b14f5a855fcee"
+    },
+    "home-assistant-awtrix": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "skillPath": "addon-opencode/skills/home-assistant-awtrix/SKILL.md",
+      "computedHash": "d9621dc0cf3cc85b1b78e1320597cf4a682cde870d574f0ba244a70fe4559d54"
+    },
+    "home-assistant-best-practices": {
+      "source": "homeassistant-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/home-assistant-best-practices/SKILL.md",
+      "computedHash": "ace3219d5f417d5ab7601e331ca6ad51cd77e526ae56deb8ae59f7568e4fd699"
+    },
+    "home-assistant-custom-integration": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "skillPath": "addon-opencode/skills/home-assistant-custom-integration/SKILL.md",
+      "computedHash": "a7188155df89952554b4b05f69aa0e13fcf212c5a4c80bf5967989f7ab415d6b"
+    },
+    "home-assistant-dashboards-cards": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "skillPath": "addon-opencode/skills/home-assistant-dashboards-cards/SKILL.md",
+      "computedHash": "c422d82efdb7fc5863c11c8a377227c53ab1e78df96cf7879c4100f9d1f3c382"
+    },
+    "home-assistant-entities-services": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "skillPath": "addon-opencode/skills/home-assistant-entities-services/SKILL.md",
+      "computedHash": "dbf33b9e0bea5b229d9a23da2f5b6dfb1aa5d21e7ba162b0b7110e151cb9814f"
+    },
+    "home-assistant-esphome": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "skillPath": "addon-opencode/skills/home-assistant-esphome/SKILL.md",
+      "computedHash": "f6b12c4796a6a6a3831e3661ce5cfc583bbf1462d1f118d8b20faafe773f6616"
+    },
+    "home-assistant-integrations-addons": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "skillPath": "addon-opencode/skills/home-assistant-integrations-addons/SKILL.md",
+      "computedHash": "f3963b0a0fd1d99ca1ef25fb0b69bc3b85d80ed594f1c62a23cd56bdf9695f68"
+    },
+    "network-engineer": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/network-engineer/SKILL.md",
+      "computedHash": "9148831046ee08eb6e86f85ded2a72bee7b33d5a51715c6f5f13a92aa2408aa2"
+    },
+    "protocol-reverse-engineering": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/protocol-reverse-engineering/SKILL.md",
+      "computedHash": "ef29017c49fa11a919b76c6c720bc5369d1616f55d4a6a7a6842b9b4054359c3"
+    }
+  }
+}
