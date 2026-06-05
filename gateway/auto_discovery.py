@@ -424,7 +424,7 @@ class DiscoveryOrchestrator:
                 }
                 modules_to_write.append(new_module)
                 added.append({"mac": dm.mac, "ip": dm.ip})
-                self._broadcast({
+                await self._broadcast({
                     "type": "device_added",
                     "mac": dm.mac,
                     "ip": dm.ip,

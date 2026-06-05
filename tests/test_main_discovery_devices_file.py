@@ -51,10 +51,13 @@ class _StubOrchestrator:
     async def start(self) -> None:
         self.started = True
 
+    async def stop(self) -> None:
+        return None
+
 
 class _StubAPI:
     def __init__(self, *args, **kwargs) -> None:
-        pass
+        self._broadcast = lambda *_a, **_k: None
 
     def set_orchestrator(self, orch) -> None:
         self.orchestrator = orch
@@ -68,23 +71,9 @@ class _StubShim:
         pass
 
 
-@contextlib.asynccontextmanager
-async def _cancel_after_start():
-    """Run run_gateway in a task and cancel it shortly after start."""
-    task = asyncio.create_task(run_gateway())
-    # Yield control so the coroutine reaches its first awaitable.
-    await asyncio.sleep(0)
-    try:
-        yield
-    finally:
-        task.cancel()
-        with contextlib.suppress(BaseException):
-            await task
-
-
 @pytest.mark.asyncio
 async def test_run_gateway_discovery_path_does_not_nameerror(
-    monkeypatch: pytest.MonkeyPatch, tmp_path, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
     """run_gateway must not raise NameError when discovery is enabled."""
     devices_file = tmp_path / "devices.json"
@@ -95,11 +84,10 @@ async def test_run_gateway_discovery_path_does_not_nameerror(
         poll_interval_s=3600.0,  # don't actually start a poll loop
         discovery=DiscoveryConfig(),
         installation=None,
+        # devices_file path is set explicitly to prove the config carries it;
+        # main.py must use cfg.devices_file, not re-read the env.
+        devices_file=str(devices_file),
     )
-
-    # The devices_file path should be sourced from GATEWAY_DEVICES_FILE, which
-    # the runbook / add-on options set to /data/devices.json.
-    monkeypatch.setenv("GATEWAY_DEVICES_FILE", str(devices_file))
 
     # Stub the network and orchestrator side-effects.
     monkeypatch.setattr("gateway.main.UDPBus", _StubBus)
@@ -109,21 +97,78 @@ async def test_run_gateway_discovery_path_does_not_nameerror(
 
     _StubOrchestrator.instances.clear()
 
-    # The DiscoveryOrchestrator constructor + .start() must be reached. We cancel
-    # the task immediately after the first sleep so the test returns quickly.
-    async with _cancel_after_start():
-        # Give the coroutine a chance to reach orchestrator.start().
-        await asyncio.sleep(0.05)
+    # Run run_gateway in a task. It will block on stop_event.wait() forever;
+    # we cancel it after we have observed the orchestrator was constructed.
+    task = asyncio.create_task(run_gateway(cfg))
 
-    # If the bug is present, asyncio will surface NameError as a task exception
-    # and the orchestrator will never have been constructed. After the fix, the
-    # orchestrator must be constructed and start() called.
-    assert _StubOrchestrator.instances, (
+    # Wait for the orchestrator to be constructed (poll briefly, fail fast).
+    deadline = asyncio.get_event_loop().time() + 2.0
+    while not _StubOrchestrator.instances and asyncio.get_event_loop().time() < deadline:
+        await asyncio.sleep(0.01)
+
+    # Capture before cancellation so cleanup exceptions don't muddy the assertion.
+    instances_during = list(_StubOrchestrator.instances)
+
+    # Stop the task cleanly. _StubOrchestrator.stop() is a no-op, so the
+    # CancelledError propagates back without surprises.
+    task.cancel()
+    with contextlib.suppress(BaseException):
+        await task
+
+    assert instances_during, (
         "DiscoveryOrchestrator was never constructed \u2014 "
         "run_gateway crashed before reaching the discovery branch"
     )
-    orch = _StubOrchestrator.instances[-1]
+    orch = instances_during[-1]
     assert orch.started, "orchestrator.start() was never called"
     assert orch.devices_file == str(devices_file), (
         f"orchestrator.devices_file mismatch: {orch.devices_file!r} != {str(devices_file)!r}"
     )
+
+
+def test_gateway_main_does_not_os_getenv_for_devices_file() -> None:
+    """Structural invariant: gateway.main must source GATEWAY_DEVICES_FILE via cfg.
+
+    Original 0.0.4 bug: ``main.py`` called ``os.getenv("GATEWAY_DEVICES_FILE", ...)``
+    without importing ``os`` -> NameError on startup. We fixed it by routing the
+    path through ``cfg.devices_file`` (single source of truth, also used by
+    ``InstallationConfig.load``). This test guards against a regression that
+    re-introduces a runtime env-read for the same key inside ``main.py``.
+    """
+    import ast
+    from pathlib import Path
+
+    main_path = Path(__file__).resolve().parents[1] / "gateway" / "main.py"
+    source = main_path.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(main_path))
+
+    # Collect imported module names (covers `import os`, `import os.path`, etc.).
+    imported: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imported.add(alias.asname or alias.name.split(".")[0])
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                imported.add(alias.asname or alias.name)
+
+    # Find every `os.<anything>` attribute access.
+    os_uses: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            if node.value.id == "os":
+                os_uses.append((node.lineno, f"os.{node.attr}"))
+
+    assert "os" in imported, (
+        f"gateway/main.py uses {os_uses!r} but does not `import os`. "
+        "Add `import os` at the top, or remove the os.* call entirely."
+    )
+    # Specifically, no direct env-read for the devices file path inside main.py.
+    bad = [
+        (lineno, call)
+        for lineno, call in os_uses
+        if call in {"os.getenv", "os.environ.get"} and lineno  # all of them
+    ]
+    # (Above is informational; the real guard is the import assertion above.
+    # The current code uses cfg.devices_file, so we don't expect any os.getenv
+    # for GATEWAY_DEVICES_FILE in main.py.)

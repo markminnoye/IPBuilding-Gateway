@@ -343,7 +343,7 @@ class TestDiscoveryOrchestratorStartStop:
 class TestDiscoveryOrchestratorCallbacks:
     @pytest.mark.asyncio
     async def test_on_arp_new_emits_device_added(self):
-        broadcast = AsyncMock()
+        broadcast = MagicMock()
         orch = DiscoveryOrchestrator(
             config=DiscoveryConfig(),
             devices_file="/tmp/dev.json",
@@ -358,7 +358,7 @@ class TestDiscoveryOrchestratorCallbacks:
 
     @pytest.mark.asyncio
     async def test_on_arp_missing_emits_device_removed(self):
-        broadcast = AsyncMock()
+        broadcast = MagicMock()
         orch = DiscoveryOrchestrator(
             config=DiscoveryConfig(),
             devices_file="/tmp/dev.json",
@@ -371,7 +371,7 @@ class TestDiscoveryOrchestratorCallbacks:
 
     @pytest.mark.asyncio
     async def test_on_arp_ip_changed_emits_device_ip_changed(self):
-        broadcast = AsyncMock()
+        broadcast = MagicMock()
         orch = DiscoveryOrchestrator(
             config=DiscoveryConfig(),
             devices_file="/tmp/dev.json",
