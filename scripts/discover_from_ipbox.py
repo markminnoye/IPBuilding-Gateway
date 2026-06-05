@@ -61,7 +61,55 @@ OUTPUT_PATH = os.getenv("DISCOVERY_OUTPUT", "devices.discovered.json")
 # Configureerbaar bereik voor de per-IP Import*-probes.
 # Default = 10.10.1.30..10.10.1.59, het typische veldbus-segment.
 _RANGE_ENV = os.getenv("IPBOX_DISCOVERY_RANGE", "30-59")
-_range_start, _range_end = (int(x) for x in _RANGE_ENV.split("-", 1))
+
+
+def _parse_range_spec(value: str) -> tuple[int, int]:
+    """Parseer ``IPBOX_DISCOVERY_RANGE`` als ``"<start>-<end>"`` of ``"<n>"``.
+
+    Geeft een duidelijke foutmelding via ``SystemExit`` als de waarde ongeldig
+    is, in plaats van een onvriendelijke ``ValueError: not enough values to
+    unpack`` of ``invalid literal for int()`` op module-import.
+    """
+    raw = value.strip()
+    if not raw:
+        sys.exit(
+            "ERROR: IPBOX_DISCOVERY_RANGE is leeg. "
+            "Verwacht formaat: '<start>-<end>' (bv. '30-59')."
+        )
+    parts = raw.split("-")
+    if len(parts) == 1:
+        try:
+            n = int(parts[0])
+        except ValueError:
+            sys.exit(
+                f"ERROR: IPBOX_DISCOVERY_RANGE={value!r} is geen geldige "
+                "gehele getal. Verwacht formaat: '<start>-<end>' (bv. '30-59')."
+            )
+        return n, n
+    if len(parts) != 2:
+        sys.exit(
+            f"ERROR: IPBOX_DISCOVERY_RANGE={value!r} heeft te veel '-'-tekens. "
+            "Verwacht formaat: '<start>-<end>' (bv. '30-59')."
+        )
+    start_raw, end_raw = parts
+    try:
+        start = int(start_raw)
+        end = int(end_raw)
+    except ValueError:
+        sys.exit(
+            f"ERROR: IPBOX_DISCOVERY_RANGE={value!r} bevat niet-numerieke "
+            "waarden. Verwacht formaat: '<start>-<end>' (bv. '30-59')."
+        )
+    if end < start:
+        sys.exit(
+            f"ERROR: IPBOX_DISCOVERY_RANGE={value!r}: end ({end}) is kleiner "
+            f"dan start ({start}). Verwacht formaat: '<start>-<end>' met "
+            "end >= start."
+        )
+    return start, end
+
+
+_range_start, _range_end = _parse_range_spec(_RANGE_ENV)
 DEFAULT_IP_SUFFIXES: range = range(_range_start, _range_end + 1)
 IPBOX_SUBNET = "10.10.1"
 

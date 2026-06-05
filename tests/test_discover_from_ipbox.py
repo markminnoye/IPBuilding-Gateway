@@ -18,6 +18,7 @@ import pytest
 from aioresponses import aioresponses
 
 from scripts.discover_from_ipbox import (
+    _parse_range_spec,
     build_devices_json,
     probe_module,
     scan_modules,
@@ -186,3 +187,124 @@ async def test_build_validates_via_installation_config(tmp_path: Path):
     # entity_id is altijd afleidbaar, niet opgeslagen; type zit NIET in het ID
     # (server-side opgezocht via module_by_ip — anti-spoofing)
     assert cfg.make_entity_id("10.10.1.30", 0) == "10.10.1.30-0"
+
+
+# ---------------------------------------------------------------------------
+# Tests voor _parse_range_spec (IPBOX_DISCOVERY_RANGE parsing)
+#
+# Regressie: vóór deze fix gaf de module-import een
+#     ValueError: not enough values to unpack (expected 2, got 1)
+# zonder uitleg wanneer de env-var geen '-' bevatte (bijv. "30").
+# _parse_range_spec geeft nu een duidelijke, bruikbare foutmelding via
+# SystemExit en accepteert ook een enkele waarde (n..n).
+# ---------------------------------------------------------------------------
+
+
+def test_parse_range_spec_pair():
+    """Standaard 'start-end' formaat werkt."""
+    assert _parse_range_spec("30-59") == (30, 59)
+    assert _parse_range_spec("1-1") == (1, 1)
+    assert _parse_range_spec("0-255") == (0, 255)
+
+
+def test_parse_range_spec_single_value():
+    """Een enkele waarde wordt geïnterpreteerd als start=end.
+
+    Dit is wat de oorspronkelijke bug triggerde: gebruikers die alleen een
+    start-IP opgeven (bijv. ``IPBOX_DISCOVERY_RANGE=30``) kregen een
+    onvriendelijke ``ValueError`` bij module-import.
+    """
+    assert _parse_range_spec("30") == (30, 30)
+    assert _parse_range_spec("42") == (42, 42)
+
+
+def test_parse_range_spec_strips_whitespace():
+    """Spaties rond de waarde worden genegeerd."""
+    assert _parse_range_spec(" 30-59 ") == (30, 59)
+    assert _parse_range_spec("  30  ") == (30, 30)
+
+
+def test_parse_range_spec_empty_raises_systemexit():
+    """Lege string → duidelijke foutmelding (niet 'not enough values')."""
+    with pytest.raises(SystemExit) as exc_info:
+        _parse_range_spec("")
+    msg = str(exc_info.value)
+    assert "IPBOX_DISCOVERY_RANGE" in msg
+    assert "leeg" in msg
+    assert "30-59" in msg  # verwijst naar het verwachte formaat
+
+
+def test_parse_range_spec_non_numeric_raises_systemexit():
+    """Niet-numerieke waarde → duidelijke foutmelding met de afgekeurde input."""
+    with pytest.raises(SystemExit) as exc_info:
+        _parse_range_spec("abc")
+    msg = str(exc_info.value)
+    assert "IPBOX_DISCOVERY_RANGE" in msg
+    assert "'abc'" in msg
+    assert "geen geldige gehele getal" in msg
+
+
+def test_parse_range_spec_half_bad_raises_systemexit():
+    """Eén geldige + één niet-numerieke waarde → duidelijke foutmelding."""
+    with pytest.raises(SystemExit) as exc_info:
+        _parse_range_spec("30-abc")
+    msg = str(exc_info.value)
+    assert "niet-numerieke" in msg
+    assert "'30-abc'" in msg
+
+
+def test_parse_range_spec_reversed_raises_systemexit():
+    """end < start → duidelijke foutmelding (geen oneindige / lege range)."""
+    with pytest.raises(SystemExit) as exc_info:
+        _parse_range_spec("59-30")
+    msg = str(exc_info.value)
+    assert "kleiner dan start" in msg
+    assert "end >= start" in msg
+
+
+def test_parse_range_spec_too_many_dashes_raises_systemexit():
+    """Meer dan één '-' → duidelijke foutmelding."""
+    with pytest.raises(SystemExit) as exc_info:
+        _parse_range_spec("30-40-50")
+    msg = str(exc_info.value)
+    assert "te veel '-'-tekens" in msg
+
+
+def test_parse_range_spec_dash_only_raises_systemexit():
+    """Alleen een '-' → duidelijke foutmelding (niet 'not enough values')."""
+    with pytest.raises(SystemExit) as exc_info:
+        _parse_range_spec("-")
+    msg = str(exc_info.value)
+    assert "niet-numerieke" in msg
+
+
+def test_parse_range_spec_leading_dash_raises_systemexit():
+    """Leading '-' (zoals '-30') → duidelijke foutmelding."""
+    with pytest.raises(SystemExit) as exc_info:
+        _parse_range_spec("-30")
+    msg = str(exc_info.value)
+    assert "niet-numerieke" in msg
+
+
+def test_module_import_does_not_crash_on_single_value(monkeypatch):
+    """Regressie: ``IPBOX_DISCOVERY_RANGE=30`` mag niet crashen bij import.
+
+    Vóór de fix gaf de module-import een onvriendelijke
+    ``ValueError: not enough values to unpack`` op regel 64 zonder
+    uitleg welke env-var of welke waarde het probleem was.
+    """
+    monkeypatch.setenv("IPBOX_DISCOVERY_RANGE", "30")
+    import importlib
+    import scripts.discover_from_ipbox as mod
+    importlib.reload(mod)
+    # Import slaagt, DEFAULT_IP_SUFFIXES bevat alleen suffix 30.
+    assert list(mod.DEFAULT_IP_SUFFIXES) == [30]
+
+
+def test_module_import_does_not_crash_on_default(monkeypatch):
+    """Zonder env-var valt de module terug op de default '30-59'."""
+    monkeypatch.delenv("IPBOX_DISCOVERY_RANGE", raising=False)
+    import importlib
+    import scripts.discover_from_ipbox as mod
+    importlib.reload(mod)
+    assert list(mod.DEFAULT_IP_SUFFIXES) == list(range(30, 60))
