@@ -1,5 +1,5 @@
 ---
-description: Release tagging — codex-review, CHANGELOG, and version bump before git tag
+description: Release tagging — codex-review, customer-facing CHANGELOG (Added/Changed/Fixed/Removed), and version bump before git tag
 globs:
   - ipbuilding_gateway/config.yaml
   - ipbuilding_gateway/CHANGELOG.md
@@ -21,6 +21,10 @@ Apply when the user or task involves:
 1. Run `/codex-review` (skill: `BenedictKing/codex-review`) on uncommitted changes or the latest commit.
    - Confirm the generated CHANGELOG entry matches the intended change.
 2. Update `ipbuilding_gateway/CHANGELOG.md` with the entry under the correct version section.
+   - **Customer-facing taal.** Beschrijf wat de gebruiker merkt, niet hoe het werkt.
+   - Gebruik de Keep-a-Changelog headers: `### Added`, `### Changed`, `### Fixed`, `### Removed`. Sla over wat niet van toepassing is.
+   - Korte, leesbare bullets. Geen bestandsnamen, functienamen, commit-hashes, regelnummers, test-technische details, of interne implementatie-termen (tenzij de gebruiker die zelf zal zien).
+   - Technische details horen in de commit message, niet in de CHANGELOG.
 3. Bump `version:` in `ipbuilding_gateway/config.yaml` (semver; pre-1.0 uses `0.x.y`).
 4. Commit: `release: v<X>.<Y>.<Z>` (conventional commit).
 5. Tag: `git tag v<X>.<Y>.<Z>` and `git push --tags`.
