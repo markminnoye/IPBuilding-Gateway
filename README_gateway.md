@@ -52,9 +52,11 @@ Do **not** extend IPBox REST parity (scenes, moods, project DB) in `rest_shim`; 
 ## What exists today
 
 - **`gateway_api.py`** — WebSocket `/ws` + REST `/api/v1/` (product northbound); uses `entity_id` not `ipbox_id`; see [`docs/api/`](docs/api/) for PAW/GetAPI import
-- **`ipbuilding-gateway-ha/`** — Home Assistant companion (switch, light, button, sensor entities); WebSocket coordinator; Supervisor auto-detection
 - **`ipbuilding_gateway/`** — HA Supervisor add-on (Docker, `config.yaml`, `host_network: true`); persistent `/data/devices.json`; REST shim opt-in; see [`ipbuilding_gateway/DOCS.md`](ipbuilding_gateway/DOCS.md)
+- **HA companion (separate repo)** — [`markminnoye/ipbuilding-gateway-ha`](https://github.com/markminnoye/ipbuilding-gateway-ha); switch, light, button, sensor entities; WebSocket coordinator; Supervisor auto-detection. Install via HACS → Integrations.
 - **EEPROM sync** (Fase 8) still open
+
+> **Note (2026-06-05):** the companion lived in `ipbuilding-gateway-ha/` in this repo until today and has been moved to its own repo ([`markminnoye/ipbuilding-gateway-ha`](https://github.com/markminnoye/ipbuilding-gateway-ha)) so HACS accepts it as an Integration (this repo's root is an add-on repository, which HACS rejects as an Integration). Update any existing HACS custom-repo URL accordingly.
 
 ## ID model
 

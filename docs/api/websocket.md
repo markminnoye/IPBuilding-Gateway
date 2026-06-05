@@ -302,4 +302,4 @@ The `module_id` field on each device contains the stable MAC of the parent modul
 
 `button_event.id` is the hardware hex ID from the IP1100PoE (e.g. `2DE341851900001F`). Route these to Home Assistant button entities via the `ipbuilding-gateway-ha` companion automation.
 
-See [ARCHITECTURE.md -- section 6](../../ARCHITECTURE.md#6-northbound-protocol-websocket) for the full sequence diagram and [coordinator.py](../../ipbuilding-gateway-ha/custom_components/ipbuilding_gateway_ha/coordinator.py) for how button events are dispatched in the HA companion.
+See [ARCHITECTURE.md -- section 6](../../ARCHITECTURE.md#6-northbound-protocol-websocket) for the full sequence diagram and [`coordinator.py`](https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/custom_components/ipbuilding_gateway_ha/coordinator.py) in the companion repo for how button events are dispatched in HA.

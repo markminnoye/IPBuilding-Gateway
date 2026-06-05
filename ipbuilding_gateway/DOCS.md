@@ -180,4 +180,4 @@ IPBuilding veldbus (UDP/1001 · 10.10.1.x)
 
 ---
 
-Companion installatie: [`ipbuilding-gateway-ha/README.md`](ipbuilding-gateway-ha/README.md)
+Companion installatie: [markminnoye/ipbuilding-gateway-ha](https://github.com/markminnoye/ipbuilding-gateway-ha) (HACS → Integrations)
