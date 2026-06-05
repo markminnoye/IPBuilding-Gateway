@@ -83,6 +83,9 @@ class GatewayConfig:
     )
     # Installation configuration; if set, field_modules is derived from it
     installation: InstallationConfig | None = None
+    # Path to the devices.json file on disk. Single source of truth: both the
+    # installation loader and the discovery orchestrator consume this.
+    devices_file: str = "./devices.json"
     # Discovery configuration (optional; loaded from env)
     discovery: DiscoveryConfig = field(default_factory=DiscoveryConfig)
 
@@ -129,5 +132,6 @@ class GatewayConfig:
             log_level=os.getenv("GATEWAY_LOG_LEVEL", "INFO").upper(),
             field_modules=modules,
             installation=installation,
+            devices_file=devices_file,
             discovery=discovery,
         )

@@ -1,6 +1,6 @@
 # IPBuilding Gateway — Architectuur
 
-**Versie:** 2026-06-03 (update §4.1 Discovery + ARP-first ✅)  
+**Versie:** 2026-06-05 (sync §2.1/§4.1/§6/§8 met runtime auto-discovery v0.0.4 ✅)  
 **Status:** Goedgekeurd (vervangt [docs/superpowers/specs/2026-05-18-gateway-architecture-design.md](docs/superpowers/specs/2026-05-18-gateway-architecture-design.md))  
 **Doelgroep:** ontwikkelaars, AI-agenten, integratie-partners
 
@@ -33,17 +33,27 @@ De propriëtaire **IPBox** (IP0000X) vervangen door een open, zelfbeheerde gatew
 | UDP/1001 pollen, commando's sturen, events ontvangen | Knop→actie beslissen |
 | Device Registry bijhouden (huidige toestand) | HA-entities aanmaken |
 | Config lezen/schrijven (naam, room, type, watt, active) | Sferen of scenes beheren |
-| Discovery: ARP-first (ping → ARP cache → OUI 00:24:77) + HTTP getSysSet + getButtons | IPBox REST nabootsen (enkel shim, tijdelijk) |
+| **Runtime auto-discovery** (init-sweep + passieve ARP-monitor + forced REST) — zie §4.1 | IPBox REST nabootsen (enkel shim, tijdelijk) |
 | Northbound: WS, REST, MQTT, Matter adapters | Button-mapping opslaan |
 | Provisioning: EEPROM-sync doorgeven aan input-module | — |
 
-**Write-policy (`devices.json`):**
-- Nieuwe modules (via init-sweep of forced discovery) → `devices.json` met `active: false`, `room: "Unconfigured"`.
-- Verloren modules → enkel markeren als unreachable in runtime registry; **niet** automatisch verwijderen uit `devices.json`.
-- IP-wijziging (DHCP) → runtime WebSocket `device_ip_changed`; `devices.json` ongewijzigd.
-- Firmware-wijziging → `devices.json` updated (één regel) + `device_firmware_changed` WS event.
-- Writes naar `devices.json` gaan altijd via `AtomicWriter` (tempfile + `os.replace` + `fcntl.flock`, 15 s lock-timeout).
-- `last_seen` / `last_seen_source` zijn **runtime-only** velden — niet gepersisteerd naar `devices.json`.
+**Write-policy (`devices.json`) — 3 categorieën met eigen eigenaar:**
+
+De gateway mag **nooit** impliciet beslissen om een northbound-veld te schrijven. Drie categorieën:
+
+| Categorie | Velden in `devices.json` | Eigenaar | Gateway-gedrag |
+|-----------|--------------------------|----------|----------------|
+| **Noordbound (HA-domein)** | `name`, `room`, `active`, `max_watt`, `semantic_type`, kanaal-specs | Companion / gebruiker | Alleen **lezen** |
+| **Fysiek (module-EEPROM)** | `backupConfig`-kanalen, button-mapping, autonomy | Module zelf (WebConfig) of gateway op expliciete `POST /api/v1/provision/autonomy` | **Nooit** impliciet schrijven |
+| **Netwerk / runtime** | `ip`, `mac`, `firmware`, `last_seen`, `last_seen_source` | Gateway zelf | `ip`/`mac` in runtime-registry; `firmware` naar `devices.json` bij wijziging; `last_seen*` is runtime-only |
+
+**Concreet:**
+- Nieuwe modules (via init-sweep, passieve ARP-monitor of forced discovery) → **append** aan `devices.json` met `active: false`, `room: "Unconfigured"`, lege `channels: []`. Atomic write met lock.
+- Verloren modules → enkel `unreachable: true` in runtime-registry. **Niet** verwijderen uit `devices.json`.
+- IP-wijziging (DHCP) → match op MAC, update in runtime-registry, emit `device_ip_changed` WS-event. **`devices.json` `ip` blijft initieel** tot de gebruiker expliciet opslaat.
+- Firmware-wijziging → één regel in `devices.json` bijgewerkt (firmware is objectief, geen split-brain risico) + `device_firmware_changed` WS event.
+- Writes naar `devices.json` gaan altijd via `AtomicWriter` (tempfile + `fsync` + `os.replace` + `fcntl.flock` op `devices.json.lock`, 15 s lock-timeout).
+- `last_seen` / `last_seen_source` zijn **runtime-only** velden — niet gepersisteerd naar `devices.json`; serialisatie laat ze weg (`ModuleConfig.to_dict()` filtert ze uit).
 
 **Talen/runtimes:**
 - Python 3.11+ (HA add-on en standalone Docker/RPi) — primaire implementatie
@@ -68,7 +78,7 @@ De propriëtaire **IPBox** (IP0000X) vervangen door een open, zelfbeheerde gatew
 | Module | IP | Functie |
 |---|---|---|
 | IP0200PoE | 10.10.1.30 | 24× relay (aan/uit, pulse) |
-| IP0300PoE | 10.10.1.40 | 8× dimmer (0–100%) |
+| IP0300PoE | 10.10.1.40 | Dimmer (0–100%); in huidige installatie 4 kanalen in gebruik, module-capaciteit 8 |
 | IP1100PoE | 10.10.1.50 | Drukknoppen — events + autonome EEPROM-mapping |
 
 Communicatieprotocol: **UDP/1001** (binary ASCII, poort 1001). Configuratie-API: **HTTP `api.html`** rechtstreeks op elke module (backupConfig, saveOutput, saveChannel, saveAutonomy, getButtons).
@@ -182,64 +192,64 @@ graph LR
 |---|---|---|
 | `udp_bus.py` | `gateway/udp_bus.py` | asyncio UDP socket; polling (2s), command send, event listen |
 | `device_registry.py` | `gateway/device_registry.py` | In-memory state van alle devices; update bij elk event |
-| `installation.py` | `gateway/installation.py` | Laadt en valideert `devices.json`; levert entity-IDs |
+| `installation.py` | `gateway/installation.py` | Laadt en valideert `devices.json`; levert entity-IDs; runtime-only `last_seen*` |
 | `discovery.py` | `gateway/discovery.py` | ARP-sweep → OUI 00:24:77 filter → HTTP getSysSet/getButtons; configureerbare range; no ipbox_id |
-| `gateway_api.py` | `gateway/gateway_api.py` | aiohttp server: WS `/ws` + REST `/api/v1/` *(Fase 3)* |
+| `auto_discovery.py` | `gateway/auto_discovery.py` | **Runtime auto-discovery (v0.0.4):** `ArpMonitor`, `DiscoveryOrchestrator`, `AtomicWriter` — init-sweep, passieve ARP-monitor, forced REST |
+| `module_metadata.py` | `gateway/module_metadata.py` | Cache van `getSysSet`/`getButtons` per module; refresh via `POST /api/v1/modules/refresh` |
+| `gateway_api.py` | `gateway/gateway_api.py` | aiohttp server: WS `/ws` + REST `/api/v1/` (incl. `POST /api/v1/discover`) |
 | `rest_shim.py` | `gateway/rest_shim.py` | IPBox-compatibele REST `:30200` *(tijdelijk, transitie)* |
 | `payloads/` | `gateway/payloads/` | encode/decode relay, dimmer, input — **aanwezig en getest** |
 
-### 4.1 Module discovery — ARP-first + HTTP identify + passive ARP monitor
+### 4.1 Module discovery — ARP-first + runtime auto-discovery (v0.0.4)
 
-Discovery starts at first boot (init-sweep) or on-demand (`POST /api/v1/discover`).
+**Geïmplementeerd in:** [`gateway/auto_discovery.py`](gateway/auto_discovery.py) (commit `2407f32`, design goedgekeurd [`docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md`](docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md)).
 
-The runtime auto-discovery system has three coordinated parts:
+**Drie modi achter één component (`DiscoveryOrchestrator`):**
 
-**Init-sweep** (first boot, optional via `auto_discover_on_start`):
+| Modus | Trigger | Doel |
+|-------|---------|------|
+| **Init ARP-sweep** | Lege `devices.json` bij start (of `auto_discover_on_start: true`) | Eerste vulling van de installatie vanuit de veldbus |
+| **Passieve ARP-monitor** | Continu tijdens runtime (default elke 30 s) | Nieuwe, gewijzigde of verdwenen modules detecteren |
+| **Geforceerde discovery** | `POST /api/v1/discover` of WS-bericht `{"type": "discover"}` | Operator-actie, negeert de mode-toggles |
+
+**Init-sweep** (eenmalig bij lege `devices.json` of `auto_discover_on_start: true`):
+
 ```
 Empty devices.json detected at startup
-  → ARP ping-sweep over discovery_subnet/range
-  → parse arp -an / proc/net/arp
+  → ARP ping-sweep over discovery_subnet/range (default 10.10.1.0–254)
+  → parse /proc/net/arp (Linux) of arp -an (macOS fallback)
   → filter OUI 00:24:77
-  → exclude OUI 00:30:18 (IPBox hub)
   → HTTP getSysSet + backupConfig per candidate
-  → write devices.json with active:false, room:"Unconfigured"
+  → write devices.json with active:false, room:"Unconfigured", channels:[]
+  → broadcast device_added per nieuwe module
 ```
 
-**Passive ARP monitor** (always running when `passive_arp_monitor: true`):
+**Passieve ARP-monitor** (altijd aan tenzij `passive_arp_monitor: false`):
+
 ```
 Every arp_poll_interval_s (default 30 s):
   → read kernel ARP table
-  → diff against known MACs
-  → emit device_added / device_removed / device_ip_changed
-  → module marked "removed" after removed_after_n_polls (default 3)
-```
-No HTTP calls are made for existing modules during passive monitoring — firmware check only on init/forced discovery.
-
-**Forced discovery** (`POST /api/v1/discover`):
-```
-ARP-sweep + HTTP getSysSet + backupConfig (all modules, regardless of toggles)
-  → new modules written to devices.json (active:false)
-  → firmware changes written to devices.json + device_firmware_changed WS event
-  → IP changes emitted as device_ip_changed (devices.json unchanged)
+  → diff tegen vorige snapshot
+  → nieuwe MAC (OUI 00:24:77, niet in devices.json) → device_added WS event
+  → bestaande MAC op ander IP → device_ip_changed WS event
+  → bestaande MAC N polls niet gezien (default N=3, ~90 s) → device_removed WS event
+  → GEEN write naar devices.json (runtime-only events)
 ```
 
-**Standaard range:** `10.10.1.30–59` — matcht IPBox Scan Modules-gedrag.
-Gebruiker configureert `discovery_subnet`, `discovery_range_start`, `discovery_range_end` (CLI or add-on options).
+Geen HTTP `getSysSet` calls tijdens passieve monitoring — firmware check gebeurt enkel op init/forced discovery (backlog-item voor v2).
 
-**OUI-filter:**
+**Geforceerde discovery** (`POST /api/v1/discover` of `{"type": "discover"}` over WS):
 
 ```
-Ping sweep (configureerbare range)
-  → kernel ARP cache vullen
-  → parse arp -an / proc/net/arp
-  → filter veldmodule-OUI 00:24:77
-  → exclude hub IPBox OUI 00:30:18
-  → HTTP getSysSet op elke candidate
-  → build devices.json draft
+Run ongeacht de toggles
+  → ARP-sweep + HTTP getSysSet + backupConfig (alle modules)
+  → nieuwe modules geschreven naar devices.json (active:false)
+  → firmware-wijziging → devices.json updated + device_firmware_changed WS event
+  → IP-wijziging → runtime-registry updated + device_ip_changed WS event
+  → return {ok, added, changed, removed, duration_ms}
 ```
 
-**Standaard range:** `10.10.1.30–59` — matcht IPBox Scan Modules-gedrag.
-Gebruiker configureert `--subnet`, `--range-start`, `--range-end` (CLI of toekomstige add-on options).
+**ARP-bron — gekozen aanpak:** `/proc/net/arp` rechtstreeks (Linux, al geïmplementeerd in `gateway/discovery.py::parse_arp_table`); `arp -an` als macOS-fallback voor ontwikkelaars. Geen netlink/pyroute2 dependency — overkill bij 30 s polling.
 
 **OUI-filter:**
 
@@ -248,9 +258,7 @@ Gebruiker configureert `--subnet`, `--range-start`, `--range-end` (CLI of toekom
 | `00:24:77` | Veldmodule (relay / dimmer / input) |
 | `00:30:18` | IPBox hub — **uitsluiten** van discovery |
 
-**Python (HA add-on / standalone):** ping-sweep via async subprocess; kernel-ARP via `arp -an` (macOS) of `/proc/net/arp` (Linux).
-
-**ESP32 (toekomstig, zie §12):** zelfde algoritme via lwIP `etharp_request()` per IP — geen `arp-scan` of mDNS nodig voor IPBuilding-modules.
+**Standaard range:** `10.10.1.0–254` (volledige /24 bij init) — gebruiker configureert `discovery_subnet`, `discovery_range_start`, `discovery_range_end` (HA add-on options of CLI `--range-start`/`--range-end`).
 
 **Type/firmware:** HTTP `getSysSet` + `backupConfig` op elke ARP-gevonden module.
 Type: `devtype`, dan `getSysSet` `name` of `butLines` → input, anders `backupConfig` `device.refNr` → `_MODEL_TO_TYPE` (`IP0200PoE` → relay, `IP0300PoE` → dimmer, `IP1100PoE` → input).
@@ -259,15 +267,43 @@ Firmware via `firm`/`firmware` (indien in getSysSet).
 
 **UDP/10001:** secundair, GO-B verdict (geen betrouwbare replies op huidige POV).
 
-**Evidence:** [2026-06-03 ARP discovery spike](resources_and_docs/evidence/2026-06-03_arp_discover_spike.md) — veldtest bevestigt `.30/.40/.50` via ARP in ~20s over /24.
+**Atomic write:** `AtomicWriter` klasse in `gateway/auto_discovery.py`:
+1. Schrijf naar `<file>.tmp` in dezelfde directory
+2. `fsync()` op de file-descriptor
+3. `os.replace(tmp, final)` — atomaire rename op POSIX
+4. Exclusive `fcntl.flock` op `<file>.lock` (15 s timeout, daarna ERROR + skip)
 
-**CLI:**
+De companion leest `devices.json` nooit rechtstreeks; alle reads gaan via REST/WS. Lock is enkel bedoeld om gateway-interne races te voorkomen (init-sweep + passieve monitor kort na elkaar).
+
+**Edge case — `hub_ip` buiten `discovery_subnet`:** gateway logt één WARNING bij start, geen auto-actie. Gebruiker moet `discovery_subnet` aanpassen of `POST /api/v1/discover` aanroepen.
+
+**Configuratie (HA add-on):**
+
+```yaml
+options:
+  discovery_subnet: 10.10.1          # eerste 3 octetten
+  discovery_range_start: 0           # default 0 ipv 30; ARP-sweep over hele /24
+  discovery_range_end: 254
+  auto_discover_on_start: false      # expliciet false; init-trigger doet het alsnog bij lege config
+  passive_arp_monitor: true          # default aan
+  arp_poll_interval_s: 30            # default 30 s
+  http_timeout_s: 2.0                # identify timeout
+```
+
+**CLI (discovery scratch-test):**
 
 ```bash
 python -m gateway.discover --range-start 30 --range-end 59
 python -m gateway.discover --range-start 1 --range-end 254
 python -m gateway.discover --no-arp   # fallback: enkel HTTP-sweep
 ```
+
+**Evidence:**
+- [2026-06-03 ARP discovery spike](resources_and_docs/evidence/2026-06-03_arp_discover_spike.md) — veldtest bevestigt `.30/.40/.50` via ARP in ~20 s over /24.
+- [2026-06-03 discovery scratch runbook](resources_and_docs/workflows/2026-06-03_discovery_scratch_test_runbook.md) — end-to-end validatie van pure discovery naar werkende gateway + companion.
+- [2026-06-04 runtime auto-discovery design spec](docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md) — volledig design, write-policy, edge cases.
+
+**ESP32 (toekomstig, zie §12):** zelfde algoritme via lwIP `etharp_query()` per richtingsverkeer — geen `arp-scan` of mDNS nodig voor IPBuilding-modules.
 
 ---
 
@@ -347,17 +383,27 @@ sequenceDiagram
     participant CL as Client (companion / app)
 
     CL->>GW: WebSocket connect /ws
-    GW-->>CL: device_list · alle devices + huidige toestand
+    GW-->>CL: snapshot · alle modules + devices + huidige toestand
 
     Note over GW,CL: Realtime push — gateway → client
     GW-->>CL: state_changed · relay aan · current_watt 60W
     GW-->>CL: state_changed · dimmer 75% · current_watt 150W
     GW-->>CL: button_event · knop 2DE34… ingedrukt
 
+    Note over GW,CL: Discovery (v0.0.4) — gateway → client
+    GW-->>CL: device_added · nieuwe module 00:24:77:…
+    GW-->>CL: device_ip_changed · MAC verhuisd naar nieuw IP
+    GW-->>CL: device_firmware_changed · firmware 5.1 → 5.2
+    GW-->>CL: device_removed · module N polls niet gezien
+
     Note over GW,CL: Commando's — client → gateway
     CL->>GW: command · relay ON
     CL->>GW: command · dimmer DIM 50%
     GW-->>CL: state_changed · bevestiging
+
+    Note over GW,CL: Forced discovery (v0.0.4) — client → gateway
+    CL->>GW: discover
+    GW-->>CL: discovery_completed · added/changed/removed/duration_ms
 ```
 
 ### Berichtformaten
@@ -373,25 +419,53 @@ sequenceDiagram
 // Gateway → client: knopgebeurtenis
 {"type": "button_event", "id": "2DE341851900001F", "action": "press"}
 
-// Gateway → client: volledige lijst bij verbinding (incl. firmware per module)
-{"type": "device_list", "devices": [
-  {"id": "10.10.1.30:0",  "name": "2e SlpK L",  "room": "2e verd",
-   "semantic_type": "light", "active": true, "max_watt": 60,
-   "state": "off", "firmware": "5.1"},
-  {"id": "10.10.1.40:0", "name": "Woonkamer",   "room": "Woonkamer",
+// Gateway → client: snapshot bij verbinding (incl. firmware + last_seen per module)
+{"type": "snapshot", "modules": [
+  {"id": "00:24:77:52:ac:be", "ip": "10.10.1.30", "name": "IP0200PoE",
+   "type": "relay", "firmware": "5.1", "last_seen": "2026-06-04T18:00:00Z",
+   "last_seen_source": "arp", "is_reachable": true}
+], "devices": [
+  {"id": "10.10.1.30-0", "module_id": "00:24:77:52:ac:be", "module_ip": "10.10.1.30",
+   "channel": 0, "name": "2e SlpK L", "room": "2e verd",
+   "semantic_type": "light", "active": true, "max_watt": 60, "state": "off"},
+  {"id": "10.10.1.40-0", "module_id": "00:24:77:52:9e:a8", "module_ip": "10.10.1.40",
+   "channel": 0, "name": "Woonkamer", "room": "Woonkamer",
    "semantic_type": "light", "active": true, "max_watt": 200,
-   "state": "on", "level": 75, "firmware": "5.4"}
+   "state": "on", "level": 75}
 ]}
+
+// Gateway → client: discovery-events (v0.0.4)
+{"type": "device_added", "id": "00:24:77:52:ac:be", "mac": "00:24:77:52:ac:be",
+ "ip": "10.10.1.30", "device_type": "relay", "firmware": "5.1"}
+
+{"type": "device_removed", "id": "00:24:77:52:ac:be", "mac": "00:24:77:52:ac:be",
+ "last_seen": "2026-06-04T18:00:00Z"}
+
+{"type": "device_ip_changed", "id": "00:24:77:52:ac:be", "mac": "00:24:77:52:ac:be",
+ "old_ip": "10.10.1.30", "new_ip": "10.10.1.35"}
+
+{"type": "device_firmware_changed", "id": "00:24:77:52:ac:be", "mac": "00:24:77:52:ac:be",
+ "old_firmware": "5.1", "new_firmware": "5.2"}
+
+{"type": "discovery_completed", "added": ["00:24:77:52:ac:be"], "changed": [],
+ "removed": [], "duration_ms": 2341, "trigger": "forced"}
 
 // Client → gateway: commando's
 {"type": "command", "id": "10.10.1.30:0", "action": "ON"}
 {"type": "command", "id": "10.10.1.40:0", "action": "DIM", "value": 75}
 {"type": "command", "id": "10.10.1.30:0", "action": "OFF"}
+
+// Client → gateway: forced discovery trigger (v0.0.4)
+{"type": "discover"}
 ```
 
-**Entity-ID formaat:** `"{module_ip}:{channel}"` — deterministisch afgeleid, nooit opgeslagen.  
+**Entity-ID formaat:** `"{module_ip}-{channel}"` — deterministisch afgeleid, nooit opgeslagen.  
 Het device type is **niet** onderdeel van de ID: de gateway leidt het altijd af van de module-config (type-spoofing door clients is structureel onmogelijk).  
-Voorbeeld: `"10.10.1.30:0"`, `"10.10.1.40:0"`
+Voorbeeld: `"10.10.1.30-0"`, `"10.10.1.40-0"`
+
+**Module-ID formaat** (in `device_added`/`device_removed`/…): genormaliseerde MAC `00:24:77:52:ac:be` (lowercase, colon-separated). MAC is stable, IP niet (DHCP). Idem voor `/api/v1/modules` resource.
+
+**Discovery events zijn fire-and-forget** — geen ack van client verwacht. Sequence numbering wordt niet toegevoegd in v1 (kan later). Velden zijn bewust compact; clients doen een `GET /api/v1/modules` of wachten op de snapshot voor details.
 
 ---
 
@@ -432,15 +506,16 @@ Companion (HA) → POST /api/v1/provision/autonomy
 | **1** | UDP-protocol RE: relay, dimmer, input `B-…E` + `gateway/payloads/` | ✅ Voltooid |
 | **2** | UDP Bus Manager, Device Registry, REST-shim, veldtest | ✅ Voltooid (2026-06-02) |
 | **3** | WebSocket API server `gateway_api.py` + REST `/api/v1/` | ✅ Voltooid (2026-06-02) |
-| **4** | Gateway als HA add-on (Dockerfile + `config.yaml` + Supervisor companion auto-discovery) | 🔲 In uitvoering |
+| **4** | Gateway als HA add-on (Dockerfile + `config.yaml` + Supervisor companion auto-discovery) | ✅ Voltooid (2026-06-04) |
 | **5** | Companion `ipbuilding-gateway-ha` — entities, automations | ✅ Voltooid (2026-06-02) |
 | **6** | Input-events IP1100PoE naar companion via WS | ✅ Verpakt in Fase 5 |
-| **7** | Discovery: ARP-first + HTTP identify + optionele IPBox-import (deels geïmplementeerd) | 🔲 Open |
-| **8** | EEPROM-sync (`/api/v1/provision/autonomy`) | 🔲 Open |
+| **7** | Runtime auto-discovery: init-sweep + passieve ARP-monitor + forced REST + write-policy | ✅ Voltooid (2026-06-04, v0.0.4) |
+| **8** | EEPROM-sync (`/api/v1/provision/autonomy`) | 🔲 Open (REST-stub aanwezig; HTTP `saveAutonomy` call nog niet geïmplementeerd) |
 | **9** | MQTT adapter | 🔲 Open |
 | **10** | Matter bridge | 🔲 Open |
 | **11** | Cover/screen entities (relay-paren) | 🔲 Open |
 | **12** | ESP32 POC (C++ firmware) | 🔲 Toekomstig |
+| **13** | Periodieke 24h ARP-sweep + HTTP-identify voor bestaande modules tijdens passieve monitor | 🔲 Backlog (uit de runtime-discovery spec §15) |
 
 ---
 
@@ -453,6 +528,9 @@ Companion (HA) → POST /api/v1/provision/autonomy
 | [`resources_and_docs/IPBUILDING_KNOWLEDGE.md`](resources_and_docs/IPBUILDING_KNOWLEDGE.md) | Diepe technische kennis: module HTTP API, UDP payloads, WebConfig |
 | [`resources_and_docs/reference/2026-05-17_RE_WIZARDS_PLAN.md`](resources_and_docs/reference/2026-05-17_RE_WIZARDS_PLAN.md) | IPBox provisioning-RE: saveOutput, saveAutonomy, FlashAutonomyToModule |
 | [`resources_and_docs/2026-05-17_ipbuilding_fieldbus_capability_matrix.md`](resources_and_docs/2026-05-17_ipbuilding_fieldbus_capability_matrix.md) | Veldbus capabilities (northbound-agnostisch) |
-| [`gateway/`](gateway/) | Huidige implementatie (Fase 1 + 2) |
+| [`gateway/`](gateway/) | Huidige implementatie (Fase 1 + 2 + 3 + 4 + 7) |
 | [`docs/architecture-diagrams.html`](docs/architecture-diagrams.html) | Gerenderde diagrammen (lokale browser) |
 | [`resources_and_docs/evidence/2026-06-03_arp_discover_spike.md`](resources_and_docs/evidence/2026-06-03_arp_discover_spike.md) | ARP-first discovery spike: OUI 00:24:77, ping-sweep, veldtest |
+| [`docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md`](docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md) | Runtime auto-discovery: init-sweep + passieve ARP + forced REST + write-policy (goedgekeurd 2026-06-04) |
+| [`resources_and_docs/workflows/2026-06-03_discovery_scratch_test_runbook.md`](resources_and_docs/workflows/2026-06-03_discovery_scratch_test_runbook.md) | End-to-end discovery scratch-test (pure discovery → werkende gateway + companion) |
+| [`ipbuilding_gateway/CHANGELOG.md`](ipbuilding_gateway/CHANGELOG.md) | Add-on release notes (v0.0.1 alfa → v0.0.4 runtime auto-discovery) |

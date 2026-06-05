@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import signal
 import sys
 
@@ -74,10 +75,9 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
     # Start runtime auto-discovery orchestrator after API is ready
     orchestrator: DiscoveryOrchestrator | None = None
     if cfg.discovery:
-        devices_file = os.getenv("GATEWAY_DEVICES_FILE", "./devices.json")
         orchestrator = DiscoveryOrchestrator(
             config=cfg.discovery,
-            devices_file=devices_file,
+            devices_file=cfg.devices_file,
             broadcast=api._broadcast,
             installation=cfg.installation,
         )
