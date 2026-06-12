@@ -170,6 +170,12 @@ class GatewayAPI:
         On connect: send snapshot (modules + devices).
         Bidirectional: broadcast state_changed/button_event → client;
         receive command → dispatch.
+
+        The built-in ``heartbeat=30`` (aiohttp 3.14.0, which includes the
+        fix from aio-libs/aiohttp#12030 that coalesces the heartbeat reset
+        on inbound data) sends PINGs every 30s and drops the connection
+        if no PONG arrives in time — symmetric with the companion's
+        ``heartbeat=30.0`` in coordinator.py.
         """
         ws = web.WebSocketResponse(heartbeat=30)
         await ws.prepare(request)
