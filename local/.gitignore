@@ -1,0 +1,5 @@
+# Dev-only venv, caches, and local HA config
+*/venv/
+*/__pycache__/
+*/*.pyc
+ha-core/config/
