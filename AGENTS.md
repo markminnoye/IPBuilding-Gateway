@@ -65,7 +65,7 @@
 1. **Companion MVP afronden** — HA 2026.3-compat, `active: false` respecteren, dynamische entities bij discovery (minimaal voor test)
 2. **Companion uitbreidingen (v2, post-MVP)** — reageren op `device_added`/`device_removed`/`device_ip_changed`/`device_firmware_changed` (`binary_sensor`, `ipbuilding.discover` service, configureer-UI)
 3. ~~**Fase 8 — EEPROM-sync**~~ — uitgesteld (buiten MVP-scope)
-4. **Bind `10.10.1.1`** (optioneel) — gateway expliciet op hub-IP wanneer IPBox uit; zonder-mirror hub-validatie **PASS 2026-06-02**
+4. **Bind `10.10.1.1`** (optioneel) — gateway expliciet op hub-IP wanneer IPBox uit; zonder-mirror hub-validatie **PASS 2026-06-02**; standalone **Pi 3B** (Deployment B): [`reference/2026-06-14-deployment-hardware-evaluation.md`](resources_and_docs/reference/2026-06-14-deployment-hardware-evaluation.md)
 5. Captures bij regressie; standaard mirror **7←15** ([playbook](resources_and_docs/workflows/2026-05-14_relay_run_a_operational_playbook.md))
 6. **Migratiepad** — bestaande HA-IPBuilding installaties overzetten via [§7 ARCHITECTURE.md](ARCHITECTURE.md) (import uit IPBox → REST shim actief → companion installeren → button-mapping in HA → IPBox afkoppelen)
 

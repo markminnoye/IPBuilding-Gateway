@@ -140,9 +140,9 @@ graph TB
 
 **Deployment A** is de primaire target: gateway als HA add-on (Docker, beheerd door HA Supervisor), companion als HACS custom component op hetzelfde device.
 
-**Deployment B** gebruikt exact dezelfde Python-code als A, maar zonder Supervisor-wrapper. Draait als `docker run` of `python -m gateway` op elke Linux-machine.
+**Deployment B** gebruikt exact dezelfde Python-code als A, maar zonder Supervisor-wrapper. Draait als `docker run` of `python -m gateway` op elke Linux-machine (o.a. **Raspberry Pi 3B/4**). Praktisch patroon op Pi: **eth0** op IPBuilding-VLAN (`10.10.1.1`, veldbus) + **wlan0** op thuis-LAN (northbound `:8080` naar HA Green). Effort en platformvergelijking: [`resources_and_docs/reference/2026-06-14-deployment-hardware-evaluation.md`](resources_and_docs/reference/2026-06-14-deployment-hardware-evaluation.md).
 
-**Deployment C** is een toekomstige standalone POC in C++ voor ESP32. Implementeert hetzelfde northbound-protocol als A en B — de companion en andere clients werken er transparant mee.
+**Deployment C** is een toekomstige standalone POC in C++ voor ESP32 (Fase 12). Implementeert hetzelfde northbound-protocol als A en B — de companion en andere clients werken er transparant mee. Pico W valt in dezelfde embedded categorie (C++ firmware, W5500 voor veldbus); zie evaluatie-doc hierboven.
 
 ---
 

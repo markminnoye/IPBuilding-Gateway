@@ -3,6 +3,26 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.0] - 2026-06-14
+
+### Added
+- Channels that are wired up but not yet in use (`active: false`) are now
+  reported to the companion so they appear in Home Assistant as disabled,
+  hidden entities. Enable them from Settings → Devices & Services when the
+  wiring is finished. Previously these channels were hidden from the API
+  entirely.
+
+### Changed
+- WebSocket keep-alive interval raised to 60 seconds. This stops the companion
+  from reconnecting every 30 seconds and keeps the Home Assistant log quiet
+  during normal operation.
+
+### Fixed
+- Commands sent to an inactive channel are now rejected instead of driving the
+  field bus, so a manually enabled entity can't switch a not-yet-wired relay or
+  dimmer.
+- Gateway shutdown no longer hangs when a slow WebSocket client is connected.
+
 ## [0.0.5] - 2026-06-05
 
 ### Fixed

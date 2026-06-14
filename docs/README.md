@@ -14,6 +14,12 @@ Last updated: 2026-05-22
 | [2026-05-17-northbound-architecture-research.md](superpowers/specs/2026-05-17-northbound-architecture-research.md) | Superseded | Achtergrondnotities; beslissing = 2026-05-18 doc |
 | [2026-05-01-ipbuilding-device-inventory-api-design.md](superpowers/specs/2026-05-01-ipbuilding-device-inventory-api-design.md) | Referentie | Device inventory API (northbound-onderdeel) |
 
+## Referentie (hardware / deployment)
+
+| Bestand | Rol |
+|---------|-----|
+| [../resources_and_docs/reference/2026-06-14-deployment-hardware-evaluation.md](../resources_and_docs/reference/2026-06-14-deployment-hardware-evaluation.md) | Pi 3B / ESP32 / Pico W — effort, netwerk, beslissing Deployment B vs C |
+
 ## Plannen (`superpowers/plans/`)
 
 | Bestand | Status |

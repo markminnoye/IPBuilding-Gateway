@@ -142,6 +142,12 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
 | `current_watt` | integer | Current consumption (0 when off) |
 | `level` | integer | Dimmer percentage 0-100 (dimmer only) |
 
+**Inactive channels** (`active: false` in `devices.json`) are still included in the
+response so the companion can show them as disabled+hidden entities. Their
+`state` is always `"unknown"` and `current_watt` is `0`. Commands to inactive
+channels are rejected by `POST /api/v1/devices/{id}/command` with HTTP 422
+and a `"channel inactive"` error.
+
 ---
 
 ## GET /api/v1/devices/{device_id}

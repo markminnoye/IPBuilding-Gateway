@@ -20,6 +20,8 @@ from gateway.rest_shim import RESTShim
 from gateway.udp_bus import UDPBus
 from gateway.gateway_api import GatewayAPI
 
+from gateway import __version__
+
 log = logging.getLogger(__name__)
 
 
@@ -93,7 +95,8 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         )
         install_info = f"  install={module_summary}"
     log.info(
-        "IPBuilding Gateway started  rest=%s:%d  shim_enabled=%s  api=%s:%d  poll=%.1fs  simulated=%s%s",
+        "IPBuilding Gateway v%s  rest=%s:%d  shim_enabled=%s  api=%s:%d  poll=%.1fs  simulated=%s%s",
+        __version__,
         cfg.rest_host,
         cfg.rest_port,
         cfg.rest_shim_enabled,

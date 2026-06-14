@@ -35,6 +35,16 @@ echo ">>> Installing ${HA_PACKAGE} (this can take a few minutes)"
 pip install --upgrade pip wheel setuptools
 pip install "${HA_PACKAGE}"
 
+# 2a. HA Core 2026.x pulls in `serialx` for the new usb/bluetooth stack,
+# which requires `aioesphomeapi` at runtime. Install it explicitly so the
+# usb → bluetooth → default_config dependency chain doesn't fail at startup.
+# Re-run safe: pip install is idempotent.
+echo ">>> Installing aioesphomeapi (required by HA 2026.x usb/bluetooth stack)"
+pip install aioesphomeapi
+# Also pin bleak — a few HA integrations (shelly, esphome) use it via the
+# bluetooth stack. Keeps startup warnings to a minimum.
+pip install bleak
+
 # 3. symlink companion custom_component
 mkdir -p "${HA_CONFIG_DIR}/custom_components"
 ln -sfn "${COMPANION_SRC}" "${HA_CONFIG_DIR}/custom_components/${COMPANION_DOMAIN}"

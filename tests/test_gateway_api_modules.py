@@ -120,7 +120,7 @@ class TestBuildDeviceList:
         assert d["module_ip"] == "10.10.1.30"
         assert d["channel"] == 5
 
-    def test_inactive_channel_excluded(self) -> None:
+    def test_inactive_channel_included_with_active_false(self) -> None:
         inst = _make_installation([
             {
                 "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
@@ -132,8 +132,12 @@ class TestBuildDeviceList:
         ])
         api = _make_api(inst)
         devices = api._build_device_list()
-        assert len(devices) == 1
-        assert devices[0]["channel"] == 0
+        assert len(devices) == 2
+        by_ch = {d["channel"]: d for d in devices}
+        assert by_ch[0]["active"] is True
+        assert by_ch[1]["active"] is False
+        assert by_ch[1]["state"] == "unknown"
+        assert by_ch[1]["current_watt"] == 0
 
 
 class TestBuildSnapshot:
@@ -164,6 +168,105 @@ class TestBuildSnapshot:
         module_ids = {m["id"] for m in snapshot["modules"]}
         device_module_ids = {d["module_id"] for d in snapshot["devices"]}
         assert device_module_ids <= module_ids, "all device.module_id values must appear in modules list"
+
+    def test_snapshot_includes_inactive_devices(self) -> None:
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
+                "channels": [
+                    {"ch": 0, "name": "Active", "active": True, "max_watt": 60},
+                    {"ch": 1, "name": "Inactive", "active": False, "max_watt": 60},
+                ],
+            }
+        ])
+        api = _make_api(inst)
+        snapshot = api._build_snapshot()
+        assert len(snapshot["devices"]) == 2
+        assert {d["channel"] for d in snapshot["devices"]} == {0, 1}
+
+
+class TestExecuteCommandInactive:
+    """Inactive channels must reject commands and not send UDP."""
+
+    @pytest.mark.asyncio
+    async def test_inactive_relay_command_rejected(self) -> None:
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
+                "channels": [
+                    {"ch": 0, "name": "A", "active": True, "max_watt": 60},
+                    {"ch": 1, "name": "B", "active": False, "max_watt": 60},
+                ],
+            }
+        ])
+        api = _make_api(inst)
+
+        ok, error = await api._execute_command("10.10.1.30-1", "ON", None)
+        assert ok is False
+        assert error == "channel inactive"
+        api._bus.send_command.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_inactive_dimmer_command_rejected(self) -> None:
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:9e:a8",
+                "channels": [{"ch": 0, "name": "X", "active": False, "max_watt": 200}],
+            }
+        ])
+        api = _make_api(inst)
+
+        ok, error = await api._execute_command("10.10.1.40-0", "DIM", 50)
+        assert ok is False
+        assert error == "channel inactive"
+        api._bus.send_command.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_active_relay_command_passes_guard(self) -> None:
+        """Sanity check: guard must not over-reject. End-to-end reply is not
+        asserted (bus is a MagicMock); the relevant assertion is that the
+        command reaches the bus when the channel is active."""
+        import asyncio
+        from gateway.device_registry import DeviceKey, RelayState
+
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
+                "channels": [{"ch": 0, "name": "A", "active": True, "max_watt": 60}],
+            }
+        ])
+        api = _make_api(inst)
+        # Pre-seed a state reply so correlate_reply returns it.
+        api._bus.last_send_ts = 0.0
+        reply_future: asyncio.Future = asyncio.Future()
+        reply_future.set_result(RelayState(state="on"))
+        api._bus.correlate_reply = MagicMock(return_value=reply_future)  # type: ignore[assignment]
+        send_future: asyncio.Future = asyncio.Future()
+        send_future.set_result(None)
+        api._bus.send_command.return_value = send_future
+
+        ok, error = await api._execute_command("10.10.1.30-0", "ON", None)
+        assert error is None
+        assert ok is True
+        api._bus.send_command.assert_called_once()
+
+
+class TestStateChangedInactive:
+    """state_changed for inactive channels must be suppressed."""
+
+    def test_inactive_relay_state_changed_is_none(self) -> None:
+        from gateway.device_registry import DeviceKey, RelayState
+
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
+                "channels": [{"ch": 3, "name": "Wire-it", "active": False, "max_watt": 60}],
+            }
+        ])
+        api = _make_api(inst)
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 3)
+        msg = api._build_state_changed(key, RelayState(state="on"))
+        assert msg is None
 
 
 class TestLastSeenFields:

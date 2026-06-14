@@ -147,9 +147,24 @@ class GatewayAPI:
         self._orchestrator = orchestrator
 
     async def stop(self) -> None:
-        """Stop the server and clean up registry callbacks."""
+        """Stop the server and clean up registry callbacks.
+
+        Closes any open WebSocket clients with a 1.0s timeout so a slow
+        client can't drag out gateway shutdown. Then aiohttp's
+        ``runner.cleanup()`` finishes within a bounded time.
+        """
+        # Force-close open WS clients first so runner.cleanup() doesn't
+        # wait for their linger timeout.
+        for ws in list(self._ws_clients):
+            try:
+                await asyncio.wait_for(ws.close(code=1001, message=b"server shutdown"), timeout=1.0)
+            except Exception as exc:
+                log.debug("WS close during shutdown: %s", exc)
         if self._runner is not None:
-            await self._runner.cleanup()
+            try:
+                await asyncio.wait_for(self._runner.cleanup(), timeout=5.0)
+            except asyncio.TimeoutError:
+                log.warning("aiohttp runner.cleanup() timed out after 5s")
             self._runner = None
             self._site = None
         if self._state_cb is not None:
@@ -171,13 +186,16 @@ class GatewayAPI:
         Bidirectional: broadcast state_changed/button_event → client;
         receive command → dispatch.
 
-        The built-in ``heartbeat=30`` (aiohttp 3.14.0, which includes the
-        fix from aio-libs/aiohttp#12030 that coalesces the heartbeat reset
-        on inbound data) sends PINGs every 30s and drops the connection
-        if no PONG arrives in time — symmetric with the companion's
-        ``heartbeat=30.0`` in coordinator.py.
+        Keep-alive: server-side heartbeat. The companion runs aiohttp 3.13.5
+        client-side which has a known race where PONG frames are sometimes
+        consumed by the receive() loop instead of the heartbeat task
+        (aio-libs/aiohttp#12030, fixed in 3.14.0). To avoid 30s reconnect
+        storms we keep ``heartbeat=None`` on the companion side and let the
+        server drive PINGs. 60s is a safe interval: simulated-mode gateways
+        have very little WS traffic, and modules are polled every 2s on
+        UDP regardless of the WS keep-alive.
         """
-        ws = web.WebSocketResponse(heartbeat=30)
+        ws = web.WebSocketResponse(heartbeat=60)
         await ws.prepare(request)
 
         async with self._ws_lock:
@@ -341,6 +359,16 @@ class GatewayAPI:
             return False, f"unknown or invalid entity_id: {entity_id}"
         module_ip, dtype, channel = parsed
 
+        # Refuse commands for inactive channels so a manually-enabled HA entity
+        # can't drive UDP traffic to a not-yet-wired relay/dimmer.
+        installation = self._cfg.installation
+        if installation is not None:
+            mc = installation.module_by_ip(module_ip)
+            if mc is not None:
+                ch_cfg = next((c for c in mc.channels if c.ch == channel), None)
+                if ch_cfg is not None and not ch_cfg.active:
+                    return False, "channel inactive"
+
         # Encode the command
         if dtype == DeviceType.RELAY:
             if action == "ON":
@@ -487,10 +515,6 @@ class GatewayAPI:
 
         for mc in (installation.modules if installation else []):
             for ch in mc.channels:
-                # Skip inactive channels
-                if not ch.active:
-                    continue
-
                 device: dict[str, Any] = {
                     "id": ch.id,
                     "module_id": mc.mac,
@@ -503,6 +527,15 @@ class GatewayAPI:
                     "active": ch.active,
                     "max_watt": ch.max_watt,
                 }
+
+                # Inactive channels are still exposed so the companion can show
+                # them as disabled+hidden entities. State is fixed to "unknown"
+                # so clients don't render stale relay/dimmer data.
+                if not ch.active:
+                    device["state"] = "unknown"
+                    device["current_watt"] = 0
+                    devices.append(device)
+                    continue
 
                 # Attach current state from registry
                 key = DeviceKey(mc.type, mc.ip, ch.ch)
@@ -544,6 +577,11 @@ class GatewayAPI:
                 break
 
         if ch_config is None:
+            return None
+
+        # Don't push state changes for inactive channels — companion has them
+        # marked disabled and doesn't render them.
+        if not ch_config.active:
             return None
 
         device_id = installation.entry_to_device_id(key.device_type, key.module_ip, key.channel)

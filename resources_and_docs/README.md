@@ -51,6 +51,7 @@ Last updated: 2026-05-22 (reorganized)
 | [reference/2026-05-17_RE_WIZARDS_Configuration_stack_analysis.md](reference/2026-05-17_RE_WIZARDS_Configuration_stack_analysis.md) | Config stack |
 | [reference/2026-05-17_scan_modules_http_analysis.md](reference/2026-05-17_scan_modules_http_analysis.md) | Scan Modules HTTP |
 | [reference/2026-05-17_scan_modules_udp_payloads.md](reference/2026-05-17_scan_modules_udp_payloads.md) | UDP/10001 discovery |
+| [reference/2026-06-14-deployment-hardware-evaluation.md](reference/2026-06-14-deployment-hardware-evaluation.md) | Deployment B/C hardware: Pi 3B, ESP32, Pico W — effort & beslissing |
 
 ## `archive/` — historisch / deprecated
 

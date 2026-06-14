@@ -117,6 +117,11 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
 }
 ```
 
+The `devices` array includes channels with `active: false` from `devices.json`.
+Their `state` is fixed to `"unknown"` and `current_watt` to `0`. The companion
+creates disabled+hidden entities for them. `state_changed` is **not** emitted
+for inactive channels.
+
 ### `state_changed` -- relay update
 
 ```json
