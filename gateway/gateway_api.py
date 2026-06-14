@@ -529,10 +529,11 @@ class GatewayAPI:
                 }
 
                 # Inactive channels are still exposed so the companion can show
-                # them as disabled+hidden entities. State is fixed to "unknown"
-                # so clients don't render stale relay/dimmer data.
+                # them as disabled+hidden entities. State is fixed to "inactive"
+                # (not "unknown") to distinguish "channel disabled in
+                # devices.json" from "no recent fieldbus response".
                 if not ch.active:
-                    device["state"] = "unknown"
+                    device["state"] = "inactive"
                     device["current_watt"] = 0
                     devices.append(device)
                     continue

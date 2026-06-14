@@ -136,8 +136,61 @@ class TestBuildDeviceList:
         by_ch = {d["channel"]: d for d in devices}
         assert by_ch[0]["active"] is True
         assert by_ch[1]["active"] is False
-        assert by_ch[1]["state"] == "unknown"
+        assert by_ch[1]["state"] == "inactive"
         assert by_ch[1]["current_watt"] == 0
+
+    def test_inactive_channel_state_is_inactive_not_unknown(self) -> None:
+        """Channels with active: false must report state='inactive', not 'unknown'.
+
+        Guards the semantic split introduced for operator/debug clarity:
+        "inactive" = disabled in devices.json (not wired), "unknown" = no
+        recent fieldbus response on an active channel.
+        """
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
+                "channels": [
+                    {"ch": 0, "name": "Keuken LED", "active": False, "max_watt": 60},
+                    {"ch": 1, "name": "Patio", "active": True, "max_watt": 60},
+                ],
+            }
+        ])
+        api = _make_api(inst)
+        devices = api._build_device_list()
+        by_id = {d["id"]: d for d in devices}
+
+        inactive = by_id["10.10.1.30-0"]
+        assert inactive["active"] is False
+        assert inactive["state"] == "inactive"
+        assert inactive["current_watt"] == 0
+        assert "level" not in inactive  # dimmer-velden leak niet door
+
+        active = by_id["10.10.1.30-1"]
+        assert active["active"] is True
+        # Actieve channels mogen nooit "inactive" rapporteren.
+        assert active["state"] != "inactive"
+        assert active["state"] in ("on", "off", "unknown")
+
+    def test_active_channel_unknown_state_unaffected(self) -> None:
+        """Actieve channels zonder registry-state behouden 'unknown' (timeout).
+
+        Beschermt tegen het per ongeluk overschrijven van "geen veldbus-respons"
+        met "inactive".
+        """
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
+                "channels": [
+                    {"ch": 0, "name": "X", "active": True, "max_watt": 60},
+                ],
+            }
+        ])
+        api = _make_api(inst)
+        devices = api._build_device_list()
+        assert len(devices) == 1
+        assert devices[0]["active"] is True
+        # Geen registry-state → fallback "unknown", NIET "inactive".
+        assert devices[0]["state"] == "unknown"
 
 
 class TestBuildSnapshot:

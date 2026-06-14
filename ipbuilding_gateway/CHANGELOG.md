@@ -3,6 +3,13 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.1] - 2026-06-14
+
+### Fixed
+- Inactive channels in the device list now report their state as `inactive`
+  instead of `unknown`, so you can tell apart "channel not wired up yet"
+  from "no recent response from the field bus" when troubleshooting.
+
 ## [0.1.0] - 2026-06-14
 
 ### Added

@@ -138,13 +138,15 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
 | `device_type` | string | `relay` / `dimmer` / `input` |
 | `active` | boolean | Whether channel is active |
 | `max_watt` | integer | Configured maximum power |
-| `state` | string | `on` / `off` / `unknown` |
+| `state` | string | `on` / `off` / `inactive` / `unknown` |
 | `current_watt` | integer | Current consumption (0 when off) |
 | `level` | integer | Dimmer percentage 0-100 (dimmer only) |
 
 **Inactive channels** (`active: false` in `devices.json`) are still included in the
 response so the companion can show them as disabled+hidden entities. Their
-`state` is always `"unknown"` and `current_watt` is `0`. Commands to inactive
+`state` is always `"inactive"` (channel disabled in `devices.json`) and
+`current_watt` is `0`. A `state` of `"unknown"` means the channel is active in
+config but no recent fieldbus response was received. Commands to inactive
 channels are rejected by `POST /api/v1/devices/{id}/command` with HTTP 422
 and a `"channel inactive"` error.
 

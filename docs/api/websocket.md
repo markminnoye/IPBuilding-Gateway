@@ -118,9 +118,11 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
 ```
 
 The `devices` array includes channels with `active: false` from `devices.json`.
-Their `state` is fixed to `"unknown"` and `current_watt` to `0`. The companion
-creates disabled+hidden entities for them. `state_changed` is **not** emitted
-for inactive channels.
+Their `state` is fixed to `"inactive"` (channel disabled in `devices.json`)
+and `current_watt` to `0`. The companion creates disabled+hidden entities for
+them. `state_changed` is **not** emitted for inactive channels. A `state` of
+`"unknown"` in the snapshot means the channel is active in config but no
+recent fieldbus response was received.
 
 ### `state_changed` -- relay update
 

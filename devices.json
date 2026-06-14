@@ -13,7 +13,7 @@
           "name": "Keuken LED",
           "room": "Keuken",
           "semantic_type": "light",
-          "active": false,
+          "active": true,
           "max_watt": 60
         },
         {
@@ -21,7 +21,7 @@
           "name": "Patio",
           "room": "Buiten",
           "semantic_type": "light",
-          "active": true,
+          "active": false,
           "max_watt": 60
         },
         {
