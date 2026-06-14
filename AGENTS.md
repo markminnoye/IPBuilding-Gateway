@@ -54,13 +54,20 @@
 
 ---
 
+## Scope (MVP — actief)
+
+**Buiten scope (voorlopig):** EEPROM-sync / `saveAutonomy` / button→relay provisioning in gateway (Fase 8). Logica hoort in HA; EEPROM-push is geen MVP-blocker.
+
+**MVP-doel:** gateway add-on + companion stabiel testbaar — entities, realtime state, button-events, handmatige `devices.json`. Discovery-events in companion en operator-UI zijn nice-to-have, geen MVP.
+
 ## Volgende focus (implementatie)
 
-1. **Fase 8 — EEPROM-sync** — `POST /api/v1/provision/autonomy` HTTP-stub aanvullen met `saveAutonomy`-call naar IP1100PoE; companion UI voor button→relay mapping
-2. **Companion uitbreidingen (v2)** — optioneel reageren op `device_added`/`device_removed`/`device_ip_changed`/`device_firmware_changed` (HA-entity `unavailable`-markering, `binary_sensor.ipbuilding_discovery_active`, `ipbuilding.discover` service voor dashboard-knop) — aparte workstream
-3. **Bind `10.10.1.1`** (optioneel) — gateway expliciet op hub-IP wanneer IPBox uit; zonder-mirror hub-validatie **PASS 2026-06-02**
-4. Captures bij regressie; standaard mirror **7←15** ([playbook](resources_and_docs/workflows/2026-05-14_relay_run_a_operational_playbook.md))
-5. **Migratiepad** — bestaande HA-IPBuilding installaties overzetten via [§7 ARCHITECTURE.md](ARCHITECTURE.md) (import uit IPBox → REST shim actief → companion installeren → button-mapping instellen → EEPROM-sync → IPBox afkoppelen)
+1. **Companion MVP afronden** — HA 2026.3-compat, `active: false` respecteren, dynamische entities bij discovery (minimaal voor test)
+2. **Companion uitbreidingen (v2, post-MVP)** — reageren op `device_added`/`device_removed`/`device_ip_changed`/`device_firmware_changed` (`binary_sensor`, `ipbuilding.discover` service, configureer-UI)
+3. ~~**Fase 8 — EEPROM-sync**~~ — uitgesteld (buiten MVP-scope)
+4. **Bind `10.10.1.1`** (optioneel) — gateway expliciet op hub-IP wanneer IPBox uit; zonder-mirror hub-validatie **PASS 2026-06-02**
+5. Captures bij regressie; standaard mirror **7←15** ([playbook](resources_and_docs/workflows/2026-05-14_relay_run_a_operational_playbook.md))
+6. **Migratiepad** — bestaande HA-IPBuilding installaties overzetten via [§7 ARCHITECTURE.md](ARCHITECTURE.md) (import uit IPBox → REST shim actief → companion installeren → button-mapping in HA → IPBox afkoppelen)
 
 **IPBox thuis-LAN (RE-stimulus / archief):** `192.168.0.185` (REST `:30200`, WebConfig). Veld-bus hub: `10.10.1.1`. Zie `IPBUILDING_KNOWLEDGE.md` §3.0.
 
