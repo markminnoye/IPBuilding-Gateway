@@ -362,8 +362,64 @@ class TestLastSeenFields:
         assert "last_seen_source" not in modules[0]
 
 
+class TestGatewayStatus:
+    """Health and status REST endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_health_returns_status_and_version(self) -> None:
+        inst = _make_installation([
+            {"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": []}
+        ])
+        api = _make_api(inst)
+        response = await api._get_health(MagicMock())
+        body = json.loads(response.text)
+        assert body["status"] == "ok"
+        assert "version" in body
+        assert "issues" not in body
+
+    @pytest.mark.asyncio
+    async def test_status_returns_full_snapshot(self) -> None:
+        inst = _make_installation([
+            {"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": []}
+        ])
+        api = _make_api(inst)
+        response = await api._get_status(MagicMock())
+        body = json.loads(response.text)
+        assert body["status"] == "ok"
+        assert "subsystems" in body
+        assert "issues" in body
+        assert "actions" in body
+        assert "uptime_seconds" in body
+
+    def test_snapshot_includes_gateway_status(self) -> None:
+        inst = _make_installation([
+            {"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": []}
+        ])
+        api = _make_api(inst)
+        snap = api._build_snapshot()
+        assert "gateway_status" in snap
+        assert snap["gateway_status"]["status"] == "ok"
+
+    @pytest.mark.asyncio
+    async def test_status_degraded_when_issue_reported(self) -> None:
+        inst = _make_installation([
+            {"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": []}
+        ])
+        api = _make_api(inst)
+        api._health.report_issue(
+            "module_metadata.getSysSet.10.10.1.30",
+            "module_metadata.http_failed",
+            "warning",
+            "HTTP getSysSet 10.10.1.30 failed",
+            {"ip": "10.10.1.30", "method": "getSysSet"},
+        )
+        response = await api._get_status(MagicMock())
+        body = json.loads(response.text)
+        assert body["status"] == "degraded"
+        assert len(body["issues"]) == 1
+
+
 class TestDiscoveryEndpoint:
-    """POST /api/v1/discover endpoint (orchestrator must be set)."""
 
     @pytest.mark.asyncio
     async def test_discover_returns_503_when_no_orchestrator(self) -> None:

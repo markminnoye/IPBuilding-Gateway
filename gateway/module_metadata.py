@@ -13,6 +13,7 @@ from typing import Any
 
 import aiohttp
 
+from gateway.health import GatewayHealthMonitor
 from gateway.installation import InstallationConfig
 from gateway.types import DeviceType
 
@@ -82,8 +83,9 @@ class ModuleMetadata:
 class ModuleMetadataCache:
     """In-memory cache of getSysSet (+ getButtons for input modules) per module MAC."""
 
-    def __init__(self) -> None:
+    def __init__(self, health: GatewayHealthMonitor | None = None) -> None:
         self._by_mac: dict[str, ModuleMetadata] = {}
+        self._health = health
 
     def get(self, mac: str) -> ModuleMetadata | None:
         return self._by_mac.get(mac)
@@ -124,17 +126,36 @@ class ModuleMetadataCache:
                     "getSysSet %s (%s) failed: %s: %r",
                     mc.ip, mac, type(result).__name__, result,
                 )
+                if self._health is not None:
+                    self._health.report_issue(
+                        f"module_metadata.getSysSet.{mc.ip}",
+                        "module_metadata.http_failed",
+                        "warning",
+                        f"getSysSet {mc.ip} ({mac}) failed: {type(result).__name__}: {result!r}",
+                        {"ip": mc.ip, "method": "getSysSet"},
+                    )
                 existing = self._by_mac.get(mac)
                 if existing:
                     new_by_mac[mac] = existing
                 continue
 
             if result is None:
+                if self._health is not None:
+                    self._health.report_issue(
+                        f"module_metadata.getSysSet.{mc.ip}",
+                        "module_metadata.http_failed",
+                        "warning",
+                        f"HTTP getSysSet {mc.ip} failed",
+                        {"ip": mc.ip, "method": "getSysSet"},
+                    )
                 # HTTP failed: keep old cache entry if available, otherwise skip.
                 existing = self._by_mac.get(mac)
                 if existing:
                     new_by_mac[mac] = existing
                 continue
+
+            if self._health is not None:
+                self._health.clear_issue(f"module_metadata.getSysSet.{mc.ip}")
 
             fields = _parse_get_sysset_body(result)
             network: dict[str, str] = {}
@@ -147,7 +168,7 @@ class ModuleMetadataCache:
             meta.allow = fields.get("allow", "")
 
             if mc.type == DeviceType.INPUT:
-                buttons = await _fetch_buttons(mc.ip, timeout)
+                buttons = await _fetch_buttons(mc.ip, timeout, self._health)
                 meta.buttons = buttons
 
             meta.fetched_at = now
@@ -157,14 +178,26 @@ class ModuleMetadataCache:
         log.info("ModuleMetadataCache refreshed %d modules", len(self._by_mac))
 
 
-async def _fetch_buttons(module_ip: str, timeout: float) -> list[dict[str, Any]] | None:
+async def _fetch_buttons(
+    module_ip: str, timeout: float, health: GatewayHealthMonitor | None = None
+) -> list[dict[str, Any]] | None:
     """Fetch getButtons JSON array from an input module."""
     import json
 
     async with aiohttp.ClientSession() as sess:
         text = await _http_get_text(module_ip, "getButtons", sess, timeout)
     if text is None:
+        if health is not None:
+            health.report_issue(
+                f"module_metadata.getButtons.{module_ip}",
+                "module_metadata.http_failed",
+                "warning",
+                f"HTTP getButtons {module_ip} failed",
+                {"ip": module_ip, "method": "getButtons"},
+            )
         return None
+    if health is not None:
+        health.clear_issue(f"module_metadata.getButtons.{module_ip}")
     try:
         data = json.loads(text)
         if isinstance(data, list):

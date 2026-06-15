@@ -941,6 +941,40 @@
       ]
     },
     {
+      "name": "Status",
+      "description": "Gateway health and operator status. Aggregate status uses ok/degraded/unhealthy with per-issue warnings. The HA companion polls GET /api/v1/status and receives WebSocket gateway_status pushes when status or open issues change.",
+      "item": [
+        {
+          "name": "Gateway status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/status",
+              "host": [
+                "{{gateway_host}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "status"
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
+            },
+            "description": "Return the full gateway health snapshot: aggregate status (ok/degraded/unhealthy), version, uptime, subsystem health, open issues with user-facing messages, and links to operator actions (discover sweep, module metadata refresh). Used by the ipbuilding-gateway-ha companion for sw_version and the gateway status sensor."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Discovery",
       "description": "Runtime auto-discovery. The gateway normally uses a passive ARP monitor to track new, changed, and removed modules on the field bus. This folder exposes a single synchronous trigger that forces a full sweep on demand \u2014 useful from operator dashboards, scripted provisioning flows, or after physical reconfiguration. The forced sweep ignores the `passive_arp_monitor` and `auto_discover_on_start` toggles and is always available.\n\nSee [`docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md) for the full write policy and design rationale.\n",
       "item": [

@@ -19,6 +19,7 @@ from gateway.types import DeviceType
 from gateway.rest_shim import RESTShim
 from gateway.udp_bus import UDPBus
 from gateway.gateway_api import GatewayAPI
+from gateway.health import GatewayHealthMonitor
 
 from gateway import __version__
 
@@ -65,14 +66,16 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         log.info("REST shim enabled on %s:%d", cfg.rest_host, cfg.rest_port)
 
     # Build metadata cache and prefetch getSysSet/getButtons before starting API.
-    meta_cache = ModuleMetadataCache()
+    health = GatewayHealthMonitor()
+    health.set_installation_loaded(cfg.installation is not None)
+    meta_cache = ModuleMetadataCache(health=health)
     if cfg.installation:
         try:
             await meta_cache.refresh(cfg.installation, timeout=2.0)
         except Exception:
             log.warning("Module metadata prefetch failed; cache is empty at startup")
 
-    api = GatewayAPI(bus, registry, cfg, metadata_cache=meta_cache)
+    api = GatewayAPI(bus, registry, cfg, metadata_cache=meta_cache, health=health)
 
     # Start runtime auto-discovery orchestrator after API is ready
     orchestrator: DiscoveryOrchestrator | None = None
@@ -82,6 +85,7 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
             devices_file=cfg.devices_file,
             broadcast=api._broadcast,
             installation=cfg.installation,
+            health=health,
         )
         await orchestrator.start()
 

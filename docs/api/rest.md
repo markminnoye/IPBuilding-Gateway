@@ -9,6 +9,60 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
 
 ---
 
+## GET /health
+
+**Description:** Liveness probe for the HA Supervisor watchdog. Minimal status + gateway version.
+
+**Response 200:**
+```json
+{
+  "status": "ok",
+  "version": "0.1.3"
+}
+```
+
+`status` is `ok` | `degraded` | `unhealthy` (same enum as `/api/v1/status`).
+
+---
+
+## GET /api/v1/status
+
+**Description:** Full gateway health snapshot for operators and the HA companion.
+
+**Response 200:**
+```json
+{
+  "status": "degraded",
+  "version": "0.1.3",
+  "uptime_seconds": 8642,
+  "updated_at": "2026-06-15T11:42:00Z",
+  "subsystems": {
+    "installation": "ok",
+    "module_metadata": "degraded",
+    "discovery": "ok"
+  },
+  "issues": [
+    {
+      "id": "module_metadata.getSysSet.10.10.1.30",
+      "level": "warning",
+      "code": "module_metadata.http_failed",
+      "technical": "HTTP getSysSet 10.10.1.30 failed: timeout",
+      "message": "Module 10.10.1.30 is not responding to getSysSet configuration requests",
+      "context": { "ip": "10.10.1.30", "method": "getSysSet" },
+      "since": "2026-06-15T11:40:00Z"
+    }
+  ],
+  "actions": {
+    "discover": { "method": "POST", "path": "/api/v1/discover" },
+    "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" }
+  }
+}
+```
+
+Push updates are sent on WebSocket as `gateway_status` when aggregate `status` or open issues change. See [websocket.md](websocket.md).
+
+---
+
 ## GET /api/v1/modules
 
 **Description:** Return all physical field-bus modules with cached network metadata.

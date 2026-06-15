@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 COLLECTION_PATH = ROOT / "docs/api/ipbuilding-gateway.postman_collection.json"
 
 EXPECTED_ROUTES: set[tuple[str, str]] = {
+    ("GET", "/api/{apiVersion}/status"),
     ("GET", "/api/{apiVersion}/modules"),
     ("GET", "/api/{apiVersion}/modules/{module_id}"),
     ("POST", "/api/{apiVersion}/modules/refresh"),

@@ -16,7 +16,7 @@ The WebSocket connection is the primary channel for real-time device state pushe
 3. Enable **heartbeat** (ping/pong every 30 s) -- some clients auto-enable this
 4. Connect
 
-On connect, the gateway immediately sends a `snapshot` message containing both modules and devices.
+On connect, the gateway immediately sends a `snapshot` message containing modules, devices, and `gateway_status`.
 
 ---
 
@@ -112,6 +112,48 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
       "state": "on",
       "level": 75,
       "current_watt": 150
+    }
+  ],
+  "gateway_status": {
+    "status": "ok",
+    "version": "0.1.3",
+    "uptime_seconds": 120,
+    "updated_at": "2026-06-15T11:42:00Z",
+    "subsystems": {
+      "installation": "ok",
+      "module_metadata": "ok",
+      "discovery": "ok"
+    },
+    "issues": []
+  }
+}
+```
+
+### `gateway_status` -- aggregate health update
+
+Pushed when aggregate `status` or the set of open `issues[].id` changes. Same fields as `GET /api/v1/status` (without `actions`).
+
+```json
+{
+  "type": "gateway_status",
+  "status": "degraded",
+  "version": "0.1.3",
+  "uptime_seconds": 8642,
+  "updated_at": "2026-06-15T11:42:00Z",
+  "subsystems": {
+    "installation": "ok",
+    "module_metadata": "degraded",
+    "discovery": "ok"
+  },
+  "issues": [
+    {
+      "id": "module_metadata.getSysSet.10.10.1.30",
+      "level": "warning",
+      "code": "module_metadata.http_failed",
+      "technical": "HTTP getSysSet 10.10.1.30 failed: timeout",
+      "message": "Module 10.10.1.30 is not responding to getSysSet configuration requests",
+      "context": { "ip": "10.10.1.30", "method": "getSysSet" },
+      "since": "2026-06-15T11:40:00Z"
     }
   ]
 }

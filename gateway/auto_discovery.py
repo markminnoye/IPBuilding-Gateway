@@ -32,6 +32,7 @@ from gateway.discovery import (
     discover_modules,
     parse_arp_table,
 )
+from gateway.health import GatewayHealthMonitor
 from gateway.installation import InstallationConfig, ModuleConfig
 
 log = logging.getLogger(__name__)
@@ -308,11 +309,13 @@ class DiscoveryOrchestrator:
         devices_file: str,
         broadcast: Callable[[dict], None],
         installation: InstallationConfig | None = None,
+        health: GatewayHealthMonitor | None = None,
     ) -> None:
         self._config = config
         self._devices_file = devices_file
         self._broadcast = broadcast
         self._installation = installation
+        self._health = health
         self._writer = AtomicWriter(devices_file, lock_timeout_s=config.lock_timeout_s)
 
         self._arp_monitor: ArpMonitor | None = None
@@ -572,6 +575,8 @@ class DiscoveryOrchestrator:
         """Handle a newly seen MAC via passive ARP."""
         if self._stopping:
             return
+        if self._health is not None:
+            self._health.clear_issue(f"discovery.unreachable.{mac}")
         now_iso = datetime.now(timezone.utc).isoformat()
 
         # If we already have this MAC in devices.json, just update last_seen
@@ -581,6 +586,8 @@ class DiscoveryOrchestrator:
                 # Update last_seen on the in-memory object
                 existing.last_seen = now_iso
                 existing.last_seen_source = "arp"
+                if self._health is not None:
+                    self._health.clear_issue(f"discovery.unreachable.{mac}")
                 log.debug("ARP: updated last_seen for known module %s", mac)
                 return
 
@@ -596,6 +603,14 @@ class DiscoveryOrchestrator:
         """Handle a module that has been absent for too many ARP polls."""
         if self._stopping:
             return
+        if self._health is not None:
+            self._health.report_issue(
+                f"discovery.unreachable.{mac}",
+                "discovery.unreachable",
+                "warning",
+                f"Module {mac} not seen for {self._config.removed_after_n_polls} ARP polls",
+                {"mac": mac},
+            )
         self._broadcast({
             "type": "device_removed",
             "mac": mac,

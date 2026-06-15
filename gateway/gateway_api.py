@@ -21,13 +21,14 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from aiohttp import web
 from aiohttp.web import WebSocketResponse
 
 from gateway.config import GatewayConfig
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
+from gateway.health import GatewayHealthMonitor
 from gateway.installation import InstallationConfig
 from gateway.module_metadata import ModuleMetadataCache
 from gateway.payloads import encode_relay_command, encode_dim_command, encode_dim_off
@@ -81,11 +82,13 @@ class GatewayAPI:
         registry: DeviceRegistry,
         config: GatewayConfig,
         metadata_cache: ModuleMetadataCache | None = None,
+        health: GatewayHealthMonitor | None = None,
     ) -> None:
         self._bus = bus
         self._registry = registry
         self._cfg = config
         self._meta_cache = metadata_cache or ModuleMetadataCache()
+        self._health = health or GatewayHealthMonitor()
         self._app: web.Application | None = None
         self._runner: web.AppRunner | None = None
         self._site: web.TCPSite | None = None
@@ -97,6 +100,7 @@ class GatewayAPI:
         self._button_cb: Any = None
         # Discovery orchestrator (set after construction via set_orchestrator)
         self._orchestrator: Any = None
+        self._health_cb: Callable[[], None] | None = None
 
     # -------------------------------------------------------------------------
     # Lifecycle
@@ -107,6 +111,7 @@ class GatewayAPI:
         self._app = web.Application()
         self._app.router.add_get("/ws", self._ws_handler)
         self._app.router.add_get("/health", self._get_health)
+        self._app.router.add_get("/api/v1/status", self._get_status)
         self._app.router.add_get("/api/v1/devices", self._get_devices)
         self._app.router.add_get(
             "/api/v1/devices/{device_id}",
@@ -131,6 +136,8 @@ class GatewayAPI:
         # Register registry callbacks
         self._state_cb = self._registry.on_state_changed(self._on_state_changed)
         self._button_cb = self._registry.on_button_event(self._on_button_event)
+        self._health_cb = self._on_health_changed
+        self._health.on_change(self._health_cb)
 
         self._runner = web.AppRunner(self._app)
         await self._runner.setup()
@@ -176,6 +183,9 @@ class GatewayAPI:
         if self._button_cb is not None:
             self._registry.unregister_button_event(self._button_cb)
             self._button_cb = None
+        if self._health_cb is not None:
+            # GatewayHealthMonitor has no unregister; drop reference only.
+            self._health_cb = None
         log.info("GatewayAPI stopped")
 
     # -------------------------------------------------------------------------
@@ -256,7 +266,15 @@ class GatewayAPI:
 
     async def _get_health(self, request: web.Request) -> web.Response:
         """GET /health — liveness probe for HA Supervisor watchdog."""
-        return web.json_response({"status": "ok"})
+        snap = self._health.snapshot(include_actions=False)
+        return web.json_response({
+            "status": snap["status"],
+            "version": snap["version"],
+        })
+
+    async def _get_status(self, request: web.Request) -> web.Response:
+        """GET /api/v1/status — full gateway health snapshot."""
+        return web.json_response(self._health.snapshot())
 
     async def _get_devices(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices — return full device list as JSON."""
@@ -437,6 +455,12 @@ class GatewayAPI:
         }
         asyncio.create_task(self._broadcast(msg))
 
+    def _on_health_changed(self) -> None:
+        payload = self._health.snapshot(include_actions=False)
+        asyncio.create_task(
+            self._broadcast({"type": "gateway_status", **payload})
+        )
+
     async def _broadcast(self, msg: dict) -> None:
         """Send a JSON message to all connected WebSocket clients."""
         async with self._ws_lock:
@@ -505,6 +529,7 @@ class GatewayAPI:
             "type": "snapshot",
             "modules": self._build_module_list(),
             "devices": self._build_device_list(),
+            "gateway_status": self._health.snapshot(include_actions=False),
         }
 
     def _build_device_list(self) -> list[dict[str, Any]]:
