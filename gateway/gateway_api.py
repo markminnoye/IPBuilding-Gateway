@@ -165,8 +165,11 @@ class GatewayAPI:
                 await asyncio.wait_for(self._runner.cleanup(), timeout=5.0)
             except asyncio.TimeoutError:
                 log.warning("aiohttp runner.cleanup() timed out after 5s")
-            self._runner = None
-            self._site = None
+            except Exception as exc:
+                log.warning("aiohttp runner.cleanup() raised: %s", exc)
+            finally:
+                self._runner = None
+                self._site = None
         if self._state_cb is not None:
             self._registry.unregister_state_changed(self._state_cb)
             self._state_cb = None

@@ -3,6 +3,17 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.3] - 2026-06-15
+
+### Fixed
+- Gateway shutdown no longer leaves the aiohttp runner in a half-initialised
+  state when `runner.cleanup()` raises something other than a timeout (for
+  example, an `OSError` while closing a socket). The `self._runner` and
+  `self._site` references are now cleared in a `finally` block, and the
+  exception is logged as a warning. Previously the uncaught exception
+  would skip the registry-callback unregistration and the final
+  "GatewayAPI stopped" log line.
+
 ## [0.1.2] - 2026-06-15
 
 ### Fixed
