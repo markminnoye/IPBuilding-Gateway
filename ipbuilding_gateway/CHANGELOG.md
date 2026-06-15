@@ -3,6 +3,16 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.2] - 2026-06-15
+
+### Fixed
+- `HTTP getSysSet` and `HTTP getButtons` warnings now include the exception
+  class and a `repr()` of the exception object, so you can see **why** the
+  request failed. Previously some aiohttp / `OSError` exceptions have an
+  empty `str()`, which produced bare `failed:` lines with no diagnostic
+  information (visible at gateway startup with no useful pointer to the
+  underlying cause, e.g. container can't reach the field-bus subnet).
+
 ## [0.1.1] - 2026-06-14
 
 ### Fixed

@@ -58,7 +58,13 @@ async def _http_get_text(
                 return await resp.text()
             log.warning("HTTP %s %s -> status %s", method, ip, resp.status)
     except Exception as exc:
-        log.warning("HTTP %s %s failed: %s", method, ip, exc)
+        # Include the exception class and repr — some aiohttp/OSError
+        # exceptions have an empty str(), which used to log a bare
+        # "failed:" line with no diagnostic info.
+        log.warning(
+            "HTTP %s %s failed: %s: %r",
+            method, ip, type(exc).__name__, exc,
+        )
     return None
 
 
@@ -114,7 +120,10 @@ class ModuleMetadataCache:
             meta = ModuleMetadata()
 
             if isinstance(result, Exception):
-                log.warning("getSysSet %s (%s) failed: %s", mc.ip, mac, result)
+                log.warning(
+                    "getSysSet %s (%s) failed: %s: %r",
+                    mc.ip, mac, type(result).__name__, result,
+                )
                 existing = self._by_mac.get(mac)
                 if existing:
                     new_by_mac[mac] = existing
