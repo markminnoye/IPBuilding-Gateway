@@ -1,8 +1,18 @@
 # IPBuilding Gateway — Home Assistant Add-on
 
-Open veldbus-hub voor IPBuilding relais, dimmers en drukknoppen via **UDP/1001**. Dit vervangt de propriëtaire IPBox en maakt het `ipbuilding-gateway-ha` Home Assistant component toegankelijk via WebSocket (`8080`) en optioneel REST (`30200`).
+Open veldbus-hub voor IPBuilding relais, dimmers en drukknoppen via **UDP/1001**.
+Dit vervangt de propriëtaire IPBox op de veldbus en voedt de companion
+[**IPBuilding Gateway HA**](https://github.com/markminnoye/ipbuilding-gateway-ha)
+via WebSocket (`8080`) en optioneel REST (`30200` shim).
 
-> **Voor add-on-ontwikkelaars:** het manifest-formaat (`config.yaml`), Supervisor communicatie, watchdog, `host_network`, `privileged`, publicatie en security van deze add-on volgen de officiële Home Assistant Apps developer docs: <https://developers.home-assistant.io/docs/apps/>
+> **Zonder companion geen HA-entiteiten.** Deze add-on alleen levert de gateway;
+> lichten/schakelaars/sensoren komen pas via de companion-integratie (zelfde
+> versienummer). Zie ook de [repository README](../README.md).
+
+> **Voor add-on-ontwikkelaars:** het manifest-formaat (`config.yaml`), Supervisor
+> communicatie, watchdog, `host_network`, `privileged`, publicatie en security
+> van deze add-on volgen de officiële Home Assistant Apps developer docs:
+> <https://developers.home-assistant.io/docs/apps/>
 
 ## Features
 
