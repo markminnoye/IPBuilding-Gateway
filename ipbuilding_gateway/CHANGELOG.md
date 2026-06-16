@@ -3,8 +3,24 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-Versions are kept in lockstep with the `ipbuilding-gateway-ha` companion
-so an add-on + companion upgrade can be tracked as a single number.
+## Versiebeleid
+
+De IPBuilding Gateway add-on en de `ipbuilding-gateway-ha` companion
+volgen **onafhankelijk semver**. Een bump in de ene repo betekent
+niet automatisch een bump in de andere.
+
+- **Patch (0.3.x)**: cosmetisch, geen impact op de REST/WS wire.
+  Werkt met alle companion-versies die de huidige wire ondersteunen.
+- **Minor (0.x.0)**: nieuwe REST endpoints of optionele velden in
+  bestaande responses. De oude companion blijft werken, maar ziet
+  de nieuwe velden niet.
+- **Major (x.0.0)**: breaking change. De gateway- of companion-CHANGELOG
+  bevat dan een `### Breaking:` entry die de incompatibele combinaties
+  opsomt.
+
+Backward compatibiliteit is de norm — een versie in deze add-on
+blijft werken met de huidige companion tot een `### Breaking:`-regel
+anders meldt.
 
 ## [0.3.6] - 2026-06-16
 
