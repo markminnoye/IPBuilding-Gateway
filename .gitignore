@@ -52,6 +52,7 @@ probe_output.log
 dimmer_re_manifest.log
 devices.discovered.json
 devices.json.pre-scratch
+devices.json.bak
 # Runtime instance_id for HA discovery (HA-discovery advertiser persists
 # this on first start so the gateway has a stable UUID across restarts;
 # it is a per-install artifact, not source).
