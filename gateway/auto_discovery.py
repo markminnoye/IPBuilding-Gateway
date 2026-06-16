@@ -539,7 +539,6 @@ class DiscoveryOrchestrator:
             log.info("DiscoveryOrchestrator: init-sweep found no modules")
             return
 
-        now_iso = datetime.now(timezone.utc).isoformat()
         modules: list[dict] = []
         for dm in discovered:
             modules.append({
@@ -555,8 +554,6 @@ class DiscoveryOrchestrator:
                 # live on the in-memory ModuleConfig; do not write them to
                 # devices.json. See ModuleConfig.to_dict().
             })
-            self._state[dm.mac].last_seen_at = now_iso
-            self._state[dm.mac].last_seen_source = "http"
             self._emit({
                 "type": "device_added",
                 "mac": dm.mac,

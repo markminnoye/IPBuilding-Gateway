@@ -22,6 +22,11 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [0.3.8] - 2026-06-16
+
+### Fixed
+- **Init-sweep crashte op `AttributeError: 'DiscoveryOrchestrator' object has no attribute '_state'`.** De 0.3.7-fix om runtime-velden uit `devices.json` te houden introduceerde een verwijzing naar `self._state[dm.mac]` in `_run_init_sweep`, maar `_state` is een attribuut van `ArpMonitor`, niet van de orchestrator. De regel is verwijderd; `_run_init_sweep` schrijft alleen naar `devices.json` en houdt geen eigen runtime-state bij. Companion-side niets gewijzigd.
+
 ## [0.3.7] - 2026-06-16
 
 ### Fixed
