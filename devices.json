@@ -21,7 +21,7 @@
           "name": "Patio",
           "room": "Buiten",
           "semantic_type": "light",
-          "active": false,
+          "active": true,
           "max_watt": 60
         },
         {
@@ -130,7 +130,7 @@
         },
         {
           "ch": 15,
-          "name": "Traphal ¿rookmelder?",
+          "name": "Traphal \u00bfrookmelder?",
           "room": "1e verd",
           "semantic_type": "light",
           "active": true,
@@ -200,7 +200,8 @@
           "active": true,
           "max_watt": 60
         }
-      ]
+      ],
+      "active": false
     },
     {
       "name": "IP0300PoE",
@@ -242,16 +243,18 @@
           "active": true,
           "max_watt": 200
         }
-      ]
+      ],
+      "active": false
     },
     {
-      "name": "IP1100PoE",
-      "model": "IP1100PoE",
+      "name": "10.10.1.50",
+      "model": "",
       "ip": "10.10.1.50",
       "type": "input",
       "firmware": "",
       "mac": "00:24:77:52:ad:aa",
-      "channels": []
+      "channels": [],
+      "active": false
     }
   ]
 }
