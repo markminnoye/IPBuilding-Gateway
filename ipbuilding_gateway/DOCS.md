@@ -6,8 +6,10 @@ Dit vervangt de propriëtaire IPBox op de veldbus en voedt de companion
 via WebSocket (`8080`) en optioneel REST (`30200` shim).
 
 > **Zonder companion geen HA-entiteiten.** Deze add-on alleen levert de gateway;
-> lichten/schakelaars/sensoren komen pas via de companion-integratie (zelfde
-> versienummer). Zie ook de [repository README](../README.md).
+> lichten/schakelaars/sensoren komen pas via de companion-integratie. Versies
+> lopen onafhankelijk — zie de
+> [releases-pagina](https://github.com/markminnoye/ipbuilding-gateway-ha/releases)
+> voor de actuele companion-versie. Zie ook de [repository README](../README.md).
 
 > **Voor add-on-ontwikkelaars:** het manifest-formaat (`config.yaml`), Supervisor
 > communicatie, watchdog, `host_network`, `privileged`, publicatie en security
@@ -151,7 +153,7 @@ Zoek naar `[run.sh]` — als die ontbreekt is `devices.json` niet geladen.
 ### Companion vindt de add-on niet
 
 - Add-on moet **draaien** (niet enkel geïnstalleerd)
-- Companion **v0.3.0+** en add-on **v0.3.0+** (zelfde versienummer)
+- Companion en add-on hoeven niet dezelfde versie te hebben — beide volgen onafhankelijk semver. Controleer [de companion releases](https://github.com/markminnoye/ipbuilding-gateway-ha/releases) en [de add-on releases](https://github.com/markminnoye/IPBuilding-Gateway/releases) voor de meest recente versies.
 - Check **Settings → Devices & Services → Discovered** (niet alleen “Add integration”)
 - Check `api_port` is `8080`
 - Supervisor discovery vereist HA OS / Supervised; op standalone gateway gebruikt de companion mDNS (`_ipbgw._tcp.local.`)
@@ -196,7 +198,9 @@ IPBuilding veldbus (UDP/1001 · 10.10.1.x)
 ## Companion (Home Assistant integration)
 
 Install **[ipbuilding-gateway-ha](https://github.com/markminnoye/ipbuilding-gateway-ha)**
-at the **same version** as this add-on (currently **v0.3.0**).
+— any recent release. Versies lopen onafhankelijk van deze add-on; zie de
+[companion releases](https://github.com/markminnoye/ipbuilding-gateway-ha/releases)
+voor de meest recente versie.
 
 1. **HACS** → Custom repository → `https://github.com/markminnoye/ipbuilding-gateway-ha`
 2. Install **IPBuilding Gateway HA** and restart Home Assistant

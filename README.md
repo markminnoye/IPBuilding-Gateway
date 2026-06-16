@@ -9,7 +9,10 @@
 > control your installation in HA you **must also install the companion
 > integration**
 > [**IPBuilding Gateway HA**](https://github.com/markminnoye/ipbuilding-gateway-ha)
-> at the **same version** (currently **v0.3.0**).
+> at the **latest release** of both — see the
+> [gateway releases](https://github.com/markminnoye/IPBuilding-Gateway/releases)
+> and the
+> [companion releases](https://github.com/markminnoye/ipbuilding-gateway-ha/releases).
 >
 > | You install | You get |
 > |-------------|---------|
@@ -52,7 +55,9 @@ add-on). Container / Core-only installs need a
 3. Provide **`devices.json`**, start the add-on, then add the integration under
    **Settings → Devices & Services → Discovered**.
 
-Version numbers are **lockstep**: always upgrade add-on and companion together.
+Version numbers are **independent** — each repo follows its own semver.
+Upgrade when one of the two has a release you want; the other is allowed
+to lag. See [CHANGELOG](ipbuilding_gateway/CHANGELOG.md) for breaking changes.
 
 ## Features
 
@@ -71,7 +76,8 @@ This add-on does **not** implement IPBox scenes, moods, or button→relay rules.
 
 - Home Assistant **OS** or **Supervised**
 - [**IPBuilding Gateway HA**](https://github.com/markminnoye/ipbuilding-gateway-ha)
-  companion (**same version** as this add-on)
+  companion — any recent release; see the
+  [companion releases page](https://github.com/markminnoye/ipbuilding-gateway-ha/releases)
 - IPBuilding modules reachable on **`10.10.1.x`** with HA using a **source IP on
   that segment** (`host_network: true` — see
   [network notes](ipbuilding_gateway/DOCS.md#network))
@@ -131,7 +137,7 @@ Manual host/port remains available if discovery is blocked; see the
 |----------|----------|
 | **[Add-on DOCS](ipbuilding_gateway/DOCS.md)** | Operators — install, options, network, troubleshooting |
 | **[Companion README](https://github.com/markminnoye/ipbuilding-gateway-ha)** | HA integration — entities, automations, dashboard |
-| **[Changelog](ipbuilding_gateway/CHANGELOG.md)** | Release notes (lockstep with companion) |
+| **[Changelog](ipbuilding_gateway/CHANGELOG.md)** | Release notes for this add-on |
 | **[Architecture](ARCHITECTURE.md)** | Migration from IPBox, deployment variants |
 | **[API reference](docs/api/)** | Northbound REST/WebSocket |
 | **[Developer library](README_gateway.md)** | Python `gateway/` package (not the add-on UI) |
