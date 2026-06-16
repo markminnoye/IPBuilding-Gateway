@@ -15,6 +15,12 @@ RUN pip install --no-cache-dir -r requirements-gateway.txt
 # Copy gateway package (setup.py not needed — module run)
 COPY gateway/ ./gateway/
 
+# config.yaml is the runtime version source of truth — gateway/version.py
+# resolves it relative to the installed gateway/ package. Shipping the
+# YAML keeps `__version__` (= /api/v1/status) in sync with what Supervisor
+# advertises, even after a release where the image tag matches the YAML.
+COPY config.yaml ./ipbuilding_gateway/config.yaml
+
 # Supervisor options JSON → env vars script
 COPY run.sh .
 RUN chmod +x ./run.sh

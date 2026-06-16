@@ -10,6 +10,12 @@ requirements gained ``zeroconf>=0.131.0`` but the add-on copy did not,
 because ``prepare-build.sh`` did not copy it. The Docker build then
 ran with the stale requirements and the published image was missing
 ``zeroconf`` at runtime.
+
+It also pins the v0.3.7+ invariant: there is no generated
+``gateway/_version.py`` any more. The runtime version is read live
+from ``ipbuilding_gateway/config.yaml`` in the add-on context, so the
+Dockerfile must copy that file in and ``prepare-build.sh`` must not
+stamp a generated module.
 """
 
 from __future__ import annotations
@@ -22,6 +28,10 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ROOT_REQUIREMENTS = REPO_ROOT / "requirements-gateway.txt"
 ADDON_REQUIREMENTS = REPO_ROOT / "ipbuilding_gateway" / "requirements-gateway.txt"
+ADDON_GATEWAY_PKG = REPO_ROOT / "ipbuilding_gateway" / "gateway"
+GENERATED_VERSION = ADDON_GATEWAY_PKG / "_version.py"
+ADDON_CONFIG_YAML = REPO_ROOT / "ipbuilding_gateway" / "config.yaml"
+ADDON_DOCKERFILE = REPO_ROOT / "ipbuilding_gateway" / "Dockerfile"
 
 
 def test_root_requirements_exists() -> None:
@@ -68,4 +78,51 @@ def test_zeroconf_present_in_root_requirements() -> None:
     assert "zeroconf" in contents, (
         f"{ROOT_REQUIREMENTS} must include zeroconf — used by "
         "gateway/ha_discovery.py for HA discovery broadcast."
+    )
+
+
+def test_no_generated_version_file_in_addon_context() -> None:
+    """`gateway/_version.py` must not exist in the add-on staging copy.
+
+    Since v0.3.7 the runtime version is read live from
+    ``ipbuilding_gateway/config.yaml``; a generated file with a different
+    value would silently drift Supervisor's advertised version from the
+    actual one. ``prepare-build.sh`` explicitly removes any stale
+    generated file before re-staging ``gateway/`` — assert that nothing
+    in the build context reintroduces it.
+    """
+    assert not GENERATED_VERSION.exists(), (
+        f"{GENERATED_VERSION} must not exist. The runtime version is read "
+        "live from ipbuilding_gateway/config.yaml. If this file reappears, "
+        "someone reintroduced build-time version stamping; see "
+        ".cursor/rules/release-process.mdc."
+    )
+
+
+def test_addon_config_yaml_present_in_build_context() -> None:
+    """`ipbuilding_gateway/config.yaml` must exist in the add-on context.
+
+    The Dockerfile copies this file into the image at
+    ``/app/ipbuilding_gateway/config.yaml`` so ``gateway.version`` can
+    resolve it relative to the installed ``gateway/`` package. If the
+    file is missing here, the Docker build context no longer carries the
+    version source of truth and the runtime would report 0.0.0-dev.
+    """
+    assert ADDON_CONFIG_YAML.is_file(), (
+        f"{ADDON_CONFIG_YAML} must exist — gateway/version.py reads the "
+        "runtime version from this file in the Docker image."
+    )
+
+
+def test_dockerfile_copies_config_yaml_into_image() -> None:
+    """The Dockerfile must COPY config.yaml into the image at runtime.
+
+    Without this line the runtime would resolve to 0.0.0-dev in the
+    container even though config.yaml is the single source of truth in
+    the build context.
+    """
+    contents = ADDON_DOCKERFILE.read_text(encoding="utf-8")
+    assert "COPY config.yaml" in contents, (
+        f"{ADDON_DOCKERFILE} must COPY config.yaml into the image — "
+        "the runtime version is read from there at import time."
     )

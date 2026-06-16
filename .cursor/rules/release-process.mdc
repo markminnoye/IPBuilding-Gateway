@@ -8,6 +8,26 @@ globs:
 
 # Release process — IPBuilding Gateway
 
+## Single source of truth
+
+The runtime version (`__version__`, exposed via `/api/v1/status` and HA
+discovery) is **always** derived from `ipbuilding_gateway/config.yaml`.
+There is no generated `gateway/_version.py`, no version stamp at build
+time, no manual override in `gateway/`. A Docker image that ships
+`config.yaml: 0.3.7` will report 0.3.7 forever.
+
+This means: bumping the version **without** shipping a new image
+produces no observable change for users. Always do both as one step
+(bump + commit + tag + push). Do not create or edit
+`gateway/_version.py`; it does not exist in this repo on purpose.
+
+The runtime reads `config.yaml` from the add-on build context (the
+`ipbuilding_gateway/` directory) via a relative path in
+`gateway/version.py`. The Dockerfile `COPY`s it into the image at
+`/app/ipbuilding_gateway/config.yaml`. `prepare-build.sh` does not
+stamp a generated file and explicitly removes any stale
+`gateway/_version.py` from the staging copy.
+
 ## Trigger
 
 Apply when the user or task involves:
