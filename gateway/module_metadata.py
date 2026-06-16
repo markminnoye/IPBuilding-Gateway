@@ -93,12 +93,29 @@ class ModuleMetadataCache:
     def all_macs(self) -> list[str]:
         return list(self._by_mac.keys())
 
-    async def refresh(self, installation: InstallationConfig, timeout: float = 2.0) -> None:
-        """Fetch getSysSet (all) and getButtons (input only) in parallel.
+    async def refresh(self, installation: InstallationConfig, timeout: float = 5.0) -> None:
+        """Fetch getSysSet (all) and getButtons (input only).
+
+        Requests are fanned out with bounded concurrency (3 in flight at
+        a time) to avoid flooding a small /24 subnet when the cache is
+        refreshed during discovery bursts. A small ``Semaphore`` is more
+        predictable than ``asyncio.gather`` over all modules, which on
+        busy boot-time could starve either the kernel TCP buffers or
+        the aiohttp connection pool.
 
         Partial failure is logged; entries for failed modules keep their old cache.
         """
-        async with aiohttp.ClientSession() as sess:
+        # One ClientSession is shared across all requests, with a bounded
+        # TCP connector so we never open more than 8 sockets at once
+        # (keeps the /24 ARP table and kernel buffers happy).
+        connector = aiohttp.TCPConnector(limit=8)
+        async with aiohttp.ClientSession(connector=connector) as sess:
+            sem = asyncio.Semaphore(3)
+
+            async def _one(ip: str) -> str | None:
+                async with sem:
+                    return await _http_get_text(ip, "getSysSet", sess, timeout)
+
             pending: dict[str, tuple[Any, asyncio.Task[str | None]]] = {}
 
             for mc in installation.modules:
@@ -106,8 +123,7 @@ class ModuleMetadataCache:
                     log.debug("Skipping refresh for %s - no MAC", mc.ip)
                     continue
                 task = asyncio.create_task(
-                    _http_get_text(mc.ip, "getSysSet", sess, timeout),
-                    name=f"getSysSet:{mc.mac}",
+                    _one(mc.ip), name=f"getSysSet:{mc.mac}",
                 )
                 pending[mc.mac] = (mc, task)
 

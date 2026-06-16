@@ -59,6 +59,13 @@ class GatewayHealthMonitor:
         self._issues: dict[str, HealthIssue] = {}
         self._change_callbacks: list[Callable[[], None]] = []
         self._last_notify_key: tuple[str, frozenset[str]] | None = None
+        # Populated by main.py after the HaDiscoveryAdvertiser has loaded or
+        # generated the instance id. Empty string means "not yet known".
+        self._instance_id: str = ""
+
+    def set_instance_id(self, instance_id: str) -> None:
+        """Record the gateway's persistent HA-discovery instance id."""
+        self._instance_id = instance_id
 
     def on_change(self, callback: Callable[[], None]) -> None:
         """Register a callback invoked when aggregate status or issues change."""
@@ -121,6 +128,7 @@ class GatewayHealthMonitor:
         body: dict[str, Any] = {
             "status": self.compute_status(),
             "version": __version__,
+            "instance_id": self._instance_id,
             "uptime_seconds": int(time.monotonic() - self._started_at),
             "updated_at": _iso_now(),
             "subsystems": self._compute_subsystems(),

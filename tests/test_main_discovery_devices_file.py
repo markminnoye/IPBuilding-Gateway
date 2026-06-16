@@ -40,11 +40,13 @@ class _StubBus:
 class _StubOrchestrator:
     instances: list["_StubOrchestrator"] = []
 
-    def __init__(self, *, config, devices_file, broadcast, installation) -> None:
+    def __init__(self, *, config, devices_file, broadcast, installation, health=None, on_installation_changed=None) -> None:
         self.config = config
         self.devices_file = devices_file
         self.broadcast = broadcast
         self.installation = installation
+        self.health = health
+        self.on_installation_changed = on_installation_changed
         self.started = False
         type(self).instances.append(self)
 
@@ -71,6 +73,25 @@ class _StubShim:
         pass
 
 
+class _StubHaDiscovery:
+    instances: list["_StubHaDiscovery"] = []
+
+    def __init__(self, config) -> None:
+        self.config = config
+        self.started = False
+        type(self).instances.append(self)
+
+    async def start(self) -> None:
+        self.started = True
+
+    async def stop(self) -> None:
+        return None
+
+    @property
+    def instance_id(self) -> str:
+        return "test-instance-id"
+
+
 @pytest.mark.asyncio
 async def test_run_gateway_discovery_path_does_not_nameerror(
     monkeypatch: pytest.MonkeyPatch, tmp_path
@@ -94,8 +115,11 @@ async def test_run_gateway_discovery_path_does_not_nameerror(
     monkeypatch.setattr("gateway.main.GatewayAPI", _StubAPI)
     monkeypatch.setattr("gateway.main.RESTShim", _StubShim)
     monkeypatch.setattr("gateway.main.DiscoveryOrchestrator", _StubOrchestrator)
+    monkeypatch.setattr("gateway.main.HaDiscoveryAdvertiser", _StubHaDiscovery)
+    monkeypatch.delenv("SUPERVISOR_TOKEN", raising=False)
 
     _StubOrchestrator.instances.clear()
+    _StubHaDiscovery.instances.clear()
 
     # Run run_gateway in a task. It will block on stop_event.wait() forever;
     # we cancel it after we have observed the orchestrator was constructed.

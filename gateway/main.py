@@ -13,6 +13,7 @@ from aiohttp import web
 from gateway.auto_discovery import DiscoveryOrchestrator
 from gateway.config import GatewayConfig
 from gateway.device_registry import DeviceRegistry
+from gateway.ha_discovery import HaDiscoveryAdvertiser, HaDiscoveryConfig
 from gateway.installation import InstallationConfig
 from gateway.module_metadata import ModuleMetadataCache
 from gateway.types import DeviceType
@@ -71,7 +72,9 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
     meta_cache = ModuleMetadataCache(health=health)
     if cfg.installation:
         try:
-            await meta_cache.refresh(cfg.installation, timeout=2.0)
+            await meta_cache.refresh(
+                cfg.installation, timeout=cfg.metadata_timeout_s,
+            )
         except Exception:
             log.warning("Module metadata prefetch failed; cache is empty at startup")
 
@@ -79,7 +82,9 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
 
     async def _safe_meta_refresh(target_inst: InstallationConfig) -> None:
         try:
-            await meta_cache.refresh(target_inst, timeout=2.0)
+            await meta_cache.refresh(
+                target_inst, timeout=cfg.metadata_timeout_s,
+            )
         except Exception:
             log.warning("Module metadata refresh (post-discovery) failed; cache may be stale")
 
@@ -115,6 +120,13 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
 
     api.set_orchestrator(orchestrator)
     await api.start()
+
+    ha_discovery = HaDiscoveryAdvertiser(
+        HaDiscoveryConfig.from_gateway_config(cfg),
+    )
+    await ha_discovery.start()
+    if ha_discovery.instance_id:
+        health.set_instance_id(ha_discovery.instance_id)
 
     install_info = ""
     if cfg.installation:
@@ -153,6 +165,7 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         if shim_runner:
             await shim_runner.cleanup()
         await api.stop()
+        await ha_discovery.stop()
         await bus.stop()
         log.info("Gateway stopped")
 

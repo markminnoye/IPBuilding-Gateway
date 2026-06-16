@@ -114,6 +114,16 @@ else
     exit 1
 fi
 
+# --- Sanity check required dependencies ---
+# Gateway v0.3.0 introduced `zeroconf` for HA discovery (mDNS broadcast).
+# If the venv pre-dates that release the import below will fail with
+# `ModuleNotFoundError: No module named 'zeroconf'`. We auto-install on
+# first run so the operator doesn't have to remember the requirements.
+if ! "${PYTHON_BIN}" -c "import zeroconf" >/dev/null 2>&1; then
+    echo "[start.sh] zeroconf not found in venv — installing requirements-gateway.txt"
+    "${PYTHON_BIN}" -m pip install -q -r "${REPO_ROOT}/requirements-gateway.txt"
+fi
+
 # --- Build env for python -m gateway ---
 export GATEWAY_DEVICES_FILE="${GATEWAY_DEVICES_FILE:-./devices.json}"
 export PYTHONPATH="${REPO_ROOT}"

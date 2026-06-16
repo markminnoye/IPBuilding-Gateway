@@ -91,6 +91,11 @@ class GatewayConfig:
     devices_file: str = "./devices.json"
     # Discovery configuration (optional; loaded from env)
     discovery: DiscoveryConfig = field(default_factory=DiscoveryConfig)
+    # Per-request timeout (seconds) for HTTP calls to field modules
+    # (getSysSet / getButtons). 5 s is a comfortable default for
+    # IPBuilding controllers on a quiet VLAN; reduce for tighter SLA,
+    # raise for slow / loaded networks.
+    metadata_timeout_s: float = 5.0
 
     @classmethod
     def from_env(cls) -> GatewayConfig:
@@ -112,6 +117,7 @@ class GatewayConfig:
 
         discovery = DiscoveryConfig.from_env()
         hub_ip = os.getenv("GATEWAY_HUB_IP", "10.10.1.1")
+        metadata_timeout_s = float(os.getenv("GATEWAY_METADATA_TIMEOUT_S", "5.0"))
         if not discovery.hub_ip_in_subnet(hub_ip):
             log.warning(
                 "hub_ip %s is outside discovery_subnet %s — "
@@ -137,4 +143,5 @@ class GatewayConfig:
             installation=installation,
             devices_file=devices_file,
             discovery=discovery,
+            metadata_timeout_s=metadata_timeout_s,
         )

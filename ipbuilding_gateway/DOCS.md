@@ -95,6 +95,7 @@ Bekijk logs voor de opstartstatus:
 | `passive_arp_monitor` | `true` | Passieve ARP-monitor inschakelen (30 s poll interval) |
 | `arp_poll_interval_s` | `30.0` | Interval voor passieve ARP-polling in seconden |
 | `http_timeout_s` | `2.0` | Timeout voor HTTP getSysSet calls tijdens discovery |
+| `metadata_timeout_s` | `5.0` | Per-request timeout (s) voor HTTP `getSysSet` / `getButtons` op de modules. Verhoog bij trage veldbus (bijv. druk VLAN). |
 
 ---
 

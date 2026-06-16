@@ -345,7 +345,9 @@ class GatewayAPI:
         if installation is None:
             return web.json_response({"error": "no installation loaded"}, status=500)
         try:
-            await self._meta_cache.refresh(installation, timeout=2.0)
+            await self._meta_cache.refresh(
+                installation, timeout=self._cfg.metadata_timeout_s,
+            )
         except Exception as exc:
             log.warning("modules refresh failed: %s", exc)
         module_list = self._build_module_list()

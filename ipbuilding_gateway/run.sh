@@ -120,6 +120,13 @@ GATEWAY_ARP_POLL_INTERVAL_S=$(json_str_or "arp_poll_interval_s" "30.0")
 export GATEWAY_HTTP_TIMEOUT_S
 GATEWAY_HTTP_TIMEOUT_S=$(json_str_or "http_timeout_s" "2.0")
 
+# ── Module metadata HTTP timeout (getSysSet / getButtons) ────────────────────
+# Distinct from GATEWAY_HTTP_TIMEOUT_S (which is for ARP-discovery HTTP
+# identify). 5 s is comfortable for IPBuilding controllers on a quiet
+# VLAN; raise for loaded networks.
+export GATEWAY_METADATA_TIMEOUT_S
+GATEWAY_METADATA_TIMEOUT_S=$(json_str_or "metadata_timeout_s" "5.0")
+
 # ── Simulated mode (default off) ─────────────────────────────────────────────
 # Set GATEWAY_SIMULATED=1 to run without field hardware during development
 export GATEWAY_SIMULATED

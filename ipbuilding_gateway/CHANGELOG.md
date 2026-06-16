@@ -3,6 +3,23 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+Versions are kept in lockstep with the `ipbuilding-gateway-ha` companion
+so an add-on + companion upgrade can be tracked as a single number.
+
+## [0.3.0] - 2026-06-16
+
+### Added
+- The add-on now appears automatically in **Settings -> Devices & Services -> Discovered** when the companion is installed, so you can add the integration with a single click instead of typing host and port.
+- A new add-on option `metadata_timeout_s` lets you tune the timeout for `getSysSet` / `getButtons` requests if your network is slow or busy. The default (5 s) is more forgiving than the previous 2 s and works on a typical home VLAN out of the box.
+
+### Fixed
+- Startup no longer drops field-bus metadata on a busy VLAN. The previous fixed 2 s timeout for `getSysSet` / `getButtons` was too tight when the gateway was also doing the initial ARP sweep and Supervisor discovery in parallel, causing a warning for one of the three modules on most boots. The default is now 5 s and the HTTP fan-out is bounded so the three modules always refresh in a predictable order.
+- The mDNS service name is now `_ipbgw._tcp.local.` (was `_ipbuilding-gateway._tcp.local.`). The old name is 18 characters in the leading label, which violates RFC 6763 §7.2 and is rejected by `zeroconf`'s strict validator, so the gateway was silently absent from the LAN broadcast. The new name is conventional, 5 characters, and works with all major mDNS implementations.
+
+### Notes
+- Companion **v0.3.0** (or newer) is required for the new auto-detect flow. Older companions still work, but only via the manual host/port entry.
+- The add-on and companion are now released in lockstep at the same version number, so a single upgrade covers both.
+
 ## [0.1.4] - 2026-06-16
 
 ### Fixed

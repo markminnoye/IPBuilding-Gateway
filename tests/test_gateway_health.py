@@ -82,3 +82,12 @@ class TestGatewayHealthMonitor:
             {"ip": "10.10.1.30", "method": "getSysSet"},
         )
         assert monitor.snapshot()["subsystems"]["module_metadata"] == "degraded"
+
+    def test_instance_id_empty_by_default(self) -> None:
+        monitor = GatewayHealthMonitor()
+        assert monitor.snapshot()["instance_id"] == ""
+
+    def test_set_instance_id_appears_in_snapshot(self) -> None:
+        monitor = GatewayHealthMonitor()
+        monitor.set_instance_id("abc123")
+        assert monitor.snapshot()["instance_id"] == "abc123"
