@@ -12,6 +12,7 @@ from gateway.module_metadata import (
     ModuleMetadata,
     ModuleMetadataCache,
     _parse_get_sysset_body,
+    normalize_button_hardware_id,
 )
 
 
@@ -151,3 +152,14 @@ class TestModuleMetadataCache:
     def test_get_returns_none_for_unknown_mac(self) -> None:
         cache = ModuleMetadataCache()
         assert cache.get("de:ad:be:ef:00:01") is None
+
+
+class TestNormalizeButtonHardwareId:
+    def test_strips_type_prefix_and_lowercases(self) -> None:
+        assert normalize_button_hardware_id("2D2F8185190000DF") == "2f8185190000df"
+
+    def test_already_wire_form_unchanged(self) -> None:
+        assert normalize_button_hardware_id("2f8185190000df") == "2f8185190000df"
+
+    def test_handles_whitespace(self) -> None:
+        assert normalize_button_hardware_id("  2D2F8185190000DF\n") == "2f8185190000df"

@@ -173,6 +173,16 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
       "state": "on",
       "level": 75,
       "current_watt": 150
+    },
+    {
+      "id": "2f8185190000df",
+      "module_id": "00:24:77:52:ad:aa",
+      "module_ip": "10.10.1.50",
+      "name": "Badkamer knop",
+      "room": "1e verdieping",
+      "semantic_type": "button",
+      "device_type": "input",
+      "active": true
     }
   ]
 }
@@ -182,19 +192,27 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Device-ID: `{module_ip}-{channel}` or custom slug |
+| `id` | string | Device-ID: `{module_ip}-{channel}` (relay/dimmer) or `custom slug`, or the IP1100PoE button **hardware id** (lowercase, 14 hex chars) for input modules |
 | `module_id` | string | Parent module MAC (stable, use for grouping) |
 | `module_ip` | string | Current module IP (mutable, use for display) |
-| `channel` | integer | Channel index on the module |
-| `name` | string | Channel name from `devices.json` |
-| `room` | string | Room from config |
-| `semantic_type` | string | `light` / `fan` / `switch` |
+| `channel` | integer | Channel index on the module (relay/dimmer only; absent for buttons) |
+| `name` | string | Channel name from `devices.json` (or `descr` from `getButtons` for input) |
+| `room` | string | Room from config (or `gr` from `getButtons` for input) |
+| `semantic_type` | string | `light` / `fan` / `switch` / `button` |
 | `device_type` | string | `relay` / `dimmer` / `input` |
 | `active` | boolean | Whether channel is active |
-| `max_watt` | integer | Configured maximum power |
-| `state` | string | `on` / `off` / `inactive` / `unknown` |
-| `current_watt` | integer | Current consumption (0 when off) |
+| `max_watt` | integer | Configured maximum power (relay/dimmer only) |
+| `state` | string | `on` / `off` / `inactive` / `unknown` (relay/dimmer only) |
+| `current_watt` | integer | Current consumption (0 when off; relay/dimmer only) |
 | `level` | integer | Dimmer percentage 0-100 (dimmer only) |
+
+**Input modules (`device_type: "input"`)** carry one entry per physical button
+fetched via HTTP `getButtons` on the IP1100PoE. There is no `channel`/`state`/
+`max_watt` — buttons are event-only. The `id` matches the `id` field of the
+`button_event` WebSocket frame so the companion can route presses to the right
+entity. Buttons appear in the snapshot only after `getButtons` has been fetched
+(automatic at startup + after `POST /api/v1/modules/refresh` or a discovery
+sweep).
 
 **Inactive channels** (`active: false` in `devices.json`) are still included in the
 response so the companion can show them as disabled+hidden entities. Their

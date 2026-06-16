@@ -20,6 +20,20 @@ from gateway.types import DeviceType
 log = logging.getLogger(__name__)
 
 
+def normalize_button_hardware_id(raw_id: str) -> str:
+    """Canonicalise an IP1100PoE button hardware id for northbound routing.
+
+    ``getButtons`` returns ids like ``2D2F8185190000DF`` (2-char type prefix
+    plus 14 hex chars). UDP ``B-...E`` frames carry the wire suffix only
+    (``2f8185190000df``). Northbound consumers (companion, snapshot) need
+    the wire form so a ``button_event.id`` always matches a device entry.
+    """
+    s = raw_id.strip().lower()
+    if len(s) >= 2 and s.startswith("2d"):
+        s = s[2:]
+    return s
+
+
 def _parse_get_sysset_body(text: str) -> dict[str, str]:
     """Parse getSysSet HTTP response body.
 

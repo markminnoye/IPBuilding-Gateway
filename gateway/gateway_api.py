@@ -30,7 +30,7 @@ from gateway.config import GatewayConfig
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.health import GatewayHealthMonitor
 from gateway.installation import InstallationConfig
-from gateway.module_metadata import ModuleMetadataCache
+from gateway.module_metadata import ModuleMetadataCache, normalize_button_hardware_id
 from gateway.payloads import encode_relay_command, encode_dim_command, encode_dim_off
 from gateway.models import RelayAction, RelayCommand, DimmerCommand
 from gateway.udp_bus import UDPBus
@@ -350,6 +350,9 @@ class GatewayAPI:
             )
         except Exception as exc:
             log.warning("modules refresh failed: %s", exc)
+        # Push the new module + device state to connected clients so freshly
+        # discovered input buttons appear in the companion without a reload.
+        asyncio.create_task(self._broadcast(self._build_snapshot()))
         module_list = self._build_module_list()
         return web.json_response({"modules": module_list})
 
@@ -587,6 +590,29 @@ class GatewayAPI:
                         device["current_watt"] = 0
 
                 devices.append(device)
+
+            if mc.type == DeviceType.INPUT:
+                meta = self._meta_cache.get(mc.mac)
+                if meta is not None and meta.buttons:
+                    for btn in meta.buttons:
+                        raw_id = btn.get("id")
+                        if not raw_id:
+                            continue
+                        device_id = normalize_button_hardware_id(str(raw_id))
+                        devices.append(
+                            {
+                                "id": device_id,
+                                "module_id": mc.mac,
+                                "module_ip": mc.ip,
+                                "name": btn.get("descr")
+                                or btn.get("name")
+                                or f"Button {device_id}",
+                                "room": btn.get("gr") or btn.get("room") or "",
+                                "semantic_type": "button",
+                                "device_type": "input",
+                                "active": True,
+                            }
+                        )
 
         return devices
 

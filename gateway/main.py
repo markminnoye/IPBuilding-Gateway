@@ -85,6 +85,9 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
             await meta_cache.refresh(
                 target_inst, timeout=cfg.metadata_timeout_s,
             )
+            # Push refreshed device list to WS clients so newly discovered
+            # input buttons (getButtons) appear in the companion immediately.
+            await api._broadcast(api._build_snapshot())
         except Exception:
             log.warning("Module metadata refresh (post-discovery) failed; cache may be stale")
 

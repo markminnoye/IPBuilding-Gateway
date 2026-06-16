@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -191,6 +191,47 @@ class TestBuildDeviceList:
         assert devices[0]["active"] is True
         # Geen registry-state → fallback "unknown", NIET "inactive".
         assert devices[0]["state"] == "unknown"
+
+    def test_input_module_buttons_in_device_list(self) -> None:
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa",
+                "channels": [],
+            }
+        ])
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:ad:aa"] = ModuleMetadata(
+            buttons=[
+                {
+                    "index": 0,
+                    "id": "2D2F8185190000DF",
+                    "descr": "Badkamer knop",
+                    "gr": "1e verdieping",
+                }
+            ]
+        )
+        api = _make_api(inst, cache=cache)
+        devices = api._build_device_list()
+        assert len(devices) == 1
+        btn = devices[0]
+        assert btn["id"] == "2f8185190000df"
+        assert btn["device_type"] == "input"
+        assert btn["semantic_type"] == "button"
+        assert btn["module_id"] == "00:24:77:52:ad:aa"
+        assert btn["module_ip"] == "10.10.1.50"
+        assert btn["name"] == "Badkamer knop"
+        assert btn["room"] == "1e verdieping"
+        assert btn["active"] is True
+
+    def test_input_module_without_cached_buttons_no_device_entries(self) -> None:
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa",
+                "channels": [],
+            }
+        ])
+        api = _make_api(inst)  # no cache
+        assert api._build_device_list() == []
 
 
 class TestBuildSnapshot:
@@ -432,3 +473,33 @@ class TestDiscoveryEndpoint:
         request.match_info = {}
         response = await api._post_discover(request)
         assert response.status == 503
+
+
+class TestModulesRefreshBroadcast:
+    """POST /api/v1/modules/refresh must broadcast a new snapshot to WS clients.
+
+    Companion side (issue #4 acceptance criterion): newly discovered input
+    buttons should appear in the EventEntity list without a manual reload.
+    """
+
+    @pytest.mark.asyncio
+    async def test_modules_refresh_schedules_snapshot_broadcast(self) -> None:
+        inst = _make_installation([
+            {"ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa", "channels": []}
+        ])
+        api = _make_api(inst)
+        api._meta_cache.refresh = AsyncMock(return_value=None)  # type: ignore[assignment]
+
+        with patch("asyncio.create_task") as create_task:
+            response = await api._post_modules_refresh(MagicMock())
+
+        assert response.status == 200
+        # Snapshot broadcast must be scheduled (snapshot of the latest
+        # module + device list) so connected WS clients see the refreshed
+        # input buttons without a manual reload.
+        assert create_task.called, "modules/refresh must schedule a snapshot broadcast"
+        msg = create_task.call_args.args[0]
+        # The coroutine wraps self._broadcast(self._build_snapshot()); the
+        # exact coroutine object isn't easy to introspect, so check that
+        # create_task was called at all and the response was a 200.
+        assert msg is not None
