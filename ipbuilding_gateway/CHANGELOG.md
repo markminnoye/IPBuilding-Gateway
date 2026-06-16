@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are kept in lockstep with the `ipbuilding-gateway-ha` companion
 so an add-on + companion upgrade can be tracked as a single number.
 
+## [0.3.5] - 2026-06-16
+
+### Changed
+- **Supervisor now auto-updates the add-on** (`auto_update: true`). Future 0.3.x patch releases roll out without an operator action; the v0.3.3 image was already published but kept running v0.3.1 because this flag was off.
+
 ## [0.3.4] - 2026-06-16
 
 ### Fixed
