@@ -77,6 +77,29 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
 
     api = GatewayAPI(bus, registry, cfg, metadata_cache=meta_cache, health=health)
 
+    async def _safe_meta_refresh(target_inst: InstallationConfig) -> None:
+        try:
+            await meta_cache.refresh(target_inst, timeout=2.0)
+        except Exception:
+            log.warning("Module metadata refresh (post-discovery) failed; cache may be stale")
+
+    def _apply_installation(new_inst: InstallationConfig) -> None:
+        """Sync callback invoked by DiscoveryOrchestrator after init-sweep /
+        forced discovery. Updates cfg.installation, registers new modules in
+        the DeviceRegistry, schedules a metadata refresh and clears the
+        'no installation' health flag so the API serves devices immediately.
+        """
+        cfg.installation = new_inst
+        for mc in new_inst.modules:
+            registry.register_module(mc.ip, mc.type)
+        if meta_cache is not None:
+            asyncio.create_task(_safe_meta_refresh(new_inst))
+        health.set_installation_loaded(True)
+        log.info(
+            "run_gateway: applied new installation from discovery (%d modules)",
+            len(new_inst.modules),
+        )
+
     # Start runtime auto-discovery orchestrator after API is ready
     orchestrator: DiscoveryOrchestrator | None = None
     if cfg.discovery:
@@ -86,6 +109,7 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
             broadcast=api._broadcast,
             installation=cfg.installation,
             health=health,
+            on_installation_changed=_apply_installation,
         )
         await orchestrator.start()
 

@@ -3,6 +3,14 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.4] - 2026-06-16
+
+### Fixed
+- Devices discovered at startup now appear in Home Assistant immediately,
+  without having to restart the gateway. Previously, after a clean install
+  or a first-run field-bus scan, the device list was empty until you
+  restarted the gateway.
+
 ## [0.1.3] - 2026-06-15
 
 ### Fixed

@@ -304,6 +304,11 @@ class DiscoveryOrchestrator:
         The callback is responsible for routing the event to WebSocket clients.
     installation : InstallationConfig | None
         Pre-loaded installation (may be None on first start).
+    on_installation_changed : Callable[[InstallationConfig], None] | None
+        Optional sync callback invoked after each init-sweep or forced
+        discovery once the new ``InstallationConfig`` has been reloaded
+        from disk. Lets the caller propagate the change to
+        ``cfg.installation``, ``DeviceRegistry`` and the metadata cache.
     """
 
     def __init__(
@@ -313,12 +318,14 @@ class DiscoveryOrchestrator:
         broadcast: Callable[[dict], Any],
         installation: InstallationConfig | None = None,
         health: GatewayHealthMonitor | None = None,
+        on_installation_changed: "Callable[[InstallationConfig], None] | None" = None,
     ) -> None:
         self._config = config
         self._devices_file = devices_file
         self._broadcast = broadcast
         self._installation = installation
         self._health = health
+        self._on_installation_changed = on_installation_changed
         self._writer = AtomicWriter(devices_file, lock_timeout_s=config.lock_timeout_s)
 
         self._arp_monitor: ArpMonitor | None = None
@@ -464,6 +471,13 @@ class DiscoveryOrchestrator:
         except Exception:
             pass
 
+        if self._installation is not None and self._on_installation_changed is not None:
+            try:
+                self._on_installation_changed(self._installation)
+                log.info("DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)")
+            except Exception:
+                log.exception("DiscoveryOrchestrator: callback failed (forced discovery)")
+
         return result
 
     def _init_sweep_sync(self) -> list[dict]:
@@ -525,6 +539,13 @@ class DiscoveryOrchestrator:
             self._installation = InstallationConfig.load(self._devices_file)
         except Exception:
             pass
+
+        if self._installation is not None and self._on_installation_changed is not None:
+            try:
+                self._on_installation_changed(self._installation)
+                log.info("DiscoveryOrchestrator: on_installation_changed callback invoked (init-sweep)")
+            except Exception:
+                log.exception("DiscoveryOrchestrator: callback failed (init-sweep)")
 
         log.info("DiscoveryOrchestrator: init-sweep wrote %d modules", len(modules))
 
