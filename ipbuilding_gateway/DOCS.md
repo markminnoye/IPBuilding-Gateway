@@ -140,9 +140,11 @@ Zoek naar `[run.sh]` — als die ontbreekt is `devices.json` niet geladen.
 
 ### Companion vindt de add-on niet
 
-- Add-on moet ** draaien** (niet enkel geïnstalleerd)
+- Add-on moet **draaien** (niet enkel geïnstalleerd)
+- Companion **v0.3.0+** en add-on **v0.3.0+** (zelfde versienummer)
+- Check **Settings → Devices & Services → Discovered** (niet alleen “Add integration”)
 - Check `api_port` is `8080`
-- De companion detecteert de add-on automatisch via Supervisor — geen handmatige host/poort nodig
+- Supervisor discovery vereist HA OS / Supervised; op standalone gateway gebruikt de companion mDNS (`_ipbgw._tcp.local.`)
 
 ### Geen entities met namen — "10.10.1.30:0"
 
@@ -181,4 +183,15 @@ IPBuilding veldbus (UDP/1001 · 10.10.1.x)
 
 ---
 
-Companion installatie: [markminnoye/ipbuilding-gateway-ha](https://github.com/markminnoye/ipbuilding-gateway-ha) (HACS → Integrations)
+## Companion (Home Assistant integration)
+
+Install **[ipbuilding-gateway-ha](https://github.com/markminnoye/ipbuilding-gateway-ha)**
+at the **same version** as this add-on (currently **v0.3.0**).
+
+1. **HACS** → Custom repository → `https://github.com/markminnoye/ipbuilding-gateway-ha`
+2. Install **IPBuilding Gateway HA** and restart Home Assistant
+3. With the add-on **running**, open **Settings → Devices & Services → Discovered**
+   and add the integration (Supervisor discovery — no host/port needed)
+
+Full companion docs: [README](https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/README.md)
+· Add-on docs (this file) · [API reference](../docs/api/)

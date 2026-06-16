@@ -8,19 +8,37 @@ so an add-on + companion upgrade can be tracked as a single number.
 
 ## [0.3.0] - 2026-06-16
 
+Bundle release: everything since **0.1.0** (and fixes that were only
+documented under 0.1.1–0.1.4) ships in this version. Intermediate
+0.1.x tags were not published as separate Docker images — upgrade
+straight to **0.3.0** together with companion **v0.3.0**.
+
 ### Added
-- The add-on now appears automatically in **Settings -> Devices & Services -> Discovered** when the companion is installed, so you can add the integration with a single click instead of typing host and port.
-- A new add-on option `metadata_timeout_s` lets you tune the timeout for `getSysSet` / `getButtons` requests if your network is slow or busy. The default (5 s) is more forgiving than the previous 2 s and works on a typical home VLAN out of the box.
+- The add-on now appears automatically in **Settings → Devices & Services → Discovered** when the companion is installed, so you can add the integration with one click instead of typing host and port.
+- **Gateway health reporting:** `GET /api/v1/status` exposes overall health (`ok` / `degraded` / `unhealthy`), version, uptime, subsystem state, and plain-language issue messages. The companion can show a diagnostic status sensor and react to changes over WebSocket. The Supervisor watchdog `GET /health` uses the same health enum.
+- A new add-on option **`metadata_timeout_s`** (default 5 s) for module metadata requests (`getSysSet` / `getButtons`) on slow or busy VLANs.
+- Inactive channels (`active: false`) are exposed to the companion as disabled, hidden entities — enable them from **Settings → Devices & Services** when wiring is finished (introduced in 0.1.0, still part of this bundle).
+
+### Changed
+- WebSocket keep-alive interval is 60 seconds (was 30 s), so the companion stays connected quietly during normal operation.
+- The add-on and companion are released in lockstep at the same version number.
 
 ### Fixed
-- Startup no longer drops field-bus metadata on a busy VLAN. The previous fixed 2 s timeout for `getSysSet` / `getButtons` was too tight when the gateway was also doing the initial ARP sweep and Supervisor discovery in parallel, causing a warning for one of the three modules on most boots. The default is now 5 s and the HTTP fan-out is bounded so the three modules always refresh in a predictable order.
-- The mDNS service name is now `_ipbgw._tcp.local.` (was `_ipbuilding-gateway._tcp.local.`). The old name is 18 characters in the leading label, which violates RFC 6763 §7.2 and is rejected by `zeroconf`'s strict validator, so the gateway was silently absent from the LAN broadcast. The new name is conventional, 5 characters, and works with all major mDNS implementations.
+- **First-run discovery:** devices found during the initial field-bus scan appear in Home Assistant immediately, without restarting the gateway.
+- **Module metadata on startup:** the default metadata timeout is more forgiving when the gateway is also running ARP sweep and Supervisor discovery in parallel; HTTP refresh to the three modules runs in a bounded order so one module is no longer dropped on most boots.
+- **mDNS discovery:** service name is now `_ipbgw._tcp.local.` (was `_ipbuilding-gateway._tcp.local.`). The old name was rejected by strict mDNS validators, so standalone gateways never appeared on the LAN for auto-detect.
+- Inactive channels report state **`inactive`** instead of **`unknown`**, so you can tell “not wired yet” from “no field-bus response”.
+- Clearer warnings when module metadata HTTP requests fail (empty error lines at startup are gone).
+- Gateway shutdown completes cleanly even when the HTTP runner hits non-timeout errors or a slow WebSocket client is still connected.
+- Commands to an inactive channel are rejected instead of driving the field bus.
 
 ### Notes
-- Companion **v0.3.0** (or newer) is required for the new auto-detect flow. Older companions still work, but only via the manual host/port entry.
-- The add-on and companion are now released in lockstep at the same version number, so a single upgrade covers both.
+- Install **add-on v0.3.0** and **companion v0.3.0** together. Older companions still work via manual host/port, but not the new Discovered flow.
+- If you are on **0.1.0** or **0.1.2** (last published 0.1.x image), this is the single upgrade step — no need to install 0.1.3 or 0.1.4 separately.
 
 ## [0.1.4] - 2026-06-16
+
+> Included in **[0.3.0]** above.
 
 ### Fixed
 - Devices discovered at startup now appear in Home Assistant immediately,
@@ -29,6 +47,8 @@ so an add-on + companion upgrade can be tracked as a single number.
   restarted the gateway.
 
 ## [0.1.3] - 2026-06-15
+
+> Included in **[0.3.0]** above.
 
 ### Fixed
 - Gateway shutdown no longer leaves the aiohttp runner in a half-initialised
@@ -41,6 +61,8 @@ so an add-on + companion upgrade can be tracked as a single number.
 
 ## [0.1.2] - 2026-06-15
 
+> Included in **[0.3.0]** above.
+
 ### Fixed
 - `HTTP getSysSet` and `HTTP getButtons` warnings now include the exception
   class and a `repr()` of the exception object, so you can see **why** the
@@ -51,12 +73,16 @@ so an add-on + companion upgrade can be tracked as a single number.
 
 ## [0.1.1] - 2026-06-14
 
+> Included in **[0.3.0]** above.
+
 ### Fixed
 - Inactive channels in the device list now report their state as `inactive`
   instead of `unknown`, so you can tell apart "channel not wired up yet"
   from "no recent response from the field bus" when troubleshooting.
 
 ## [0.1.0] - 2026-06-14
+
+> Superseded by **[0.3.0]** for upgrades; kept for history.
 
 ### Added
 - Channels that are wired up but not yet in use (`active: false`) are now
