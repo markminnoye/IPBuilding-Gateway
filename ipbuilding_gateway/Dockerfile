@@ -19,8 +19,8 @@ COPY gateway/ ./gateway/
 COPY run.sh .
 RUN chmod +x ./run.sh
 
-# Persistent data directory (mapped via addon_config)
-RUN mkdir -p /data
+# Supervisor /data (options.json) and /config (addon_config:rw for devices.json)
+RUN mkdir -p /data /config
 
 ENV PYTHONUNBUFFERED=1
 

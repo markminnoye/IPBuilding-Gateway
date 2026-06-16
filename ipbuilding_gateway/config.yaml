@@ -1,5 +1,5 @@
 name: IPBuilding Gateway
-version: "0.3.3"
+version: "0.3.4"
 slug: ipbuilding_gateway
 description: Open IPBuilding field-bus gateway (UDP/1001) — replaces proprietary IPBox hub
 url: https://github.com/markminnoye/IPBuilding-Gateway
@@ -9,7 +9,7 @@ arch:
   - aarch64
   - amd64
 map:
-  - addon_config
+  - addon_config:rw
 ports:
   8080/tcp: null
   30200/tcp: null
@@ -23,7 +23,7 @@ options:
   api_port: 8080
   rest_shim_enabled: false
   log_level: info
-  devices_file: /data/devices.json
+  devices_file: /config/devices.json
   discovery_subnet: 10.10.1
   discovery_range_start: 0
   discovery_range_end: 254

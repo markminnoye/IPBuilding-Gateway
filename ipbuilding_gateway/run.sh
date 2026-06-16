@@ -95,8 +95,25 @@ export GATEWAY_LOG_LEVEL
 GATEWAY_LOG_LEVEL=$(json_str_or "log_level" "info")
 
 # ── Persistent devices.json ──────────────────────────────────────────────────
+# Default /config/devices.json — addon_config:rw maps the host folder
+# /addon_configs/<hash>_ipbuilding_gateway/ to /config (Samba-visible).
 export GATEWAY_DEVICES_FILE
-GATEWAY_DEVICES_FILE=$(json_str_or "devices_file" "/data/devices.json")
+GATEWAY_DEVICES_FILE=$(json_str_or "devices_file" "/config/devices.json")
+
+mkdir -p "$(dirname "$GATEWAY_DEVICES_FILE")"
+
+# One-time migration from the pre-0.3.4 internal /data volume.
+if [ "$GATEWAY_DEVICES_FILE" = "/data/devices.json" ] && [ -f /data/devices.json ]; then
+    if [ ! -f /config/devices.json ]; then
+        cp -a /data/devices.json /config/devices.json
+        echo "[run.sh] Migrated devices.json from /data to /config"
+    fi
+    GATEWAY_DEVICES_FILE="/config/devices.json"
+elif [ ! -f "$GATEWAY_DEVICES_FILE" ] && [ -f /data/devices.json ]; then
+    cp -a /data/devices.json "$GATEWAY_DEVICES_FILE"
+    echo "[run.sh] Migrated devices.json from /data to $GATEWAY_DEVICES_FILE"
+fi
+export GATEWAY_DEVICES_FILE
 
 # ── Discovery / auto-discovery ───────────────────────────────────────────────
 export GATEWAY_DISCOVERY_SUBNET

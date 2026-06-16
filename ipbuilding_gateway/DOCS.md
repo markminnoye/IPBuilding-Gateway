@@ -41,10 +41,10 @@ https://github.com/markminnoye/IPBuilding-Gateway
 
 ### 3. Configure
 
-Kopieer `devices.json` naar de add-on data folder via **Samba** of **SSH**:
+Kopieer `devices.json` naar de add-on config folder via **Samba** of **SSH**:
 
 ```
-/addon_configs/<repo-hash>_ipbuilding_gateway/data/devices.json
+/addon_configs/<repo-hash>_ipbuilding_gateway/devices.json
 ```
 
 Het `<repo-hash>` is zichtbaar in de add-on info panel.
@@ -83,7 +83,7 @@ Bekijk logs voor de opstartstatus:
 ```
 [run.sh] GATEWAY_HUB_IP=10.10.1.1
 [run.sh] GATEWAY_API_PORT=8080
-[run.sh] GATEWAY_DEVICES_FILE=/data/devices.json
+[run.sh] GATEWAY_DEVICES_FILE=/config/devices.json
 ```
 
 ---
@@ -97,7 +97,7 @@ Bekijk logs voor de opstartstatus:
 | `api_port` | `8080` | WebSocket + REST northbound API poort |
 | `rest_shim_enabled` | `false` | IPBox REST shim op poort `30200` (enkel migratie) |
 | `log_level` | `info` | Log niveau: `debug`, `info`, `warning`, `error` |
-| `devices_file` | `/data/devices.json` | Pad naar installatie configuratie |
+| `devices_file` | `/config/devices.json` | Pad naar installatie configuratie (Samba: `addon_configs/.../devices.json`) |
 | `discovery_subnet` | `10.10.1` | Subnet voor ARP-sweep en passieve monitor |
 | `discovery_range_start` | `0` | Start van IP-range voor init-sweep (0 = volledige /24) |
 | `discovery_range_end` | `254` | Eind van IP-range voor init-sweep |

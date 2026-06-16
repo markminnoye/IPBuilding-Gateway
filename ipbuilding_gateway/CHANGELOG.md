@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are kept in lockstep with the `ipbuilding-gateway-ha` companion
 so an add-on + companion upgrade can be tracked as a single number.
 
+## [0.3.4] - 2026-06-16
+
+### Fixed
+- **`devices.json` is now saved where you can see it.** Discovery and forced scans write to `/config/devices.json`, which maps to the add-on folder under **Samba / SSH** (`addon_configs/.../devices.json`). Earlier releases wrote to the internal `/data` volume only, so the file looked missing even when discovery succeeded. Existing installs are migrated automatically on start.
+- **Startup log and API version** now match the add-on version in Supervisor (single source: `config.yaml`).
+
+### Changed
+- Add-on requests **`addon_config:rw`** so the gateway can write installatieconfig next to your other add-on files.
+
 ## [0.3.3] - 2026-06-16
 
 ### Changed

@@ -26,6 +26,7 @@ Apply when the user or task involves:
    - Korte, leesbare bullets. Geen bestandsnamen, functienamen, commit-hashes, regelnummers, test-technische details, of interne implementatie-termen (tenzij de gebruiker die zelf zal zien).
    - Technische details horen in de commit message, niet in de CHANGELOG.
 3. Bump `version:` in `ipbuilding_gateway/config.yaml` (semver; pre-1.0 uses `0.x.y`).
+   - **Only place to edit the version.** Runtime logs, `/api/v1/status`, and HA discovery read it via `gateway/version.py` (local dev / pytest) or `prepare-build.sh` → `gateway/_version.py` (Docker image). Do **not** set `__version__` manually in Python.
 4. Commit: `release: v<X>.<Y>.<Z>` (conventional commit).
 5. Tag: `git tag v<X>.<Y>.<Z>` and `git push --tags`.
 6. CI (tags only) builds and publishes to `ghcr.io`.
