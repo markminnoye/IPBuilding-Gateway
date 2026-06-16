@@ -132,6 +132,9 @@ class AtomicWriter:
         """Atomically replace devices.json with ``data``.
 
         Returns ``True`` on success, ``False`` on lock-timeout (file unchanged).
+        The advisory lock file (``devices_file.lock``) is always removed on
+        exit, even on exception, so it does not leak into the working tree
+        as an untracked artefact.
         """
         lock_fd = None
         try:
@@ -178,6 +181,14 @@ class AtomicWriter:
                     os.close(lock_fd)
                 except OSError:
                     pass
+            # Always remove the lock file so it never leaks as an untracked
+            # artefact (e.g. after a crash or test interruption).
+            try:
+                os.unlink(self._lock_file)
+            except FileNotFoundError:
+                pass
+            except OSError as exc:
+                log.debug("AtomicWriter: could not remove %s: %s", self._lock_file, exc)
         return True
 
 
@@ -390,12 +401,17 @@ class DiscoveryOrchestrator:
 
         modules_to_write: list[dict] = []
 
-        # First: preserve existing modules, update last_seen
+        # First: preserve existing modules; backfill SKU where missing.
         if installation:
             for mc in installation.modules:
                 d = mc.to_dict()
-                d["last_seen"] = now_iso
-                d["last_seen_source"] = "http"  # forced discovery uses HTTP
+                # Runtime-only fields (last_seen, last_seen_source) are
+                # intentionally NOT written to devices.json. Update them on
+                # the in-memory object so the WS-emit and ``_apply_gateway_status``
+                # path see the new timestamp, but keep devices.json stable
+                # across discovery runs.
+                mc.last_seen = now_iso
+                mc.last_seen_source = "http"
                 # Backfill missing hardware SKU: modules drafted from a
                 # pre-provisioned install (e.g. legacy IPBox export) often
                 # carry an empty ``model`` and an IP-based ``name``. Replace
@@ -451,8 +467,9 @@ class DiscoveryOrchestrator:
                     "mac": dm.mac,
                     "channels": list(dm.channels) if dm.channels else [],
                     "active": False,      # unconfigured — user assigns name/room
-                    "last_seen": now_iso,
-                    "last_seen_source": "http",
+                    # ``last_seen`` / ``last_seen_source`` are runtime-only
+                    # and live on the in-memory ModuleConfig; do not write
+                    # them to devices.json. See ModuleConfig.to_dict().
                 }
                 modules_to_write.append(new_module)
                 added.append({"mac": dm.mac, "ip": dm.ip})
@@ -534,9 +551,12 @@ class DiscoveryOrchestrator:
                 "mac": dm.mac,
                 "channels": list(dm.channels) if dm.channels else [],
                 "active": False,
-                "last_seen": now_iso,
-                "last_seen_source": "http",
+                # ``last_seen`` / ``last_seen_source`` are runtime-only and
+                # live on the in-memory ModuleConfig; do not write them to
+                # devices.json. See ModuleConfig.to_dict().
             })
+            self._state[dm.mac].last_seen_at = now_iso
+            self._state[dm.mac].last_seen_source = "http"
             self._emit({
                 "type": "device_added",
                 "mac": dm.mac,

@@ -88,7 +88,9 @@ class ChannelConfig:
         return self.room
 
     def to_dict(self) -> dict:
-        """Serialize to dict for devices.json."""
+        """Serialize to dict for devices.json; entity_id is always derived."""
+        # The ``id`` (entity_id) is derived on-the-fly via ``make_entity_id`` —
+        # never stored, never round-tripped. See module-level docstring.
         d: dict = {
             "ch": self.ch,
             "name": self.name,
@@ -99,8 +101,6 @@ class ChannelConfig:
         }
         if self.ipbox_id is not None:
             d["ipbox_id"] = self.ipbox_id
-        if self.id:
-            d["id"] = self.id
         return d
 
     @classmethod

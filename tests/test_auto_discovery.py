@@ -94,13 +94,18 @@ def test_atomic_writer_write_success(tmp_path: Path):
     assert loaded["modules"][0]["ip"] == "10.10.1.30"
 
 
-def test_atomic_writer_write_creates_lock_file(tmp_path: Path):
+def test_atomic_writer_write_removes_lock_file(tmp_path: Path):
+    """The advisory lock file is removed on success so it does not leak.
+
+    A leftover ``devices.json.lock`` in the working tree would show up as
+    an untracked artefact after a crash or test interruption.
+    """
     devices_file = tmp_path / "devices.json"
     devices_file.write_text('{"modules":[]}', encoding="utf-8")
 
     writer = AtomicWriter(str(devices_file))
     writer.write({"modules": []})
-    assert (tmp_path / "devices.json.lock").exists()
+    assert not (tmp_path / "devices.json.lock").exists()
 
 
 def test_atomic_writer_lock_timeout_on_contention(tmp_path: Path):

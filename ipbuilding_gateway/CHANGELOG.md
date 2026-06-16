@@ -22,6 +22,12 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [0.3.7] - 2026-06-16
+
+### Fixed
+- **`devices.json` blijft stabiel tussen discovery-runs.** De runtime-velden `last_seen` en `last_seen_source` werden door `auto_discovery` stiekem toegevoegd aan het weggeschreven bestand, tegen de conventie in (`ModuleConfig.to_dict()` documenteerde al "NOT serialized to devices.json"). Idem voor `ChannelConfig.to_dict()` dat het derived entity-`id` meeschreef. Drie aanroepplekken in `auto_discovery.py` zijn geschoond; `ChannelConfig.to_dict()` schrijft het `id`-veld niet meer terug. Het bestand bevat nu puur installatie-specifieke data (naam, kamer, `active`, model, MAC) en verandert niet meer bij elke `POST /api/v1/discover`.
+- **Lock-bestand (`devices.json.lock`) wordt opgeruimd.** `AtomicWriter` hield een advisory lock op een `.lock`-file. Bij crash of test-onderbreking bleef die als untracked artefact in de working tree staan. `try/finally` ruimt het bestand nu altijd op, ook op exception-paden.
+
 ## [0.3.6] - 2026-06-16
 
 ### Changed
