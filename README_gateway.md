@@ -102,6 +102,7 @@ See [`resources_and_docs/evidence/2026-06-03_arp_discover_spike.md`](resources_a
 | `GATEWAY_LOG_LEVEL` | `INFO` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `GATEWAY_DEVICES_FILE` | `./devices.json` | Path to installation config; if set, `field_modules` is derived from it and env IP overrides are ignored |
 | `GATEWAY_SIMULATED` | off | `1` / `true` — no real UDP socket; in-process reply simulation for dev/tests |
+| `GATEWAY_FORCE_DISCOVER_ON_START` | off | `1` / `true` — run forced (merge) discovery at startup. Preserves names/rooms/active flags, updates IP/firmware, adds new modules as `active:false`. |
 
 ## Tests
 
@@ -120,6 +121,8 @@ Also install `aioresponses` for the discover test:
 ```
 
 ## Run locally
+
+**Dev launcher (recommended on the Mac):** `./local/gateway/start.sh` supports `--sim`, `--init` (interactive refresh from the field bus) and `--help`. See [`local/README.md`](local/README.md) for the two-terminal HA workflow.
 
 **Simulated (no hardware):**
 

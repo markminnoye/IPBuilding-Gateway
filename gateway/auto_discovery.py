@@ -26,7 +26,7 @@ import os
 import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Callable
+from typing import Any, Callable
 
 from gateway.discovery import (
     discover_modules,
@@ -56,6 +56,7 @@ class DiscoveryConfig:
     arp_poll_interval_s: float = 30.0
     passive_arp_monitor: bool = True   # default: on
     auto_discover_on_start: bool = False   # default: off
+    force_discover_on_start: bool = False  # default: off — run_forced_discovery at startup
     http_timeout_s: float = 2.0
     lock_timeout_s: float = 15.0        # AtomicWriter lock acquire timeout
     removed_after_n_polls: int = 3      # N missed ARP polls → "removed"
@@ -81,6 +82,8 @@ class DiscoveryConfig:
             passive_arp_monitor=os.getenv("GATEWAY_PASSIVE_ARP_MONITOR", "1").lower()
                 in ("1", "true", "yes"),
             auto_discover_on_start=os.getenv("GATEWAY_AUTO_DISCOVER_ON_START", "0").lower()
+                in ("1", "true", "yes"),
+            force_discover_on_start=os.getenv("GATEWAY_FORCE_DISCOVER_ON_START", "0").lower()
                 in ("1", "true", "yes"),
             http_timeout_s=float(os.getenv("GATEWAY_HTTP_TIMEOUT_S", "2.0")),
         )
@@ -307,7 +310,7 @@ class DiscoveryOrchestrator:
         self,
         config: DiscoveryConfig,
         devices_file: str,
-        broadcast: Callable[[dict], None],
+        broadcast: Callable[[dict], Any],
         installation: InstallationConfig | None = None,
         health: GatewayHealthMonitor | None = None,
     ) -> None:
@@ -321,6 +324,12 @@ class DiscoveryOrchestrator:
         self._arp_monitor: ArpMonitor | None = None
         self._arp_task: asyncio.Task | None = None
         self._stopping = False
+
+    def _emit(self, msg: dict) -> None:
+        """Schedule a WebSocket broadcast (safe from sync and async callers)."""
+        result = self._broadcast(msg)
+        if asyncio.iscoroutine(result):
+            asyncio.create_task(result)
 
     def _run_forced_discovery_sync(self) -> list[dict]:
         """Synchronous wrapper around discover_modules — runs in thread pool."""
@@ -387,7 +396,7 @@ class DiscoveryOrchestrator:
                     dm = disc_by_mac[mc.mac]
                     if dm.ip != mc.ip:
                         d["ip"] = dm.ip
-                        self._broadcast({
+                        self._emit({
                             "type": "device_ip_changed",
                             "mac": mc.mac,
                             "old_ip": mc.ip,
@@ -397,7 +406,7 @@ class DiscoveryOrchestrator:
                     if dm.firmware and dm.firmware != mc.firmware:
                         old_firmware = mc.firmware
                         d["firmware"] = dm.firmware
-                        self._broadcast({
+                        self._emit({
                             "type": "device_firmware_changed",
                             "mac": mc.mac,
                             "old_firmware": old_firmware,
@@ -427,7 +436,7 @@ class DiscoveryOrchestrator:
                 }
                 modules_to_write.append(new_module)
                 added.append({"mac": dm.mac, "ip": dm.ip})
-                await self._broadcast({
+                self._emit({
                     "type": "device_added",
                     "mac": dm.mac,
                     "ip": dm.ip,
@@ -501,7 +510,7 @@ class DiscoveryOrchestrator:
                 "last_seen": now_iso,
                 "last_seen_source": "http",
             })
-            self._broadcast({
+            self._emit({
                 "type": "device_added",
                 "mac": dm.mac,
                 "ip": dm.ip,
@@ -520,7 +529,12 @@ class DiscoveryOrchestrator:
         log.info("DiscoveryOrchestrator: init-sweep wrote %d modules", len(modules))
 
     async def start(self) -> None:
-        """Start the orchestrator: init-sweep (if needed) + passive ARP monitor."""
+        """Start the orchestrator: init-sweep (if needed) + passive ARP monitor.
+
+        If ``force_discover_on_start`` is set, runs :meth:`run_forced_discovery`
+        after any init-sweep so the gateway is in sync with the field bus
+        immediately on startup (preserves existing names/rooms/active flags).
+        """
         if self._config.auto_discover_on_start:
             needs_init = True
             if self._installation is not None and self._installation.modules:
@@ -538,6 +552,13 @@ class DiscoveryOrchestrator:
 
             if needs_init:
                 await self._run_init_sweep()
+
+        if self._config.force_discover_on_start:
+            try:
+                result = await self.run_forced_discovery()
+                log.info("DiscoveryOrchestrator: force-discover on start: %s", result)
+            except Exception:
+                log.exception("DiscoveryOrchestrator: force-discover on start failed")
 
         if self._config.passive_arp_monitor:
             self._arp_monitor = ArpMonitor(
@@ -592,7 +613,7 @@ class DiscoveryOrchestrator:
                 return
 
         # New module not in devices.json — emit device_added
-        self._broadcast({
+        self._emit({
             "type": "device_added",
             "mac": mac,
             "ip": ip,
@@ -611,7 +632,7 @@ class DiscoveryOrchestrator:
                 f"Module {mac} not seen for {self._config.removed_after_n_polls} ARP polls",
                 {"mac": mac},
             )
-        self._broadcast({
+        self._emit({
             "type": "device_removed",
             "mac": mac,
         })
@@ -620,7 +641,7 @@ class DiscoveryOrchestrator:
         """Handle DHCP IP relocation of a known module."""
         if self._stopping:
             return
-        self._broadcast({
+        self._emit({
             "type": "device_ip_changed",
             "mac": mac,
             "old_ip": old_ip,

@@ -45,6 +45,7 @@ def test_discovery_config_from_env(monkeypatch):
     monkeypatch.setenv("GATEWAY_ARP_POLL_INTERVAL_S", "60.0")
     monkeypatch.setenv("GATEWAY_PASSIVE_ARP_MONITOR", "0")
     monkeypatch.setenv("GATEWAY_AUTO_DISCOVER_ON_START", "1")
+    monkeypatch.setenv("GATEWAY_FORCE_DISCOVER_ON_START", "1")
     monkeypatch.setenv("GATEWAY_HTTP_TIMEOUT_S", "5.0")
     cfg = DiscoveryConfig.from_env()
     assert cfg.subnet == "192.168.1"
@@ -53,6 +54,7 @@ def test_discovery_config_from_env(monkeypatch):
     assert cfg.arp_poll_interval_s == 60.0
     assert cfg.passive_arp_monitor is False
     assert cfg.auto_discover_on_start is True
+    assert cfg.force_discover_on_start is True
     assert cfg.http_timeout_s == 5.0
 
 
@@ -337,6 +339,41 @@ class TestDiscoveryOrchestratorStartStop:
 
         await orch.start()
         assert orch._arp_monitor is None
+        await orch.stop()
+
+    @pytest.mark.asyncio
+    async def test_start_runs_forced_discovery_when_force_flag_set(self):
+        cfg = DiscoveryConfig(
+            passive_arp_monitor=False,
+            force_discover_on_start=True,
+        )
+        orch = DiscoveryOrchestrator(
+            config=cfg,
+            devices_file="/tmp/dev.json",
+            broadcast=AsyncMock(),
+            installation=None,
+        )
+
+        with patch.object(orch, "run_forced_discovery", new=AsyncMock(return_value={"ok": True})) as mocked:
+            await orch.start()
+
+        mocked.assert_awaited_once()
+        await orch.stop()
+
+    @pytest.mark.asyncio
+    async def test_start_does_not_run_forced_discovery_by_default(self):
+        cfg = DiscoveryConfig(passive_arp_monitor=False)
+        orch = DiscoveryOrchestrator(
+            config=cfg,
+            devices_file="/tmp/dev.json",
+            broadcast=AsyncMock(),
+            installation=None,
+        )
+
+        with patch.object(orch, "run_forced_discovery", new=AsyncMock(return_value={"ok": True})) as mocked:
+            await orch.start()
+
+        mocked.assert_not_awaited()
         await orch.stop()
 
 

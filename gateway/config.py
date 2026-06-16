@@ -27,6 +27,7 @@ class DiscoveryConfig:
     arp_poll_interval_s: float = 30.0
     passive_arp_monitor: bool = True
     auto_discover_on_start: bool = False
+    force_discover_on_start: bool = False
     http_timeout_s: float = 2.0
     lock_timeout_s: float = 15.0
     removed_after_n_polls: int = 3
@@ -41,6 +42,8 @@ class DiscoveryConfig:
             passive_arp_monitor=os.getenv("GATEWAY_PASSIVE_ARP_MONITOR", "1").lower()
                 in ("1", "true", "yes"),
             auto_discover_on_start=os.getenv("GATEWAY_AUTO_DISCOVER_ON_START", "0").lower()
+                in ("1", "true", "yes"),
+            force_discover_on_start=os.getenv("GATEWAY_FORCE_DISCOVER_ON_START", "0").lower()
                 in ("1", "true", "yes"),
             http_timeout_s=float(os.getenv("GATEWAY_HTTP_TIMEOUT_S", "2.0")),
         )
