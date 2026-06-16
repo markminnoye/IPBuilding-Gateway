@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are kept in lockstep with the `ipbuilding-gateway-ha` companion
 so an add-on + companion upgrade can be tracked as a single number.
 
+## [0.3.1] - 2026-06-16
+
+### Fixed
+- **Image was missing the `zeroconf` package at runtime**, even though the source-of-truth `requirements-gateway.txt` listed it. The build context picked up a stale copy at `ipbuilding_gateway/requirements-gateway.txt` that pre-dated this release. The build was technically successful — the image just did not contain the dependency. `prepare-build.sh` now syncs the requirements file alongside `gateway/`, so the add-on copy is regenerated on every CI run.
+
 ## [0.3.0] - 2026-06-16
 
 Bundle release: everything since **0.1.0** (and fixes that were only
