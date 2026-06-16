@@ -83,7 +83,9 @@ This add-on does **not** implement IPBox scenes, moods, or button→relay rules.
 
 [![Open companion in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=markminnoye&repository=ipbuilding-gateway-ha&category=integration)
 
-Full steps: [companion README](https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/README.md)
+Adds custom repository `markminnoye/ipbuilding-gateway-ha` in HACS, then download
+**IPBuilding Gateway HA** and restart HA. Full steps:
+[companion README](https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/README.md#2-companion-integration-hacs-recommended)
 
 ### 2. Add-on repository
 

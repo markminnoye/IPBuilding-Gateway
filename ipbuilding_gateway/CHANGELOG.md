@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are kept in lockstep with the `ipbuilding-gateway-ha` companion
 so an add-on + companion upgrade can be tracked as a single number.
 
+## [0.3.3] - 2026-06-16
+
+### Changed
+- **Module names are now consistent across all three field modules.** The gateway fills in the canonical hardware SKU (`IP0200PoE`, `IP0300PoE`, `IP1100PoE`) when `devices.json` carries an empty `model` or an IP-based `name`, so the companion's onboarding "Apparaat-info" always shows the SKU as title and the role label (Relay / Dimmer / Input) as the device name. The companion also treats module IP addresses as auto-discovery placeholders and never leaks them into the operator-facing name.
+
+## [0.3.2] - 2026-06-16
+
+### Fixed
+- **Discovery failed in the add-on container** because the slim Docker image did not include the `ping` binary used for ARP-first field-bus scans (`POST /api/v1/discover`). The image now installs `iputils-ping`.
+- **Linux ping timeout** during discovery used the wrong flag/units (`-W` with milliseconds); sweeps could hang for minutes on silent hosts. Linux now uses `-w` with a seconds deadline.
+
 ## [0.3.1] - 2026-06-16
 
 ### Fixed

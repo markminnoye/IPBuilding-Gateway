@@ -31,6 +31,7 @@ from typing import Any, Callable
 from gateway.discovery import (
     discover_modules,
     parse_arp_table,
+    resolve_module_model,
 )
 from gateway.health import GatewayHealthMonitor
 from gateway.installation import InstallationConfig, ModuleConfig
@@ -395,6 +396,17 @@ class DiscoveryOrchestrator:
                 d = mc.to_dict()
                 d["last_seen"] = now_iso
                 d["last_seen_source"] = "http"  # forced discovery uses HTTP
+                # Backfill missing hardware SKU: modules drafted from a
+                # pre-provisioned install (e.g. legacy IPBox export) often
+                # carry an empty ``model`` and an IP-based ``name``. Replace
+                # those with the canonical SKU so the companion shows a
+                # stable "Apparaat-info" title across installs.
+                resolved_model = resolve_module_model(d.get("model", ""), d.get("type", ""))
+                if resolved_model and not d.get("model"):
+                    d["model"] = resolved_model
+                    d["name"] = resolved_model
+                elif resolved_model and d.get("name") == d.get("ip"):
+                    d["name"] = resolved_model
                 modules_to_write.append(d)
 
                 # Check for IP change
@@ -429,9 +441,10 @@ class DiscoveryOrchestrator:
         existing_macs = set(current_modules.keys())
         for dm in discovered:
             if dm.mac and dm.mac not in existing_macs:
+                resolved_model = resolve_module_model(dm.model, dm.device_type)
                 new_module = {
-                    "name": dm.model or dm.ip,
-                    "model": dm.model,
+                    "name": resolved_model or dm.ip,
+                    "model": resolved_model,
                     "ip": dm.ip,
                     "type": dm.device_type,
                     "firmware": dm.firmware,

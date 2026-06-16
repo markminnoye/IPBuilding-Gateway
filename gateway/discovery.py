@@ -75,6 +75,30 @@ _MODEL_TO_TYPE: dict[str, str] = {
     "IP1100PoE": "input",
 }
 
+# Inverse of ``_MODEL_TO_TYPE`` for the canonical SKUs: type → default
+# hardware model. Used as a fallback when a module was discovered without a
+# ``model`` (e.g. ARP-only discovery, getSysSet unreachable, or a fresh
+# ``devices.json`` drafted from a pre-provisioned module). The fallback
+# keeps the companion's "Apparaat-info" title stable across installs
+# without overwriting a real factory product label.
+_TYPE_TO_MODEL: dict[str, str] = {
+    "relay": "IP0200PoE",
+    "dimmer": "IP0300PoE",
+    "input": "IP1100PoE",
+}
+
+
+def resolve_module_model(model: str, device_type: str) -> str:
+    """Return the hardware SKU to expose for a module.
+
+    Prefers the factory product label (e.g. ``IP200PoE``) when present; falls
+    back to the canonical SKU for the type when ``model`` is empty. Returns
+    an empty string when neither is known.
+    """
+    if model:
+        return model
+    return _TYPE_TO_MODEL.get(device_type, "")
+
 UDP_PROBE_PAYLOAD = b"\x01\x00\x00\x00"
 UDP_LISTEN_PORT = 10001
 
@@ -214,9 +238,11 @@ def parse_arp_table(subnet: str) -> list[tuple[str, str]]:
 
 async def ping_host(ip: str, timeout_s: float = 0.5) -> bool:
     """Send one ICMP echo to ip; return True if a reply was received."""
-    args = ["ping", "-c", "1", "-W", str(int(timeout_s * 1000))]
     if platform.system() == "Darwin":
-        args = ["ping", "-c", "1", "-t", str(int(timeout_s))]
+        args = ["ping", "-c", "1", "-t", str(max(1, int(timeout_s)))]
+    else:
+        # iputils-ping (Linux): -w is overall deadline in seconds, not milliseconds
+        args = ["ping", "-c", "1", "-w", str(max(timeout_s, 0.1))]
     proc = await asyncio.create_subprocess_exec(
         *args, ip,
         stdout=asyncio.subprocess.DEVNULL,
@@ -642,8 +668,8 @@ def build_devices_json_draft(modules: list[DiscoveredModule]) -> dict[str, Any]:
     return {
         "modules": [
             {
-                "name": m.model or m.ip,
-                "model": m.model,
+                "name": resolve_module_model(m.model, m.device_type) or m.ip,
+                "model": resolve_module_model(m.model, m.device_type),
                 "ip": m.ip,
                 "type": m.device_type,
                 "firmware": m.firmware,

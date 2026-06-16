@@ -22,6 +22,7 @@ from gateway.discovery import (
     parse_backup_config_body,
     parse_get_sysset_body,
     parse_udp10001_reply,
+    resolve_module_model,
     sweep_arp_range,
     sweep_http_range,
 )
@@ -571,13 +572,37 @@ def test_build_devices_json_draft_has_model_and_type():
 
 
 def test_build_devices_json_draft_name_falls_back_to_ip():
-    """When model is empty, name defaults to the module IP."""
+    """When model is empty, name falls back to the canonical SKU for the type."""
     modules = [
         DiscoveredModule(ip="10.10.1.30", device_type="relay", firmware="",
                          mac="00:24:77:52:ac:be", model=""),
     ]
     draft = build_devices_json_draft(modules)
-    assert draft["modules"][0]["name"] == "10.10.1.30"
+    entry = draft["modules"][0]
+    assert entry["name"] == "IP0200PoE"
+    assert entry["model"] == "IP0200PoE"
+
+
+def test_build_devices_json_draft_input_module_backfills_ip1100():
+    """Input module with no model resolves to IP1100PoE (regression: IP was leaking)."""
+    modules = [
+        DiscoveredModule(ip="10.10.1.50", device_type="input", firmware="",
+                         mac="00:24:77:52:ad:aa", model=""),
+    ]
+    draft = build_devices_json_draft(modules)
+    entry = draft["modules"][0]
+    assert entry["name"] == "IP1100PoE"
+    assert entry["model"] == "IP1100PoE"
+
+
+def test_resolve_module_model_uses_canonical_sku():
+    assert resolve_module_model("", "relay") == "IP0200PoE"
+    assert resolve_module_model("", "dimmer") == "IP0300PoE"
+    assert resolve_module_model("", "input") == "IP1100PoE"
+    # Preserves factory product label (e.g. legacy IP200PoE).
+    assert resolve_module_model("IP200PoE", "relay") == "IP200PoE"
+    # Empty model and unknown type: no fallback available.
+    assert resolve_module_model("", "unknown") == ""
 
 
 # sweep_arp_range — mocked ping + arp

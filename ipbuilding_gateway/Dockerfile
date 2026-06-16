@@ -3,6 +3,11 @@ FROM python:3.11-slim
 # Multi-arch support for HA Green (aarch64) and generic OVA (amd64)
 WORKDIR /app
 
+# ARP-first discovery runs `ping` during POST /api/v1/discover and init sweeps
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends iputils-ping \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install only what the gateway needs at runtime
 COPY requirements-gateway.txt .
 RUN pip install --no-cache-dir -r requirements-gateway.txt

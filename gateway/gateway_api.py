@@ -28,6 +28,7 @@ from aiohttp.web import WebSocketResponse
 
 from gateway.config import GatewayConfig
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
+from gateway.discovery import resolve_module_model
 from gateway.health import GatewayHealthMonitor
 from gateway.installation import InstallationConfig
 from gateway.module_metadata import ModuleMetadataCache, normalize_button_hardware_id
@@ -501,7 +502,7 @@ class GatewayAPI:
                 "id": mc.mac,
                 "ip": mc.ip,
                 "name": mc.name,
-                "model": mc.model,
+                "model": resolve_module_model(mc.model, mc.type.value),
                 "type": mc.type.value,
                 "firmware": mc.firmware,
                 "mac": mc.mac,

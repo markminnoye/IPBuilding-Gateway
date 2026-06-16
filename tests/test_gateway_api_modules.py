@@ -61,6 +61,23 @@ class TestBuildModuleList:
         # No cache -- empty network
         assert m["network"] == {}
 
+    def test_empty_model_resolves_to_canonical_sku(self) -> None:
+        """An empty model in devices.json is enriched to the type's canonical SKU."""
+        inst = _make_installation([
+            {
+                "name": "10.10.1.50", "ip": "10.10.1.50", "type": "input",
+                "mac": "00:24:77:52:ad:aa", "model": "",
+                "firmware": "", "channels": [],
+            }
+        ])
+        api = _make_api(inst)
+        m = api._build_module_list()[0]
+        assert m["model"] == "IP1100PoE"
+        # Name comes from devices.json (gateway does not rewrite it here;
+        # the companion treats IP placeholder names as auto-discovery
+        # defaults and falls back to the type label).
+        assert m["name"] == "10.10.1.50"
+
     def test_cached_network_fields_merged(self) -> None:
         inst = _make_installation([
             {
