@@ -313,6 +313,80 @@ class TestDiscoveryOrchestratorForcedDiscovery:
         assert loaded["modules"][0]["active"] is False
 
 
+class TestDiscoveryOrchestratorInitSweep:
+    """Regression: init-sweep must not reference ArpMonitor._state on the orchestrator."""
+
+    @pytest.mark.asyncio
+    async def test_run_init_sweep_writes_modules(self, tmp_path: Path) -> None:
+        devices_file = tmp_path / "devices.json"
+
+        discovered = [
+            MagicMock(
+                ip="10.10.1.30",
+                mac="00:24:77:52:ac:be",
+                device_type="relay",
+                firmware="5.1",
+                model="IP200PoE",
+                channels=[],
+            )
+        ]
+
+        broadcast = MagicMock()
+        orch = DiscoveryOrchestrator(
+            config=DiscoveryConfig(),
+            devices_file=str(devices_file),
+            broadcast=broadcast,
+            installation=None,
+        )
+        assert not hasattr(orch, "_state")
+
+        with patch("gateway.auto_discovery.discover_modules", return_value=discovered):
+            await orch._run_init_sweep()
+
+        loaded = json.loads(devices_file.read_text(encoding="utf-8"))
+        assert len(loaded["modules"]) == 1
+        assert loaded["modules"][0]["mac"] == "00:24:77:52:ac:be"
+        assert loaded["modules"][0]["active"] is False
+        broadcast.assert_called_once()
+        assert broadcast.call_args[0][0]["type"] == "device_added"
+
+    @pytest.mark.asyncio
+    async def test_start_runs_init_sweep_when_auto_discover_and_empty_file(
+        self, tmp_path: Path
+    ) -> None:
+        devices_file = tmp_path / "devices.json"
+        devices_file.write_text('{"modules":[]}', encoding="utf-8")
+
+        discovered = [
+            MagicMock(
+                ip="10.10.1.30",
+                mac="00:24:77:52:ac:be",
+                device_type="relay",
+                firmware="5.1",
+                model="IP200PoE",
+                channels=[],
+            )
+        ]
+
+        cfg = DiscoveryConfig(
+            auto_discover_on_start=True,
+            passive_arp_monitor=False,
+        )
+        orch = DiscoveryOrchestrator(
+            config=cfg,
+            devices_file=str(devices_file),
+            broadcast=MagicMock(),
+            installation=None,
+        )
+
+        with patch("gateway.auto_discovery.discover_modules", return_value=discovered):
+            await orch.start()
+
+        loaded = json.loads(devices_file.read_text(encoding="utf-8"))
+        assert len(loaded["modules"]) == 1
+        await orch.stop()
+
+
 class TestDiscoveryOrchestratorStartStop:
     @pytest.mark.asyncio
     async def test_start_creates_arp_monitor_when_enabled(self):
