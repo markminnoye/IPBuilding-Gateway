@@ -263,7 +263,7 @@ Dezelfde **HTTP/1.0**-stijl als andere controllers: homepage + `api.html`. Geobs
 | `id`             | String-ID van het drukknop-/interface-apparaat (hex-achtig)                                                                                                 |
 | `descr`          | Omschrijving                                                                                                                                                |
 | `gr`             | Groepnaam                                                                                                                                                   |
-| `func1`, `func2` | Objecten met doel-output: `ip` (laatste octet van controller-IP, bv. **30** = `10.10.1.30`, **40** = `10.10.1.40`), `ch` (kanaalindex), `outType`, `action` |
+| `func1`, `func2` | Objecten met doel-output: `ip` (laatste octet van controller-IP, bv. **30** = `10.10.1.30`, **40** = `10.10.1.40`), `ch` (kanaalindex), `outType`, `action`. **`func1` = directe actie bij indrukken; `func2` = tweede functie / long press** (drempel in seconden) — volledig actiemodel (press/long press/release + dim-transitie + e-mail) in §12.7 |
 
 
 **Overige `api.html`-methodes (GET, selectie):**
@@ -978,6 +978,51 @@ Autonomietabel bevat per koppeling: drukknop-ID, type (Relais/Dimmer), doelmodul
 
 Remote toegang: **Radmin Server** op centrale, poort **4899**.
 
+### 12.7 Drukknop-actiemodel: indrukken / ingedrukt houden (long press) / loslaten
+
+> **Kernbevinding (operator-bevestigd, 2026-06-16):** de **long press** is géén apart veldbus-event. De IP1100PoE stuurt op de veldbus enkel **press** (`01`) en **release** (`00`) randen (`B-…E`, Sprint 5 bevestigd — §2C, [completion](evidence/2026-05-22_sprint5_input_physical_completion.md)). De **IPBox-logicalaag derives** "kort vs lang" door de **duur tussen press en release** te meten en te vergelijken met een per-knop ingestelde **drempel in seconden**. Dit beantwoordt RE-vraag uit gateway-issue [#10](https://github.com/markminnoye/IPBuilding-Gateway/issues/10) (stap 2): *"derived by the hub from press→release duration (timing threshold)"*.
+
+In de IPBox WebConfig/service-software is per drukknop het volgende actiemodel instelbaar. Dit is de **referentie** voor wat een gebruiker vandaag van de IPBox verwacht; in onze oplossing hoort deze logica in **Home Assistant** (zie §Implicatie hieronder), niet in de gateway.
+
+**Acties bij het indrukken van de drukknop** (op de `press`-rand)
+
+- **Eerste functie** (directe actie bij indrukken):
+  - **Actief** (bool)
+  - **Doel** — in IPBuilding via ruimte → device; in onze oplossing een willekeurige entity/target
+  - **Actie** — `aan` / `uit` / `toggle`; bij een dimmer-doel ook **dimmen** met **Geleidelijke overgang 1 ms – 250 ms**
+  - **Aantal minuten actie aanhouden** (auto-off timer; default *nvt*)
+- **Tweede functie** (= **long press** / ingedrukt houden):
+  - **Actief** (bool)
+  - **Aantal seconden ingedrukt** — drempel: **0,5 · 1 · 1,5 · 2 · 2,5 · 3 · 4 · 5** seconden
+  - **Doel**
+  - **Actie** — `aan` / `uit` / `toggle`; bij dimmer ook **dimmen** + **Geleidelijke overgang 1 ms – 250 ms**
+  - **Aantal minuten actie aanhouden** (default *nvt*)
+
+**Acties bij het loslaten van de drukknop** (op de `release`-rand)
+
+- **Actief** (bool)
+- **Doel**
+- **Actie** — `aan` / `uit` / `toggle`; bij dimmer ook **dimmen** + **Geleidelijke overgang 1 ms – 250 ms**
+- **Aantal minuten actie aanhouden** (default *nvt*)
+
+**E-mail**
+
+- `geen email` **of** een te kiezen **e-mailgroep** (notificatie bij de drukknopactie).
+
+**Afleiding kort vs lang (zoals IPBox het doet):**
+
+1. `press` (`01`) → start timer; voer eventueel **Eerste functie** uit (directe actie).
+2. Als `release` (`00`) komt **vóór** de drempel `aantal seconden ingedrukt` → het was een **korte druk** (Eerste functie / release-actie).
+3. Als de knop langer ingedrukt blijft dan de drempel → **Tweede functie** (long press) vuurt.
+4. `release` → voer eventueel de **release-actie** uit.
+
+**Implicatie voor onze oplossing (gateway + HA):**
+
+- **Geen extra veldbus-RE nodig** voor long-press *detectie*: de wire levert al press/release; de timing-afleiding is een softwarekwestie.
+- **Detectie** (press→release-duur → `press` / `long_press` / `release`) hoort in de **gateway** of in **HA**; de gateway forwardt deze acties northbound op WS `button_event` (`docs/api/websocket.md`).
+- **Actie-koppeling** (knop → doel/dimwaarde/transitie/auto-off/e-mail) hoort in **Home Assistant** (automations/scenes), conform `ARCHITECTURE.md` — **niet** in de gateway als tweede project-DB.
+- Te beslissen met een agent (later): drempel/dim-transitie/auto-off als gateway-config vs. volledig in HA; en of we de IPBox-velden (`func1`/`func2`, dim-transitie, hold-minuten) bij migratie willen importeren.
+
 ---
 
 ## 11. OPENSTAANDE VRAGEN
@@ -997,6 +1042,7 @@ Remote toegang: **Radmin Server** op centrale, poort **4899**.
 | 10  | Maximal aantal devices per controller?                                    | 🟢 Laag                                                           |
 | 11  | Is wire-level protocol op IP040x↔IP1100 bus nodig (naast Ethernetlaag)?   | 🟡 Middel — aparte scope, niet in standaard LAN-pcap              |
 | 12  | Hoe definieert IPBox de actie na `B-…E` (project vs module `func1`)?       | 🟢 Laag voor product — wire + architectuur gedocumenteerd; **eigen gateway:** events naar HA, geen IPBox-project-DB — [completion § Architectuurdoel](2026-05-22_sprint5_input_physical_completion.md#architectuurdoel) |
+| 13  | Long press: apart veldbus-event of door hub afgeleid uit press→release-duur? | — *(opgelost 2026-06-16: hub-afgeleid uit timing; geen extra veldbus-RE nodig — zie §12.7 + gateway-issue [#10](https://github.com/markminnoye/IPBuilding-Gateway/issues/10))* |
 
 
 ---
