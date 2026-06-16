@@ -238,7 +238,7 @@ class TestBuildDeviceList:
         assert btn["module_ip"] == "10.10.1.50"
         assert btn["name"] == "Badkamer knop"
         assert btn["room"] == "1e verdieping"
-        assert btn["active"] is True
+        assert btn["active"] is False
 
     def test_input_module_without_cached_buttons_no_device_entries(self) -> None:
         inst = _make_installation([

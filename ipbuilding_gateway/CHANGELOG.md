@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are kept in lockstep with the `ipbuilding-gateway-ha` companion
 so an add-on + companion upgrade can be tracked as a single number.
 
+## [0.3.6] - 2026-06-16
+
+### Changed
+- **IP1100PoE-knoppen starten uitgeschakeld** in Home Assistant. Na discovery verschijnen ze onder niet-ingeschakelde entiteiten zodat je zelf kiest welke knoppen je activeert.
+
 ## [0.3.5] - 2026-06-16
 
 ### Changed
