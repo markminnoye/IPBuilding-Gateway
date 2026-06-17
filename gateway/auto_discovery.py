@@ -579,6 +579,25 @@ class DiscoveryOrchestrator:
 
         log.info("DiscoveryOrchestrator: init-sweep wrote %d modules", len(modules))
 
+    def _needs_init_sweep(self) -> bool:
+        """Return True when an init-sweep should populate devices.json.
+
+        A missing devices.json (fresh add-on install) always triggers a sweep
+        so the northbound API exposes modules/channels to the companion. The
+        ``auto_discover_on_start`` toggle only gates re-sweeps when the file
+        already exists but contains no modules (operator-managed empty file).
+        """
+        if self._installation is not None and self._installation.modules:
+            return False
+
+        if not os.path.exists(self._devices_file):
+            return True
+
+        if self._config.auto_discover_on_start:
+            return True
+
+        return False
+
     async def start(self) -> None:
         """Start the orchestrator: init-sweep (if needed) + passive ARP monitor.
 
@@ -586,23 +605,8 @@ class DiscoveryOrchestrator:
         after any init-sweep so the gateway is in sync with the field bus
         immediately on startup (preserves existing names/rooms/active flags).
         """
-        if self._config.auto_discover_on_start:
-            needs_init = True
-            if self._installation is not None and self._installation.modules:
-                needs_init = False
-            else:
-                # Check if devices.json exists and has modules
-                if os.path.exists(self._devices_file):
-                    try:
-                        with open(self._devices_file, encoding="utf-8") as fh:
-                            data = json.load(fh)
-                        if data.get("modules"):
-                            needs_init = False
-                    except Exception:
-                        pass
-
-            if needs_init:
-                await self._run_init_sweep()
+        if self._needs_init_sweep():
+            await self._run_init_sweep()
 
         if self._config.force_discover_on_start:
             try:

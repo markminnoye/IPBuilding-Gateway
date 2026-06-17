@@ -103,7 +103,7 @@ Bekijk logs voor de opstartstatus:
 | `discovery_subnet` | `10.10.1` | Subnet voor ARP-sweep en passieve monitor |
 | `discovery_range_start` | `0` | Start van IP-range voor init-sweep (0 = volledige /24) |
 | `discovery_range_end` | `254` | Eind van IP-range voor init-sweep |
-| `auto_discover_on_start` | `false` | Init-sweep draaien bij eerste start (vult lege `devices.json`) |
+| `auto_discover_on_start` | `false` | Re-sweep van een leeg `devices.json` forceren. Ontbrekend `devices.json` triggert altijd een init-sweep, ook als deze optie uit staat. |
 | `passive_arp_monitor` | `true` | Passieve ARP-monitor inschakelen (30 s poll interval) |
 | `arp_poll_interval_s` | `30.0` | Interval voor passieve ARP-polling in seconden |
 | `http_timeout_s` | `2.0` | Timeout voor HTTP getSysSet calls tijdens discovery |

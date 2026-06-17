@@ -19,6 +19,7 @@ from gateway.auto_discovery import (
     DiscoveryOrchestrator,
     DiscoveryState,
 )
+from gateway.installation import InstallationConfig
 
 
 # ---------------------------------------------------------------------------
@@ -384,6 +385,66 @@ class TestDiscoveryOrchestratorInitSweep:
 
         loaded = json.loads(devices_file.read_text(encoding="utf-8"))
         assert len(loaded["modules"]) == 1
+        await orch.stop()
+
+    @pytest.mark.asyncio
+    async def test_start_runs_init_sweep_when_devices_file_missing(
+        self, tmp_path: Path
+    ) -> None:
+        """Fresh add-on install: no devices.json must sweep even when auto_discover is off."""
+        devices_file = tmp_path / "devices.json"
+
+        discovered = [
+            MagicMock(
+                ip="10.10.1.30",
+                mac="00:24:77:52:ac:be",
+                device_type="relay",
+                firmware="5.1",
+                model="IP200PoE",
+                channels=[],
+            )
+        ]
+
+        cfg = DiscoveryConfig(
+            auto_discover_on_start=False,
+            passive_arp_monitor=False,
+        )
+        orch = DiscoveryOrchestrator(
+            config=cfg,
+            devices_file=str(devices_file),
+            broadcast=MagicMock(),
+            installation=None,
+        )
+
+        with patch("gateway.auto_discovery.discover_modules", return_value=discovered):
+            await orch.start()
+
+        loaded = json.loads(devices_file.read_text(encoding="utf-8"))
+        assert len(loaded["modules"]) == 1
+        await orch.stop()
+
+    @pytest.mark.asyncio
+    async def test_start_skips_init_sweep_for_empty_file_when_auto_discover_off(
+        self, tmp_path: Path
+    ) -> None:
+        devices_file = tmp_path / "devices.json"
+        devices_file.write_text('{"modules":[]}', encoding="utf-8")
+
+        cfg = DiscoveryConfig(
+            auto_discover_on_start=False,
+            passive_arp_monitor=False,
+        )
+        orch = DiscoveryOrchestrator(
+            config=cfg,
+            devices_file=str(devices_file),
+            broadcast=MagicMock(),
+            installation=InstallationConfig(modules=[]),
+        )
+
+        with patch("gateway.auto_discovery.discover_modules") as discover:
+            await orch.start()
+            discover.assert_not_called()
+
         await orch.stop()
 
 

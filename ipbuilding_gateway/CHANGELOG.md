@@ -22,6 +22,11 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [0.4.1] - 2026-06-18
+
+### Fixed
+- **Fresh add-on installs now auto-populate `devices.json` on first start**, even when `auto_discover_on_start` is off. Modules and channels appear in the companion without a manual discovery sweep.
+
 ## [0.4.0] - 2026-06-17
 
 ### Added
