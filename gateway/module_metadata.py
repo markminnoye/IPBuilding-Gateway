@@ -238,6 +238,72 @@ async def _fetch_buttons(
     return None
 
 
+# ---------------------------------------------------------------------------
+# ButtonConfig extraction
+# ---------------------------------------------------------------------------
+
+
+def extract_button_config(
+    module_id: str,
+    button_json: dict[str, Any],
+    default_threshold_s: float | None = None,
+):
+    """Convert a raw getButtons entry into a :class:`ButtonConfig`.
+
+    The hold threshold is seeded from ``func2.holdSeconds`` when present —
+    this is the same drempelwaarde the IPBox hanteert for its long_press
+    detection (operator-bevestigd 2026-06-16, IPBUILDING_KNOWLEDGE.md §12.7).
+    """
+    from gateway.installation import ButtonConfig, DEFAULT_BUTTON_HOLD_THRESHOLD_S
+
+    raw_id = button_json.get("id")
+    if not raw_id:
+        raise ValueError(f"button entry has no 'id': {button_json!r}")
+    btn_id = normalize_button_hardware_id(str(raw_id))
+
+    func2 = button_json.get("func2") or {}
+    hold = func2.get("holdSeconds")
+    try:
+        hold_s = float(hold) if hold is not None else (
+            default_threshold_s if default_threshold_s is not None
+            else DEFAULT_BUTTON_HOLD_THRESHOLD_S
+        )
+    except (TypeError, ValueError):
+        hold_s = (
+            default_threshold_s if default_threshold_s is not None
+            else DEFAULT_BUTTON_HOLD_THRESHOLD_S
+        )
+
+    return ButtonConfig(
+        id=btn_id,
+        module_id=module_id,
+        name=button_json.get("descr", "") or button_json.get("name", ""),
+        room=button_json.get("gr", "") or button_json.get("room", ""),
+        active=True,
+        hold_threshold_s=hold_s,
+    )
+
+
+def extract_buttons_from_getbuttons(
+    module_id: str, buttons_json: list[dict[str, Any]]
+) -> list:
+    """Apply :func:`extract_button_config` to a full getButtons list.
+
+    Skips entries that fail to parse (logged at WARNING); the caller still
+    gets a partial list back. Used by the runtime auto-discovery to seed
+    missing ButtonConfig entries into ``devices.json`` (Fase 8 hook).
+    """
+    from gateway.installation import ButtonConfig
+
+    out: list[ButtonConfig] = []
+    for entry in buttons_json or []:
+        try:
+            out.append(extract_button_config(module_id, entry))
+        except ValueError as exc:
+            log.warning("Skipping getButtons entry: %s", exc)
+    return out
+
+
 def _iso_now() -> str:
     from datetime import datetime, timezone
 
