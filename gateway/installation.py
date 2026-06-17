@@ -117,6 +117,56 @@ class ChannelConfig:
         )
 
 
+# Default hold threshold (seconds) when no per-button override is present.
+# Matches the IPBox default in `getButtons` (which the IPBox software maps
+# to 0.5/1/1.5/2/2.5/3/4/5s — 1.5s is the typical middle).
+DEFAULT_BUTTON_HOLD_THRESHOLD_S = 1.5
+
+
+@dataclass
+class ButtonConfig:
+    """A single physical button on an IP1100PoE input module.
+
+    Buttons are not channels — they have no entity_id of the form
+    `{module_ip}-{ch}`. They are event sources on a module. The gateway
+    uses :attr:`hold_threshold_s` to classify press→release timing into
+    ``press`` vs ``long_press`` events; the value is normally seeded from
+    ``getButtons.func2.holdSeconds`` on the input module (operator-bevestigd
+    2026-06-16: dit is dezelfde drempel die IPBox hanteert).
+    """
+
+    id: str  # hardware hex, e.g. "2f8185190000df" (14 lowercase hex chars)
+    module_id: str = ""  # parent module MAC (stable)
+    name: str = ""  # operator-friendly description, default from getButtons.descr
+    room: str = ""  # from getButtons.gr
+    active: bool = True
+    hold_threshold_s: float = DEFAULT_BUTTON_HOLD_THRESHOLD_S
+
+    def to_dict(self) -> dict:
+        """Serialize to dict for devices.json."""
+        return {
+            "id": self.id,
+            "module_id": self.module_id,
+            "name": self.name,
+            "room": self.room,
+            "active": self.active,
+            "hold_threshold_s": self.hold_threshold_s,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ButtonConfig":
+        return cls(
+            id=data["id"],
+            module_id=data.get("module_id", ""),
+            name=data.get("name", ""),
+            room=data.get("room", ""),
+            active=data.get("active", True),
+            hold_threshold_s=float(
+                data.get("hold_threshold_s", DEFAULT_BUTTON_HOLD_THRESHOLD_S)
+            ),
+        )
+
+
 @dataclass
 class ModuleConfig:
     """A single field module (relay/dimmer/input)."""
@@ -173,6 +223,9 @@ class InstallationConfig:
     """Loaded and validated installation configuration."""
 
     modules: list[ModuleConfig] = field(default_factory=list)
+    # Physical buttons (IP1100PoE). Authoritative for hold_threshold_s and
+    # event routing. Persisted in devices.json under top-level "buttons" key.
+    buttons: list[ButtonConfig] = field(default_factory=list)
 
     # Derived indices — keyed by ipbox_id (IPBox component ID)
     _ipbox_id_to_entry: dict[int, tuple[DeviceType, str, int]] = field(default_factory=dict)
@@ -184,6 +237,8 @@ class InstallationConfig:
     _device_id_to_entry: dict[str, tuple[DeviceType, str, int]] = field(default_factory=dict)
     # (DeviceType, module_ip, channel) -> device_id
     _entry_to_device_id: dict[tuple[DeviceType, str, int], str] = field(default_factory=dict)
+    # button hardware id (lowercase) -> ButtonConfig
+    _buttons_by_id: dict[str, ButtonConfig] = field(default_factory=dict)
 
     @classmethod
     def load(
@@ -216,11 +271,13 @@ class InstallationConfig:
         seen_ipbox_ids: set[int] = set()
         seen_device_ids: set[str] = set()
         modules: list[ModuleConfig] = []
+        buttons: list[ButtonConfig] = []
         ipbox_id_to_entry: dict[int, tuple[DeviceType, str, int]] = {}
         device_id_to_entry: dict[str, tuple[DeviceType, str, int]] = {}
         entry_to_device_id: dict[tuple[DeviceType, str, int], str] = {}
         modules_by_ip: dict[str, ModuleConfig] = {}
         modules_by_mac: dict[str, ModuleConfig] = {}
+        buttons_by_id: dict[str, ButtonConfig] = {}
 
         for mod in raw.get("modules", []):
             mod_type_str = mod.get("type", "")
@@ -307,12 +364,29 @@ class InstallationConfig:
             if mac_normalised:
                 modules_by_mac[mac_normalised] = mc
 
-        inst = cls(modules=modules)
+        # Parse top-level "buttons" list. Authoritative for hold_threshold_s
+        # and event routing. Module may not have an HTTP cache yet — the
+        # gateway seeds / merges these from getButtons at runtime.
+        for btn_entry in raw.get("buttons", []):
+            btn_id = btn_entry.get("id")
+            if not btn_id:
+                log.warning("Skipping button entry without id: %r", btn_entry)
+                continue
+            if btn_id in buttons_by_id:
+                raise InstallationError(
+                    f"Duplicate button id {btn_id!r}"
+                )
+            btn = ButtonConfig.from_dict(btn_entry)
+            buttons.append(btn)
+            buttons_by_id[btn_id] = btn
+
+        inst = cls(modules=modules, buttons=buttons)
         inst._ipbox_id_to_entry = ipbox_id_to_entry
         inst._modules_by_ip = modules_by_ip
         inst._modules_by_mac = modules_by_mac
         inst._device_id_to_entry = device_id_to_entry
         inst._entry_to_device_id = entry_to_device_id
+        inst._buttons_by_id = buttons_by_id
         return inst
 
     def device_id_to_entry(
@@ -365,3 +439,21 @@ class InstallationConfig:
     def all_ipbox_ids(self) -> list[int]:
         """All known legacy (IPBox component) IDs in installation order."""
         return list(self._ipbox_id_to_entry.keys())
+
+    def button_by_id(self, button_id: str) -> ButtonConfig | None:
+        """Look up a button by hardware id (case-insensitive). Returns None if unknown."""
+        if not button_id:
+            return None
+        return self._buttons_by_id.get(button_id.lower())
+
+    def button_threshold(self, button_id: str) -> float:
+        """Return the hold threshold (seconds) for a button.
+
+        Falls back to :data:`DEFAULT_BUTTON_HOLD_THRESHOLD_S` when the
+        button is not (yet) in the installation config. The timing
+        detector in gateway_api.py uses this when no override is present.
+        """
+        btn = self.button_by_id(button_id)
+        if btn is None:
+            return DEFAULT_BUTTON_HOLD_THRESHOLD_S
+        return btn.hold_threshold_s

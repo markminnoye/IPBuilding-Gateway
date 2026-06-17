@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from gateway import gateway_api
 from gateway.device_registry import DeviceRegistry, DeviceType
 from gateway.installation import InstallationConfig
 from gateway.module_metadata import ModuleMetadata, ModuleMetadataCache
@@ -485,11 +486,24 @@ class TestDiscoveryEndpoint:
             {"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": []}
         ])
         api = _make_api(inst)
-        # No orchestrator set
+        # No orchestrator set — handler raises ApiError which the
+        # api_error_middleware translates to a typed 503 response.
         request = MagicMock()
         request.match_info = {}
-        response = await api._post_discover(request)
+        with pytest.raises(gateway_api.ApiError) as exc_info:
+            await api._post_discover(request)
+        assert exc_info.value.status == 503
+        assert exc_info.value.code == "orchestrator_unavailable"
+
+        # Verify middleware produces the expected JSON shape.
+        err = exc_info.value
+        response = gateway_api._json_error(err)
         assert response.status == 503
+        body = json.loads(response.body)
+        assert body == {
+            "error": "orchestrator_unavailable",
+            "message": "Discovery orchestrator not available",
+        }
 
 
 class TestModulesRefreshBroadcast:

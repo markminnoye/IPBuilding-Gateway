@@ -21,6 +21,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
+from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from aiohttp import web
@@ -42,6 +44,55 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+@dataclass
+class _ButtonState:
+    """Per-button timing state for press → long_press classification.
+
+    The gateway only classifies the press→release interval. The IP1100PoE
+    wire only carries ``press`` (edge 0x01) and ``release`` (edge 0x00)
+    frames — long_press is derived locally from a per-button
+    ``hold_threshold_s`` (default 1.5s, seeded from
+    ``getButtons.func2.holdSeconds`` when present).
+    """
+
+    press_started_at: float | None = None
+    long_press_fired: bool = False
+    long_press_handle: asyncio.TimerHandle | None = None
+
+
+# ---------------------------------------------------------------------------
+# REST error model
+# ---------------------------------------------------------------------------
+
+
+class ApiError(Exception):
+    """Raised by REST handlers to return a typed error response.
+
+    The companion and any future clients should switch on ``status`` first
+    and the ``code`` field of the body. See plan §A.
+    """
+
+    def __init__(
+        self,
+        status: int,
+        code: str,
+        message: str = "",
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(message or code)
+        self.status = status
+        self.code = code
+        self.message = message or code
+        self.details = details or {}
+
+
+def _json_error(err: ApiError) -> web.Response:
+    body: dict[str, Any] = {"error": err.code, "message": err.message}
+    if err.details:
+        body["details"] = err.details
+    return web.json_response(body, status=err.status)
 
 
 def _resolve_entity_id(
@@ -102,6 +153,11 @@ class GatewayAPI:
         # Discovery orchestrator (set after construction via set_orchestrator)
         self._orchestrator: Any = None
         self._health_cb: Callable[[], None] | None = None
+        # Per-button timing state (key: hardware id lowercase). Tracks the
+        # press→release interval so we can emit long_press after the per-button
+        # hold_threshold_s elapses. Only classification lives here — direction
+        # and dim-loop logic belong in HA (see plan §6).
+        self._button_state: dict[str, _ButtonState] = {}
 
     # -------------------------------------------------------------------------
     # Lifecycle
@@ -109,7 +165,7 @@ class GatewayAPI:
 
     async def start(self) -> None:
         """Start the aiohttp API server and register registry callbacks."""
-        self._app = web.Application()
+        self._app = web.Application(middlewares=[self._api_error_middleware])
         self._app.router.add_get("/ws", self._ws_handler)
         self._app.router.add_get("/health", self._get_health)
         self._app.router.add_get("/api/v1/status", self._get_status)
@@ -188,6 +244,50 @@ class GatewayAPI:
             # GatewayHealthMonitor has no unregister; drop reference only.
             self._health_cb = None
         log.info("GatewayAPI stopped")
+
+    # -------------------------------------------------------------------------
+    # Middleware
+    # -------------------------------------------------------------------------
+
+    @web.middleware
+    async def _api_error_middleware(
+        self, request: web.Request, handler: Callable
+    ) -> web.StreamResponse:
+        """Translate ApiError raised in handlers into typed JSON responses.
+
+        Successful responses are wrapped to include ``schema_version: 2`` so
+        clients can detect the contract version on every reply.
+        """
+        try:
+            response = await handler(request)
+        except ApiError as exc:
+            return _json_error(exc)
+        except web.HTTPException:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            log.exception("Unhandled error in %s", request.path)
+            return web.json_response(
+                {
+                    "error": "internal",
+                    "message": str(exc) or "internal server error",
+                    "request_id": f"{time.monotonic_ns():x}",
+                },
+                status=500,
+            )
+
+        # Stamp schema_version on JSON responses (success path only).
+        if (
+            isinstance(response, web.Response)
+            and response.content_type == "application/json"
+        ):
+            try:
+                payload = json.loads(response.body)
+            except Exception:
+                return response
+            if isinstance(payload, dict) and "schema_version" not in payload:
+                payload["schema_version"] = 2
+                response = web.json_response(payload, status=response.status)
+        return response
 
     # -------------------------------------------------------------------------
     # WebSocket
@@ -280,7 +380,7 @@ class GatewayAPI:
     async def _get_devices(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices — return full device list as JSON."""
         device_list = self._build_device_list()
-        return web.json_response({"devices": device_list})
+        return web.json_response({"devices": device_list, "schema_version": 2})
 
     async def _get_device(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices/{device_id} — return single device."""
@@ -289,7 +389,7 @@ class GatewayAPI:
         for d in devices:
             if d["id"] == device_id:
                 return web.json_response(d)
-        return web.json_response({"error": "not found"}, status=404)
+        raise ApiError(404, "device_not_found", details={"device_id": device_id})
 
     async def _post_command(self, request: web.Request) -> web.Response:
         """POST /api/v1/devices/{device_id}/command — send a command."""
@@ -297,30 +397,37 @@ class GatewayAPI:
         try:
             body = await request.json()
         except Exception:
-            return web.json_response({"ok": False, "error": "invalid JSON"}, status=400)
+            raise ApiError(400, "invalid_json", "Body must be valid JSON")
 
         action = body.get("action")
         value = body.get("value")
         if not action:
-            return web.json_response(
-                {"ok": False, "error": "missing 'action'"}, status=400
-            )
+            raise ApiError(400, "missing_action", "Body must contain 'action'")
 
         ok, error = await self._execute_command(device_id, action, value)
         if ok:
-            return web.json_response({"ok": True})
-        else:
-            return web.json_response(
-                {"ok": False, "error": error or "command failed"}, status=422
-            )
+            return web.json_response({"ok": True, "schema_version": 2})
+        # Map internal error strings to typed codes so the client can act.
+        code = "command_failed"
+        status = 422
+        details: dict[str, Any] = {"device_id": device_id, "action": action}
+        if error and "unknown" in error:
+            code = "device_not_found"
+            status = 404
+        elif error == "channel inactive":
+            code = "channel_inactive"
+            status = 422
+        elif error and "unsupported" in error:
+            code = "unsupported_action"
+            status = 422
+            details["valid_actions"] = ["ON", "OFF", "PULSE", "TOGGLE", "DIM"]
+        raise ApiError(status, code, error or "command failed", details)
 
     async def _post_autonomy(self, request: web.Request) -> web.Response:
         """POST /api/v1/provision/autonomy — stub for EEPROM sync (Fase 8)."""
         # TODO(Fase 8): implement saveAutonomy → IP1100PoE HTTP API
         log.info("Autonomy provisioning called (stub — Fase 8)")
-        return web.json_response(
-            {"ok": False, "error": "not yet implemented"}, status=501
-        )
+        raise ApiError(501, "not_implemented", "Autonomy provisioning is not yet implemented")
 
     # -------------------------------------------------------------------------
     # Module resource (REST)
@@ -329,7 +436,7 @@ class GatewayAPI:
     async def _get_modules(self, request: web.Request) -> web.Response:
         """GET /api/v1/modules — return all modules with cached metadata."""
         module_list = self._build_module_list()
-        return web.json_response({"modules": module_list})
+        return web.json_response({"modules": module_list, "schema_version": 2})
 
     async def _get_module(self, request: web.Request) -> web.Response:
         """GET /api/v1/modules/{module_id} — single module by MAC."""
@@ -338,13 +445,13 @@ class GatewayAPI:
         for m in module_list:
             if m["id"] == module_id:
                 return web.json_response(m)
-        return web.json_response({"error": "not found"}, status=404)
+        raise ApiError(404, "module_not_found", details={"module_id": module_id})
 
     async def _post_modules_refresh(self, request: web.Request) -> web.Response:
         """POST /api/v1/modules/refresh — reload getSysSet/getButtons from all modules."""
         installation = self._cfg.installation
         if installation is None:
-            return web.json_response({"error": "no installation loaded"}, status=500)
+            raise ApiError(500, "no_installation", "No installation loaded")
         try:
             await self._meta_cache.refresh(
                 installation, timeout=self._cfg.metadata_timeout_s,
@@ -355,7 +462,7 @@ class GatewayAPI:
         # discovered input buttons appear in the companion without a reload.
         asyncio.create_task(self._broadcast(self._build_snapshot()))
         module_list = self._build_module_list()
-        return web.json_response({"modules": module_list})
+        return web.json_response({"modules": module_list, "schema_version": 2})
 
     async def _post_discover(self, request: web.Request) -> web.Response:
         """POST /api/v1/discover — run forced discovery (ARP-sweep + HTTP identify).
@@ -365,13 +472,13 @@ class GatewayAPI:
         existing modules.
         """
         if self._orchestrator is None:
-            return web.json_response({"ok": False, "error": "orchestrator not available"}, status=503)
+            raise ApiError(503, "orchestrator_unavailable", "Discovery orchestrator not available")
         try:
             result = await self._orchestrator.run_forced_discovery()
-            return web.json_response(result)
+            return web.json_response({**result, "schema_version": 2})
         except Exception as exc:
             log.exception("POST /api/v1/discover failed")
-            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+            raise ApiError(500, "discovery_failed", str(exc))
 
     # -------------------------------------------------------------------------
     # Command execution
@@ -454,12 +561,69 @@ class GatewayAPI:
             asyncio.create_task(self._broadcast(msg))
 
     def _on_button_event(self, key: DeviceKey, evt: Any) -> None:
+        """Classify a raw button event and broadcast press/long_press/release.
+
+        The wire only delivers ``press`` and ``release`` edges. We arm a
+        per-button timer on press; if the timer fires before the matching
+        release we emit ``long_press`` (the operator's hold threshold from
+        ``getButtons.func2.holdSeconds``). On release we cancel the timer
+        and emit ``release``.
+        """
+        id_hex = (evt.id_hex or "").lower()
+        action = (evt.action or "").lower()
+        if not id_hex or action not in ("press", "release"):
+            log.debug("Button event ignored: id=%s action=%s", id_hex, action)
+            return
+
+        state = self._button_state.setdefault(id_hex, _ButtonState())
+
+        if action == "press":
+            # Idempotent: a second press without a release resets the timer.
+            if state.long_press_handle is not None:
+                state.long_press_handle.cancel()
+                state.long_press_handle = None
+            state.press_started_at = time.monotonic()
+            state.long_press_fired = False
+            self._broadcast_button(id_hex, "press")
+            # Arm long_press timer.
+            threshold = self._button_threshold(id_hex)
+            loop = asyncio.get_event_loop()
+            state.long_press_handle = loop.call_later(
+                threshold, self._fire_long_press, id_hex
+            )
+        else:  # release
+            if state.long_press_handle is not None:
+                state.long_press_handle.cancel()
+                state.long_press_handle = None
+            state.press_started_at = None
+            state.long_press_fired = False
+            self._broadcast_button(id_hex, "release")
+
+    def _fire_long_press(self, id_hex: str) -> None:
+        """Timer callback: emit long_press if the button is still pressed."""
+        state = self._button_state.get(id_hex)
+        if state is None or state.press_started_at is None:
+            return  # already released; no-op
+        state.long_press_fired = True
+        state.long_press_handle = None
+        self._broadcast_button(id_hex, "long_press")
+
+    def _broadcast_button(self, id_hex: str, action: str) -> None:
+        """Send a button_event to all WS clients. Coroutine, scheduled."""
         msg = {
             "type": "button_event",
-            "id": evt.id_hex,
-            "action": evt.action,
+            "id": id_hex,
+            "action": action,
         }
         asyncio.create_task(self._broadcast(msg))
+
+    def _button_threshold(self, id_hex: str) -> float:
+        """Look up the hold threshold for a button id (seconds)."""
+        installation = self._cfg.installation
+        if installation is None:
+            from gateway.installation import DEFAULT_BUTTON_HOLD_THRESHOLD_S
+            return DEFAULT_BUTTON_HOLD_THRESHOLD_S
+        return installation.button_threshold(id_hex)
 
     def _on_health_changed(self) -> None:
         payload = self._health.snapshot(include_actions=False)
@@ -530,9 +694,17 @@ class GatewayAPI:
         return modules
 
     def _build_snapshot(self) -> dict[str, Any]:
-        """Build the WebSocket snapshot sent on connect."""
+        """Build the WebSocket snapshot sent on connect.
+
+        ``schema_version`` bumps when the wire contract changes in a
+        backward-compatible way. v1 has no field (implicit). v2 adds
+        ``action: "long_press"`` and ``action: "release"`` to button_event
+        frames. Older clients ignore unknown fields and unknown action
+        values, so v1 clients keep working against a v2 gateway.
+        """
         return {
             "type": "snapshot",
+            "schema_version": 2,
             "modules": self._build_module_list(),
             "devices": self._build_device_list(),
             "gateway_status": self._health.snapshot(include_actions=False),
