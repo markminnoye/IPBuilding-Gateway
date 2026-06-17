@@ -783,10 +783,12 @@ class GatewayAPI:
                                 "room": btn.get("gr") or btn.get("room") or "",
                                 "semantic_type": "button",
                                 "device_type": "input",
-                                # Disabled-by-default in HA (operator enables
-                                # from entity registry); mirrors inactive
-                                # relay channels and HA-IPBuilding onboarding.
-                                "active": False,
+                                # No 'active' key on purpose: absence is
+                                # treated as enabled-by-default by the
+                                # companion, so freshly installed buttons
+                                # are immediately usable. Operators can
+                                # still disable individual buttons from
+                                # the entity registry if they want.
                             }
                         )
 

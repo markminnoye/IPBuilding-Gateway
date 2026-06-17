@@ -22,6 +22,11 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [Unreleased]
+
+### Fixed
+- **IP1100PoE knoppen zijn nu meteen actief na installatie.** De gateway stuurde tot nu toe `active: false` mee voor input-buttons, waardoor ze na elke installatie of herstart handmatig ingeschakeld moesten worden via Instellingen → Apparaten & entiteiten. Knoppen waar je eerder bewust voor hebt gekozen om ze uit te laten, blijven uit.
+
 ## [0.3.8] - 2026-06-16
 
 ### Fixed

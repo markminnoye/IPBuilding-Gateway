@@ -239,7 +239,9 @@ class TestBuildDeviceList:
         assert btn["module_ip"] == "10.10.1.50"
         assert btn["name"] == "Badkamer knop"
         assert btn["room"] == "1e verdieping"
-        assert btn["active"] is False
+        # 'active' is intentionally omitted for input-buttons so the
+        # companion treats them as enabled-by-default.
+        assert "active" not in btn
 
     def test_input_module_without_cached_buttons_no_device_entries(self) -> None:
         inst = _make_installation([
@@ -250,6 +252,28 @@ class TestBuildDeviceList:
         ])
         api = _make_api(inst)  # no cache
         assert api._build_device_list() == []
+
+    def test_input_button_omits_active_field(self) -> None:
+        """Regression: input-buttons must NOT carry an 'active' key in
+        _build_device_list so the companion treats them as
+        enabled-by-default.
+        """
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa",
+                "channels": [],
+            }
+        ])
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:ad:aa"] = ModuleMetadata(
+            buttons=[
+                {"index": 0, "id": "2DCAFEBABE000001", "descr": "Test", "gr": "T"}
+            ]
+        )
+        api = _make_api(inst, cache=cache)
+        devices = api._build_device_list()
+        assert len(devices) == 1
+        assert "active" not in devices[0]
 
 
 class TestBuildSnapshot:
