@@ -644,6 +644,7 @@ class GatewayAPI:
 
     def _broadcast_button(self, id_hex: str, action: str) -> None:
         """Send a button_event to all WS clients. Coroutine, scheduled."""
+        log.info("BUTTON %s: %s", id_hex, action)
         msg = {
             "type": "button_event",
             "id": id_hex,

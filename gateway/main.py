@@ -49,9 +49,6 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
     registry.on_state_changed(
         lambda key, old, new: log.info("STATE  %s ch%d: %s → %s", key.module_ip, key.channel, old, new)
     )
-    registry.on_button_event(
-        lambda key, evt: log.info("EVENT  %s button %s: %s", key.module_ip, evt.id_hex, evt.action)
-    )
 
     bus = UDPBus(cfg)
     bus.add_listener(registry.handle_packet)
