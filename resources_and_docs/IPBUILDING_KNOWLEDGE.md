@@ -595,50 +595,50 @@ Browser → IPBox :30200 POST /general/Hardware/Relais/UpdateRelay
 
 ---
 
-## 6. PROTOCOL — UDP BINARY (CONTROLLER LEVEL)
+## 6. PROTOCOL — UDP VELDBUS (CONTROLLER LEVEL)
 
-> **Status:** Gedeeltelijk gedecodeeerd via pcap analyse. Commandopakketten nog ONBEKEND.
+> **Status:** Relay-, dimmer- en input-wire grotendeels gedecodeerd (2026-05-22). Canonical capability-overzicht: [fieldbus matrix](2026-05-17_ipbuilding_fieldbus_capability_matrix.md). Gateway-implementatie: `gateway/udp_bus.py`, `gateway/payloads/`.
 
 ### 6.1 Transport
 
 - **Protocol:** UDP
-- **Poort:** 1001 (op de controller)
-- **Richting polling:** IPBox → Controller (initiator)
-- **Poll interval:** ~2 seconden
+- **Poort:** 1001 (op elke veldmodule)
+- **Richting polling:** hub (IPBox of gateway) → module (initiator)
+- **Poll interval:** ~**2 seconden** (IPBox én open gateway; env `GATEWAY_POLL_INTERVAL`, default `2.0`)
 
-### 6.2 Poll pakket (IPBox → Controller)
+### 6.2 Hub-poll per moduletype
 
-**Lengte:** 5 bytes  
-**Payload (hex):** `49 30 30 30 30`  
-**Payload (ASCII):** `I0000`
+Elk moduletype heeft een **eigen** poll-payload. Niet alles wat “poll” heet levert kanaalstatus op.
 
-```
-Byte  Waarde  Betekenis
-0     0x49    'I' — identifier (IPBuilding?)
-1-4   0x30    '0' × 4 — device/channel identifier of fixed padding
-```
+| Module | Poll (hub → module) | Typisch antwoord (module → hub) | Levert kanaalstatus? |
+|--------|---------------------|----------------------------------|----------------------|
+| **Relay** (IP0200PoE) | `P0000` | `P000000000` (pulse-echo, 10 tekens) | **Nee** — keep-alive alleen |
+| **Dimmer** (IP0300PoE) | `I9900` | `I0154999` (idle heartbeat) | Deels — idle, geen volledige setpoint-tabel |
+| **Input** (IP1100PoE) | `I0000` | 14-byte idle `I\x02R…E` (of `B-…E` bij druk) | Nee (idle); events bij druk apart |
 
-### 6.3 Status response (Controller → IPBox)
+Open gateway: zelfde payloads in `gateway/udp_bus.py` (`_MODULE_POLL`). Veldtest: [2026-06-01_gateway_field_test.md](evidence/2026-06-01_gateway_field_test.md).
 
-**Lengte:** 13 bytes  
-**Payload (hex):** `49 02 52 05 02 04 00 00 00 00 00 45 00`
+### 6.3 Relay — poll vs kanaalstatus
 
-```
-Byte   Hex    ASCII  Vermoedelijke betekenis
-0      0x49   'I'    Identifier (IPBuilding)
-1      0x02   —      Pakket type of versie?
-2      0x52   'R'    'R' = Response?
-3      0x05   —      Onbekend
-4      0x02   —      Onbekend
-5      0x04   —      Status bitfield? (relay standen: 0x04 = relay 3 aan?)
-6-10   0x00   —      Nul bytes (padding of uitgebreide status)
-11     0x45   'E'    Onbekend ('E' = End? of waarde)
-12     0x00   —      Nul
-```
+**Poll `P0000`:** relay antwoordt met `P000000000` (~10–20 ms). Dit is een **pulse-echo**, geen status van kanaal 0 of andere kanalen. IPBox idle captures tonen herhaaldelijk hub→relay `P0000` (soms met `J`-envelope `pJP0000` op wire); nooit `I<ch>` als status-poll naar relay.
 
-**Opmerking:** Byte 5 (0x04) is mogelijk een bitfield voor 8 relay outputs. Bij 8-bit encoding: `0000 0100` = relay 3 actief.
+**`I<ch>` als status-poll:** **niet ondersteund**. Lab-test 2026-06-02: `I0000`/`I0010`/… → altijd `I000000000` (echo), nooit `I<CH><state>`. Evidence: [2026-06-02_relay_poll_i_ch_test.md](evidence/2026-06-02_relay_poll_i_ch_test.md), `scripts/test_relay_poll.py`.
 
-### 6.4 Commandopakketten (Relay → UDP/1001)
+**Kanaalstatus op veldbus:** `I<channel><state>` (10-byte ASCII), bv. `I00000100` = kanaal 0 **aan**, `I00000000` = **uit**. Komt **na commando** `S`/`C`/`T` (niet via periodieke poll). Sprint 1 + golden capture: relay→hub `I<CH><state>` zichtbaar bij goede mirror-POV.
+
+**Alternatief read-pad:** HTTP `GET /api.html?method=statuses` op de relaymodule (§2A) — JSON per kanaal `status: 0|1`, onafhankelijk van UDP-poll.
+
+### 6.4 Input — poll (`I0000`) en idle reply
+
+**Poll-payload:** 5 bytes ASCII `I0000` (`49 30 30 30 30`).
+
+**Idle-antwoord (geen druk):** 14 bytes, o.a. `49 02 52 … 45 00` — constant in rust. Zie [2026-05-17_ip1100_input_payload_decode.md](evidence/2026-05-17_ip1100_input_payload_decode.md).
+
+> **Historische misinterpretatie:** een oudere 13-byte capture (§6.7) werd ten onrechte als relay-bitfield gelezen. Die payload hoort bij de **inputmodule**, niet bij relay-status.
+
+**Button events:** fysieke druk → `B-…E` (13 bytes), rand `01` = press, `00` = release. Sprint 5: [2026-05-22_sprint5_input_physical_completion.md](evidence/2026-05-22_sprint5_input_physical_completion.md).
+
+### 6.5 Relay-commando's (UDP/1001)
 
 **Geverifieerd 2026-05-19 via directe UDP/1001 tests:**
 
@@ -657,15 +657,17 @@ De relay module op `10.10.1.30` verwacht **raw ASCII commando's** op UDP/1001 �
 
 **Opmerking:** eerdere documentatie hypothetiseerde een `[pfx]J` envelope — die blijkt **niet** te werken op UDP/1001. De module accepteert enkel raw ASCII.
 
-Dimmer- en input-veldbus: zie [2026-05-17_dimmer_I0154xxx_full_decode.md](evidence/2026-05-17_dimmer_I0154xxx_full_decode.md) en [2026-05-17_ip1100_input_payload_decode.md](evidence/2026-05-17_ip1100_input_payload_decode.md) (input events: [2026-05-22_sprint5_input_physical_completion.md](evidence/2026-05-22_sprint5_input_physical_completion.md)). Oudere poll-only pcap §6.5 hieronder blijft historische referentie.
+### 6.6 Dimmer- en overige veldbus-families
 
-### 6.5 Pcap bestand
+Dimmer commando's/replies (`S…1030`, `I0154<C><VV>`, …): [2026-05-17_dimmer_I0154xxx_full_decode.md](evidence/2026-05-17_dimmer_I0154xxx_full_decode.md). Input button-wire: [2026-05-22_sprint5_input_physical_completion.md](evidence/2026-05-22_sprint5_input_physical_completion.md). Parser-code: `gateway/payloads/`.
+
+### 6.7 Historische input-pcap (referentie)
 
 **Bestandsnaam:** `traffic between controller an IPbox.pcapng`  
 **Locatie:** `/IPBuilding/` map in Google Drive  
-**Inhoud:** Polling verkeer tussen IPBox (10.10.1.1) en **IP1100PoE** (`10.10.1.50`) op UDP/1001. Geen commandopakketten aanwezig in deze capture.
+**Inhoud:** Polling verkeer tussen IPBox (10.10.1.1) en **IP1100PoE** (`10.10.1.50`) op UDP/1001 — poll `I0000` + idle reply. Geen relay-commando's in deze capture. Zie §6.4 voor actuele interpretatie.
 
-### 6.6 Golden capture workflow (2026-05-03)
+### 6.8 Golden capture workflow (2026-05-03)
 
 Voor de commandodecode en fysieke schakelaars wordt nu een vaste captureworkflow gebruikt:
 
@@ -679,7 +681,7 @@ Belangrijke punten:
 - Gebruik bij voorkeur 1 mirror-POV; anders dual-capture met NTP-kloksync en manifestmarkers.
 - Maak per run een sessiemap met minimaal: `capture.pcapng`, `manifest.jsonl`, `inventory_pre.json`, `runbook.yaml`, `run.log`, `README.txt`.
 
-### 6.7 Fysieke schakelaars: scopegrens
+### 6.9 Fysieke schakelaars: scopegrens
 
 Voor reverse engineering van fysieke schakelaars zijn er twee lagen:
 
