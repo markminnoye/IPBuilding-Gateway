@@ -17,7 +17,7 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
 ```json
 {
   "status": "ok",
-  "version": "0.1.3"
+  "version": "0.4.0"
 }
 ```
 
@@ -33,7 +33,7 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
 ```json
 {
   "status": "degraded",
-  "version": "0.1.3",
+  "version": "0.4.0",
   "uptime_seconds": 8642,
   "updated_at": "2026-06-15T11:42:00Z",
   "subsystems": {

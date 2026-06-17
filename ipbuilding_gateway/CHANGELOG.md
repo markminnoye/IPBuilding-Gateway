@@ -22,10 +22,28 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
-## [Unreleased]
+## [0.4.0] - 2026-06-17
+
+### Added
+- **Long press op IP1100PoE-knoppen.** De gateway meet hoelang een fysieke drukknop ingedrukt blijft en stuurt via WebSocket een `long_press`-event zodra de drempel is bereikt (standaard 1,5 s — dezelfde waarde als IPBox `holdSeconds`). Korte drukken blijven `press`; loslaten stuurt `release`. **Vereist companion v0.4.0+** om long press in Home Assistant te gebruiken.
+- **Knop-metadata uit de module zelf.** Bij startup en discovery leest de gateway `getButtons` van IP1100PoE-modules en vult knopnaam, kamer en hold-drempel in. Die metadata verschijnt in `/api/v1/devices` en de WebSocket-snapshot.
+- **IPBox → Home Assistant importscript.** Nieuw hulpprogramma `scripts/import_ipbox_to_ha.py` (draait op je werkstation, niet in de add-on) leest IP1100PoE `getButtons` en optioneel IPBox REST `/comp/items`, en schrijft kant-en-klare `automations.yaml`, `helpers.yaml`, `import_report.md` en `checksum.txt` voor migratie van knop→actie-mapping inclusief dim-tijdens-hold. Idempotent: herhaald draaien met dezelfde bron wijzigt niets. Zie cutover-gids: `resources_and_docs/reference/2026-06-17_button_long_press_cutover.md`.
+- **API-schema versie 2.** Succesvolle REST-responses en de WebSocket `snapshot` bevatten `schema_version: 2`. Additief — oude clients negeren onbekende velden.
+
+### Changed
+- **REST-fouten gebruiken echte HTTP-statuscodes** (400, 404, 422, 500, …) met een gestructureerde body `{"error": "<code>", "message": "...", "details": {...}}`. Custom clients die altijd HTTP 200 verwachtten (oude `{ok: false}`-patroon) moeten worden aangepast. URL-paden zijn ongewijzigd.
+- **Versie in logs, Supervisor en `/api/v1/status`** komt rechtstreeks uit `ipbuilding_gateway/config.yaml`. Geen aparte build-stamp meer; wat je in Supervisor ziet is wat de gateway rapporteert.
 
 ### Fixed
-- **IP1100PoE knoppen zijn nu meteen actief na installatie.** De gateway stuurde tot nu toe `active: false` mee voor input-buttons, waardoor ze na elke installatie of herstart handmatig ingeschakeld moesten worden via Instellingen → Apparaten & entiteiten. Knoppen waar je eerder bewust voor hebt gekozen om ze uit te laten, blijven uit.
+- **IP1100PoE-knoppen zijn meteen actief na installatie.** Sinds 0.3.6 stuurde de gateway `active: false` mee voor input-buttons, waardoor ze handmatig ingeschakeld moesten worden. Dat veld ontbreekt nu bewust; de companion behandelt afwezigheid als ingeschakeld. Knoppen die je eerder bewust hebt uitgeschakeld blijven uit.
+- **Knop-ID matching is niet meer hoofdlettergevoelig.** Verschillende schrijfwijzen van dezelfde hardware-ID (bijv. uit veldbus vs. getButtons) leiden niet meer tot gemiste events.
+- **Button-timers overleven gateway-herstart betrouwbaarder** dankzij correcte asyncio-loop-afhandeling in de event-callback.
+
+### Notes
+- **Upgrade-pad IPBox → open gateway:** installeer add-on v0.4.0, companion v0.4.0+, discovery sweep, draai importscript, volg cutover-gids. Scenes en sferen blijven in Home Assistant — niet in de gateway.
+- **Companion is een aparte release** (repo `ipbuilding-gateway-ha`). Long press werkt pas wanneer beide kanten up-to-date zijn.
+
+## [Unreleased]
 
 ## [0.3.8] - 2026-06-16
 

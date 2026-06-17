@@ -116,7 +116,7 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
   ],
   "gateway_status": {
     "status": "ok",
-    "version": "0.1.3",
+    "version": "0.4.0",
     "uptime_seconds": 120,
     "updated_at": "2026-06-15T11:42:00Z",
     "subsystems": {
@@ -137,7 +137,7 @@ Pushed when aggregate `status` or the set of open `issues[].id` changes. Same fi
 {
   "type": "gateway_status",
   "status": "degraded",
-  "version": "0.1.3",
+  "version": "0.4.0",
   "uptime_seconds": 8642,
   "updated_at": "2026-06-15T11:42:00Z",
   "subsystems": {
