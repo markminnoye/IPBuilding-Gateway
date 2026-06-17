@@ -587,7 +587,7 @@ class GatewayAPI:
             self._broadcast_button(id_hex, "press")
             # Arm long_press timer.
             threshold = self._button_threshold(id_hex)
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             state.long_press_handle = loop.call_later(
                 threshold, self._fire_long_press, id_hex
             )
