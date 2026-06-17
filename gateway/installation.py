@@ -372,13 +372,14 @@ class InstallationConfig:
             if not btn_id:
                 log.warning("Skipping button entry without id: %r", btn_entry)
                 continue
-            if btn_id in buttons_by_id:
+            key = btn_id.lower()
+            if key in buttons_by_id:
                 raise InstallationError(
                     f"Duplicate button id {btn_id!r}"
                 )
             btn = ButtonConfig.from_dict(btn_entry)
             buttons.append(btn)
-            buttons_by_id[btn_id] = btn
+            buttons_by_id[key] = btn
 
         inst = cls(modules=modules, buttons=buttons)
         inst._ipbox_id_to_entry = ipbox_id_to_entry
