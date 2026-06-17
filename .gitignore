@@ -68,5 +68,8 @@ tests/fixtures/minimal_udp1001_session/udp_ipbox_export.txt
 *.egg-info/
 .pytest_cache/
 
+# Editor / IDE
+.vscode/
+
 # HA add-on build staging (populated by prepare-build.sh / CI)
 ipbuilding_gateway/gateway/
