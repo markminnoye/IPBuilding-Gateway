@@ -22,6 +22,14 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [Unreleased]
+
+### Changed
+- **Classified button events appear in the add-on log.** `press`, `long_press` and `release` are now logged at INFO level (`gateway.gateway_api BUTTON <id>: <action>`) on the moment they are broadcast over WebSocket. Wire-level edges stay visible via `gateway.device_registry`. No new REST endpoint, no wire change.
+
+### Added
+- **Debug toggle for the field-bus polling loop.** New endpoint `POST /api/v1/debug/fieldbus-polling` lets an operator stop the periodic UDP/1001 keep-alive polls at runtime (without restarting the bus). The poll loop keeps running on its normal cadence, so flipping the flag back on resumes polling almost immediately. The status payload now reports a top-level `fieldbus` block with the current `polling_enabled` and `poll_interval_s`, and the `fieldbus` subsystem goes to `degraded` while polling is off — surfaced as a `fieldbus.polling_disabled` warning in `/api/v1/status`. **Requires companion v0.4.2+** to expose the matching "Veldbus polling (debug)" switch in Home Assistant; older companions ignore the new endpoint.
+
 ## [0.4.1] - 2026-06-18
 
 ### Fixed
