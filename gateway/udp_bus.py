@@ -50,39 +50,6 @@ class UDPBus:
         self._listeners: list[ReplyCallback] = []
         self._poll_task: asyncio.Task[None] | None = None
         self.last_send_ts: float = 0.0  # monotonic ts of last send_command
-        # Runtime debug toggle: the HA companion exposes a "Veldbus polling
-        # (debug)" switch that flips this flag. When False, the poll loop
-        # skips the per-round UDP/1001 keep-alive polls but keeps sleeping,
-        # so flipping it back on resumes polling without restarting the bus.
-        # Note: input modules cache the last hub IP and may direct `B-…E`
-        # events elsewhere while polling is off — the companion surfaces a
-        # warning in the gateway health status.
-        self._polling_enabled: bool = True
-
-    @property
-    def polling_enabled(self) -> bool:
-        """Return whether the periodic UDP/1001 poll loop is currently active."""
-        return self._polling_enabled
-
-    def set_polling_enabled(self, enabled: bool) -> bool:
-        """Enable or disable the periodic poll loop at runtime.
-
-        Returns the new state. This is a debug operator action: on-demand
-        ``send_command`` calls (light/relay/dimmer control) keep working
-        regardless of this flag.
-        """
-        new_value = bool(enabled)
-        if new_value == self._polling_enabled:
-            return new_value
-        self._polling_enabled = new_value
-        if new_value:
-            log.info("Fieldbus polling ENABLED (interval=%.1fs)", self.config.poll_interval_s)
-        else:
-            log.warning(
-                "Fieldbus polling DISABLED (debug). Input events will likely go to IPBox; "
-                "relay/dimmer commands still work."
-            )
-        return new_value
 
     def add_listener(self, cb: ReplyCallback) -> None:
         """Register a callback invoked for every inbound packet."""
@@ -129,17 +96,10 @@ class UDPBus:
         log.info("UDPBus stopped")
 
     async def _poll_loop(self) -> None:
-        """Background task: poll all modules at fixed interval.
-
-        Honours ``self._polling_enabled``: when False, ``_poll_all_modules``
-        is skipped each round but the loop keeps sleeping on
-        ``poll_interval_s`` so flipping the flag back on resumes polling
-        almost immediately, without a bus restart.
-        """
+        """Background task: poll all modules at fixed interval."""
         try:
             while True:
-                if self._polling_enabled:
-                    await self._poll_all_modules()
+                await self._poll_all_modules()
                 await asyncio.sleep(self.config.poll_interval_s)
         except asyncio.CancelledError:
             log.info("Poll loop cancelled")

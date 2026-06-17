@@ -18,35 +18,62 @@ discovery:
   - ipbuilding_gateway_ha
 privileged: []
 options:
+  # --- Hub / field bus --------------------------------------------------
+  # IP waarop de gateway als hub op UDP/1001 fungeert (wordt IPBox vervanger).
   hub_ip: 10.10.1.1
+  # Seconden tussen opeenvolgende UDP/1001 polls per module (P0000, I9900, I0000).
   poll_interval: 2.0
-  api_port: 8080
-  rest_shim_enabled: false
-  log_level: info
+  # Pad naar installatie-specifieke data (modules, namen, kamers, active flags).
   devices_file: /config/devices.json
-  discovery_subnet: 10.10.1
-  discovery_range_start: 0
-  discovery_range_end: 254
-  auto_discover_on_start: false
-  passive_arp_monitor: true
-  arp_poll_interval_s: 30.0
+
+  # --- Network / API ----------------------------------------------------
+  # Poort voor WebSocket /ws en REST /api/v1/.
+  api_port: 8080
+  # Zet aan om de legacy IPBox REST :30200 shim te starten (alleen tijdens migratie).
+  rest_shim_enabled: false
+  # Per-request timeout (s) voor HTTP-calls naar modules (getSysSet, getButtons).
   http_timeout_s: 2.0
+  # Idle-tolerance (s) voor trage / zwaar belaste modules.
   metadata_timeout_s: 5.0
+
+  # --- Discovery --------------------------------------------------------
+  # /24 veldbus subnet waarop ARP/HTTP discovery draait.
+  discovery_subnet: 10.10.1
+  # Eerste host in scan-range (ARP + HTTP identify).
+  discovery_range_start: 0
+  # Laatste host in scan-range (ARP + HTTP identify).
+  discovery_range_end: 254
+  # Bij start een actieve ARP-sweep + HTTP-identify draaien.
+  auto_discover_on_start: false
+  # Passief meekijken op ARP-verkeer zonder broadcast (geen actieve scan).
+  passive_arp_monitor: true
+  # Frequentie (s) van de passieve ARP-poll in DiscoveryConfig.
+  arp_poll_interval_s: 30.0
+
+  # --- Logging ----------------------------------------------------------
+  # debug | info | warning | error (HA Supervisor standaard).
+  log_level: info
+
 schema:
+  # --- Hub / field bus ---
   hub_ip: str
   poll_interval: float
+  devices_file: str
+  # --- Network / API ---
   api_port: port
   rest_shim_enabled: bool
-  log_level: list(debug|info|warning|error)
-  devices_file: str
+  http_timeout_s: float
+  metadata_timeout_s: float
+  # --- Discovery ---
   discovery_subnet: str
   discovery_range_start: int
   discovery_range_end: int
   auto_discover_on_start: bool
   passive_arp_monitor: bool
   arp_poll_interval_s: float
-  http_timeout_s: float
-  metadata_timeout_s: float
+  # --- Logging ---
+  log_level: list(debug|info|warning|error)
+
 boot: auto
 auto_update: true
 watchdog: "http://[HOST]:[PORT:8080]/health"

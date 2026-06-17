@@ -189,10 +189,6 @@ class GatewayAPI:
         self._app.router.add_post("/api/v1/modules/refresh", self._post_modules_refresh)
         # Runtime auto-discovery
         self._app.router.add_post("/api/v1/discover", self._post_discover)
-        # Debug toggles (HA companion switches; not for normal operation)
-        self._app.router.add_post(
-            "/api/v1/debug/fieldbus-polling", self._post_fieldbus_polling
-        )
 
         # Register registry callbacks
         self._state_cb = self._registry.on_state_changed(self._on_state_changed)
@@ -483,36 +479,6 @@ class GatewayAPI:
         except Exception as exc:
             log.exception("POST /api/v1/discover failed")
             raise ApiError(500, "discovery_failed", str(exc))
-
-    async def _post_fieldbus_polling(self, request: web.Request) -> web.Response:
-        """POST /api/v1/debug/fieldbus-polling — toggle the UDP poll loop at runtime.
-
-        Body: ``{"enabled": <bool>}``. Used by the companion's
-        "Veldbus polling (debug)" switch to test whether hub polling is
-        interfering with switch behaviour. Not persistent: the gateway
-        defaults back to ``poll_interval`` config on the next start.
-        """
-        try:
-            payload = await request.json()
-        except Exception:
-            raise ApiError(400, "invalid_json", "Body must be JSON object")
-        if not isinstance(payload, dict) or "enabled" not in payload:
-            raise ApiError(400, "missing_field", "Body must include 'enabled' boolean")
-        enabled_raw = payload["enabled"]
-        if not isinstance(enabled_raw, bool):
-            raise ApiError(400, "invalid_type", "'enabled' must be a boolean")
-
-        new_state = self._bus.set_polling_enabled(enabled_raw)
-        self._health.set_fieldbus_polling_enabled(new_state, device_name="IPBuilding Gateway")
-        # Health change broadcasts gateway_status via the existing change callback
-        # in start() — no extra broadcast needed.
-        return web.json_response(
-            {
-                "polling_enabled": new_state,
-                "poll_interval_s": self._cfg.poll_interval_s,
-                "schema_version": 2,
-            }
-        )
 
     # -------------------------------------------------------------------------
     # Command execution

@@ -66,14 +66,6 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
     # Build metadata cache and prefetch getSysSet/getButtons before starting API.
     health = GatewayHealthMonitor()
     health.set_installation_loaded(cfg.installation is not None)
-    # Seed the field-bus runtime state so /api/v1/status reports the right
-    # ``fieldbus.poll_interval_s`` from the very first reply. The polling
-    # flag starts enabled — the operator debug switch is the only path to
-    # flip it off at runtime.
-    health.set_fieldbus_state(
-        polling_enabled=True,
-        poll_interval_s=cfg.poll_interval_s,
-    )
     meta_cache = ModuleMetadataCache(health=health)
     if cfg.installation:
         try:

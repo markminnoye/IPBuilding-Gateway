@@ -24,6 +24,9 @@ anders meldt.
 
 ## [Unreleased]
 
+### Removed
+- **Runtime endpoint `POST /api/v1/debug/fieldbus-polling`** en het bijbehorende `fieldbus` blok uit `/api/v1/status` (`polling_enabled`, `poll_interval_s`). De companion `Fieldbus polling (debug)` switch is tegelijk verwijderd — de gateway heeft hier verder geen runtime-toggle meer voor. Zie [ipbuilding-gateway-ha v0.4.3](../ipbuilding-gateway-ha/blob/main/CHANGELOG.md).
+
 ## [0.4.2] - 2026-06-18
 
 ### Added
