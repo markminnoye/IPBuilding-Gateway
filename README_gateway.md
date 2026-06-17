@@ -67,6 +67,58 @@ Do **not** extend IPBox REST parity (scenes, moods, project DB) in `rest_shim`; 
 
 `ipbox_id` disappears when the shim is retired. `entity_id` is always `make_entity_id(ip, type, ch)`.
 
+## Long-press detection (button timer)
+
+Physical IP1100PoE wall switches produce only `press` and `release`
+edges on the field bus (`B-…E`, see Sprint 5 evidence). The gateway
+classifies the press→release interval into a `long_press` event using a
+per-button timer:
+
+- `press`  → broadcast `button_event.action="press"`, arm a
+  `loop.call_later(threshold, ...)` timer
+- threshold reached while still pressed → broadcast `long_press`
+- `release` → cancel the timer, broadcast `release`
+
+The threshold is read from `installation.buttons[*].hold_threshold_s`
+(default 1.5 s), which is normally seeded from
+`getButtons.func2.holdSeconds` on the IP1100PoE. This is the same
+drempelwaarde the IPBox uses — see
+`resources_and_docs/IPBUILDING_KNOWLEDGE.md` §12.7.
+
+WebSocket `snapshot` and the new companion (v0.4.0) carry a
+`schema_version: 2` field; v1 clients ignore unknown fields and
+unknown `action` values, so this is backward-compatible.
+
+REST error responses (plan §A) use typed HTTP status codes (400/404/422/
+500/501/504) with a `{"error": "<code>", "message": "...", "details": {...}}`
+body, replacing the old `200 + {"ok": false, "error": "..."}` pattern.
+URL paths are unchanged.
+
+## Import IPBox → HA
+
+`scripts/import_ipbox_to_ha.py` reads the IP1100PoE `getButtons` endpoint
+(single source of truth for the knop → uitgang mapping) and optionally
+the IPBox REST `/comp/items` for channel naming, then writes four files
+to the output directory:
+
+- `automations.yaml`     import-ready HA automations
+- `helpers.yaml`         `input_boolean` direction helpers
+- `import_report.md`     conversion report + warnings
+- `checksum.txt`         SHA256 of inputs (idempotency gate)
+
+Idempotent: re-running with an unchanged source produces a no-op.
+Existing helpers are never silently overwritten on name/icon conflicts.
+
+```bash
+# Default: read getButtons from 10.10.1.50 + /comp/items from IPBox.
+python3 scripts/import_ipbox_to_ha.py \
+    --ipbox-host 192.168.0.185 \
+    --out ./out
+
+# Only getButtons — useful when IPBox REST is no longer reachable.
+python3 scripts/import_ipbox_to_ha.py --no-ipbox --out ./out
+```
+
 ## Discovery tools (optional provisioning)
 
 | Tool | Requires | Output |
