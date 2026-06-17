@@ -18,12 +18,24 @@ MESSAGE_TEMPLATES: dict[str, str] = {
         "Module {ip} is not responding to {method} configuration requests"
     ),
     "discovery.unreachable": "Module {mac} has not been seen on the field bus",
+    "fieldbus.polling_disabled": (
+        "UDP/1001 field-bus polling is disabled (debug toggle). Input events "
+        "may be sent to the IPBox instead of this gateway. Re-enable from HA: "
+        "Settings \u2192 Devices \u2192 {device_name} \u2192 Veldbus polling (debug)."
+    ),
 }
 
 STATUS_ACTIONS: dict[str, dict[str, str]] = {
     "discover": {"method": "POST", "path": "/api/v1/discover"},
     "refresh_modules": {"method": "POST", "path": "/api/v1/modules/refresh"},
+    "set_fieldbus_polling": {"method": "POST", "path": "/api/v1/debug/fieldbus-polling"},
 }
+
+# When the companion issues the debug toggle, it tells us the device name it
+# advertises (e.g. "IPBuilding Gateway") so the operator-facing warning can
+# point at the exact HA device. main.py sets this once the HaDiscoveryAdvertiser
+# has named itself.
+DEFAULT_FIELDBUS_DEVICE_NAME = "IPBuilding Gateway"
 
 
 @dataclass
@@ -62,6 +74,11 @@ class GatewayHealthMonitor:
         # Populated by main.py after the HaDiscoveryAdvertiser has loaded or
         # generated the instance id. Empty string means "not yet known".
         self._instance_id: str = ""
+        # Cached at startup from the gateway config so the status payload
+        # always reports the configured poll interval, even if the bus
+        # changes (it doesn't today, but keeping the source of truth here
+        # means a future tuning surface has a single place to update).
+        self._fieldbus_poll_interval_s: float = 2.0
 
     def set_instance_id(self, instance_id: str) -> None:
         """Record the gateway's persistent HA-discovery instance id."""
@@ -113,9 +130,12 @@ class GatewayHealthMonitor:
             "installation": "ok",
             "module_metadata": "ok",
             "discovery": "ok",
+            "fieldbus": "ok",
         }
         if "installation.missing" in self._issues:
             subsystems["installation"] = "unhealthy"
+        if "fieldbus.polling_disabled" in self._issues:
+            subsystems["fieldbus"] = "degraded"
         for issue in self._issues.values():
             if issue.code.startswith("module_metadata"):
                 subsystems["module_metadata"] = "degraded"
@@ -144,10 +164,25 @@ class GatewayHealthMonitor:
                 }
                 for issue in self._issues.values()
             ],
+            "fieldbus": {
+                "polling_enabled": "fieldbus.polling_disabled" not in self._issues,
+                "poll_interval_s": self._fieldbus_poll_interval_s,
+            },
         }
         if include_actions:
             body["actions"] = STATUS_ACTIONS
         return body
+
+    def set_fieldbus_state(self, *, polling_enabled: bool, poll_interval_s: float) -> None:
+        """Cache runtime field-bus state for the status snapshot.
+
+        The companion switch reads ``fieldbus.polling_enabled`` /
+        ``fieldbus.poll_interval_s`` from the snapshot, so we keep the
+        canonical values here (set by :mod:`gateway.main` once the bus is
+        up) instead of the bus having to push state into HA two ways.
+        """
+        self._fieldbus_poll_interval_s = float(poll_interval_s)
+        self.set_fieldbus_polling_enabled(polling_enabled)
 
     def set_installation_loaded(self, loaded: bool) -> None:
         """Report or clear installation.missing."""
@@ -161,6 +196,26 @@ class GatewayHealthMonitor:
                 "devices.json not loaded or installation empty",
                 {},
             )
+
+    def set_fieldbus_polling_enabled(self, enabled: bool, *, device_name: str | None = None) -> None:
+        """Report or clear the ``fieldbus.polling_disabled`` debug warning.
+
+        Called by the REST handler in :mod:`gateway.gateway_api` whenever the
+        companion toggles the debug switch. When polling is enabled, the
+        issue is cleared; when disabled, a warning is registered so the
+        operator sees it in the gateway status sensor in HA.
+        """
+        if enabled:
+            self.clear_issue("fieldbus.polling_disabled")
+            return
+        name = device_name or DEFAULT_FIELDBUS_DEVICE_NAME
+        self.report_issue(
+            "fieldbus.polling_disabled",
+            "fieldbus.polling_disabled",
+            "warning",
+            "Debug toggle: UDP/1001 polling disabled at runtime",
+            {"device_name": name},
+        )
 
     def _notify_key(self) -> tuple[str, frozenset[str]]:
         return (self.compute_status(), frozenset(self._issues.keys()))
