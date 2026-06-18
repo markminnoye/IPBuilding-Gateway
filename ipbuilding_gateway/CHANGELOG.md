@@ -24,16 +24,16 @@ anders meldt.
 
 ## [Unreleased]
 
-### Breaking
-- **Companion HA-domain hernoemd** van `ipbuilding_gateway_ha` naar `ha_ipbuilding_gateway`. De add-on `discovery:` key in deze repo is bijgewerkt naar `ha_ipbuilding_gateway`. **Oudere add-on versies (< dit Unreleased) blijven werken met de oude `ipbuilding_gateway_ha` discovery key**; nieuwe add-on + nieuwe companion (≥ 1.0.0) gebruiken de nieuwe. Het oude/nieuwe-paar is incompatibel als de versies uit sync zijn (oude add-on + nieuwe companion: Supervisor discovery faalt, handmatige config-flow werkt nog; nieuwe add-on + oude companion: Supervisor discovery faalt). **Geen impact** op REST/WS wire-format of `devices.json`. Operators die de Supervisor discovery gebruiken: update add-on en companion in dezelfde HA-sessie.
-- **`gateway/ha_discovery.py` service-payload** bijgewerkt naar `"service": "ha_ipbuilding_gateway"`. Voorheen `"ipbuilding_gateway_ha"`.
-- **`scripts/import_ipbox_to_ha.py`** schrijft nu `event_type: ha_ipbuilding_gateway.button_pressed` (en `_long_pressed`) in de gegenereerde `automations.yaml`. Was `ipbuilding_gateway_ha.button_pressed`. Re-run het script niet tenzij je oude imports wilt migreren; nieuwe imports gebruiken de nieuwe types.
+## [1.0.0] - 2026-06-19
 
-### Notes
-- **Companion-repo hernoemd** van `markminnoye/ipbuilding-gateway-ha` naar `markminnoye/ha-ipbuilding-gateway`. GitHub 301-redirect houdt bestaande clones, issues en HACS custom-repository URL's werkend. Geen impact op de gateway of de integratie zelf.
+### Breaking
+- **HA integration domain hernoemd** van `ipbuilding_gateway_ha` naar `ha_ipbuilding_gateway`, in lockstep met companion `ha-ipbuilding-gateway` v1.0.0. De add-on `discovery:` key, `gateway/ha_discovery.py` service-payload en `scripts/import_ipbox_to_ha.py` event types gebruiken nu overal de nieuwe domeinnaam. **Oudere add-on versies (< 1.0.0) blijven werken met de oude `ipbuilding_gateway_ha` discovery key**; de nieuwe add-on + nieuwe companion (≥ 1.0.0) gebruiken de nieuwe. Het oude/nieuwe-paar is incompatibel als de versies uit sync zijn (oude add-on + nieuwe companion: Supervisor discovery faalt, handmatige config-flow werkt nog; nieuwe add-on + oude companion: Supervisor discovery faalt). **Geen impact** op REST/WS wire-format of `devices.json`. Operators die de Supervisor discovery gebruiken: update add-on en companion in dezelfde HA-sessie.
 
 ### Removed
-- **Runtime endpoint `POST /api/v1/debug/fieldbus-polling`** en het bijbehorende `fieldbus` blok uit `/api/v1/status` (`polling_enabled`, `poll_interval_s`). De companion `Fieldbus polling (debug)` switch is tegelijk verwijderd — de gateway heeft hier verder geen runtime-toggle meer voor. Zie [ha-ipbuilding-gateway v0.4.3](../ha-ipbuilding-gateway/blob/main/CHANGELOG.md).
+- **Runtime endpoint `POST /api/v1/debug/fieldbus-polling`** en het bijbehorende `fieldbus` blok uit `/api/v1/status` (`polling_enabled`, `poll_interval_s`). De gateway heeft geen runtime-toggle voor de field-bus polling meer; de companion `Fieldbus polling (debug)` switch is eveneens verwijderd.
+
+### Notes
+- **Versiebeleid wijziging** — de add-on bereikt `1.0.0` bij deze breaking rename. Hierna volgt de add-on onafhankelijk semver van de companion: patch-level bumps in één repo betekenen niet automatisch een bump in de andere. Backward compatibiliteit blijft de norm tot een `### Breaking:` regel anders meldt.
 
 ## [0.4.3] - 2026-06-18
 
