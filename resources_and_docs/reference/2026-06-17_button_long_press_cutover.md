@@ -134,7 +134,7 @@ van de volgende drie paden:
 
 3. **YAML-referentie** (geavanceerd). De blueprint-files in de
    companion-repo demonstreren de patronen:
-   [`blueprints/automation/ipbuilding_gateway_ha/`](https://github.com/markminnoye/ha-ipbuilding-gateway/tree/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/).
+   [`blueprints/automation/ha_ipbuilding_gateway/`](https://github.com/markminnoye/ha-ipbuilding-gateway/tree/main/custom_components/ha_ipbuilding_gateway/blueprints/automation/ha_ipbuilding_gateway/).
    Kopieer de `trigger` en `action` blokken naar `automations.yaml`.
 
 #### Voorbeeld: korte druk → toggle

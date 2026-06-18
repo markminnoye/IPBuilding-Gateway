@@ -19,7 +19,7 @@ Core, which is what this document covers.
 ## Pre-flight
 
 - [ ] Companion v0.3.0 installed via HACS (or copied into
-  `config/custom_components/ipbuilding_gateway_ha/`).
+  `config/custom_components/ha_ipbuilding_gateway/`).
 - [ ] Home Assistant restarted after installing the companion.
 - [ ] Gateway add-on v0.1.4 installed from your add-on repository.
 - [ ] `ipbuilding_gateway/CHANGELOG.md` and
@@ -59,7 +59,7 @@ Core, which is what this document covers.
 
 ### Negative — companion not installed
 
-- [ ] Temporarily move `config/custom_components/ipbuilding_gateway_ha/`
+- [ ] Temporarily move `config/custom_components/ha_ipbuilding_gateway/`
   out of the way and restart HA.
 - [ ] **Expected:** no entry in **Ontdekt**, even though the add-on
   is announcing itself. (No companion = no handler = nothing to
@@ -128,7 +128,7 @@ Core, which is what this document covers.
 | Goal                                               | Command                                                                                                                           |
 | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | Confirm the gateway advertises on mDNS             | `avahi-browse -art | grep ipbuilding` (Linux) / `dns-sd -B _ipbuilding-gateway._tcp.local.` (macOS)                               |
-| Confirm the gateway announces to Supervisor        | `curl -H "Authorization: Bearer $SUPERVISOR_TOKEN" http://supervisor/discovery` — should list the `ipbuilding_gateway_ha` service |
+| Confirm the gateway announces to Supervisor        | `curl -H "Authorization: Bearer $SUPERVISOR_TOKEN" http://supervisor/discovery` — should list the `ha_ipbuilding_gateway` service |
 | Confirm the companion's config flow parses the TXT | `PYTHONPATH=. pytest tests/test_config_flow_parsing.py`                                                                           |
 | Confirm the gateway's discovery advertiser         | `PYTHONPATH=. pytest tests/test_ha_discovery.py`                                                                                  |
 | Confirm no regression in the broader gateway       | `PYTHONPATH=. pytest tests/ --ignore=tests/test_discover_from_ipbox.py`                                                           |

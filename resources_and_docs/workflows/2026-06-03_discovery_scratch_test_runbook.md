@@ -181,7 +181,7 @@ print(f'Devices: {len(msg.get(\"devices\", []))}')
 
 ## Step 7 — HA companion reload
 
-1. Reload the `ipbuilding_gateway_ha` integration in Home Assistant
+1. Reload the `ha_ipbuilding_gateway` integration in Home Assistant
 2. Confirm entity count matches device count
 3. Verify entity names match discovery names (e.g. `10.10.1.30-9` becomes `Badkamer ventilatie` with `fan` semantic type)
 4. Test one relay ON/OFF and one dimmer brightness command from HA

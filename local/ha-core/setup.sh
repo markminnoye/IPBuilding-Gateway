@@ -5,8 +5,8 @@ set -euo pipefail
 
 VENV_DIR="${HA_CORE_VENV:-$HOME/.ha-core-venv}"
 HA_CONFIG_DIR="$HOME/.homeassistant"
-COMPANION_SRC="/Users/markminnoye/git/ha-ipbuilding-gateway/custom_components/ipbuilding_gateway_ha"
-COMPANION_DOMAIN="ipbuilding_gateway_ha"
+COMPANION_SRC="/Users/markminnoye/git/ha-ipbuilding-gateway/custom_components/ha_ipbuilding_gateway"
+COMPANION_DOMAIN="ha_ipbuilding_gateway"
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 HA_PACKAGE="${HA_PACKAGE:-homeassistant}"

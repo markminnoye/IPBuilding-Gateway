@@ -1,7 +1,7 @@
 """Home Assistant discovery advertiser.
 
 Registers the gateway on the local network so the
-``ipbuilding-gateway-ha`` companion can pick it up under
+``ha-ipbuilding-gateway`` companion can pick it up under
 *Settings -> Devices & Services -> Discovered*.
 
 Two parallel channels are used (the Music Assistant pattern):
@@ -9,7 +9,7 @@ Two parallel channels are used (the Music Assistant pattern):
 1. **Zeroconf / mDNS** — broadcasts ``_ipbuilding-gateway._tcp.local.``
    on the LAN. Works for standalone Docker / Pi deployments.
 2. **Home Assistant Supervisor** — ``POST http://supervisor/discovery``
-   with ``service: ipbuilding_gateway_ha``. Works on HA OS / Supervised
+   with ``service: ha_ipbuilding_gateway``. Works on HA OS / Supervised
    where the add-on runs alongside Home Assistant.
 
 When running as a Supervisor add-on, the Zeroconf TXT record carries
@@ -344,7 +344,7 @@ class HaDiscoveryAdvertiser:
     async def _hassio_announce_once(self) -> str | None:
         assert self._http is not None
         payload = {
-            "service": "ipbuilding_gateway_ha",
+            "service": "ha_ipbuilding_gateway",
             "config": {
                 "host": "127.0.0.1",
                 "port": self._cfg.api_port,

@@ -9,12 +9,12 @@
 
 ## 1. Doel
 
-De companion levert vandaag één blueprint ([`dim_button.yaml`](../../ha-ipbuilding-gateway/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/dim_button.yaml)) die twee use-cases mixt: lampen schakelen en dimmen tijdens hold. Daardoor:
+De companion levert vandaag één blueprint ([`dim_button.yaml`](../../ha-ipbuilding-gateway/custom_components/ha_ipbuilding_gateway/blueprints/automation/ha_ipbuilding_gateway/dim_button.yaml)) die twee use-cases mixt: lampen schakelen en dimmen tijdens hold. Daardoor:
 
 1. Een operator die alleen een lamp wil togglen moet verplicht een `input_boolean` `direction_helper` aanmaken, anders kan de blueprint niet geïnstantieerd worden.
 2. De blueprint is niet duidelijk genoeg voor verschillende patronen (gordijn met hold+stop, scene-activering, area-acties).
 3. `max: 1` in combinatie met `mode: restart` is ongeldig volgens HA-core en geeft `value must be at least 2 @ data['max']` bij het opslaan.
-4. Een update van de companion bereikt bestaande HA-installs niet: `async_install_packaged_blueprints` ([`blueprints.py`](../../ha-ipbuilding-gateway/custom_components/ipbuilding_gateway_ha/blueprints.py)) kopieert alleen ontbrekende bestanden.
+4. Een update van de companion bereikt bestaande HA-installs niet: `async_install_packaged_blueprints` ([`blueprints.py`](../../ha-ipbuilding-gateway/custom_components/ha_ipbuilding_gateway/blueprints.py)) kopieert alleen ontbrekende bestanden.
 
 **Doel van deze iteratie:** vier doelgerichte blueprints, een P0-fix op de dim-blueprint, en versioned sync zodat updates bestaande installs bereiken.
 
@@ -78,7 +78,7 @@ flowchart TB
 |-------|------|
 | `automation_name` | `alias` |
 | `automation_area` | `area_id` op de automatisering |
-| `button_entity` | Event-entity (`ipbuilding_gateway_ha`, domain `event`) |
+| `button_entity` | Event-entity (`ha_ipbuilding_gateway`, domain `event`) |
 
 ### 4.1 `button_toggle.yaml`
 
@@ -138,7 +138,7 @@ Entity domains: `light`, `switch`, `scene`. Geen `cover`.
 - **release** (default: `stop`) → `cover.stop_cover`
 - **press** (optioneel, default: `none`) → geen actie, of toggle/open/close
 
-`release` vuurt bij **elke** loslating (zie [`event.py`](../../ha-ipbuilding-gateway/custom_components/ipbuilding_gateway_ha/event.py) L39–40). In deze blueprint is dat gewenst — description legt het hold+stop-patroon uit.
+`release` vuurt bij **elke** loslating (zie [`event.py`](../../ha-ipbuilding-gateway/custom_components/ha_ipbuilding_gateway/event.py) L39–40). In deze blueprint is dat gewenst — description legt het hold+stop-patroon uit.
 
 **GUI:**
 
@@ -180,7 +180,7 @@ Stub met `[VEROUDERD]`-naam + description die naar `button_dim.yaml` verwijst. V
 
 ## 5. Blueprint-sync (laag 1 + 2)
 
-Probleem: `async_install_packaged_blueprints` kopieert alleen ontbrekende bestanden en draait maar één keer per HA-sessie (zie [`blueprints.py`](../../ha-ipbuilding-gateway/custom_components/ipbuilding_gateway_ha/blueprints.py) regel 22, 28, 62). Updates bereiken bestaande installs niet.
+Probleem: `async_install_packaged_blueprints` kopieert alleen ontbrekende bestanden en draait maar één keer per HA-sessie (zie [`blueprints.py`](../../ha-ipbuilding-gateway/custom_components/ha_ipbuilding_gateway/blueprints.py) regel 22, 28, 62). Updates bereiken bestaande installs niet.
 
 ### 5.1 Versioned sync
 
@@ -215,15 +215,15 @@ Probleem: `async_install_packaged_blueprints` kopieert alleen ontbrekende bestan
 
 | Bestand | Actie |
 |---------|-------|
-| `blueprints/automation/ipbuilding_gateway_ha/button_toggle.yaml` | Nieuw |
-| `blueprints/automation/ipbuilding_gateway_ha/button_standard.yaml` | Nieuw |
-| `blueprints/automation/ipbuilding_gateway_ha/button_cover.yaml` | Nieuw |
-| `blueprints/automation/ipbuilding_gateway_ha/button_dim.yaml` | Nieuw (van dim_button) |
-| `blueprints/automation/ipbuilding_gateway_ha/dim_button.yaml` | Deprecation-stub |
-| `custom_components/ipbuilding_gateway_ha/blueprints.py` | Versioned sync |
+| `blueprints/automation/ha_ipbuilding_gateway/button_toggle.yaml` | Nieuw |
+| `blueprints/automation/ha_ipbuilding_gateway/button_standard.yaml` | Nieuw |
+| `blueprints/automation/ha_ipbuilding_gateway/button_cover.yaml` | Nieuw |
+| `blueprints/automation/ha_ipbuilding_gateway/button_dim.yaml` | Nieuw (van dim_button) |
+| `blueprints/automation/ha_ipbuilding_gateway/dim_button.yaml` | Deprecation-stub |
+| `custom_components/ha_ipbuilding_gateway/blueprints.py` | Versioned sync |
 | `tests/test_blueprints.py` | Sync + smoke tests |
 | `CHANGELOG.md` | Release notes |
-| `custom_components/ipbuilding_gateway_ha/README.md` | Blueprint-lijst bijwerken |
+| `custom_components/ha_ipbuilding_gateway/README.md` | Blueprint-lijst bijwerken |
 
 Gateway repo: korte update in [`2026-06-17_button_long_press_cutover.md`](../../resources_and_docs/reference/2026-06-17_button_long_press_cutover.md) stap 8 (blueprint-namen).
 
