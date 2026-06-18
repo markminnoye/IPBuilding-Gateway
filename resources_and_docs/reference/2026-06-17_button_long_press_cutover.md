@@ -107,42 +107,107 @@ Instellingen → Apparaten & entiteiten → Entiteiten
 → filter "event" → selecteer de knop → Inschakelen
 ```
 
-### 8. Knop-blueprint kiezen
+### 8. Knop-actie opzetten
 
-De companion levert vanaf **v0.4.0** vier doelgerichte blueprints.
-Kies het patroon dat bij de wandknop past; maak één automatisering per
-blueprint, met dezelfde knop als trigger.
+Vanaf companion **v0.4.0-rc.11** worden er geen packaged blueprints
+meer geïnstalleerd in de Blueprint-picker van de operator. Kies één
+van de volgende drie paden:
 
-| Blueprint | Wanneer te gebruiken |
-|-----------|---------------------|
-| `button_toggle` | Eén tik op de knop schakelt één lamp / schakelaar, of alle lampen in een ruimte |
-| `button_standard` | Korte en/of lange druk, elk met on / off / toggle / scene-activering voor een entity of alle lampen in een ruimte |
-| `button_dim` | Korte druk = toggle, hold = dimmen met automatische richting-flip (vereist een `input_boolean` direction helper) |
-| `button_cover` | Hold = gordijn/screen open of close, release = stop (en optioneel korte druk) |
+1. **Community-blueprint** (aanbevolen voor de meeste operators).
+   Bijvoorbeeld:
+   - [Philips Hue Dimmer Switch Ultimate Controller (Z2M)](https://community.home-assistant.io/t/z2m-philips-hue-dimmer-switch-ultimate-controller-device-triggers-double-clicks/977875)
+     — ondersteunt onze `press` / `long_press` / `release`-semantiek.
+   - [IKEA STYRBAR 4-Button Remote (ZHA / MQTT)](https://gist.github.com/ivvil/08c95674732b51bc4ccf79938471cdc9)
+     — per knop configureerbaar.
 
-De oude naam `IPBuilding button — toggle + dim during hold` (`dim_button.yaml`)
-blijft nog één release als stub bestaan voor bestaande automatiseringen.
-Maak nieuwe automatiseringen vanuit de nieuwe blueprint-namen; de stub
-vuurt een `persistent_notification` af zodra hij nog wordt gebruikt.
+   Installeer via HACS of `ha_import_blueprint`. Kies de event-entity
+   van de fysieke knop als trigger.
 
-#### Voorbeeld dim-flow (was stap 8)
+2. **Standaard HA-flow**. Maak een automation vanuit het device-scherm
+   (`+ Toevoegen aan → Maak automatisering`) of
+   `Instellingen → Automatiseringen & scènes → + Maak automatisering
+   → Maak nieuwe automatisering`. Trigger: `state` op de event-entity
+   met `to: "press"` (en eventueel `to: "long_press"` /
+   `to: "release"`). Action: `light.toggle` (korte druk) of
+   `repeat: while: trigger.id == "hold"; light.turn_on;
+   brightness_step_pct: -10; delay: 200ms` (smooth dim tijdens hold).
 
-Kies `button_dim.yaml`. Voorbeeld-instellingen voor een keuken-knop:
+3. **YAML-referentie** (geavanceerd). De blueprint-files in de
+   companion-repo demonstreren de patronen:
+   [`blueprints/automation/ipbuilding_gateway_ha/`](https://github.com/markminnoye/ipbuilding-gateway-ha/tree/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/).
+   Kopieer de `trigger` en `action` blokken naar `automations.yaml`.
 
-| Input | Waarde (voorbeeld) |
-|-------|---------------------|
-| Naam automatisering | `Keuken wandknop → Keuken LED` |
-| Knop | `event.2f8185190000df` |
-| Ruimte | `Keuken` |
-| Lamp | `light.keuken_led` |
-| Dim-richting helper | `input_boolean.ipb_keuken_knop_1_dim_up` |
-| Dim-stap % | `5` |
-| Dim-interval (ms) | `200` |
-| Dim-grens % | `50` |
+#### Voorbeeld: korte druk → toggle
 
-De helper aanmaken: Instellingen → Apparaten & services → Helpers →
-Toggle. **Naam** mag spaties bevatten; **Entity ID** alleen `a-z`,
-`0-9` en underscores (anders krijg je `slugify`-fouten).
+```yaml
+trigger:
+  - platform: state
+    entity_id: event.2f8185190000df
+    to: "press"
+    id: press
+action:
+  - action: homeassistant.toggle
+    target:
+      entity_id: light.keuken_led
+```
+
+#### Voorbeeld: hold → smooth dimmen, release → flip direction
+
+```yaml
+trigger:
+  - platform: state
+    entity_id: event.2f8185190000df
+    to: "press"
+    id: press
+  - platform: state
+    entity_id: event.2f8185190000df
+    to: "long_press"
+    id: hold
+  - platform: state
+    entity_id: event.2f8185190000df
+    to: "release"
+    id: release
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: press
+        sequence:
+          - action: light.toggle
+            target:
+              entity_id: light.keuken_led
+      - conditions:
+          - condition: trigger
+            id: hold
+        sequence:
+          - variables:
+              sign: "{{ 1 if is_state('input_boolean.ipb_keuken_knop_1_dim_up', 'on') else -1 }}"
+          - repeat:
+              while:
+                - condition: trigger
+                  id: hold
+              sequence:
+                - action: light.turn_on
+                  target:
+                    entity_id: light.keuken_led
+                  data:
+                    brightness_step_pct: "{{ 5 * sign }}"
+                    transition: 0.2
+                - delay:
+                    milliseconds: 200
+      - conditions:
+          - condition: trigger
+            id: release
+        sequence:
+          - action: input_boolean.toggle
+            target:
+              entity_id: input_boolean.ipb_keuken_knop_1_dim_up
+```
+
+De `input_boolean` direction helper aanmaken: Instellingen →
+Apparaten & services → Helpers → Toggle. **Naam** mag spaties
+bevatten; **Entity ID** alleen `a-z`, `0-9` en underscores (anders
+krijg je `slugify`-fouten).
 
 ### 9. Live-test
 
