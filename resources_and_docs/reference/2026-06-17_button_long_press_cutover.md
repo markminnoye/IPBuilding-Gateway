@@ -107,20 +107,42 @@ Instellingen → Apparaten & entiteiten → Entiteiten
 → filter "event" → selecteer de knop → Inschakelen
 ```
 
-### 8. Dim-button blueprint instantiëren
+### 8. Knop-blueprint kiezen
 
-Het packaged blueprint `IPBuilding button — toggle + dim during hold`
-verschijnt automatisch in de blueprint-lijst. Maak een nieuwe
-automatisering vanuit dit blueprint, kies:
+De companion levert vanaf **v0.4.0** vier doelgerichte blueprints.
+Kies het patroon dat bij de wandknop past; maak één automatisering per
+blueprint, met dezelfde knop als trigger.
+
+| Blueprint | Wanneer te gebruiken |
+|-----------|---------------------|
+| `button_toggle` | Eén tik op de knop schakelt één lamp / schakelaar, of alle lampen in een ruimte |
+| `button_standard` | Korte en/of lange druk, elk met on / off / toggle / scene-activering voor een entity of alle lampen in een ruimte |
+| `button_dim` | Korte druk = toggle, hold = dimmen met automatische richting-flip (vereist een `input_boolean` direction helper) |
+| `button_cover` | Hold = gordijn/screen open of close, release = stop (en optioneel korte druk) |
+
+De oude naam `IPBuilding button — toggle + dim during hold` (`dim_button.yaml`)
+blijft nog één release als stub bestaan voor bestaande automatiseringen.
+Maak nieuwe automatiseringen vanuit de nieuwe blueprint-namen; de stub
+vuurt een `persistent_notification` af zodra hij nog wordt gebruikt.
+
+#### Voorbeeld dim-flow (was stap 8)
+
+Kies `button_dim.yaml`. Voorbeeld-instellingen voor een keuken-knop:
 
 | Input | Waarde (voorbeeld) |
 |-------|---------------------|
-| Button entity | `event.keuken_knop_1` |
-| Light | `light.keuken_led` |
-| Direction helper | `input_boolean.ipb_keuken_knop_1_dim_up` |
-| Dim step % | `5` |
-| Dim interval (ms) | `200` |
-| Dim boundary % | `50` |
+| Naam automatisering | `Keuken wandknop → Keuken LED` |
+| Knop | `event.2f8185190000df` |
+| Ruimte | `Keuken` |
+| Lamp | `light.keuken_led` |
+| Dim-richting helper | `input_boolean.ipb_keuken_knop_1_dim_up` |
+| Dim-stap % | `5` |
+| Dim-interval (ms) | `200` |
+| Dim-grens % | `50` |
+
+De helper aanmaken: Instellingen → Apparaten & services → Helpers →
+Toggle. **Naam** mag spaties bevatten; **Entity ID** alleen `a-z`,
+`0-9` en underscores (anders krijg je `slugify`-fouten).
 
 ### 9. Live-test
 
