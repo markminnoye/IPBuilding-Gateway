@@ -2,10 +2,10 @@
   "modules": [
     {
       "name": "IP0200PoE",
-      "model": "IP0200PoE",
       "ip": "10.10.1.30",
       "type": "relay",
       "firmware": "",
+      "model": "IP0200PoE",
       "mac": "00:24:77:52:ac:be",
       "channels": [
         {
@@ -27,7 +27,7 @@
         {
           "ch": 2,
           "name": "Achterdeur Licht",
-          "room": "Buiten",
+          "room": "Tuin",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -35,7 +35,7 @@
         {
           "ch": 3,
           "name": "Straatkant OP",
-          "room": "Gelijkvloers",
+          "room": "Bureau",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -43,7 +43,7 @@
         {
           "ch": 4,
           "name": "Straatkant NEER",
-          "room": "Gelijkvloers",
+          "room": "Bureau",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -51,7 +51,7 @@
         {
           "ch": 5,
           "name": "Buiten",
-          "room": "Buiten",
+          "room": "Tuin",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -59,7 +59,7 @@
         {
           "ch": 6,
           "name": "Tuinkant OP",
-          "room": "Gelijkvloers",
+          "room": "Woonkamer",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -67,7 +67,7 @@
         {
           "ch": 7,
           "name": "Tuinkant NEER",
-          "room": "Gelijkvloers",
+          "room": "Woonkamer",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -75,7 +75,7 @@
         {
           "ch": 8,
           "name": "Vuurtoren",
-          "room": "Gelijkvloers",
+          "room": "Inkomhal",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -83,7 +83,7 @@
         {
           "ch": 9,
           "name": "Badkamer ventilatie",
-          "room": "1e verd",
+          "room": "Badkamer",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -91,7 +91,7 @@
         {
           "ch": 10,
           "name": "Inkom",
-          "room": "Gelijkvloers",
+          "room": "Inkomhal",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -99,7 +99,7 @@
         {
           "ch": 11,
           "name": "Slaapkamer achteraan",
-          "room": "1e verd",
+          "room": "Slaapkamer",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -107,7 +107,7 @@
         {
           "ch": 12,
           "name": "Badkamer",
-          "room": "1e verd",
+          "room": "Badkamer",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -115,7 +115,7 @@
         {
           "ch": 13,
           "name": "Slaapkamer vooraan",
-          "room": "1e verd",
+          "room": "Slaapkamer",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -123,7 +123,7 @@
         {
           "ch": 14,
           "name": "Traphal",
-          "room": "Hal",
+          "room": "Traphal",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -131,7 +131,7 @@
         {
           "ch": 15,
           "name": "Traphal \u00bfrookmelder?",
-          "room": "1e verd",
+          "room": "Traphal",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -163,7 +163,7 @@
         {
           "ch": 19,
           "name": "Speelkamer Boven LED",
-          "room": "2e verd",
+          "room": "Speelkamer",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -171,7 +171,7 @@
         {
           "ch": 20,
           "name": "Speelkamer Boven",
-          "room": "2e verd",
+          "room": "Speelkamer",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -179,7 +179,7 @@
         {
           "ch": 21,
           "name": "2e SlpK R",
-          "room": "2e verd",
+          "room": "Slaapkamers 2e%20verdieping",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -187,7 +187,7 @@
         {
           "ch": 22,
           "name": "2e SlpK L",
-          "room": "2e verd",
+          "room": "Slaapkamers 2e%20verdieping",
           "semantic_type": "light",
           "active": true,
           "max_watt": 60
@@ -200,15 +200,14 @@
           "active": true,
           "max_watt": 60
         }
-      ],
-      "active": false
+      ]
     },
     {
       "name": "IP0300PoE",
-      "model": "IP0300PoE",
       "ip": "10.10.1.40",
       "type": "dimmer",
       "firmware": "",
+      "model": "IP0300PoE",
       "mac": "00:24:77:52:9e:a8",
       "channels": [
         {
@@ -243,18 +242,16 @@
           "active": true,
           "max_watt": 200
         }
-      ],
-      "active": false
+      ]
     },
     {
-      "name": "10.10.1.50",
-      "model": "",
+      "name": "IP1100PoE",
       "ip": "10.10.1.50",
       "type": "input",
       "firmware": "",
+      "model": "IP1100PoE",
       "mac": "00:24:77:52:ad:aa",
-      "channels": [],
-      "active": false
+      "channels": []
     }
   ]
 }
