@@ -16,6 +16,7 @@ from gateway.device_registry import DeviceRegistry
 from gateway.ha_discovery import HaDiscoveryAdvertiser, HaDiscoveryConfig
 from gateway.installation import InstallationConfig
 from gateway.module_metadata import ModuleMetadataCache
+from gateway.module_status import hydrate_registry_from_http
 from gateway.types import DeviceType
 from gateway.rest_shim import RESTShim
 from gateway.udp_bus import UDPBus
@@ -74,6 +75,22 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
             )
         except Exception:
             log.warning("Module metadata prefetch failed; cache is empty at startup")
+        # Seed the in-memory relay/dimmer registry from each module's
+        # HTTP ``statuses`` endpoint so the very first REST/WS snapshot
+        # already reflects the real physical channel state. Without this
+        # step the registry stays empty until the first ``S``/``C`` UDP
+        # command, and a freshly restarted gateway would report every
+        # channel as "unknown" (relay) or "off" (dimmer).
+        try:
+            await hydrate_registry_from_http(
+                registry,
+                cfg.installation,
+                timeout=cfg.metadata_timeout_s,
+            )
+        except Exception:
+            log.warning(
+                "HTTP status hydration failed; channel state may be stale at startup"
+            )
 
     api = GatewayAPI(bus, registry, cfg, metadata_cache=meta_cache, health=health)
 

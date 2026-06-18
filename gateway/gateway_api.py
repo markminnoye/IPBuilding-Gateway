@@ -757,10 +757,22 @@ class GatewayAPI:
                     ds = self._registry.get_dimmer_state(key)
                     level = ds.level_percent if ds else None
                     device["level"] = level
-                    device["state"] = "on" if (level and level > 0) else "off"
-                    if level is not None and ch.max_watt:
-                        device["current_watt"] = ch.max_watt * level // 100
+                    if level is None:
+                        # No data yet — distinguish "no recent fieldbus
+                        # response" from "off". Previously collapsed to
+                        # "off", which the companion rendered as a real
+                        # off state right after gateway/companion
+                        # restart while the HTTP hydration was still
+                        # pending.
+                        device["state"] = "unknown"
+                        device["current_watt"] = 0
+                    elif level > 0:
+                        device["state"] = "on"
+                        device["current_watt"] = (
+                            ch.max_watt * level // 100 if ch.max_watt else 0
+                        )
                     else:
+                        device["state"] = "off"
                         device["current_watt"] = 0
 
                 devices.append(device)

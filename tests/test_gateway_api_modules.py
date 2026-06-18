@@ -210,6 +210,52 @@ class TestBuildDeviceList:
         # Geen registry-state → fallback "unknown", NIET "inactive".
         assert devices[0]["state"] == "unknown"
 
+    def test_dimmer_no_registry_state_is_unknown(self) -> None:
+        """Dimmer channels zonder registry-state rapporteren 'unknown' (geen
+        "off"). Voorkomt dat de companion de lamp ten onrechte als uit toont
+        vlak na een gateway-herstart, vóór de HTTP ``statuses``-hydratatie
+        is binnengekomen.
+        """
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:9e:a8",
+                "channels": [
+                    {"ch": 0, "name": "Bureau", "active": True, "max_watt": 200},
+                ],
+            }
+        ])
+        api = _make_api(inst)
+        devices = api._build_device_list()
+        assert len(devices) == 1
+        d = devices[0]
+        assert d["active"] is True
+        assert d["state"] == "unknown"
+        assert d["level"] is None
+        assert d["current_watt"] == 0
+
+    def test_dimmer_with_zero_level_is_off(self) -> None:
+        """Dimmer met level=0 (uit) moet 'off' rapporteren, niet 'unknown'."""
+        from gateway.device_registry import DeviceKey, DimmerState
+
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:9e:a8",
+                "channels": [
+                    {"ch": 0, "name": "Bureau", "active": True, "max_watt": 200},
+                ],
+            }
+        ])
+        api = _make_api(inst)
+        api._registry.seed_dimmer_state(
+            DeviceKey(DeviceType.DIMMER, "10.10.1.40", 0), 0
+        )
+
+        devices = api._build_device_list()
+        d = devices[0]
+        assert d["state"] == "off"
+        assert d["level"] == 0
+        assert d["current_watt"] == 0
+
     def test_input_module_buttons_in_device_list(self) -> None:
         inst = _make_installation([
             {

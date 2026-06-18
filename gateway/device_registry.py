@@ -79,6 +79,38 @@ class DeviceRegistry:
     def get_dimmer_state(self, key: DeviceKey) -> DimmerState | None:
         return self._dimmer_states.get(key)
 
+    def seed_relay_state(
+        self, key: DeviceKey, state: str, state_code: str = ""
+    ) -> None:
+        """Set relay state without firing state-changed callbacks.
+
+        Used by the HTTP ``statuses`` hydrator at startup to populate the
+        in-memory cache from a module's authoritative channel state. Unlike
+        ``handle_packet`` this never broadcasts; subscribers are wired in
+        later when the gateway API is created.
+        """
+        self._relay_states[key] = RelayState(state=state, state_code=state_code)
+
+    def seed_dimmer_state(
+        self,
+        key: DeviceKey,
+        level_percent: int,
+        internal_value_code: str = "",
+    ) -> None:
+        """Set dimmer state without firing state-changed callbacks.
+
+        Mirror of :meth:`seed_relay_state` for dimmer modules. ``level_percent``
+        is clamped to ``[0, 100]``; ``None`` is rejected — use
+        :meth:`get_dimmer_state` for a miss.
+        """
+        if level_percent is None:
+            raise ValueError("level_percent must not be None")
+        clamped = max(0, min(int(level_percent), 100))
+        self._dimmer_states[key] = DimmerState(
+            level_percent=clamped,
+            internal_value_code=internal_value_code,
+        )
+
     def track_dimmer_channel(self, module_ip: str, channel: int) -> None:
         """Remember the last commanded channel for a dimmer module.
 

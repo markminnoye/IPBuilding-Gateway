@@ -231,3 +231,68 @@ class TestCallbackError:
         key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 0)
         assert reg.get_relay_state(key).state == "on"
         assert len(received) == 1
+
+
+class TestSeedState:
+    """seed_relay_state / seed_dimmer_state populate the cache directly
+    without firing any state-changed callback. Used by the HTTP
+    ``statuses`` hydrator at startup."""
+
+    def test_seed_relay_state_sets_value(self):
+        reg = _registry_with_modules()
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 4)
+        reg.seed_relay_state(key, "on", "0100")
+
+        rs = reg.get_relay_state(key)
+        assert rs is not None
+        assert rs.state == "on"
+        assert rs.state_code == "0100"
+
+    def test_seed_relay_state_does_not_fire_callback(self):
+        reg = _registry_with_modules()
+        received: list[tuple] = []
+        reg.on_state_changed(lambda key, old, new: received.append((key, old, new)))
+
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 5)
+        reg.seed_relay_state(key, "on")
+
+        assert reg.get_relay_state(key).state == "on"
+        assert received == []  # no callback fired on bootstrap
+
+    def test_seed_dimmer_state_sets_value(self):
+        reg = _registry_with_modules()
+        key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 2)
+        reg.seed_dimmer_state(key, 75, "175")
+
+        ds = reg.get_dimmer_state(key)
+        assert ds is not None
+        assert ds.level_percent == 75
+        assert ds.internal_value_code == "175"
+
+    def test_seed_dimmer_state_clamps_and_rejects_none(self):
+        reg = _registry_with_modules()
+        key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 3)
+
+        # Above 100 -> clamped to 100
+        reg.seed_dimmer_state(key, 250)
+        assert reg.get_dimmer_state(key).level_percent == 100
+
+        # Below 0 -> clamped to 0
+        reg.seed_dimmer_state(key, -10)
+        assert reg.get_dimmer_state(key).level_percent == 0
+
+        # None rejected
+        import pytest
+        with pytest.raises(ValueError):
+            reg.seed_dimmer_state(key, None)  # type: ignore[arg-type]
+
+    def test_seed_dimmer_state_does_not_fire_callback(self):
+        reg = _registry_with_modules()
+        received: list[tuple] = []
+        reg.on_state_changed(lambda key, old, new: received.append((key, old, new)))
+
+        key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 1)
+        reg.seed_dimmer_state(key, 50)
+
+        assert reg.get_dimmer_state(key).level_percent == 50
+        assert received == []

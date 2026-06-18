@@ -27,6 +27,11 @@ anders meldt.
 ### Removed
 - **Runtime endpoint `POST /api/v1/debug/fieldbus-polling`** en het bijbehorende `fieldbus` blok uit `/api/v1/status` (`polling_enabled`, `poll_interval_s`). De companion `Fieldbus polling (debug)` switch is tegelijk verwijderd — de gateway heeft hier verder geen runtime-toggle meer voor. Zie [ipbuilding-gateway-ha v0.4.3](../ipbuilding-gateway-ha/blob/main/CHANGELOG.md).
 
+## [0.4.3] - 2026-06-18
+
+### Fixed
+- **Correcte lichtstatus direct na een herstart.** Vóór deze versie toonde Home Assistant alle lampen als "uit" tot de eerste UDP-commando binnenkwam — de gateway had nog geen idee van de echte kanaalstand. Bij het opstarten haalt de gateway nu de live kanaalstatus op van elke relay- en dimmermodule via hun ingebouwde webinterface, zodat de eerste snapshot in Home Assistant direct de juiste aan/uit-stand laat zien. Dimmers die nog geen status hebben gerapporteerd tonen nu "Onbekend" in plaats van "uit", en inactieve kanalen worden correct als uitgeschakeld gemarkeerd.
+
 ## [0.4.2] - 2026-06-18
 
 ### Added
