@@ -1,63 +1,45 @@
-# IPBuilding Gateway — Home Assistant Add-on
+# IPBuilding Gateway
 
 [![Version](https://img.shields.io/github/v/release/markminnoye/IPBuilding-Gateway)](https://github.com/markminnoye/IPBuilding-Gateway/releases/latest)
 
-> ## Companion required — this add-on alone is not enough
->
-> **Installing only this add-on will not give you lights, switches, or sensors in
-> Home Assistant.** The add-on is the **field-bus hub** (UDP/1001). To see and
-> control your installation in HA you **must also install the companion
-> integration**
-> [**IPBuilding Gateway HA**](https://github.com/markminnoye/ha-ipbuilding-gateway)
-> at the **latest release** of both — see the
-> [gateway releases](https://github.com/markminnoye/IPBuilding-Gateway/releases)
-> and the
-> [companion releases](https://github.com/markminnoye/ha-ipbuilding-gateway/releases).
->
-> | You install | You get |
-> |-------------|---------|
-> | **Add-on only** | Gateway service on port 8080 — **no HA entities** |
-> | **Add-on + companion** | Lights, switches, sensors, buttons, dashboards ✅ |
-
 Open replacement for the proprietary **IPBox hub** on the IPBuilding field bus.
-The add-on speaks **UDP/1001** to relay, dimmer, and input modules and exposes
-a northbound API for the companion. Scenes and automations live in **Home
-Assistant**, not in this add-on.
+The gateway speaks **UDP/1001** to relay, dimmer, and input modules on
+`10.10.1.x` and exposes a northbound API (WebSocket `/ws` + REST `/api/v1/` on
+port **8080**) for any client — Home Assistant, MQTT, Matter, scripts.
+Scenes and automations live in your home automation platform, **not** in the
+gateway.
 
-**Install type:** Home Assistant **OS** or **Supervised** only (Supervisor
-add-on). Container / Core-only installs need a
-[standalone gateway](ipbuilding_gateway/DOCS.md) instead.
+## Deployment variants
 
-## Two-part setup (read this first)
+The same gateway code runs in three shapes. Pick what fits your hardware:
 
-```text
-  IPBuilding modules (UDP/1001)
-           │
-           ▼
-  ┌─────────────────────────────┐
-  │  IPBuilding Gateway add-on   │  ← this repository
-  │  (field-bus hub, port 8080)  │
-  └──────────────┬──────────────┘
-                 │ WebSocket / REST
-                 ▼
-  ┌─────────────────────────────┐
-  │  IPBuilding Gateway HA       │  ← required companion (HACS)
-  │  (lights, switches, sensors) │
-  └─────────────────────────────┘
-                 │
-                 ▼
-         Home Assistant UI
-```
+| Variant | Platform | Status |
+|---------|----------|--------|
+| **HA add-on** (Docker, Supervisor-managed) | Home Assistant OS / Supervised | Primary, fully supported |
+| **Standalone Docker container** (`docker run` / `python -m gateway`) | Linux — Raspberry Pi, NAS, VPS, any x86/ARM box | Same Python code, no Supervisor |
+| **ESP32 firmware** (C++ / ESP-IDF) | ESP32 + W5500 Ethernet | Future — protocol-level POC ([ARCHITECTURE.md](ARCHITECTURE.md) §3) |
 
-1. **[Install the companion](https://github.com/markminnoye/ha-ipbuilding-gateway#installation)**
-   (HACS → custom repository `markminnoye/ha-ipbuilding-gateway`).
-2. **Add this add-on repository** and install **IPBuilding Gateway** (below).
-3. Provide **`devices.json`**, start the add-on, then add the integration under
-   **Settings → Devices & Services → Discovered**.
+For the HA add-on variant, follow the [Installation](#installation) steps
+below. For standalone or ESP32, see [ARCHITECTURE.md](ARCHITECTURE.md) §3 and
+the [add-on documentation](ipbuilding_gateway/DOCS.md).
 
-Version numbers are **independent** — each repo follows its own semver.
-Upgrade when one of the two has a release you want; the other is allowed
-to lag. See [CHANGELOG](ipbuilding_gateway/CHANGELOG.md) for breaking changes.
+## If Home Assistant is your client: the companion is required
+
+The gateway only speaks the northbound protocol (WebSocket `/ws` + REST
+`/api/v1/` on port **8080**). To get lights, switches, sensors, and buttons in
+HA you also need the companion integration
+[**IPBuilding Gateway HA**](https://github.com/markminnoye/ha-ipbuilding-gateway)
+at the latest release of both. This holds for **any** deployment variant — HA
+add-on, standalone Docker container, or ESP32 firmware — as long as HA is the
+client that turns protocol messages into entities.
+
+| You install | You get |
+|-------------|---------|
+| **Gateway only** | Gateway service on port 8080 — no HA entities |
+| **Gateway + companion** | Lights, switches, sensors, buttons, dashboards |
+
+If you don't use Home Assistant at all (pure MQTT, custom scripts, …) the
+companion is irrelevant — talk to the northbound API directly.
 
 ## Features
 
