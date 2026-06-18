@@ -89,7 +89,7 @@ Both run on the Mac host, so they reach each other over plain
 
 ## Editing the companion
 
-Files in `ipbuilding-gateway-ha/custom_components/...` are symlinked
+Files in `ha-ipbuilding-gateway/custom_components/...` are symlinked
 into `~/.homeassistant/custom_components/`. After Python changes:
 
 ```bash

@@ -2,13 +2,13 @@
 
 Open veldbus-hub voor IPBuilding relais, dimmers en drukknoppen via **UDP/1001**.
 Dit vervangt de propriëtaire IPBox op de veldbus en voedt de companion
-[**IPBuilding Gateway HA**](https://github.com/markminnoye/ipbuilding-gateway-ha)
+[**IPBuilding Gateway HA**](https://github.com/markminnoye/ha-ipbuilding-gateway)
 via WebSocket (`8080`) en optioneel REST (`30200` shim).
 
 > **Zonder companion geen HA-entiteiten.** Deze add-on alleen levert de gateway;
 > lichten/schakelaars/sensoren komen pas via de companion-integratie. Versies
 > lopen onafhankelijk — zie de
-> [releases-pagina](https://github.com/markminnoye/ipbuilding-gateway-ha/releases)
+> [releases-pagina](https://github.com/markminnoye/ha-ipbuilding-gateway/releases)
 > voor de actuele companion-versie. Zie ook de [repository README](../README.md).
 
 > **Voor add-on-ontwikkelaars:** het manifest-formaat (`config.yaml`), Supervisor
@@ -153,7 +153,7 @@ Zoek naar `[run.sh]` — als die ontbreekt is `devices.json` niet geladen.
 ### Companion vindt de add-on niet
 
 - Add-on moet **draaien** (niet enkel geïnstalleerd)
-- Companion en add-on hoeven niet dezelfde versie te hebben — beide volgen onafhankelijk semver. Controleer [de companion releases](https://github.com/markminnoye/ipbuilding-gateway-ha/releases) en [de add-on releases](https://github.com/markminnoye/IPBuilding-Gateway/releases) voor de meest recente versies.
+- Companion en add-on hoeven niet dezelfde versie te hebben — beide volgen onafhankelijk semver. Controleer [de companion releases](https://github.com/markminnoye/ha-ipbuilding-gateway/releases) en [de add-on releases](https://github.com/markminnoye/IPBuilding-Gateway/releases) voor de meest recente versies.
 - Check **Settings → Devices & Services → Discovered** (niet alleen “Add integration”)
 - Check `api_port` is `8080`
 - Supervisor discovery vereist HA OS / Supervised; op standalone gateway gebruikt de companion mDNS (`_ipbgw._tcp.local.`)
@@ -197,15 +197,15 @@ IPBuilding veldbus (UDP/1001 · 10.10.1.x)
 
 ## Companion (Home Assistant integration)
 
-Install **[ipbuilding-gateway-ha](https://github.com/markminnoye/ipbuilding-gateway-ha)**
+Install **[ipbuilding-gateway-ha](https://github.com/markminnoye/ha-ipbuilding-gateway)**
 — any recent release. Versies lopen onafhankelijk van deze add-on; zie de
-[companion releases](https://github.com/markminnoye/ipbuilding-gateway-ha/releases)
+[companion releases](https://github.com/markminnoye/ha-ipbuilding-gateway/releases)
 voor de meest recente versie.
 
-1. **HACS** → Custom repository → `https://github.com/markminnoye/ipbuilding-gateway-ha`
+1. **HACS** → Custom repository → `https://github.com/markminnoye/ha-ipbuilding-gateway`
 2. Install **IPBuilding Gateway HA** and restart Home Assistant
 3. With the add-on **running**, open **Settings → Devices & Services → Discovered**
    and add the integration (Supervisor discovery — no host/port needed)
 
-Full companion docs: [README](https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/README.md)
+Full companion docs: [README](https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/README.md)
 · Add-on docs (this file) · [API reference](../docs/api/)

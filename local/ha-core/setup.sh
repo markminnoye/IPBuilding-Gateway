@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # One-time setup: create venv, install Home Assistant, symlink the
-# companion custom_component from the sibling ipbuilding-gateway-ha repo.
+# companion custom_component from the sibling ha-ipbuilding-gateway repo.
 set -euo pipefail
 
 VENV_DIR="${HA_CORE_VENV:-$HOME/.ha-core-venv}"
 HA_CONFIG_DIR="$HOME/.homeassistant"
-COMPANION_SRC="/Users/markminnoye/git/ipbuilding-gateway-ha/custom_components/ipbuilding_gateway_ha"
+COMPANION_SRC="/Users/markminnoye/git/ha-ipbuilding-gateway/custom_components/ipbuilding_gateway_ha"
 COMPANION_DOMAIN="ipbuilding_gateway_ha"
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"

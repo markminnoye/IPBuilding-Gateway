@@ -69,13 +69,13 @@
 5. Captures bij regressie; standaard mirror **7←15** ([playbook](resources_and_docs/workflows/2026-05-14_relay_run_a_operational_playbook.md))
 6. **Migratiepad** — bestaande HA-IPBuilding installaties overzetten via [§7 ARCHITECTURE.md](ARCHITECTURE.md) (import uit IPBox → REST shim actief → companion installeren → button-mapping in HA → IPBox afkoppelen)
 
-### Companion issues (gefilmd 2026-06-15, [ipbuilding-gateway-ha](https://github.com/markminnoye/ipbuilding-gateway-ha))
+### Companion issues (gefilmd 2026-06-15, [ipbuilding-gateway-ha](https://github.com/markminnoye/ha-ipbuilding-gateway))
 
 Companion-issues geïnspireerd op de legacy [HA-IPBuilding](https://github.com/markminnoye/HA-IPBuilding) integratie. Logica hoort in HA, niet in de gateway; deze issues raken daarom **alleen** de companion.
 
-- [ipbuilding-gateway-ha#2 — Onboarding: koppel channels aan HA-areas (room → area)](https://github.com/markminnoye/ipbuilding-gateway-ha/issues/2) — open. Eerste installatie-ervaring. Lees legacy `entity.py` (`suggested_area` patroon) en `_register_hubs` voor de device-tree opzet.
-- [ipbuilding-gateway-ha#3 — Companion: correcte HA application / hub integratie-metadata](https://github.com/markminnoye/ipbuilding-gateway-ha/issues/3) — **afgerond in companion v0.2.1** (`manifest.json`, drie-tier device tree gateway → module → channel, expliciete device-registry voor gateway + modules, `sw_version` via `/api/v1/status`).
-- [ipbuilding-gateway-ha#4 — Companion: hardware knoppen (IP1100PoE) als routeable entities](https://github.com/markminnoye/ipbuilding-gateway-ha/issues/4) — open. Gateway moet `getButtons` meenemen in `/api/v1/devices` snapshot; companion `button.py` moet dynamisch via `register_platform` werken. Vervolg-issue (nog te filen): button→action mappings in HA i.p.v. in IPBox-project DB.
+- [ha-ipbuilding-gateway#2 — Onboarding: koppel channels aan HA-areas (room → area)](https://github.com/markminnoye/ha-ipbuilding-gateway/issues/2) — open. Eerste installatie-ervaring. Lees legacy `entity.py` (`suggested_area` patroon) en `_register_hubs` voor de device-tree opzet.
+- [ha-ipbuilding-gateway#3 — Companion: correcte HA application / hub integratie-metadata](https://github.com/markminnoye/ha-ipbuilding-gateway/issues/3) — **afgerond in companion v0.2.1** (`manifest.json`, drie-tier device tree gateway → module → channel, expliciete device-registry voor gateway + modules, `sw_version` via `/api/v1/status`).
+- [ha-ipbuilding-gateway#4 — Companion: hardware knoppen (IP1100PoE) als routeable entities](https://github.com/markminnoye/ha-ipbuilding-gateway/issues/4) — open. Gateway moet `getButtons` meenemen in `/api/v1/devices` snapshot; companion `button.py` moet dynamisch via `register_platform` werken. Vervolg-issue (nog te filen): button→action mappings in HA i.p.v. in IPBox-project DB.
 
 Legacy referentie (geen verplicht eindmodel, alleen inspiratie): [`markminnoye/HA-IPBuilding/custom_components/ipbuilding/`](https://github.com/markminnoye/HA-IPBuilding/tree/main/custom_components/ipbuilding) — `entity.py` (`suggested_area`, `via_device`), `__init__.py` (`_register_hubs`, `HUB_BY_TYPE`), `const.py` (type-constanten), `button.py` (legacy `ButtonEntity` vs onze `EventEntity`).
 

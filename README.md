@@ -8,11 +8,11 @@
 > Home Assistant.** The add-on is the **field-bus hub** (UDP/1001). To see and
 > control your installation in HA you **must also install the companion
 > integration**
-> [**IPBuilding Gateway HA**](https://github.com/markminnoye/ipbuilding-gateway-ha)
+> [**IPBuilding Gateway HA**](https://github.com/markminnoye/ha-ipbuilding-gateway)
 > at the **latest release** of both — see the
 > [gateway releases](https://github.com/markminnoye/IPBuilding-Gateway/releases)
 > and the
-> [companion releases](https://github.com/markminnoye/ipbuilding-gateway-ha/releases).
+> [companion releases](https://github.com/markminnoye/ha-ipbuilding-gateway/releases).
 >
 > | You install | You get |
 > |-------------|---------|
@@ -49,8 +49,8 @@ add-on). Container / Core-only installs need a
          Home Assistant UI
 ```
 
-1. **[Install the companion](https://github.com/markminnoye/ipbuilding-gateway-ha#installation)**
-   (HACS → custom repository `markminnoye/ipbuilding-gateway-ha`).
+1. **[Install the companion](https://github.com/markminnoye/ha-ipbuilding-gateway#installation)**
+   (HACS → custom repository `markminnoye/ha-ipbuilding-gateway`).
 2. **Add this add-on repository** and install **IPBuilding Gateway** (below).
 3. Provide **`devices.json`**, start the add-on, then add the integration under
    **Settings → Devices & Services → Discovered**.
@@ -75,9 +75,9 @@ This add-on does **not** implement IPBox scenes, moods, or button→relay rules.
 ## Requirements {#prerequisites}
 
 - Home Assistant **OS** or **Supervised**
-- [**IPBuilding Gateway HA**](https://github.com/markminnoye/ipbuilding-gateway-ha)
+- [**IPBuilding Gateway HA**](https://github.com/markminnoye/ha-ipbuilding-gateway)
   companion — any recent release; see the
-  [companion releases page](https://github.com/markminnoye/ipbuilding-gateway-ha/releases)
+  [companion releases page](https://github.com/markminnoye/ha-ipbuilding-gateway/releases)
 - IPBuilding modules reachable on **`10.10.1.x`** with HA using a **source IP on
   that segment** (`host_network: true` — see
   [network notes](ipbuilding_gateway/DOCS.md#network))
@@ -87,11 +87,11 @@ This add-on does **not** implement IPBox scenes, moods, or button→relay rules.
 
 ### 1. Companion (required — do this first or in parallel)
 
-[![Open companion in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=markminnoye&repository=ipbuilding-gateway-ha&category=integration)
+[![Open companion in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=markminnoye&repository=ha-ipbuilding-gateway&category=integration)
 
-Adds custom repository `markminnoye/ipbuilding-gateway-ha` in HACS, then download
+Adds custom repository `markminnoye/ha-ipbuilding-gateway` in HACS, then download
 **IPBuilding Gateway HA** and restart HA. Full steps:
-[companion README](https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/README.md#2-companion-integration-hacs-recommended)
+[companion README](https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/README.md#2-companion-integration-hacs-recommended)
 
 ### 2. Add-on repository
 
@@ -121,7 +121,7 @@ With the add-on **running** and the companion **installed**:
 **Add**
 
 Manual host/port remains available if discovery is blocked; see the
-[companion configuration guide](https://github.com/markminnoye/ipbuilding-gateway-ha/blob/main/README.md#configuration).
+[companion configuration guide](https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/README.md#configuration).
 
 ## Security
 
@@ -136,7 +136,7 @@ Manual host/port remains available if discovery is blocked; see the
 | Document | Audience |
 |----------|----------|
 | **[Add-on DOCS](ipbuilding_gateway/DOCS.md)** | Operators — install, options, network, troubleshooting |
-| **[Companion README](https://github.com/markminnoye/ipbuilding-gateway-ha)** | HA integration — entities, automations, dashboard |
+| **[Companion README](https://github.com/markminnoye/ha-ipbuilding-gateway)** | HA integration — entities, automations, dashboard |
 | **[Changelog](ipbuilding_gateway/CHANGELOG.md)** | Release notes for this add-on |
 | **[Architecture](ARCHITECTURE.md)** | Migration from IPBox, deployment variants |
 | **[API reference](docs/api/)** | Northbound REST/WebSocket |
@@ -150,7 +150,7 @@ Add-on manifest and Supervisor integration follow the official
 - Add-on / gateway:
   [IPBuilding-Gateway issues](https://github.com/markminnoye/IPBuilding-Gateway/issues)
 - Companion / HA entities:
-  [ipbuilding-gateway-ha issues](https://github.com/markminnoye/ipbuilding-gateway-ha/issues)
+  [ha-ipbuilding-gateway issues](https://github.com/markminnoye/ha-ipbuilding-gateway/issues)
 
 When reporting problems, state **both versions** (add-on and companion) from
 `GET /api/v1/status` or the add-on info panel.

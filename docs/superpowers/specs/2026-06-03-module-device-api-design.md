@@ -213,7 +213,7 @@ Discovery ([`build_devices_json_draft()`](gateway/discovery.py) ~regel 600) schr
 | `gateway/module_metadata.py` | **Nieuw** — `ModuleMetadataCache` met `async refresh()` |
 | `gateway/gateway_api.py` | Routes `/modules`, `_build_module_list()`, `_build_snapshot()`, devices met `module_id` |
 | `gateway/main.py` | `cache.refresh()` vóór `api.start()` |
-| `ipbuilding-gateway-ha/coordinator.py` | `snapshot` handler (WS) |
+| `ha-ipbuilding-gateway/coordinator.py` | `snapshot` handler (WS) |
 | `docs/api/rest.md` | Modules endpoints gedocumenteerd |
 | `docs/api/websocket.md` | `snapshot` message gedocumenteerd |
 | `docs/api/modules.md` | **Nieuw** — module resource referentie |

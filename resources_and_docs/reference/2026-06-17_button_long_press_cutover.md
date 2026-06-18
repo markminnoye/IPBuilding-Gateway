@@ -33,7 +33,7 @@ gateway al op de veldbus als `10.10.1.1` zodra de IPBox uit is.
 
 ```text
 HACS → Integrations → ⋯ → Custom repositories
-→ https://github.com/markminnoye/ipbuilding-gateway-ha
+→ https://github.com/markminnoye/ha-ipbuilding-gateway
 → Categorie: Integration → Install "IPBuilding Gateway HA"
 → Restart Home Assistant
 ```
@@ -134,7 +134,7 @@ van de volgende drie paden:
 
 3. **YAML-referentie** (geavanceerd). De blueprint-files in de
    companion-repo demonstreren de patronen:
-   [`blueprints/automation/ipbuilding_gateway_ha/`](https://github.com/markminnoye/ipbuilding-gateway-ha/tree/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/).
+   [`blueprints/automation/ipbuilding_gateway_ha/`](https://github.com/markminnoye/ha-ipbuilding-gateway/tree/main/custom_components/ipbuilding_gateway_ha/blueprints/automation/ipbuilding_gateway_ha/).
    Kopieer de `trigger` en `action` blokken naar `automations.yaml`.
 
 #### Voorbeeld: korte druk → toggle

@@ -24,8 +24,11 @@ anders meldt.
 
 ## [Unreleased]
 
+### Notes
+- **Companion-repo hernoemd** van `markminnoye/ipbuilding-gateway-ha` naar `markminnoye/ha-ipbuilding-gateway`. GitHub 301-redirect houdt bestaande clones, issues en HACS custom-repository URL's werkend. Geen impact op de gateway of de integratie zelf.
+
 ### Removed
-- **Runtime endpoint `POST /api/v1/debug/fieldbus-polling`** en het bijbehorende `fieldbus` blok uit `/api/v1/status` (`polling_enabled`, `poll_interval_s`). De companion `Fieldbus polling (debug)` switch is tegelijk verwijderd — de gateway heeft hier verder geen runtime-toggle meer voor. Zie [ipbuilding-gateway-ha v0.4.3](../ipbuilding-gateway-ha/blob/main/CHANGELOG.md).
+- **Runtime endpoint `POST /api/v1/debug/fieldbus-polling`** en het bijbehorende `fieldbus` blok uit `/api/v1/status` (`polling_enabled`, `poll_interval_s`). De companion `Fieldbus polling (debug)` switch is tegelijk verwijderd — de gateway heeft hier verder geen runtime-toggle meer voor. Zie [ha-ipbuilding-gateway v0.4.3](../ha-ipbuilding-gateway/blob/main/CHANGELOG.md).
 
 ## [0.4.3] - 2026-06-18
 

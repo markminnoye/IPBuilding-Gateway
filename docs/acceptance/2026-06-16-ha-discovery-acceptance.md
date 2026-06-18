@@ -23,7 +23,7 @@ Core, which is what this document covers.
 - [ ] Home Assistant restarted after installing the companion.
 - [ ] Gateway add-on v0.1.4 installed from your add-on repository.
 - [ ] `ipbuilding_gateway/CHANGELOG.md` and
-  `ipbuilding-gateway-ha/CHANGELOG.md` mention the discovery change.
+  `ha-ipbuilding-gateway/CHANGELOG.md` mention the discovery change.
 
 ---
 
