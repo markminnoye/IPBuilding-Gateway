@@ -24,6 +24,11 @@ anders meldt.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-06-19
+
+### Fixed
+- **Add-on verschijnt nu automatisch in Home Assistant → Devices & Services → Discovered** wanneer de companion geïnstalleerd is. De HassIO-discovery-call naar `http://supervisor/discovery` werd door Supervisor geweigerd omdat de add-on de `hassio_api` permissie miste; daardoor kreeg de add-on geen `SUPERVISOR_TOKEN` en werd de discovery-stap in stilte overgeslagen. De `discovery:` service key (`ha_ipbuilding_gateway`) was al aanwezig; alleen de permissie ontbrak. Geen wijziging aan de REST/WS wire of `devices.json`.
+
 ## [1.0.0] - 2026-06-19
 
 ### Breaking
