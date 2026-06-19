@@ -24,6 +24,11 @@ anders meldt.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-06-19
+
+### Added
+- **Diagnostische logging** bij Supervisor discovery-registratie bij opstarten, zodat te verifiëren is of de gateway correct wordt aangeboden aan Home Assistant.
+
 ## [1.0.1] - 2026-06-19
 
 ### Fixed
