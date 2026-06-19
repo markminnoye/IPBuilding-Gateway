@@ -1,5 +1,5 @@
 name: IPBuilding Gateway
-version: "1.0.2"
+version: "1.0.3"
 slug: ipbuilding_gateway
 description: Open IPBuilding field-bus gateway (UDP/1001) — replaces proprietary IPBox hub
 url: https://github.com/markminnoye/IPBuilding-Gateway
@@ -19,15 +19,10 @@ discovery:
   - ha_ipbuilding_gateway
 privileged: []
 options:
-  # --- Hub / field bus --------------------------------------------------
-  # IP waarop de gateway als hub op UDP/1001 fungeert (wordt IPBox vervanger).
-  hub_ip: 10.10.1.1
-  # Seconden tussen opeenvolgende UDP/1001 polls per module (P0000, I9900, I0000).
-  poll_interval: 2.0
-  # Pad naar installatie-specifieke data (modules, namen, kamers, active flags).
-  devices_file: /config/devices.json
 
   # --- Network / API ----------------------------------------------------
+  # IP waarop de gateway als hub op UDP/1001 fungeert (wordt IPBox vervanger).
+  hub_ip: 10.10.1.1
   # Poort voor WebSocket /ws en REST /api/v1/.
   api_port: 8080
   # Zet aan om de legacy IPBox REST :30200 shim te starten (alleen tijdens migratie).
@@ -36,6 +31,12 @@ options:
   http_timeout_s: 2.0
   # Idle-tolerance (s) voor trage / zwaar belaste modules.
   metadata_timeout_s: 5.0
+
+  # --- Hub / field bus --------------------------------------------------
+  # Seconden tussen opeenvolgende UDP/1001 polls per module (P0000, I9900, I0000).
+  poll_interval: 2.0
+  # Pad naar installatie-specifieke data (modules, namen, kamers, active flags).
+  devices_file: /config/devices.json
 
   # --- Discovery --------------------------------------------------------
   # /24 veldbus subnet waarop ARP/HTTP discovery draait.
@@ -56,15 +57,15 @@ options:
   log_level: info
 
 schema:
-  # --- Hub / field bus ---
-  hub_ip: str
-  poll_interval: float
-  devices_file: str
   # --- Network / API ---
+  hub_ip: str
   api_port: port
   rest_shim_enabled: bool
   http_timeout_s: float
   metadata_timeout_s: float
+  # --- Hub / field bus ---
+  poll_interval: float
+  devices_file: str
   # --- Discovery ---
   discovery_subnet: str
   discovery_range_start: int

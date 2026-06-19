@@ -309,28 +309,6 @@ class HaDiscoveryAdvertiser:
     # ------------------------------------------------------------------
 
     async def _start_hassio(self) -> None:
-        # #region agent log (debug fb376d hypothesisId=B)
-        import json as _json, time as _time
-        _tok = os.environ.get("SUPERVISOR_TOKEN")
-        _log_path = "/config/debug-fb376d.log"
-        try:
-            with open(_log_path, "a", encoding="utf-8") as _f:
-                _f.write(_json.dumps({
-                    "sessionId": "fb376d",
-                    "runId": "initial",
-                    "hypothesisId": "B",
-                    "location": "gateway/ha_discovery.py:_start_hassio",
-                    "message": "SUPERVISOR_TOKEN presence check",
-                    "data": {
-                        "has_token": bool(_tok),
-                        "token_length": len(_tok) if _tok else 0,
-                        "gateway_version": __version__,
-                    },
-                    "timestamp": int(_time.time() * 1000),
-                }) + "\n")
-        except Exception:
-            pass
-        # #endregion agent log
         if not os.environ.get("SUPERVISOR_TOKEN"):
             log.info("HassIO discovery skipped (no SUPERVISOR_TOKEN)")
             return
@@ -378,29 +356,6 @@ class HaDiscoveryAdvertiser:
                 json=payload,
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as resp:
-                # #region agent log (debug fb376d hypothesisId=C)
-                import json as _json, time as _time
-                _log_path = "/config/debug-fb376d.log"
-                try:
-                    with open(_log_path, "a", encoding="utf-8") as _f:
-                        _f.write(_json.dumps({
-                            "sessionId": "fb376d",
-                            "runId": "initial",
-                            "hypothesisId": "C",
-                            "location": "gateway/ha_discovery.py:_hassio_announce_once",
-                            "message": "Supervisor POST response",
-                            "data": {
-                                "status": resp.status,
-                                "service_key": payload["service"],
-                                "config_host": payload["config"]["host"],
-                                "config_port": payload["config"]["port"],
-                                "content_type": resp.headers.get("Content-Type", ""),
-                            },
-                            "timestamp": int(_time.time() * 1000),
-                        }) + "\n")
-                except Exception:
-                    pass
-                # #endregion agent log
                 if resp.status != 200:
                     log.warning(
                         "HassIO discovery POST failed: HTTP %d", resp.status
@@ -408,25 +363,6 @@ class HaDiscoveryAdvertiser:
                     return None
                 data: dict[str, Any] = await resp.json()
                 uuid_str = data.get("data", {}).get("uuid")
-                # #region agent log (debug fb376d hypothesisId=C success)
-                try:
-                    with open(_log_path, "a", encoding="utf-8") as _f:
-                        _f.write(_json.dumps({
-                            "sessionId": "fb376d",
-                            "runId": "initial",
-                            "hypothesisId": "C",
-                            "location": "gateway/ha_discovery.py:_hassio_announce_once:ok",
-                            "message": "Supervisor POST 200 — uuid accepted",
-                            "data": {
-                                "uuid_present": bool(uuid_str),
-                                "uuid_length": len(uuid_str) if uuid_str else 0,
-                                "response_keys": list(data.keys()) if isinstance(data, dict) else None,
-                            },
-                            "timestamp": int(_time.time() * 1000),
-                        }) + "\n")
-                except Exception:
-                    pass
-                # #endregion agent log
                 log.info("HassIO discovery announced: uuid=%s", uuid_str)
                 return uuid_str
         except (aiohttp.ClientError, asyncio.TimeoutError) as exc:

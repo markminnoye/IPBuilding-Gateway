@@ -24,6 +24,14 @@ anders meldt.
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-06-19
+
+### Removed
+- **Tijdelijke fb376d debug-file logging uit HassIO discovery.** De `_start_hassio` en `_hassio_announce_once` methodes schreven tijdens de diagnose van het 1.0.1 discovery-probleem gestructureerde events naar `/config/debug-fb376d.log`. Die zijn niet meer nodig; de reguliere `HassIO discovery announced: uuid=…` info-log en waarschuwingen op POST-fouten blijven.
+
+### Changed
+- `ipbuilding_gateway/config.yaml` `options:` en `schema:` secties in dezelfde volgorde gezet (Network / API → Hub / field bus → Discovery → Logging). Cosmetisch; geen impact op wire, defaults of schema-validatie.
+
 ## [1.0.2] - 2026-06-19
 
 ### Added
