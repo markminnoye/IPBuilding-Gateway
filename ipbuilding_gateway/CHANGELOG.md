@@ -24,6 +24,12 @@ anders meldt.
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-06-19
+
+### Added
+- **Discovery TXT record schema v2.** `_build_txt_properties` zendt nu expliciet `host`, `port`, `sw` (alias van `version`) en `mac` naast de bestaande velden. Companion v1.2.2+ gebruikt deze velden om meerdere gateways van elkaar te onderscheiden.
+- **`instance_id` in HassIO discovery payload.** De Supervisor `/supervisor/discovery` POST bevat nu `instance_id` in `config`, zodat de companion dezelfde unieke ID kan gebruiken als voor zeroconf discovery.
+
 ## [1.0.3] - 2026-06-19
 
 ### Removed

@@ -45,7 +45,9 @@ SERVICE_TYPE = "_ipbgw._tcp.local."
 
 #: Discovery payload schema version. Bump when TXT record format changes
 #: in a way the companion needs to react to.
-DISCOVERY_SCHEMA_VERSION = 1
+#: v1: instance_id, version, base_url, homeassistant_addon, schema_version
+#: v2: + sw, mac, host, port (Shelly-style: explicit host/port + sw alias of version)
+DISCOVERY_SCHEMA_VERSION = 2
 
 
 @dataclass
@@ -142,16 +144,68 @@ def _pick_publish_ip(api_host: str) -> str:
         return "127.0.0.1"
 
 
+def _parse_host_port(base_url: str) -> tuple[str, str]:
+    """Extract host and port from a ``http://host:port`` base URL.
+
+    Falls back to ``("127.0.0.1", "8080")`` when the URL cannot be parsed,
+    which keeps the TXT record well-formed even if the add-on options are
+    misconfigured.
+    """
+    from urllib.parse import urlparse
+
+    parsed = urlparse(base_url)
+    host = parsed.hostname or "127.0.0.1"
+    port = str(parsed.port or 8080)
+    return host, port
+
+
+def _read_interface_mac() -> str:
+    """Best-effort MAC of the LAN-facing interface.
+
+    Falls back to ``uuid.getnode()`` (which on Linux reads the first
+    interface MAC) and finally to an empty string. Returns the
+    colon-separated lower-case form used by HA's device registry
+    (``homeassistant.helpers.device_registry.format_mac``).
+    """
+    try:
+        mac_hex = uuid.getnode()
+        if (mac_hex >> 40) % 2 == 0:  # locally-administered bit unset → real MAC
+            mac = ":".join(f"{(mac_hex >> (8 * i)) & 0xFF:02x}" for i in range(6))
+            return mac
+    except Exception:
+        pass
+    return ""
+
+
 def _build_txt_properties(
     instance_id: str,
     base_url: str,
     addon: bool,
+    mac: str = "",
 ) -> dict[str, str]:
-    """Build Zeroconf TXT properties. All values are strings (RFC 6763)."""
+    """Build Zeroconf TXT properties. All values are strings (RFC 6763).
+
+    Field set (schema v2):
+
+    - ``instance_id``: stable UUID per gateway install (used as HA unique_id)
+    - ``version``/``sw``: gateway semver (kept both for back-compat)
+    - ``host``/``port``: where the companion should connect
+    - ``base_url``: convenience (``http://host:port``) for older clients
+    - ``mac``: colon-separated MAC of the LAN-facing interface; empty
+      when unavailable (e.g. add-on with host_network)
+    - ``homeassistant_addon``: "true" when running under Supervisor
+    - ``schema_version``: integer as string; the companion uses this to
+      switch between TXT layouts
+    """
+    host, port = _parse_host_port(base_url)
     return {
         "instance_id": instance_id,
         "version": __version__,
+        "sw": __version__,
+        "host": host,
+        "port": port,
         "base_url": base_url,
+        "mac": mac,
         "homeassistant_addon": "true" if addon else "false",
         "schema_version": str(DISCOVERY_SCHEMA_VERSION),
     }
@@ -173,6 +227,10 @@ class HaDiscoveryAdvertiser:
 
         self._aiozc: AsyncZeroconf | None = None
         self._service_info: AsyncServiceInfo | None = None
+
+        # Best-effort LAN MAC; empty when running under Supervisor (the
+        # add-on does not own a unique interface).
+        self._mac = "" if self._is_addon else _read_interface_mac()
 
         # HassIO state
         self._hassio_uuid: str | None = None
@@ -198,7 +256,7 @@ class HaDiscoveryAdvertiser:
     @property
     def txt_properties(self) -> dict[str, str]:
         return _build_txt_properties(
-            self._instance_id, self._base_url, self._is_addon
+            self._instance_id, self._base_url, self._is_addon, mac=self._mac
         )
 
     # ------------------------------------------------------------------
@@ -348,6 +406,7 @@ class HaDiscoveryAdvertiser:
             "config": {
                 "host": "127.0.0.1",
                 "port": self._cfg.api_port,
+                "instance_id": self._instance_id,
             },
         }
         try:
