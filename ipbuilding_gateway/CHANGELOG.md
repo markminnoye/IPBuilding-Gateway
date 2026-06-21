@@ -24,6 +24,12 @@ anders meldt.
 
 ## [Unreleased]
 
+### Added
+- Buttons emit a new `single_press` event on the WebSocket when a press is
+  released without crossing the long-press threshold. The raw `pressed`/
+  `released` edges and `long_press` are unchanged. Companion ≥ 1.3.0 maps
+  this to the HA-standard `press_end`.
+
 ## [1.0.4] - 2026-06-19
 
 ### Added
