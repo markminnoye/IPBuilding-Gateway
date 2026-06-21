@@ -159,7 +159,39 @@ class TestButtonStateMachine:
         self._release(api, "2f8185190000df")
 
         actions = [m["action"] for m in api._captured]
-        assert actions == ["press", "release"]
+        # short press without crossing the long-press threshold emits
+        # single_press (the gesture) *before* the raw release edge.
+        assert actions == ["press", "single_press", "release"]
+
+    @pytest.mark.asyncio
+    async def test_short_press_emits_single_press_before_release(self) -> None:
+        inst = _make_installation([
+            {"id": "2f8185190000df", "hold_threshold_s": 0.5}
+        ])
+        api = self._make_capturing_api(inst)
+
+        self._press(api, "2f8185190000df")
+        self._release(api, "2f8185190000df")
+
+        actions = [m["action"] for m in api._captured]
+        # single_press is emitted on release when no long_press fired,
+        # before the raw release edge.
+        assert actions == ["press", "single_press", "release"]
+
+    @pytest.mark.asyncio
+    async def test_long_press_does_not_emit_single_press(self) -> None:
+        inst = _make_installation([
+            {"id": "2f8185190000df", "hold_threshold_s": 0.5}
+        ])
+        api = self._make_capturing_api(inst)
+
+        self._press(api, "2f8185190000df")
+        self._run_long_press_timer(api, "2f8185190000df")
+        self._release(api, "2f8185190000df")
+
+        actions = [m["action"] for m in api._captured]
+        assert actions == ["press", "long_press", "release"]
+        assert "single_press" not in actions
 
     @pytest.mark.asyncio
     async def test_double_press_resets_state(self) -> None:
@@ -196,7 +228,8 @@ class TestButtonStateMachine:
         actions = [m["action"] for m in api._captured]
         # No long_press frame in the captured output.
         assert "long_press" not in actions
-        assert actions == ["press", "release"]
+        # Short release after no long_press fires single_press + release.
+        assert actions == ["press", "single_press", "release"]
 
     def test_unknown_action_is_ignored(self) -> None:
         inst = _make_installation()

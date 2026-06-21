@@ -566,8 +566,9 @@ class GatewayAPI:
         The wire only delivers ``press`` and ``release`` edges. We arm a
         per-button timer on press; if the timer fires before the matching
         release we emit ``long_press`` (the operator's hold threshold from
-        ``getButtons.func2.holdSeconds``). On release we cancel the timer
-        and emit ``release``.
+        ``getButtons.func2.holdSeconds``). On release we cancel the timer;
+        if no long_press fired we emit single_press (the short click), then
+        always emit release.
         """
         id_hex = (evt.id_hex or "").lower()
         action = (evt.action or "").lower()
@@ -595,8 +596,15 @@ class GatewayAPI:
             if state.long_press_handle is not None:
                 state.long_press_handle.cancel()
                 state.long_press_handle = None
+            was_long = state.long_press_fired
             state.press_started_at = None
             state.long_press_fired = False
+            # A release with no preceding long_press is a short click.
+            # Emit single_press *before* the raw release edge so consumers
+            # that key on the gesture see it first; release stays as the
+            # always-present raw edge for dim/cover blueprints.
+            if not was_long:
+                self._broadcast_button(id_hex, "single_press")
             self._broadcast_button(id_hex, "release")
 
     def _fire_long_press(self, id_hex: str) -> None:
