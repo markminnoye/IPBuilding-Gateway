@@ -596,14 +596,19 @@ class GatewayAPI:
             if state.long_press_handle is not None:
                 state.long_press_handle.cancel()
                 state.long_press_handle = None
+            # press_started_at is the "currently held" sentinel (same guard
+            # _fire_long_press uses). A release without an active press —
+            # a duplicate release frame, or one with no matching press — must
+            # NOT synthesise a single_press, or downstream toggles fire twice.
+            had_active_press = state.press_started_at is not None
             was_long = state.long_press_fired
             state.press_started_at = None
             state.long_press_fired = False
-            # A release with no preceding long_press is a short click.
-            # Emit single_press *before* the raw release edge so consumers
-            # that key on the gesture see it first; release stays as the
-            # always-present raw edge for dim/cover blueprints.
-            if not was_long:
+            # A real short press (active press, no long_press) is a short
+            # click. Emit single_press *before* the raw release edge so
+            # consumers that key on the gesture see it first; release stays
+            # as the always-present raw edge for dim/cover blueprints.
+            if had_active_press and not was_long:
                 self._broadcast_button(id_hex, "single_press")
             self._broadcast_button(id_hex, "release")
 

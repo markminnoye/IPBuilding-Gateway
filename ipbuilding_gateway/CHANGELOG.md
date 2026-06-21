@@ -22,13 +22,15 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
-## [Unreleased]
+## [1.1.0] - 2026-06-21
 
 ### Added
 - Buttons emit a new `single_press` event on the WebSocket when a press is
   released without crossing the long-press threshold. The raw `pressed`/
-  `released` edges and `long_press` are unchanged. Companion ≥ 1.3.0 maps
-  this to the HA-standard `press_end`.
+  `released` edges and `long_press` are unchanged. `single_press` is only
+  synthesised for a real short press — a release with no active press
+  (duplicate or orphan release frame) forwards just the raw `release`.
+  Companion ≥ 1.3.0 maps this to the HA-standard `press_end`.
 
 ## [1.0.4] - 2026-06-19
 

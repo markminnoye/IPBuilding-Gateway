@@ -231,6 +231,38 @@ class TestButtonStateMachine:
         # Short release after no long_press fires single_press + release.
         assert actions == ["press", "single_press", "release"]
 
+    @pytest.mark.asyncio
+    async def test_orphan_release_does_not_emit_single_press(self) -> None:
+        # A release with no preceding press (lost press frame, startup edge)
+        # must only forward the raw release — never a synthetic single_press.
+        inst = _make_installation([
+            {"id": "2f8185190000df", "hold_threshold_s": 0.5}
+        ])
+        api = self._make_capturing_api(inst)
+
+        self._release(api, "2f8185190000df")
+
+        actions = [m["action"] for m in api._captured]
+        assert actions == ["release"]
+        assert "single_press" not in actions
+
+    @pytest.mark.asyncio
+    async def test_duplicate_release_emits_single_press_once(self) -> None:
+        # A duplicate release frame must not produce a second single_press,
+        # or a toggle would fire twice for one physical tap.
+        inst = _make_installation([
+            {"id": "2f8185190000df", "hold_threshold_s": 0.5}
+        ])
+        api = self._make_capturing_api(inst)
+
+        self._press(api, "2f8185190000df")
+        self._release(api, "2f8185190000df")
+        self._release(api, "2f8185190000df")  # duplicate
+
+        actions = [m["action"] for m in api._captured]
+        assert actions == ["press", "single_press", "release", "release"]
+        assert actions.count("single_press") == 1
+
     def test_unknown_action_is_ignored(self) -> None:
         inst = _make_installation()
         api = self._make_capturing_api(inst)

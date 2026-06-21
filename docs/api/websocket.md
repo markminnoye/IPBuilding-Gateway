@@ -201,7 +201,16 @@ recent fieldbus response was received.
 }
 ```
 
-Possible `action` values: `press`, `release`, `long_press` (firmware-dependent).
+Possible `action` values:
+
+- `press` — raw press edge (button down).
+- `release` — raw release edge (button up); always sent.
+- `long_press` — sent once the per-button hold threshold is crossed while
+  still held (gateway-derived; default 1.5 s).
+- `single_press` — sent on the release of a short tap (no `long_press`
+  crossed). Synthesised by the gateway only for a real short press; a
+  duplicate or orphan release forwards just `release`. Sent *before* the
+  `release` frame so consumers keying on the gesture see it first.
 
 ### `device_added` -- new module detected
 
