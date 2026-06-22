@@ -22,6 +22,15 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [1.1.1] - 2026-06-22
+
+### Fixed
+- `single_press` wordt niet meer dubbel uitgestuurd wanneer een duplicate of
+  wees-release frame binnenkomt (geen actief ingedrukte knop). Alleen echte
+  korte indrukken genereren een `single_press`; overtollige release-frames
+  leiden nog uitsluitend tot een `released` event. Voorkomt ongewenste dubbele
+  schakelacties bij gebruik met HA-automations.
+
 ## [1.1.0] - 2026-06-21
 
 ### Added
