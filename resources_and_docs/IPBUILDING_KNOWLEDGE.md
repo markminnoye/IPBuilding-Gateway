@@ -661,6 +661,8 @@ De relay module op `10.10.1.30` verwacht **raw ASCII commando's** op UDP/1001 �
 
 Dimmer commando's/replies (`S…1030`, `I0154<C><VV>`, …): [2026-05-17_dimmer_I0154xxx_full_decode.md](evidence/2026-05-17_dimmer_I0154xxx_full_decode.md). Input button-wire: [2026-05-22_sprint5_input_physical_completion.md](evidence/2026-05-22_sprint5_input_physical_completion.md). Parser-code: `gateway/payloads/`.
 
+**Downstream `T` / `D` ramp-dialect** (`T<ch>991000`, `D<ch>001003`, `D<ch>001000`) — peer-to-peer capture van input→dimmer via IPBox-hub: [2026-06-22_dimmer_p2p_hold_dim_capture.md](evidence/2026-06-22_dimmer_p2p_hold_dim_capture.md). Encoders in `gateway/payloads/dimmer.py`: `encode_dim_toggle`, `encode_dim_start`, `encode_dim_stop`. Companion-dispatch via gateway-acties `TOGGLE` / `DIM_START` / `DIM_STOP`; companion exposeert `ha_ipbuilding_gateway.dim_start` / `dim_stop` services die `button_dim.yaml` v8 aanroept.
+
 ### 6.7 Historische input-pcap (referentie)
 
 **Bestandsnaam:** `traffic between controller an IPbox.pcapng`  

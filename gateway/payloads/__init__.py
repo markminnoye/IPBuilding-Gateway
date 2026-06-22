@@ -1,6 +1,13 @@
 """UDP/1001 payload encoders and decoders."""
 
-from gateway.payloads.dimmer import decode_dimmer_payload, encode_dim_command, encode_dim_off
+from gateway.payloads.dimmer import (
+    decode_dimmer_payload,
+    encode_dim_command,
+    encode_dim_off,
+    encode_dim_start,
+    encode_dim_stop,
+    encode_dim_toggle,
+)
 from gateway.payloads.input import decode_input_payload, encode_input_poll
 from gateway.payloads.relay import (
     decode_relay_payload,
@@ -12,6 +19,9 @@ __all__ = [
     "decode_dimmer_payload",
     "encode_dim_command",
     "encode_dim_off",
+    "encode_dim_start",
+    "encode_dim_stop",
+    "encode_dim_toggle",
     "decode_input_payload",
     "encode_input_poll",
     "decode_relay_payload",

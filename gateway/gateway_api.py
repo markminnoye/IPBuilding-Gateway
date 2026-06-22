@@ -34,7 +34,14 @@ from gateway.discovery import resolve_module_model
 from gateway.health import GatewayHealthMonitor
 from gateway.installation import InstallationConfig
 from gateway.module_metadata import ModuleMetadataCache, normalize_button_hardware_id
-from gateway.payloads import encode_relay_command, encode_dim_command, encode_dim_off
+from gateway.payloads import (
+    encode_dim_command,
+    encode_dim_off,
+    encode_dim_start,
+    encode_dim_stop,
+    encode_dim_toggle,
+    encode_relay_command,
+)
 from gateway.models import RelayAction, RelayCommand, DimmerCommand
 from gateway.udp_bus import UDPBus
 
@@ -420,7 +427,15 @@ class GatewayAPI:
         elif error and "unsupported" in error:
             code = "unsupported_action"
             status = 422
-            details["valid_actions"] = ["ON", "OFF", "PULSE", "TOGGLE", "DIM"]
+            details["valid_actions"] = [
+                "ON",
+                "OFF",
+                "PULSE",
+                "TOGGLE",
+                "DIM",
+                "DIM_START",
+                "DIM_STOP",
+            ]  # noqa: E501
         raise ApiError(status, code, error or "command failed", details)
 
     async def _post_autonomy(self, request: web.Request) -> web.Response:
@@ -504,6 +519,12 @@ class GatewayAPI:
                     return False, "channel inactive"
 
         # Encode the command
+        # ``awaits_reply`` is shared across relay and dimmer branches so the
+        # post-send "wait for correlate_reply" decision stays in one place.
+        # DIM_START is the only fire-and-forget action today; everything else
+        # (relay ON/OFF/PULSE/TOGGLE, dimmer DIM/TOGGLE/DIM_STOP) replies with
+        # a status frame that must land on the right registry key.
+        awaits_reply = True
         if dtype == DeviceType.RELAY:
             if action == "ON":
                 cmd = RelayCommand(channel=channel, action=RelayAction.ON)
@@ -517,24 +538,37 @@ class GatewayAPI:
                 return False, f"unsupported relay action: {action}"
             payload = encode_relay_command(cmd)
         elif dtype == DeviceType.DIMMER:
-            if action != "DIM":
-                return False, f"unsupported dimmer action: {action}"
-            level = int(value) if value is not None else 0
-            if level == 0:
-                payload = encode_dim_off(channel)
+            if action == "DIM":
+                level = int(value) if value is not None else 0
+                if level == 0:
+                    payload = encode_dim_off(channel)
+                else:
+                    cmd = DimmerCommand(channel=channel, level=level)
+                    payload = encode_dim_command(cmd)
+            elif action == "TOGGLE":
+                payload = encode_dim_toggle(channel)
+            elif action == "DIM_START":
+                payload = encode_dim_start(channel)
+            elif action == "DIM_STOP":
+                payload = encode_dim_stop(channel)
             else:
-                cmd = DimmerCommand(channel=channel, level=level)
-                payload = encode_dim_command(cmd)
+                return False, f"unsupported dimmer action: {action}"
+            # DIM_START produces no reply on the wire — the dimmer just begins
+            # ramping. TOGGLE/DIM_STOP reply with I0154<ch><VV> (as DIM does),
+            # so the channel-less reply still needs to land on the right key.
+            if action == "DIM_START":
+                awaits_reply = False
+            else:
+                self._registry.track_dimmer_channel(module_ip, channel)
         else:
             return False, f"unsupported device type: {dtype.value}"
 
         # Send and wait for reply
         try:
             await self._bus.send_command(module_ip, payload)
-            # For dimmer commands, track the channel so that the next status
-            # reply (which carries no channel) is stored under the correct key.
-            if dtype == DeviceType.DIMMER and action == "DIM":
-                self._registry.track_dimmer_channel(module_ip, channel)
+            if not awaits_reply:
+                # DIM_START — fire-and-forget; no reply to correlate.
+                return True, None
             reply = await self._bus.correlate_reply(
                 module_ip=module_ip,
                 after_ts=self._bus.last_send_ts,
@@ -566,8 +600,9 @@ class GatewayAPI:
         The wire only delivers ``press`` and ``release`` edges. We arm a
         per-button timer on press; if the timer fires before the matching
         release we emit ``long_press`` (the operator's hold threshold from
-        ``getButtons.func2.holdSeconds``). On release we cancel the timer
-        and emit ``release``.
+        ``getButtons.func2.holdSeconds``). On release we cancel the timer;
+        if no long_press fired we emit single_press (the short click), then
+        always emit release.
         """
         id_hex = (evt.id_hex or "").lower()
         action = (evt.action or "").lower()
@@ -595,8 +630,20 @@ class GatewayAPI:
             if state.long_press_handle is not None:
                 state.long_press_handle.cancel()
                 state.long_press_handle = None
+            # press_started_at is the "currently held" sentinel (same guard
+            # _fire_long_press uses). A release without an active press —
+            # a duplicate release frame, or one with no matching press — must
+            # NOT synthesise a single_press, or downstream toggles fire twice.
+            had_active_press = state.press_started_at is not None
+            was_long = state.long_press_fired
             state.press_started_at = None
             state.long_press_fired = False
+            # A real short press (active press, no long_press) is a short
+            # click. Emit single_press *before* the raw release edge so
+            # consumers that key on the gesture see it first; release stays
+            # as the always-present raw edge for dim/cover blueprints.
+            if had_active_press and not was_long:
+                self._broadcast_button(id_hex, "single_press")
             self._broadcast_button(id_hex, "release")
 
     def _fire_long_press(self, id_hex: str) -> None:

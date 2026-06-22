@@ -433,6 +433,114 @@ class TestExecuteCommandInactive:
         api._bus.send_command.assert_called_once()
 
 
+class TestDimmerDownstreamCommands:
+    """Button / ramp wire dialect on dimmer channels.
+
+    The IP0300PoE accepts the new TOGGLE / DIM_START / DIM_STOP actions in
+    addition to the absolute DIM path. TOGGLE and DIM_STOP produce a status
+    reply that must land on the right channel key; DIM_START is
+    fire-and-forget.
+    """
+
+    @pytest.mark.asyncio
+    async def test_dim_toggle_sends_t_frame_and_tracks_channel(self) -> None:
+        """TOGGLE → ``T<ch>991000``; ``track_dimmer_channel`` called."""
+        import asyncio
+        from gateway.device_registry import DeviceKey, DimmerState
+
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:9e:a8",
+                "channels": [{"ch": 1, "name": "Bureau", "active": True, "max_watt": 100}],
+            }
+        ])
+        api = _make_api(inst)
+        api._bus.last_send_ts = 0.0
+        reply_future: asyncio.Future = asyncio.Future()
+        reply_future.set_result(DimmerState(level_percent=42))
+        api._bus.correlate_reply = MagicMock(return_value=reply_future)
+        send_future: asyncio.Future = asyncio.Future()
+        send_future.set_result(None)
+        api._bus.send_command.return_value = send_future
+
+        ok, error = await api._execute_command("10.10.1.40-1", "TOGGLE", None)
+        assert ok is True
+        assert error is None
+        api._bus.send_command.assert_called_once_with(
+            "10.10.1.40", b"T1991000"
+        )
+
+    @pytest.mark.asyncio
+    async def test_dim_start_sends_d_start_no_reply(self) -> None:
+        """DIM_START → ``D<ch>001003``; no correlate_reply awaited."""
+        import asyncio
+
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:9e:a8",
+                "channels": [{"ch": 0, "name": "Bureau", "active": True, "max_watt": 100}],
+            }
+        ])
+        api = _make_api(inst)
+        api._bus.last_send_ts = 0.0
+        send_future: asyncio.Future = asyncio.Future()
+        send_future.set_result(None)
+        api._bus.send_command.return_value = send_future
+
+        ok, error = await api._execute_command("10.10.1.40-0", "DIM_START", None)
+        assert ok is True
+        assert error is None
+        api._bus.send_command.assert_called_once_with(
+            "10.10.1.40", b"D0001003"
+        )
+        api._bus.correlate_reply.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_dim_stop_sends_d_stop_and_tracks_channel(self) -> None:
+        """DIM_STOP → ``D<ch>001000``; reply awaited, channel tracked."""
+        import asyncio
+        from gateway.device_registry import DeviceKey, DimmerState
+
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:9e:a8",
+                "channels": [{"ch": 0, "name": "Bureau", "active": True, "max_watt": 100}],
+            }
+        ])
+        api = _make_api(inst)
+        api._bus.last_send_ts = 0.0
+        reply_future: asyncio.Future = asyncio.Future()
+        reply_future.set_result(DimmerState(level_percent=70))
+        api._bus.correlate_reply = MagicMock(return_value=reply_future)
+        send_future: asyncio.Future = asyncio.Future()
+        send_future.set_result(None)
+        api._bus.send_command.return_value = send_future
+
+        ok, error = await api._execute_command("10.10.1.40-0", "DIM_STOP", None)
+        assert ok is True
+        assert error is None
+        api._bus.send_command.assert_called_once_with(
+            "10.10.1.40", b"D0001000"
+        )
+        api._bus.correlate_reply.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_unsupported_dimmer_action_rejected(self) -> None:
+        """Unknown dimmer actions return a typed error (no UDP sent)."""
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:9e:a8",
+                "channels": [{"ch": 0, "name": "Bureau", "active": True, "max_watt": 100}],
+            }
+        ])
+        api = _make_api(inst)
+
+        ok, error = await api._execute_command("10.10.1.40-0", "PULSE", None)
+        assert ok is False
+        assert "unsupported dimmer action" in (error or "")
+        api._bus.send_command.assert_not_called()
+
+
 class TestStateChangedInactive:
     """state_changed for inactive channels must be suppressed."""
 

@@ -196,12 +196,37 @@ recent fieldbus response was received.
 ```json
 {
   "type": "button_event",
-  "id": "2DE341851900001F",
-  "action": "press"
+  "id": "2f8185190000df",
+  "action": "single_press"
 }
 ```
 
-Possible `action` values: `press`, `release`, `long_press` (firmware-dependent).
+The `id` field carries the normalized hardware hex ID (14 lowercase hex
+characters). `getButtons` returns the same id with a `2D` type prefix
+(e.g. `2D2F8185190000DF`); the gateway strips the prefix on the
+northbound WS so a `button_event.id` always matches a `devices[].id`
+on a `type=input` entry. The `id` is stable per physical button; do
+not key on `module_ip` because DHCP can change the input module's
+address.
+
+Possible `action` values:
+
+- `press` — raw press edge (button down). Sent on every press, including
+  the start of a long press; consumers that want a clean short/long
+  distinction should subscribe to `single_press` / `long_press` instead.
+- `release` — raw release edge (button up); always sent.
+- `long_press` — sent once the per-button hold threshold is crossed while
+  still held (gateway-derived; default 1.5 s, per-button override from
+  `getButtons.func2.holdSeconds`).
+- `single_press` — sent on the release of a short tap (no `long_press`
+  crossed). Synthesised by the gateway only for a real short press; a
+  duplicate or orphan release forwards just `release`. Sent *before* the
+  `release` frame so consumers keying on the gesture see it first.
+
+Typical sequences:
+
+- Short tap: `press` → `single_press` → `release`
+- Long press: `press` → `long_press` → `release` (no `single_press`)
 
 ### `device_added` -- new module detected
 
@@ -349,6 +374,6 @@ The `module_id` field on each device contains the stable MAC of the parent modul
 
 ## Routing button events to HA entities
 
-`button_event.id` is the hardware hex ID from the IP1100PoE (e.g. `2DE341851900001F`). Route these to Home Assistant button entities via the `ipbuilding-gateway-ha` companion automation.
+`button_event.id` is the normalized hardware hex ID from the IP1100PoE (14 lowercase hex characters, e.g. `2f8185190000df`). The companion routes these to Home Assistant `event.<hardware_id>` entities via the `ipbuilding-gateway-ha` integration, then exposes a `single_pressed` / `long_pressed` device trigger in the automation editor for each physical button. The HA / Matter standard event types are also forwarded in `event_data` (`press_start`, `press_end`, `long_press_start`).
 
 See [ARCHITECTURE.md -- section 6](../../ARCHITECTURE.md#6-northbound-protocol-websocket) for the full sequence diagram and [`coordinator.py`](https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ha_ipbuilding_gateway/coordinator.py) in the companion repo for how button events are dispatched in HA.

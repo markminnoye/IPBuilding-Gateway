@@ -22,7 +22,29 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
-## [Unreleased]
+## [1.1.1] - 2026-06-22
+
+### Fixed
+- `single_press` wordt niet meer dubbel uitgestuurd wanneer een duplicate of
+  wees-release frame binnenkomt (geen actief ingedrukte knop). Alleen echte
+  korte indrukken genereren een `single_press`; overtollige release-frames
+  leiden nog uitsluitend tot een `released` event. Voorkomt ongewenste dubbele
+  schakelacties bij gebruik met HA-automations.
+
+## [1.2.0] - 2026-06-23
+
+### Added
+- **Downstream `T` / `D` dimmer commands.** `gateway/payloads/dimmer.py` exposes `encode_dim_toggle(channel)`, `encode_dim_start(channel)`, `encode_dim_stop(channel)` for the button/ramp wire dialect (`T<ch>991000`, `D<ch>001003`, `D<ch>001000`). `gateway_api._execute_command` dispatches `TOGGLE`, `DIM_START`, `DIM_STOP` actions on dimmer channels; `TOGGLE` and `DIM_STOP` track the channel for the channel-less reply, `DIM_START` is fire-and-forget. The companion's `button_dim` blueprint (v8) uses these to drive a native ramp instead of the old `brightness_step_pct` loop. Wire-bytes match `resources_and_docs/evidence/2026-06-22_dimmer_p2p_hold_dim_capture.md`. Companion `ha-ipbuilding-gateway` ≥ **1.7.0** consumes the new gateway actions via `ha_ipbuilding_gateway.dim_start` / `dim_stop`.
+
+## [1.1.0] - 2026-06-21
+
+### Added
+- Buttons emit a new `single_press` event on the WebSocket when a press is
+  released without crossing the long-press threshold. The raw `pressed`/
+  `released` edges and `long_press` are unchanged. `single_press` is only
+  synthesised for a real short press — a release with no active press
+  (duplicate or orphan release frame) forwards just the raw `release`.
+  Companion ≥ 1.3.0 maps this to the HA-standard `press_end`.
 
 ## [1.0.4] - 2026-06-19
 

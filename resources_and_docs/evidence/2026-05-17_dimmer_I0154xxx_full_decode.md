@@ -85,12 +85,41 @@ From [IPBUILDING_KNOWLEDGE.md](IPBUILDING_KNOWLEDGE.md) §12.3:
 
 **Implication:** commanding REST `DIM 1%` may produce physical ~15% before ramping; wire value-code reflects **commanded setpoint**, not instantaneous PWM. Gateway must apply EEPROM `dimMin`/`dimMax` when translating user-facing %.
 
+## Input-module→dimmer dialect (2026-06-22 — NIEUW)
+
+**Evidence:** `/Users/markminnoye/Downloads/capture dimmer.pcapng`, [2026-06-22_dimmer_p2p_hold_dim_capture.md](2026-06-22_dimmer_p2p_hold_dim_capture.md)
+
+De IP1100PoE input module stuurt commando's **rechtstreeks** naar de IP0300PoE dimmer (peer-to-peer, hub afwezig op dit pad). Dit is het reguliere schakelpad in het IPBox-systeem — geen noodmodus.
+
+| Payload | Formaat | Semantiek |
+|---------|---------|-----------|
+| `T<ch><vv>1000` | T + ch-digit + 2-digit dimMax + `1000` | Toggle (kort drukken) |
+| `D<ch><vv>1003` | D + ch-digit + 2-digit dimMax + `1003` | Dim hold **start** (auto-richting; **geen ack**) |
+| `D<ch><vv>1000` | D + ch-digit + 2-digit dimMax + `1000` | Dim hold **stop** (ack `I0154<ch><vv>`) |
+
+**Hold-dim = start/stop protocol:**
+- Exact 2 pakketten per hold-actie
+- Dimmer dimmt autonoom tussen start en stop
+- Identieke payload voor dim-omhoog en dim-omlaag; IP0300 wisselt intern van richting
+- Dim-snelheden: ~31%/s omhoog, ~20%/s omlaag
+
+**Vergelijking dialecten:**
+
+| | Hub-dialect | Input-dialect |
+|---|------------|---------------|
+| Suffix | `1030` | `1000` / `1003` |
+| Toggle | — | `T<ch><vv>1000` |
+| Dim set | `S<ch><vv>1030` | `D<ch><vv>1003` (start) + `D<ch><vv>1000` (stop) |
+| Off | `C<ch>991030` | `T<ch><vv>1000` (toggle naar off) |
+| Ack | altijd | alleen op stop (niet op start) |
+
 ## Open questions
 
 - Exact PWM timing curve vs value-code (needs `api.html?method=statuses` correlate when IPBox live).
 - Whether all 8 channels (571–578) use identical `I01` + `54` prefix (only ch 0–2 seen in sweep pcaps).
+- Input→relay direct pad: nog niet gecaptured (alleen input→dimmer bevestigd).
 
 ## Parser references
 
 - `scripts/dimmer_payload_parser.py` — hub commands `S*`/`C*`/`I9900`
-- `gateway/payloads/dimmer.py` — gateway encoder/decoder including `I0154xxx`
+- `gateway/payloads/dimmer.py` — gateway encoder/decoder including `I0154xxx` + input P2P dialect

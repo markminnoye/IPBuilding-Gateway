@@ -6,6 +6,9 @@ from gateway.payloads.dimmer import (
     decode_dimmer_status,
     encode_dim_command,
     encode_dim_off,
+    encode_dim_start,
+    encode_dim_stop,
+    encode_dim_toggle,
 )
 
 
@@ -71,3 +74,28 @@ def test_encode_dim_command():
 
 def test_encode_dim_off():
     assert encode_dim_off(1) == b"C1991030"
+
+
+# --- Button / ramp dialect (downstream control) -----------------------------
+# Wire-bytes match the 2026-06-22 p2p capture of IP1100PoE → IP0300PoE
+# (`resources_and_docs/evidence/2026-06-22_dimmer_p2p_hold_dim_capture.md`).
+
+def test_encode_dim_toggle():
+    """``T<ch>991000`` — short-press toggle; ``99`` value field is a placeholder."""
+    assert encode_dim_toggle(0) == b"T0991000"
+    assert encode_dim_toggle(1) == b"T1991000"
+    assert encode_dim_toggle(7) == b"T7991000"
+
+
+def test_encode_dim_start():
+    """``D<ch>001003`` — hold start; module ramps and auto-reverses."""
+    assert encode_dim_start(0) == b"D0001003"
+    assert encode_dim_start(1) == b"D1001003"
+    assert encode_dim_start(7) == b"D7001003"
+
+
+def test_encode_dim_stop():
+    """``D<ch>001000`` — hold stop; dimmer replies with ``I0154<ch><VV>``."""
+    assert encode_dim_stop(0) == b"D0001000"
+    assert encode_dim_stop(1) == b"D1001000"
+    assert encode_dim_stop(7) == b"D7001000"

@@ -143,28 +143,38 @@ van de volgende drie paden:
 trigger:
   - platform: state
     entity_id: event.2f8185190000df
-    to: "press"
+    attribute: event_type
+    to: "single_press"
     id: press
 action:
-  - action: homeassistant.toggle
+  - action: light.toggle
     target:
       entity_id: light.keuken_led
 ```
 
-#### Voorbeeld: hold → smooth dimmen, release → flip direction
+#### Voorbeeld: hold → native dim-ramp, release → stop
+
+Vanaf companion **v1.7.0** gebruikt het blueprint-pad de native
+`D<ch>001003` / `D<ch>001000` ramp-dialect — de IP0300PoE dimt zelf
+en draait de richting automatisch om. Geen `repeat`-lus, geen
+`brightness_step_pct`, geen `direction_helper` meer.
 
 ```yaml
 trigger:
   - platform: state
     entity_id: event.2f8185190000df
-    to: "press"
+    attribute: event_type
+    to: "single_press"
     id: press
   - platform: state
     entity_id: event.2f8185190000df
+    attribute: event_type
     to: "long_press"
     id: hold
   - platform: state
     entity_id: event.2f8185190000df
+    attribute: event_type
+    from: "long_press"
     to: "release"
     id: release
 action:
@@ -180,44 +190,30 @@ action:
           - condition: trigger
             id: hold
         sequence:
-          - variables:
-              sign: "{{ 1 if is_state('input_boolean.ipb_keuken_knop_1_dim_up', 'on') else -1 }}"
-          - repeat:
-              while:
-                - condition: trigger
-                  id: hold
-              sequence:
-                - action: light.turn_on
-                  target:
-                    entity_id: light.keuken_led
-                  data:
-                    brightness_step_pct: "{{ 5 * sign }}"
-                    transition: 0.2
-                - delay:
-                    milliseconds: 200
+          - action: ha_ipbuilding_gateway.dim_start
+            target:
+              entity_id: light.keuken_led
       - conditions:
           - condition: trigger
             id: release
         sequence:
-          - action: input_boolean.toggle
+          - action: ha_ipbuilding_gateway.dim_stop
             target:
-              entity_id: input_boolean.ipb_keuken_knop_1_dim_up
+              entity_id: light.keuken_led
 ```
-
-De `input_boolean` direction helper aanmaken: Instellingen →
-Apparaten & services → Helpers → Toggle. **Naam** mag spaties
-bevatten; **Entity ID** alleen `a-z`, `0-9` en underscores (anders
-krijg je `slugify`-fouten).
 
 ### 9. Live-test
 
 1. Lamp aan, brightness 50%.
 2. Korte druk → lamp toggle (uit).
 3. Korte druk → lamp aan.
-4. Hold → `long_pressed` → lamp dimt omhoog in stapjes.
-5. Release → `released` → loop stopt, helper flip naar "down".
-6. Hold opnieuw → lamp dimt omlaag.
-7. Bij 1% of 100% → automatische flip van richting.
+4. Hold → `long_pressed` → lamp dimt via de native ramp (gateway
+   zendt `D<ch>001003`).
+5. Release → `released` → gateway zendt `D<ch>001000`, dimmer stopt
+   en rapporteert het bereikte niveau.
+6. Hold opnieuw → lamp dimt de andere kant op (de IP0300PoE
+   module-eigen richting-omkeer doet dit automatisch; geen helper
+   meer in HA).
 
 ### 10. IPBox uitschakelen
 
