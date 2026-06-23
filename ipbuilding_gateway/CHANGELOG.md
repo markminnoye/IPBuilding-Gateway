@@ -31,6 +31,14 @@ anders meldt.
   leiden nog uitsluitend tot een `released` event. Voorkomt ongewenste dubbele
   schakelacties bij gebruik met HA-automations.
 
+## [1.2.1] - 2026-06-23
+
+### Fixed
+- **Meer fysieke knoppen worden herkend.** Sommige IP1100PoE-knoppen sturen een ander
+  event-type op de veldbus dan de eerder gedocumenteerde variant. De gateway negeerde
+  die drukken volledig; ze worden nu als normale press/release doorgegeven aan Home
+  Assistant.
+
 ## [1.2.0] - 2026-06-23
 
 ### Added

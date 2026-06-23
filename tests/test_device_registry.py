@@ -162,8 +162,8 @@ class TestInputEvents:
         events: list[tuple[DeviceKey, ButtonEvent]] = []
         reg.on_button_event(lambda key, evt: events.append((key, evt)))
 
-        # 13-byte button event: B + '-' + 6-byte id_core + 1-byte suffix + 0x03 + press(0x01) + 0x00 + E
-        raw = b"B-\x41\x42\x43\x44\x45\x46\x47\x03\x01\x00E"
+        # 13-byte button event: B + '-' + 6-byte id_core + 1-byte suffix + marker + press + 0x00 + E
+        raw = b"B-\x41\x42\x43\x44\x45\x46\x47\x02\x01\x00E"
         reg.handle_packet(_make_pkt("10.10.1.50", raw))
 
         assert len(events) == 1

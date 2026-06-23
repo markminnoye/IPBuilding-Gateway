@@ -13,9 +13,10 @@ from gateway.models import InputEvent
 
 _INPUT_POLL_RE = re.compile(rb"^I0000$")
 _INPUT_REPLY_RE = re.compile(rb"^I\x02R(?P<status>.{3})\x00{7}E$")
-# 13-byte event: B + '-' + 6-byte id core + 1-byte id suffix + 0x03 + edge + 0x00 + E
+# 13-byte event: B + '-' + 6-byte id core + 1-byte id suffix + marker + edge + 0x00 + E
+# marker observed as 0x03 (Sprint 5) and 0x02 (2026-06-23 missing-buttons capture); accept any byte.
 _INPUT_EVENT_RE = re.compile(
-    rb"^B\x2d(?P<id_core>.{6})(?P<id_suffix>.)\x03(?P<edge>\x01|\x00)\x00E$"
+    rb"^B\x2d(?P<id_core>.{6})(?P<id_suffix>.)(?P<marker>.)(?P<edge>\x01|\x00)\x00E$"
 )
 
 
@@ -55,6 +56,7 @@ def decode_input_payload(data: bytes) -> dict[str, Any] | None:
             "direction": "input_to_hub",
             "id_core_hex": m.group("id_core").hex(),
             "id_suffix_hex": m.group("id_suffix").hex(),
+            "marker_hex": m.group("marker").hex(),
             "length": len(data),
         }
 
