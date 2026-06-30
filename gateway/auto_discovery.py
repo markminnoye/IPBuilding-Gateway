@@ -597,14 +597,19 @@ class DiscoveryOrchestrator:
         """Return True when an init-sweep should populate devices.json.
 
         A missing devices.json (fresh add-on install) always triggers a sweep
-        so the northbound API exposes modules/channels to the companion. The
-        ``auto_discover_on_start`` toggle only gates re-sweeps when the file
-        already exists but contains no modules (operator-managed empty file).
+        so the northbound API exposes modules/channels to the companion. An
+        unreadable devices.json (parse/validation error) is treated the same
+        way. The ``auto_discover_on_start`` toggle only gates re-sweeps when
+        the file already exists, loads cleanly, but contains no modules
+        (operator-managed empty file).
         """
         if self._installation is not None and self._installation.modules:
             return False
 
         if not os.path.exists(self._devices_file):
+            return True
+
+        if self._installation is None:
             return True
 
         if self._config.auto_discover_on_start:

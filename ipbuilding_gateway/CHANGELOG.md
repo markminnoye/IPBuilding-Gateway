@@ -22,6 +22,16 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [Unreleased]
+
+### Changed
+- **Env-default UDP poll targets (`.30/.40/.50`) zijn niet langer stille fallback** wanneer `devices.json` ontbreekt of ongeldig is. Productie-installaties starten zonder UDP-polling tot discovery `devices.json` vult. Lab/RE: zet add-on optie `use_env_defaults` aan of `GATEWAY_USE_ENV_DEFAULTS=1`; `GATEWAY_SIMULATED=1` gedraagt zich zoals voorheen.
+- **Init-sweep bij ongeldig `devices.json`** — parse/validatiefouten (bijv. `type: unknown`) triggeren nu dezelfde startup-sweep als een ontbrekend bestand.
+
+### Added
+- **Diagnostische discovery-logging** — HTTP-identify fouten, onopgeloste moduletypes en `devices.json` reload-fouten verschijnen in de add-on logs.
+- **Health issue `installation.load_failed`** wanneer `devices.json` bestaat maar niet geladen kan worden.
+
 ## [1.1.1] - 2026-06-22
 
 ### Fixed

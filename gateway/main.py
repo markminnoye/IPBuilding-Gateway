@@ -38,7 +38,7 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         for mc in cfg.installation.modules:
             registry.register_module(mc.ip, mc.type)
     else:
-        # Fall back to env-derived field_modules
+        # Optional env/lab poll targets (see use_env_defaults / simulated_mode).
         for module_type, module_ip in cfg.field_modules.items():
             try:
                 dtype = DeviceType(module_type)
@@ -67,6 +67,14 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
     # Build metadata cache and prefetch getSysSet/getButtons before starting API.
     health = GatewayHealthMonitor()
     health.set_installation_loaded(cfg.installation is not None)
+    if cfg.installation_load_error:
+        health.report_issue(
+            "installation.load_failed",
+            "installation.load_failed",
+            "error",
+            cfg.installation_load_error,
+            {"devices_file": cfg.devices_file},
+        )
     meta_cache = ModuleMetadataCache(health=health)
     if cfg.installation:
         try:

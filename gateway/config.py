@@ -12,6 +12,19 @@ from gateway.installation import InstallationConfig, InstallationError
 log = logging.getLogger(__name__)
 
 
+def _env_truthy(name: str, default: str = "0") -> bool:
+    return os.getenv(name, default).lower() in ("1", "true", "yes")
+
+
+def _default_env_module_ips() -> dict[str, str]:
+    """Lab/RE fallback targets when env-default polling is explicitly enabled."""
+    return {
+        "relay": os.getenv("GATEWAY_RELAY_IP", "10.10.1.30"),
+        "dimmer": os.getenv("GATEWAY_DIMMER_IP", "10.10.1.40"),
+        "input": os.getenv("GATEWAY_INPUT_IP", "10.10.1.50"),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Discovery config
 # ---------------------------------------------------------------------------
@@ -77,13 +90,13 @@ class GatewayConfig:
     poll_interval_s: float = 2.0
     simulated_mode: bool = False
     log_level: str = "INFO"
-    field_modules: dict[str, str] = field(
-        default_factory=lambda: {
-            "relay": "10.10.1.30",
-            "dimmer": "10.10.1.40",
-            "input": "10.10.1.50",
-        }
-    )
+    # When True, poll the env-derived relay/dimmer/input IPs when devices.json
+    # is missing or failed to load. Off by default in production; enabled
+    # automatically in simulated_mode or via GATEWAY_USE_ENV_DEFAULTS=1.
+    use_env_defaults: bool = False
+    # Human-readable reason devices.json did not load (None when load succeeded).
+    installation_load_error: str | None = None
+    field_modules: dict[str, str] = field(default_factory=dict)
     # Installation configuration; if set, field_modules is derived from it
     installation: InstallationConfig | None = None
     # Path to the devices.json file on disk. Single source of truth: both the
@@ -97,6 +110,14 @@ class GatewayConfig:
     # raise for slow / loaded networks.
     metadata_timeout_s: float = 5.0
 
+    def __post_init__(self) -> None:
+        if (
+            not self.field_modules
+            and self.installation is None
+            and (self.simulated_mode or self.use_env_defaults)
+        ):
+            object.__setattr__(self, "field_modules", _default_env_module_ips())
+
     @classmethod
     def from_env(cls) -> GatewayConfig:
         installation: InstallationConfig | None = None
@@ -107,22 +128,41 @@ class GatewayConfig:
         except InstallationError as exc:
             load_error = exc
 
-        if installation is None:
-            modules = {
-                "relay": os.getenv("GATEWAY_RELAY_IP", "10.10.1.30"),
-                "dimmer": os.getenv("GATEWAY_DIMMER_IP", "10.10.1.40"),
-                "input": os.getenv("GATEWAY_INPUT_IP", "10.10.1.50"),
-            }
-            if load_error is not None:
-                log.warning(
-                    "Failed to load devices.json (%s) - falling back to env default "
-                    "UDP poll targets %s: %s",
+        simulated_mode = _env_truthy("GATEWAY_SIMULATED")
+        use_env_defaults = _env_truthy("GATEWAY_USE_ENV_DEFAULTS")
+        devices_file_exists = os.path.isfile(devices_file)
+
+        if installation is not None:
+            modules = installation.field_modules()
+        elif simulated_mode or use_env_defaults:
+            modules = _default_env_module_ips()
+            reason = "simulated_mode" if simulated_mode else "GATEWAY_USE_ENV_DEFAULTS"
+            log.info(
+                "Using env default UDP poll targets (%s): %s",
+                reason,
+                ", ".join(f"{dtype}@{ip}" for dtype, ip in modules.items()),
+            )
+        else:
+            modules = {}
+            if not devices_file_exists:
+                log.info(
+                    "No devices.json at %s — UDP polling disabled until init-sweep "
+                    "populates the installation",
                     devices_file,
-                    ", ".join(f"{dtype}@{ip}" for dtype, ip in modules.items()),
+                )
+            elif load_error is not None:
+                log.warning(
+                    "Failed to load devices.json (%s) — UDP polling disabled until "
+                    "discovery succeeds (set GATEWAY_USE_ENV_DEFAULTS=1 for lab IPs): %s",
+                    devices_file,
                     load_error,
                 )
-        else:
-            modules = installation.field_modules()
+            else:
+                log.info(
+                    "devices.json at %s loaded with no modules — UDP polling disabled "
+                    "until discovery runs",
+                    devices_file,
+                )
 
         discovery = DiscoveryConfig.from_env()
         hub_ip = os.getenv("GATEWAY_HUB_IP", "10.10.1.1")
@@ -146,8 +186,14 @@ class GatewayConfig:
             bind_ip=os.getenv("GATEWAY_BIND_IP", "0.0.0.0"),
             reply_timeout_ms=int(os.getenv("GATEWAY_REPLY_TIMEOUT_MS", "500")),
             poll_interval_s=float(os.getenv("GATEWAY_POLL_INTERVAL", "2.0")),
-            simulated_mode=os.getenv("GATEWAY_SIMULATED", "").lower() in ("1", "true", "yes"),
+            simulated_mode=simulated_mode,
             log_level=os.getenv("GATEWAY_LOG_LEVEL", "INFO").upper(),
+            use_env_defaults=use_env_defaults,
+            installation_load_error=(
+                str(load_error)
+                if load_error is not None and devices_file_exists
+                else None
+            ),
             field_modules=modules,
             installation=installation,
             devices_file=devices_file,

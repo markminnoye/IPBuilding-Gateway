@@ -424,6 +424,46 @@ class TestDiscoveryOrchestratorInitSweep:
         await orch.stop()
 
     @pytest.mark.asyncio
+    async def test_start_runs_init_sweep_when_devices_file_invalid(
+        self, tmp_path: Path,
+    ) -> None:
+        """Unreadable devices.json must trigger init-sweep like a missing file."""
+        devices_file = tmp_path / "devices.json"
+        devices_file.write_text(
+            '{"modules": [{"ip": "10.10.1.55", "type": "unknown", "channels": []}]}',
+            encoding="utf-8",
+        )
+
+        discovered = [
+            MagicMock(
+                ip="10.10.1.55",
+                mac="00:24:77:06:70:ba",
+                device_type="relay",
+                firmware="5.1",
+                model="IP0200PoE",
+                channels=[],
+            )
+        ]
+
+        cfg = DiscoveryConfig(
+            auto_discover_on_start=False,
+            passive_arp_monitor=False,
+        )
+        orch = DiscoveryOrchestrator(
+            config=cfg,
+            devices_file=str(devices_file),
+            broadcast=MagicMock(),
+            installation=None,
+        )
+
+        with patch("gateway.auto_discovery.discover_modules", return_value=discovered):
+            await orch.start()
+
+        loaded = json.loads(devices_file.read_text(encoding="utf-8"))
+        assert len(loaded["modules"]) == 1
+        await orch.stop()
+
+    @pytest.mark.asyncio
     async def test_start_skips_init_sweep_for_empty_file_when_auto_discover_off(
         self, tmp_path: Path
     ) -> None:

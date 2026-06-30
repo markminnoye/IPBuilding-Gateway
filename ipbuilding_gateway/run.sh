@@ -137,6 +137,9 @@ GATEWAY_ARP_POLL_INTERVAL_S=$(json_str_or "arp_poll_interval_s" "30.0")
 export GATEWAY_HTTP_TIMEOUT_S
 GATEWAY_HTTP_TIMEOUT_S=$(json_str_or "http_timeout_s" "2.0")
 
+export GATEWAY_USE_ENV_DEFAULTS
+GATEWAY_USE_ENV_DEFAULTS=$(json_bool "use_env_defaults")
+
 # ── Module metadata HTTP timeout (getSysSet / getButtons) ────────────────────
 # Distinct from GATEWAY_HTTP_TIMEOUT_S (which is for ARP-discovery HTTP
 # identify). 5 s is comfortable for IPBuilding controllers on a quiet
@@ -161,6 +164,7 @@ echo "[run.sh] GATEWAY_AUTO_DISCOVER_ON_START=$GATEWAY_AUTO_DISCOVER_ON_START"
 echo "[run.sh] GATEWAY_PASSIVE_ARP_MONITOR=$GATEWAY_PASSIVE_ARP_MONITOR"
 echo "[run.sh] GATEWAY_ARP_POLL_INTERVAL_S=$GATEWAY_ARP_POLL_INTERVAL_S"
 echo "[run.sh] GATEWAY_HTTP_TIMEOUT_S=$GATEWAY_HTTP_TIMEOUT_S"
+echo "[run.sh] GATEWAY_USE_ENV_DEFAULTS=$GATEWAY_USE_ENV_DEFAULTS"
 
 # Apply log level
 export PYTHON_LOG_LEVEL
