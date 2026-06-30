@@ -78,6 +78,16 @@ _MODEL_TO_TYPE: dict[str, str] = {
     "IP1100PoE": "input",
 }
 
+# Prefix fallback when ``device.refNr`` uses a variant spelling (older firmware).
+_REFNR_PREFIX_TO_TYPE: tuple[tuple[str, str], ...] = (
+    ("IP0200", "relay"),
+    ("IP200", "relay"),
+    ("IP0300", "dimmer"),
+    ("IP1100", "input"),
+)
+
+LOADABLE_DEVICE_TYPES = frozenset({"relay", "dimmer", "input"})
+
 # Inverse of ``_MODEL_TO_TYPE`` for the canonical SKUs: type → default
 # hardware model. Used as a fallback when a module was discovered without a
 # ``model`` (e.g. ARP-only discovery, getSysSet unreachable, or a fresh
@@ -101,6 +111,30 @@ def resolve_module_model(model: str, device_type: str) -> str:
     if model:
         return model
     return _TYPE_TO_MODEL.get(device_type, "")
+
+
+def is_loadable_device_type(device_type: str) -> bool:
+    """Return True when ``device_type`` can be stored in devices.json."""
+    return device_type in LOADABLE_DEVICE_TYPES
+
+
+def discovered_module_to_devices_json(
+    module: DiscoveredModule,
+) -> dict[str, Any] | None:
+    """Build one devices.json module entry, or None when type is unidentified."""
+    if not is_loadable_device_type(module.device_type):
+        return None
+    resolved_model = resolve_module_model(module.model, module.device_type)
+    return {
+        "name": resolved_model or module.ip,
+        "model": resolved_model,
+        "ip": module.ip,
+        "type": module.device_type,
+        "firmware": module.firmware,
+        "mac": module.mac,
+        "channels": list(module.channels),
+        "active": False,
+    }
 
 UDP_PROBE_PAYLOAD = b"\x01\x00\x00\x00"
 UDP_LISTEN_PORT = 10001
@@ -337,9 +371,10 @@ def device_type_from_fields(fields: dict[str, str]) -> str:
         return f"unknown_{raw_devtype}"
 
     # Fallback: factory product name from getSysSet "name" field
-    model_name = fields.get("name", "")
-    if model_name in _MODEL_TO_TYPE:
-        return _MODEL_TO_TYPE[model_name]
+    model_name = fields.get("name", "").strip()
+    mapped = device_type_from_ref_nr(model_name)
+    if mapped != "unknown":
+        return mapped
 
     if fields.get("butLines"):
         return "input"
@@ -348,8 +383,20 @@ def device_type_from_fields(fields: dict[str, str]) -> str:
 
 
 def device_type_from_ref_nr(ref_nr: str) -> str:
-    """Map ``device.refNr`` from backupConfig to gateway type."""
-    return _MODEL_TO_TYPE.get(ref_nr, "unknown")
+    """Map ``device.refNr`` (or product label) from backupConfig to gateway type."""
+    key = ref_nr.strip()
+    if not key:
+        return "unknown"
+    if key in _MODEL_TO_TYPE:
+        return _MODEL_TO_TYPE[key]
+    upper = key.upper()
+    for model, dtype in _MODEL_TO_TYPE.items():
+        if model.upper() == upper:
+            return dtype
+    for prefix, dtype in _REFNR_PREFIX_TO_TYPE:
+        if upper.startswith(prefix.upper()):
+            return dtype
+    return "unknown"
 
 
 def parse_backup_config_body(text: str) -> dict[str, Any] | None:
@@ -721,15 +768,8 @@ def build_devices_json_draft(modules: list[DiscoveredModule]) -> dict[str, Any]:
     """
     return {
         "modules": [
-            {
-                "name": resolve_module_model(m.model, m.device_type) or m.ip,
-                "model": resolve_module_model(m.model, m.device_type),
-                "ip": m.ip,
-                "type": m.device_type,
-                "firmware": m.firmware,
-                "mac": m.mac,
-                "channels": list(m.channels),
-            }
+            entry
             for m in modules
+            if (entry := discovered_module_to_devices_json(m)) is not None
         ]
     }

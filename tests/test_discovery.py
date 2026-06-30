@@ -16,7 +16,9 @@ from gateway.discovery import (
     detect_mac_ip_changes,
     device_type_from_fields,
     device_type_from_ref_nr,
+    discovered_module_to_devices_json,
     http_identify_module,
+    is_loadable_device_type,
     normalize_mac,
     parse_arp_table,
     parse_backup_config_body,
@@ -474,7 +476,32 @@ def test_device_type_from_ref_nr():
     assert device_type_from_ref_nr("IP0200PoE") == "relay"
     assert device_type_from_ref_nr("IP0300PoE") == "dimmer"
     assert device_type_from_ref_nr("IP1100PoE") == "input"
+    assert device_type_from_ref_nr("ip0200poe") == "relay"
+    assert device_type_from_ref_nr("IP0300PoE-extra") == "dimmer"
     assert device_type_from_ref_nr("Unknown") == "unknown"
+
+
+def test_is_loadable_device_type():
+    assert is_loadable_device_type("relay")
+    assert is_loadable_device_type("dimmer")
+    assert is_loadable_device_type("input")
+    assert not is_loadable_device_type("unknown")
+    assert not is_loadable_device_type("unknown_1")
+
+
+def test_discovered_module_to_devices_json_skips_unknown():
+    mod = DiscoveredModule(ip="10.10.1.55", device_type="unknown", mac="00:24:77:06:70:ba")
+    assert discovered_module_to_devices_json(mod) is None
+
+
+def test_build_devices_json_draft_skips_unknown_modules():
+    modules = [
+        DiscoveredModule(ip="10.10.1.30", device_type="relay", mac="00:24:77:52:ac:be"),
+        DiscoveredModule(ip="10.10.1.55", device_type="unknown", mac="00:24:77:06:70:ba"),
+    ]
+    draft = build_devices_json_draft(modules)
+    assert len(draft["modules"]) == 1
+    assert draft["modules"][0]["ip"] == "10.10.1.30"
 
 
 RELAY_BACKUP_JSON = json.dumps({

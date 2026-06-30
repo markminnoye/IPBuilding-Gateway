@@ -27,10 +27,12 @@ anders meldt.
 ### Changed
 - **Env-default UDP poll targets (`.30/.40/.50`) zijn niet langer stille fallback** wanneer `devices.json` ontbreekt of ongeldig is. Productie-installaties starten zonder UDP-polling tot discovery `devices.json` vult. Lab/RE: zet add-on optie `use_env_defaults` aan of `GATEWAY_USE_ENV_DEFAULTS=1`; `GATEWAY_SIMULATED=1` gedraagt zich zoals voorheen.
 - **Init-sweep bij ongeldig `devices.json`** — parse/validatiefouten (bijv. `type: unknown`) triggeren nu dezelfde startup-sweep als een ontbrekend bestand.
+- **Discovery schrijft geen `type: unknown` meer naar `devices.json`.** Ongeïdentificeerde modules (ARP-only of HTTP zonder herkenbare `refNr`) verschijnen via WebSocket `device_added` en in `skipped_unidentified` op `POST /api/v1/discover`, maar blokkeren de loader niet meer. Init-sweep wist een ongeldig bestand naar `{"modules":[]}`.
 
 ### Added
 - **Diagnostische discovery-logging** — HTTP-identify fouten, onopgeloste moduletypes en `devices.json` reload-fouten verschijnen in de add-on logs.
 - **Health issue `installation.load_failed`** wanneer `devices.json` bestaat maar niet geladen kan worden.
+- **`refNr`/productnaam prefix-fallback** — varianten zoals `ip0200poe` of `IP0300…` worden herkend als relay/dimmer/input.
 
 ## [1.1.1] - 2026-06-22
 

@@ -30,6 +30,7 @@ from typing import Any, Callable
 
 from gateway.discovery import (
     discover_modules,
+    discovered_module_to_devices_json,
     parse_arp_table,
     resolve_module_model,
 )
@@ -386,6 +387,7 @@ class DiscoveryOrchestrator:
         )
 
         added: list[dict] = []
+        skipped_unidentified: list[dict] = []
         changed: list[dict] = []
         firmware_changed: list[dict] = []
 
@@ -462,22 +464,6 @@ class DiscoveryOrchestrator:
         existing_macs = set(current_modules.keys())
         for dm in discovered:
             if dm.mac and dm.mac not in existing_macs:
-                resolved_model = resolve_module_model(dm.model, dm.device_type)
-                new_module = {
-                    "name": resolved_model or dm.ip,
-                    "model": resolved_model,
-                    "ip": dm.ip,
-                    "type": dm.device_type,
-                    "firmware": dm.firmware,
-                    "mac": dm.mac,
-                    "channels": list(dm.channels) if dm.channels else [],
-                    "active": False,      # unconfigured — user assigns name/room
-                    # ``last_seen`` / ``last_seen_source`` are runtime-only
-                    # and live on the in-memory ModuleConfig; do not write
-                    # them to devices.json. See ModuleConfig.to_dict().
-                }
-                modules_to_write.append(new_module)
-                added.append({"mac": dm.mac, "ip": dm.ip})
                 self._emit({
                     "type": "device_added",
                     "mac": dm.mac,
@@ -485,6 +471,22 @@ class DiscoveryOrchestrator:
                     "device_type": dm.device_type,
                     "firmware": dm.firmware,
                 })
+                entry = discovered_module_to_devices_json(dm)
+                if entry is None:
+                    log.info(
+                        "DiscoveryOrchestrator: skipping devices.json write for %s "
+                        "(unidentified type %r — HTTP getSysSet/backupConfig required)",
+                        dm.ip,
+                        dm.device_type,
+                    )
+                    skipped_unidentified.append({
+                        "mac": dm.mac,
+                        "ip": dm.ip,
+                        "device_type": dm.device_type,
+                    })
+                    continue
+                modules_to_write.append(entry)
+                added.append({"mac": dm.mac, "ip": dm.ip})
 
         duration_ms = int((time.monotonic() - start) * 1000)
         result = {
@@ -493,6 +495,7 @@ class DiscoveryOrchestrator:
             "changed": changed,
             "firmware_changed": firmware_changed,
             "removed": [],
+            "skipped_unidentified": skipped_unidentified,
             "duration_ms": duration_ms,
         }
 
@@ -535,6 +538,22 @@ class DiscoveryOrchestrator:
             )
         )
 
+    def _clear_unloadable_devices_file(self) -> None:
+        """Replace devices.json with an empty module list when load failed."""
+        if self._installation is None and os.path.exists(self._devices_file):
+            self._writer.write({"modules": []})
+            try:
+                self._installation = InstallationConfig.load(self._devices_file)
+            except Exception as exc:
+                log.warning(
+                    "DiscoveryOrchestrator: cleared devices.json but reload failed: %s",
+                    exc,
+                )
+            log.info(
+                "DiscoveryOrchestrator: cleared unloadable devices.json at %s",
+                self._devices_file,
+            )
+
     async def _run_init_sweep(self) -> None:
         """Run ARP-sweep on startup when devices.json is empty or missing."""
         log.info("DiscoveryOrchestrator: running init-sweep")
@@ -547,23 +566,12 @@ class DiscoveryOrchestrator:
 
         if not discovered:
             log.info("DiscoveryOrchestrator: init-sweep found no modules")
+            self._clear_unloadable_devices_file()
             return
 
         modules: list[dict] = []
+        skipped = 0
         for dm in discovered:
-            modules.append({
-                "name": dm.model or dm.ip,
-                "model": dm.model,
-                "ip": dm.ip,
-                "type": dm.device_type,
-                "firmware": dm.firmware,
-                "mac": dm.mac,
-                "channels": list(dm.channels) if dm.channels else [],
-                "active": False,
-                # ``last_seen`` / ``last_seen_source`` are runtime-only and
-                # live on the in-memory ModuleConfig; do not write them to
-                # devices.json. See ModuleConfig.to_dict().
-            })
             self._emit({
                 "type": "device_added",
                 "mac": dm.mac,
@@ -571,6 +579,28 @@ class DiscoveryOrchestrator:
                 "device_type": dm.device_type,
                 "firmware": dm.firmware,
             })
+            entry = discovered_module_to_devices_json(dm)
+            if entry is None:
+                skipped += 1
+                log.info(
+                    "DiscoveryOrchestrator: init-sweep skipping %s "
+                    "(unidentified type %r — HTTP getSysSet/backupConfig required)",
+                    dm.ip,
+                    dm.device_type,
+                )
+                continue
+            modules.append(entry)
+
+        if skipped:
+            log.info(
+                "DiscoveryOrchestrator: init-sweep skipped %d unidentified module(s)",
+                skipped,
+            )
+
+        if not modules:
+            log.info("DiscoveryOrchestrator: init-sweep found no loadable modules")
+            self._clear_unloadable_devices_file()
+            return
 
         devices_data = {"modules": modules}
         self._writer.write(devices_data)
