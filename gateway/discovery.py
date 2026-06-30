@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import platform
 import re
 import socket
@@ -46,6 +47,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import aiohttp
+
+log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -75,6 +78,16 @@ _MODEL_TO_TYPE: dict[str, str] = {
     "IP1100PoE": "input",
 }
 
+# Prefix fallback when ``device.refNr`` uses a variant spelling (older firmware).
+_REFNR_PREFIX_TO_TYPE: tuple[tuple[str, str], ...] = (
+    ("IP0200", "relay"),
+    ("IP200", "relay"),
+    ("IP0300", "dimmer"),
+    ("IP1100", "input"),
+)
+
+LOADABLE_DEVICE_TYPES = frozenset({"relay", "dimmer", "input"})
+
 # Inverse of ``_MODEL_TO_TYPE`` for the canonical SKUs: type → default
 # hardware model. Used as a fallback when a module was discovered without a
 # ``model`` (e.g. ARP-only discovery, getSysSet unreachable, or a fresh
@@ -98,6 +111,30 @@ def resolve_module_model(model: str, device_type: str) -> str:
     if model:
         return model
     return _TYPE_TO_MODEL.get(device_type, "")
+
+
+def is_loadable_device_type(device_type: str) -> bool:
+    """Return True when ``device_type`` can be stored in devices.json."""
+    return device_type in LOADABLE_DEVICE_TYPES
+
+
+def discovered_module_to_devices_json(
+    module: DiscoveredModule,
+) -> dict[str, Any] | None:
+    """Build one devices.json module entry, or None when type is unidentified."""
+    if not is_loadable_device_type(module.device_type):
+        return None
+    resolved_model = resolve_module_model(module.model, module.device_type)
+    return {
+        "name": resolved_model or module.ip,
+        "model": resolved_model,
+        "ip": module.ip,
+        "type": module.device_type,
+        "firmware": module.firmware,
+        "mac": module.mac,
+        "channels": list(module.channels),
+        "active": False,
+    }
 
 UDP_PROBE_PAYLOAD = b"\x01\x00\x00\x00"
 UDP_LISTEN_PORT = 10001
@@ -334,9 +371,10 @@ def device_type_from_fields(fields: dict[str, str]) -> str:
         return f"unknown_{raw_devtype}"
 
     # Fallback: factory product name from getSysSet "name" field
-    model_name = fields.get("name", "")
-    if model_name in _MODEL_TO_TYPE:
-        return _MODEL_TO_TYPE[model_name]
+    model_name = fields.get("name", "").strip()
+    mapped = device_type_from_ref_nr(model_name)
+    if mapped != "unknown":
+        return mapped
 
     if fields.get("butLines"):
         return "input"
@@ -345,8 +383,20 @@ def device_type_from_fields(fields: dict[str, str]) -> str:
 
 
 def device_type_from_ref_nr(ref_nr: str) -> str:
-    """Map ``device.refNr`` from backupConfig to gateway type."""
-    return _MODEL_TO_TYPE.get(ref_nr, "unknown")
+    """Map ``device.refNr`` (or product label) from backupConfig to gateway type."""
+    key = ref_nr.strip()
+    if not key:
+        return "unknown"
+    if key in _MODEL_TO_TYPE:
+        return _MODEL_TO_TYPE[key]
+    upper = key.upper()
+    for model, dtype in _MODEL_TO_TYPE.items():
+        if model.upper() == upper:
+            return dtype
+    for prefix, dtype in _REFNR_PREFIX_TO_TYPE:
+        if upper.startswith(prefix.upper()):
+            return dtype
+    return "unknown"
 
 
 def parse_backup_config_body(text: str) -> dict[str, Any] | None:
@@ -439,9 +489,14 @@ async def _http_get_text(
     try:
         async with sess.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
             if resp.status != 200:
+                log.warning(
+                    "HTTP identify %s: %s returned HTTP %d",
+                    ip, method, resp.status,
+                )
                 return None
             return await resp.text()
-    except Exception:
+    except Exception as exc:
+        log.warning("HTTP identify %s: %s failed: %s", ip, method, exc)
         return None
 
 
@@ -495,12 +550,45 @@ async def _http_identify_with_session(
         model=model,
     )
 
+    backup_text = ""
     if use_backup_config:
         backup_text = await _http_get_text(ip, "backupConfig", sess, timeout)
         if backup_text:
             backup_data = parse_backup_config_body(backup_text)
             if backup_data:
                 apply_backup_config(module, backup_data)
+            else:
+                log.warning(
+                    "HTTP identify %s: backupConfig body is not valid JSON",
+                    ip,
+                )
+        else:
+            log.warning("HTTP identify %s: backupConfig unreachable or empty", ip)
+
+    if module.device_type == "unknown":
+        ref_nr = ""
+        if use_backup_config and backup_text:
+            backup_data = parse_backup_config_body(backup_text)
+            if isinstance(backup_data, dict):
+                device = backup_data.get("device")
+                if isinstance(device, dict):
+                    ref_nr = str(device.get("refNr", "") or "").strip()
+        log.warning(
+            "HTTP identify %s: module type unresolved "
+            "(getSysSet keys=%s, refNr=%r, model=%r)",
+            ip,
+            sorted(fields.keys()),
+            ref_nr or None,
+            module.model or None,
+        )
+    else:
+        log.info(
+            "HTTP identify %s: type=%s model=%r firmware=%r",
+            ip,
+            module.device_type,
+            module.model or None,
+            module.firmware or None,
+        )
 
     return module
 
@@ -551,6 +639,10 @@ async def discover_modules(
             concurrency=ping_concurrency,
         )
         if arp_candidates:
+            log.info(
+                "ARP sweep %s.%d-%d: %d field-module candidate(s)",
+                subnet, ip_range.start, ip_range.stop, len(arp_candidates),
+            )
             # HTTP-identify each ARP candidate in parallel
             tasks = [
                 _http_identify_candidate(
@@ -561,6 +653,10 @@ async def discover_modules(
             identified = await asyncio.gather(*tasks)
             return [m for m in identified if m is not None]
 
+        log.warning(
+            "ARP sweep %s.%d-%d: no field-module candidates; falling back to HTTP-only sweep",
+            subnet, ip_range.start, ip_range.stop,
+        )
         # No ARP candidates — fall back to HTTP-only sweep
         return await sweep_http_range(subnet, ip_range, use_backup_config=use_backup_config)
 
@@ -580,6 +676,11 @@ async def _http_identify_candidate(
         use_backup_config=use_backup_config,
     )
     if identified is None:
+        log.warning(
+            "HTTP identify %s: getSysSet unreachable; ARP candidate kept as type=unknown mac=%s",
+            module.ip,
+            module.mac or "?",
+        )
         return DiscoveredModule(ip=module.ip, device_type="unknown", mac=module.mac)
     # Preserve MAC from ARP (more reliable than getSysSet JSON field)
     if module.mac:
@@ -667,15 +768,8 @@ def build_devices_json_draft(modules: list[DiscoveredModule]) -> dict[str, Any]:
     """
     return {
         "modules": [
-            {
-                "name": resolve_module_model(m.model, m.device_type) or m.ip,
-                "model": resolve_module_model(m.model, m.device_type),
-                "ip": m.ip,
-                "type": m.device_type,
-                "firmware": m.firmware,
-                "mac": m.mac,
-                "channels": list(m.channels),
-            }
+            entry
             for m in modules
+            if (entry := discovered_module_to_devices_json(m)) is not None
         ]
     }

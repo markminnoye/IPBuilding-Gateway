@@ -14,6 +14,7 @@ IssueLevel = Literal["warning", "error"]
 
 MESSAGE_TEMPLATES: dict[str, str] = {
     "installation.missing": "No installation configuration loaded (devices.json)",
+    "installation.load_failed": "devices.json could not be loaded: {devices_file}",
     "module_metadata.http_failed": (
         "Module {ip} is not responding to {method} configuration requests"
     ),

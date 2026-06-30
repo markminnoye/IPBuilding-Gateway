@@ -313,6 +313,43 @@ class TestDiscoveryOrchestratorForcedDiscovery:
         assert loaded["modules"][0]["mac"] == "00:24:77:52:ac:be"
         assert loaded["modules"][0]["active"] is False
 
+    @pytest.mark.asyncio
+    async def test_run_forced_discovery_skips_unknown_modules(self, tmp_path: Path):
+        devices_file = tmp_path / "devices.json"
+        devices_file.write_text(
+            '{"modules": [{"ip": "10.10.1.55", "type": "unknown", "channels": []}]}',
+            encoding="utf-8",
+        )
+
+        discovered = [
+            MagicMock(
+                ip="10.10.1.55",
+                mac="00:24:77:06:70:ba",
+                device_type="unknown",
+                firmware="",
+                model="",
+                channels=[],
+            )
+        ]
+
+        broadcast = AsyncMock()
+        orch = DiscoveryOrchestrator(
+            config=DiscoveryConfig(),
+            devices_file=str(devices_file),
+            broadcast=broadcast,
+            installation=None,
+        )
+
+        with patch("gateway.auto_discovery.discover_modules", return_value=discovered):
+            result = await orch.run_forced_discovery()
+
+        loaded = json.loads(devices_file.read_text(encoding="utf-8"))
+        assert loaded["modules"] == []
+        assert result["added"] == []
+        assert len(result["skipped_unidentified"]) == 1
+        broadcast.assert_called_once()
+        assert broadcast.call_args[0][0]["device_type"] == "unknown"
+
 
 class TestDiscoveryOrchestratorInitSweep:
     """Regression: init-sweep must not reference ArpMonitor._state on the orchestrator."""
@@ -401,6 +438,46 @@ class TestDiscoveryOrchestratorInitSweep:
                 device_type="relay",
                 firmware="5.1",
                 model="IP200PoE",
+                channels=[],
+            )
+        ]
+
+        cfg = DiscoveryConfig(
+            auto_discover_on_start=False,
+            passive_arp_monitor=False,
+        )
+        orch = DiscoveryOrchestrator(
+            config=cfg,
+            devices_file=str(devices_file),
+            broadcast=MagicMock(),
+            installation=None,
+        )
+
+        with patch("gateway.auto_discovery.discover_modules", return_value=discovered):
+            await orch.start()
+
+        loaded = json.loads(devices_file.read_text(encoding="utf-8"))
+        assert len(loaded["modules"]) == 1
+        await orch.stop()
+
+    @pytest.mark.asyncio
+    async def test_start_runs_init_sweep_when_devices_file_invalid(
+        self, tmp_path: Path,
+    ) -> None:
+        """Unreadable devices.json must trigger init-sweep like a missing file."""
+        devices_file = tmp_path / "devices.json"
+        devices_file.write_text(
+            '{"modules": [{"ip": "10.10.1.55", "type": "unknown", "channels": []}]}',
+            encoding="utf-8",
+        )
+
+        discovered = [
+            MagicMock(
+                ip="10.10.1.55",
+                mac="00:24:77:06:70:ba",
+                device_type="relay",
+                firmware="5.1",
+                model="IP0200PoE",
                 channels=[],
             )
         ]
