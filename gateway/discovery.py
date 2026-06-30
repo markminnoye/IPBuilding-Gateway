@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import platform
 import re
 import socket
@@ -46,6 +47,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import aiohttp
+
+log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -439,9 +442,14 @@ async def _http_get_text(
     try:
         async with sess.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
             if resp.status != 200:
+                log.warning(
+                    "HTTP identify %s: %s returned HTTP %d",
+                    ip, method, resp.status,
+                )
                 return None
             return await resp.text()
-    except Exception:
+    except Exception as exc:
+        log.warning("HTTP identify %s: %s failed: %s", ip, method, exc)
         return None
 
 
@@ -495,12 +503,45 @@ async def _http_identify_with_session(
         model=model,
     )
 
+    backup_text = ""
     if use_backup_config:
         backup_text = await _http_get_text(ip, "backupConfig", sess, timeout)
         if backup_text:
             backup_data = parse_backup_config_body(backup_text)
             if backup_data:
                 apply_backup_config(module, backup_data)
+            else:
+                log.warning(
+                    "HTTP identify %s: backupConfig body is not valid JSON",
+                    ip,
+                )
+        else:
+            log.warning("HTTP identify %s: backupConfig unreachable or empty", ip)
+
+    if module.device_type == "unknown":
+        ref_nr = ""
+        if use_backup_config and backup_text:
+            backup_data = parse_backup_config_body(backup_text)
+            if isinstance(backup_data, dict):
+                device = backup_data.get("device")
+                if isinstance(device, dict):
+                    ref_nr = str(device.get("refNr", "") or "").strip()
+        log.warning(
+            "HTTP identify %s: module type unresolved "
+            "(getSysSet keys=%s, refNr=%r, model=%r)",
+            ip,
+            sorted(fields.keys()),
+            ref_nr or None,
+            module.model or None,
+        )
+    else:
+        log.info(
+            "HTTP identify %s: type=%s model=%r firmware=%r",
+            ip,
+            module.device_type,
+            module.model or None,
+            module.firmware or None,
+        )
 
     return module
 
@@ -551,6 +592,10 @@ async def discover_modules(
             concurrency=ping_concurrency,
         )
         if arp_candidates:
+            log.info(
+                "ARP sweep %s.%d-%d: %d field-module candidate(s)",
+                subnet, ip_range.start, ip_range.stop, len(arp_candidates),
+            )
             # HTTP-identify each ARP candidate in parallel
             tasks = [
                 _http_identify_candidate(
@@ -561,6 +606,10 @@ async def discover_modules(
             identified = await asyncio.gather(*tasks)
             return [m for m in identified if m is not None]
 
+        log.warning(
+            "ARP sweep %s.%d-%d: no field-module candidates; falling back to HTTP-only sweep",
+            subnet, ip_range.start, ip_range.stop,
+        )
         # No ARP candidates — fall back to HTTP-only sweep
         return await sweep_http_range(subnet, ip_range, use_backup_config=use_backup_config)
 
@@ -580,6 +629,11 @@ async def _http_identify_candidate(
         use_backup_config=use_backup_config,
     )
     if identified is None:
+        log.warning(
+            "HTTP identify %s: getSysSet unreachable; ARP candidate kept as type=unknown mac=%s",
+            module.ip,
+            module.mac or "?",
+        )
         return DiscoveredModule(ip=module.ip, device_type="unknown", mac=module.mac)
     # Preserve MAC from ARP (more reliable than getSysSet JSON field)
     if module.mac:

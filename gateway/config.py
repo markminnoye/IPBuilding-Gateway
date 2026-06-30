@@ -101,10 +101,11 @@ class GatewayConfig:
     def from_env(cls) -> GatewayConfig:
         installation: InstallationConfig | None = None
         devices_file = os.getenv("GATEWAY_DEVICES_FILE", "./devices.json")
+        load_error: InstallationError | None = None
         try:
             installation = InstallationConfig.load(devices_file)
         except InstallationError as exc:
-            log.warning("Failed to load devices.json (%s) - falling back to env defaults: %s", devices_file, exc)
+            load_error = exc
 
         if installation is None:
             modules = {
@@ -112,6 +113,14 @@ class GatewayConfig:
                 "dimmer": os.getenv("GATEWAY_DIMMER_IP", "10.10.1.40"),
                 "input": os.getenv("GATEWAY_INPUT_IP", "10.10.1.50"),
             }
+            if load_error is not None:
+                log.warning(
+                    "Failed to load devices.json (%s) - falling back to env default "
+                    "UDP poll targets %s: %s",
+                    devices_file,
+                    ", ".join(f"{dtype}@{ip}" for dtype, ip in modules.items()),
+                    load_error,
+                )
         else:
             modules = installation.field_modules()
 

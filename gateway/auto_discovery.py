@@ -380,6 +380,11 @@ class DiscoveryOrchestrator:
         loop = asyncio.get_running_loop()
         discovered = await loop.run_in_executor(None, self._run_forced_discovery_sync)
 
+        log.info(
+            "DiscoveryOrchestrator: forced discovery returned %d candidate(s)",
+            len(discovered),
+        )
+
         added: list[dict] = []
         changed: list[dict] = []
         firmware_changed: list[dict] = []
@@ -498,8 +503,13 @@ class DiscoveryOrchestrator:
         # Reload installation so registry picks up changes
         try:
             self._installation = InstallationConfig.load(self._devices_file)
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning(
+                "DiscoveryOrchestrator: devices.json written (%d module(s) on disk) "
+                "but reload failed — runtime installation unchanged: %s",
+                len(modules_to_write),
+                exc,
+            )
 
         if self._installation is not None and self._on_installation_changed is not None:
             try:
@@ -567,8 +577,12 @@ class DiscoveryOrchestrator:
 
         try:
             self._installation = InstallationConfig.load(self._devices_file)
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning(
+                "DiscoveryOrchestrator: init-sweep wrote %d module(s) but reload failed: %s",
+                len(modules),
+                exc,
+            )
 
         if self._installation is not None and self._on_installation_changed is not None:
             try:
