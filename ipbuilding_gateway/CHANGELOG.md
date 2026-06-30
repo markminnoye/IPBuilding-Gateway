@@ -22,7 +22,7 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
-## [Unreleased]
+## [1.2.2] - 2026-06-30
 
 ### Changed
 - **Env-default UDP poll targets (`.30/.40/.50`) zijn niet langer stille fallback** wanneer `devices.json` ontbreekt of ongeldig is. Productie-installaties starten zonder UDP-polling tot discovery `devices.json` vult. Lab/RE: zet add-on optie `use_env_defaults` aan of `GATEWAY_USE_ENV_DEFAULTS=1`; `GATEWAY_SIMULATED=1` gedraagt zich zoals voorheen.
@@ -33,15 +33,6 @@ anders meldt.
 - **Diagnostische discovery-logging** — HTTP-identify fouten, onopgeloste moduletypes en `devices.json` reload-fouten verschijnen in de add-on logs.
 - **Health issue `installation.load_failed`** wanneer `devices.json` bestaat maar niet geladen kan worden.
 - **`refNr`/productnaam prefix-fallback** — varianten zoals `ip0200poe` of `IP0300…` worden herkend als relay/dimmer/input.
-
-## [1.1.1] - 2026-06-22
-
-### Fixed
-- `single_press` wordt niet meer dubbel uitgestuurd wanneer een duplicate of
-  wees-release frame binnenkomt (geen actief ingedrukte knop). Alleen echte
-  korte indrukken genereren een `single_press`; overtollige release-frames
-  leiden nog uitsluitend tot een `released` event. Voorkomt ongewenste dubbele
-  schakelacties bij gebruik met HA-automations.
 
 ## [1.2.1] - 2026-06-23
 
@@ -55,6 +46,15 @@ anders meldt.
 
 ### Added
 - **Downstream `T` / `D` dimmer commands.** `gateway/payloads/dimmer.py` exposes `encode_dim_toggle(channel)`, `encode_dim_start(channel)`, `encode_dim_stop(channel)` for the button/ramp wire dialect (`T<ch>991000`, `D<ch>001003`, `D<ch>001000`). `gateway_api._execute_command` dispatches `TOGGLE`, `DIM_START`, `DIM_STOP` actions on dimmer channels; `TOGGLE` and `DIM_STOP` track the channel for the channel-less reply, `DIM_START` is fire-and-forget. The companion's `button_dim` blueprint (v8) uses these to drive a native ramp instead of the old `brightness_step_pct` loop. Wire-bytes match `resources_and_docs/evidence/2026-06-22_dimmer_p2p_hold_dim_capture.md`. Companion `ha-ipbuilding-gateway` ≥ **1.7.0** consumes the new gateway actions via `ha_ipbuilding_gateway.dim_start` / `dim_stop`.
+
+## [1.1.1] - 2026-06-22
+
+### Fixed
+- `single_press` wordt niet meer dubbel uitgestuurd wanneer een duplicate of
+  wees-release frame binnenkomt (geen actief ingedrukte knop). Alleen echte
+  korte indrukken genereren een `single_press`; overtollige release-frames
+  leiden nog uitsluitend tot een `released` event. Voorkomt ongewenste dubbele
+  schakelacties bij gebruik met HA-automations.
 
 ## [1.1.0] - 2026-06-21
 
