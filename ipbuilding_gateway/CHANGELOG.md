@@ -22,6 +22,11 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [1.2.4] - 2026-07-01
+
+### Added
+- **`README.md` in de add-on folder** — korte About-sectie in de Supervisor UI (store en add-on info), met duidelijke melding dat de **IPBuilding Gateway** companion verplicht is voor HA-entiteiten en een HACS-installatielink via my.home-assistant.io.
+
 ## [1.2.3] - 2026-07-01
 
 ### Fixed

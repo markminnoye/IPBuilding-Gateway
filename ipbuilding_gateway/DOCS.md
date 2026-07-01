@@ -6,10 +6,10 @@ Dit vervangt de propriëtaire IPBox op de veldbus en voedt de companion
 via WebSocket (`8080`) en optioneel REST (`30200` shim).
 
 > **Zonder companion geen HA-entiteiten.** Deze add-on alleen levert de gateway;
-> lichten/schakelaars/sensoren komen pas via de companion-integratie. Versies
-> lopen onafhankelijk — zie de
-> [releases-pagina](https://github.com/markminnoye/ha-ipbuilding-gateway/releases)
-> voor de actuele companion-versie. Zie ook de [repository README](../README.md).
+> lichten/schakelaars/sensoren komen pas via de companion-integratie. Zie
+> [README.md](README.md) voor de korte intro en HACS-link; versies lopen
+> onafhankelijk — zie de
+> [companion releases](https://github.com/markminnoye/ha-ipbuilding-gateway/releases).
 
 > **Voor add-on-ontwikkelaars:** het manifest-formaat (`config.yaml`), Supervisor
 > communicatie, watchdog, `host_network`, `privileged`, publicatie en security

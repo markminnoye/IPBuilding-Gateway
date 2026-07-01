@@ -59,3 +59,19 @@ def test_required_manifest_fields() -> None:
         assert cfg.get(key), f"required config.yaml field missing: {key}"
     assert cfg["slug"] == "ipbuilding_gateway"
     assert "ha_ipbuilding_gateway" in cfg.get("discovery", [])
+
+
+def test_readme_present_for_supervisor_intro() -> None:
+    """HA renders the add-on About/intro from ipbuilding_gateway/README.md."""
+    readme = _CONFIG.parent / "README.md"
+    assert readme.is_file(), (
+        f"{readme} must exist — Supervisor uses it for the add-on info page."
+    )
+    text = readme.read_text(encoding="utf-8")
+    assert "companion" in text.lower()
+    assert "my.home-assistant.io/redirect/hacs_repository" in text
+
+
+def test_icon_png_present() -> None:
+    icon = _CONFIG.parent / "icon.png"
+    assert icon.is_file(), f"{icon} required for add-on presentation in Supervisor UI."
