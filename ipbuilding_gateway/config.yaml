@@ -82,5 +82,5 @@ schema:
 
 boot: auto
 auto_update: true
-watchdog: "http://[HOST]:[PORT:8080]/health"
+watchdog: http://[HOST]:[PORT]/health
 image: ghcr.io/markminnoye/ipbuilding-gateway
