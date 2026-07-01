@@ -22,6 +22,11 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [1.2.3] - 2026-07-01
+
+### Fixed
+- **Add-on store-validatie hersteld.** De `watchdog`-URL in `config.yaml` gebruikte per ongeluk `http://[HOST]:[PORT]/health`. De Supervisor verwacht `http://[HOST]:[PORT:8080]/health` (interne containerpoort). Daardoor kon de add-on na een store-refresh verdwijnen uit de catalogus met fouten als *"does not exist in the store"* of *"has no source location"*.
+
 ## [1.2.2] - 2026-06-30
 
 ### Changed
