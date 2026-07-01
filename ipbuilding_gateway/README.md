@@ -1,46 +1,51 @@
 # IPBuilding Gateway
 
-Open veldbus-hub voor IPBuilding relais, dimmers en drukknoppen via **UDP/1001**.
+Open field-bus hub for IPBuilding relays, dimmers, and buttons via **UDP/1001**.
 
-> **Zonder companion geen Home Assistant-entiteiten.**  
-> Deze add-on levert alleen de gateway-service. Lichten, schakelaars, sensoren
-> en knoppen komen pas via de **IPBuilding Gateway** companion-integratie.
+> **No Home Assistant entities without the companion.**  
+> This add-on only runs the gateway service. Lights, switches, sensors, and
+> buttons require the **IPBuilding Gateway** companion integration.
 
 ## About
 
-Vervangt de propriëtaire IPBox-hub op de veldbus. De gateway praat UDP/1001 met
-je modules en biedt een northbound API (WebSocket `/ws` + REST `/api/v1/` op
-poort **8080**). Scenes en automatiseringen horen in Home Assistant, niet in de
+Replaces the proprietary IPBox hub on the field bus. The gateway speaks UDP/1001
+to your modules and exposes a northbound API (WebSocket `/ws` + REST `/api/v1/`
+on port **8080**). Scenes and automations belong in Home Assistant, not in the
 gateway.
 
-| Je installeert | Resultaat |
-|----------------|-----------|
-| Alleen deze add-on | Gateway draait — geen HA-entiteiten |
-| Add-on + companion | Lights, switches, sensors, knoppen in HA |
+Add-on and companion follow **independent semver** — use recent releases of both.
 
-Add-on en companion volgen **onafhankelijk semver** — gebruik recente releases
-van beide.
+## Features
 
-## Vereist: companion installeren
+- **UDP/1001 field bus** — IP0200PoE relays, IP0300PoE dimmers, IP1100PoE inputs
+- **Northbound API** — WebSocket `/ws` and REST `/api/v1/` on port **8080**
+- **Runtime discovery** — ARP monitor and optional init-sweep; updates `devices.json`
+- **Supervisor discovery** — registers with HA when the companion is installed (no manual host/port on HA OS)
+- **Health reporting** — `/api/v1/status` and watchdog `/health`
+- **Optional IPBox REST shim** on `:30200` for migration only (off by default)
 
-Installeer de companion **vóór of direct na** deze add-on:
+This add-on does **not** implement IPBox scenes, moods, or button→relay rules.
+
+## Required: install the companion
+
+Install the companion **before or right after** this add-on:
 
 [![Open companion in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=markminnoye&repository=ha-ipbuilding-gateway&category=integration)
 
-Handmatig: **HACS → Integraties → ⋮ → Aangepaste repositories** →
+Manual: **HACS → Integrations → ⋮ → Custom repositories** →
 
 ```text
 https://github.com/markminnoye/ha-ipbuilding-gateway
 ```
 
-Download **IPBuilding Gateway**, herstart Home Assistant.
+Download **IPBuilding Gateway**, then restart Home Assistant.
 
-Na installatie van beide: **Instellingen → Apparaten & diensten → Ontdekt** →
-voeg **IPBuilding Gateway** toe (geen handmatig host/poort nodig op HA OS).
+After both are installed: **Settings → Devices & Services → Discovered** → add
+**IPBuilding Gateway** (no manual host/port on HA OS).
 
-## Installatie add-on
+## Install this add-on
 
-Zie de **Documentatie**-tab voor netwerk, `devices.json`, discovery en
+See the **Documentation** tab for network setup, `devices.json`, discovery, and
 troubleshooting.
 
 ## Support

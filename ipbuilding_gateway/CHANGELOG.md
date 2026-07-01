@@ -25,7 +25,7 @@ anders meldt.
 ## [1.2.4] - 2026-07-01
 
 ### Added
-- **`README.md` in de add-on folder** — korte About-sectie in de Supervisor UI (store en add-on info), met duidelijke melding dat de **IPBuilding Gateway** companion verplicht is voor HA-entiteiten en een HACS-installatielink via my.home-assistant.io.
+- **`README.md` in the add-on folder** — English About/Features section in the Supervisor UI (store and add-on info), with a clear note that the **IPBuilding Gateway** companion is required for HA entities, a HACS install link via my.home-assistant.io, and a feature list (UDP/1001, northbound API, discovery, health, optional IPBox shim).
 
 ## [1.2.3] - 2026-07-01
 
