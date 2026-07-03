@@ -2,7 +2,7 @@
 
 **Datum:** 2026-07-03  
 **Type:** Design spec (provisioning / `devices.json`)  
-**Status:** Draft — merge policy **A** goedgekeurd (2026-07-03)  
+**Status:** Draft — merge policy **A** goedgekeurd (2026-07-03); review tegen codebase (2026-07-03)  
 **Scope:** gateway northbound API + `scripts/` import-tools. Companion-integratie is sketched in §8; implementatie in `ipbuilding-gateway-ha` is een aparte workstream.
 
 **Context:** Legacy IPBuilding-centrale (IP0000) en IPBox-installaties hebben projectconfig in respectievelijk `ipcom.mdb` / WebConfig. Module-HTTP discovery (`POST /api/v1/discover`) vindt fysieke modules maar levert niet altijd de logische mapping (namen, groepen) zoals de gebruiker die in de mobile UI ziet. Import-scripts per scenario + één dunne gateway-API houden de gateway vrij van scenario-specifieke logica.
@@ -83,7 +83,7 @@ flowchart LR
 
 ## 4. REST API
 
-Base: bestaande `gateway_api.py` op `/api/v1/`.
+Base: bestaande `gateway_api.py` (aiohttp) op `/api/v1/`.
 
 ### 4.1 `GET /api/v1/installation`
 
@@ -110,16 +110,27 @@ Retourneert de **persisted** installatie (inhoud van `devices.json`), niet runti
         }
       ]
     }
+  ],
+  "buttons": [
+    {
+      "id": "1100-01",
+      "name": "Keuken links",
+      "hold_threshold_s": 0.5
+    }
   ]
 }
 ```
 
 - Geen `last_seen` / `last_seen_source` (runtime-only).
+- `buttons[]` (top-level) wordt **altijd** teruggegeven — IP1100PoE-inputs staan hier,
+  niet onder `channels`. `channels` blijft `[]` voor input-modules. Zie §5.5.
 - Optioneel query `?include_validation=true` voor warnings (lege kanalen, ontbrekende MAC).
 
 ### 4.2 `POST /api/v1/installation/validate`
 
 Dry-run: zelfde body als `apply`, geen schrijven.
+Validatie hergebruikt de bestaande `InstallationConfig._parse(raw)` (dict-in): schema,
+duplicate MAC/IP en duplicate `device_id` worden daar al afgedwongen.
 
 **Response 200:**
 
@@ -141,7 +152,8 @@ Dry-run: zelfde body als `apply`, geen schrijven.
 ```json
 {
   "mode": "merge_modules",
-  "modules": [ … ]
+  "modules": [ … ],
+  "buttons": [ … ]
 }
 ```
 
@@ -165,8 +177,8 @@ Dry-run: zelfde body als `apply`, geen schrijven.
 Na succesvolle apply:
 
 1. `AtomicWriter` → `devices.json`
-2. `InstallationConfig.load()` — bij falen: **geen** partial runtime state; oude installatie blijft actief + error in response
-3. Callback `on_installation_changed` (registry, metadata refresh, WS `discovery_completed` of nieuw `installation_changed`)
+2. Re-validatie via `InstallationConfig._parse()` / `load()` — bij falen: **geen** partial runtime state; oude installatie blijft actief + error in response
+3. Hergebruik de bestaande callback `on_installation_changed` (`main.py:142` → `_apply_installation`, zelfde pad als discovery in `auto_discovery.py:517`): registry, metadata refresh, WS `discovery_completed` of nieuw `installation_changed`
 4. Log: `applied installation: N modules` (expliciet, geen mismatch “written 1 / applied 0” zonder error)
 
 ### 4.4 Afscheiding van bestaande endpoints
@@ -187,14 +199,15 @@ Na succesvolle apply:
 |-----------|--------|------------------------------------------|
 | **Northbound** | `name`, `room`, `active`, `max_watt`, `semantic_type`, kanaal-specs | **Behoud bestaand** als kanaal/module al bestaat |
 | **Netwerk** | `ip`, `mac`, `firmware`, `model` | Update vanuit import als import waarde levert |
-| **Shim-only** | `ipbox_id` | Vullen als leeg; nooit wissen |
+| **Shim-only** | `ipbox_id`, `id` (device_id) | Vullen als leeg; nooit wissen (stabiele entity-id) |
 | **Nieuw** | Module of kanaal niet in huidige config | Northbound uit import; default `active: false`, `room: "Unconfigured"` als import geen waarde heeft |
+| **Buttons** | top-level `buttons[]` (IP1100) | Zie §5.5 — behoud bestaand, nooit impliciet wissen |
 
 ### 5.2 Match-regels
 
 **Module:**
 
-1. `mac` genormaliseerd (lowercase, colons) — primair
+1. `mac` genormaliseerd via bestaande `_normalize_mac()` (lowercase, colons) — primair
 2. Anders `ip` — fallback (DHCP-installaties zonder MAC in import)
 
 **Kanaal:**
@@ -225,6 +238,18 @@ for each imported_module:
 
 Geen merge — volledige vervanging. Operator/script expliciet. Companion zou dit alleen via bevestigde UI mogen aanbieden.
 
+### 5.5 Buttons (top-level `buttons[]`)
+
+IP1100PoE-inputs worden **niet** als kanalen opgeslagen maar in de top-level `buttons[]`
+array (`installation.py`: `raw.get("buttons", [])`). `hold_threshold_s` en event-routing
+zijn hier authoritative.
+
+- `merge_modules` / `import_channels` / `append_modules`: **buttons ongemoeid** — bestaande
+  `buttons[]` blijft integraal behouden, ook als de import ze niet levert.
+- `replace`: als de body geen `buttons[]` bevat, worden bestaande buttons **behouden**
+  (geen impliciet wissen). Alleen een expliciete `"buttons": []` reset ze.
+- Volledige button-import uit de legacy centrale is v1 out of scope (§12).
+
 ---
 
 ## 6. Import-scripts (`scripts/`)
@@ -250,7 +275,7 @@ Of één stap: `--apply http://127.0.0.1:8080`.
 
 | Script | Bron | Status |
 |--------|------|--------|
-| `gateway.discover` / `import_from_modules.py` | Module HTTP + ARP | Bestaat; refactor naar `apply` API |
+| `POST /discover` (orchestrator) | Module HTTP + ARP | Bestaat; refactor naar `apply` API. Optionele CLI-wrapper `import_from_modules.py` is **Nieuw** |
 | `discover_from_ipbox.py` | IPBox WebConfig | Bestaat; refactor apply-pad |
 | `import_from_legacy_central.py` | `actions.php` `searchItems` / `showGroupItems*` | **Nieuw** |
 | `apply_installation.py` | JSON-bestand → POST API | **Nieuw** (shared helper) |
@@ -262,6 +287,8 @@ Of één stap: `--apply http://127.0.0.1:8080`.
 - **Parse:** HTML uit `ComponentenModel` — fixtures in `tests/fixtures/legacy_central/` (snapshot HTML uit veld).
 - **Mapping `Modula` → `type`:** 1=dimmer, relay=overige output (zie legacy-analyse); input-knoppen via prefix `B` in `Adres` → aparte `buttons[]` of skip in v1.
 - **`Adres`:** `10.10.1.32-00` → module IP + channel index.
+- **URL-decode:** velden uit de centrale/IPBox kunnen encoding-artefacten bevatten
+  (bv. `"Slaapkamers 2e%20verdieping"`); `name`/`room` moeten URL-gedecodeerd worden.
 - **Output:** `devices.json`-schema; `active: false` op nieuwe kanalen.
 
 **Netwerk:** script moet draaien waar `10.10.1.1` bereikbaar is (add-on container, niet thuis-LAN laptop).
@@ -277,7 +304,7 @@ Of één stap: `--apply http://127.0.0.1:8080`.
 
 Los van de API, om het veldgeval te dichten:
 
-1. **`type: unknown`:** weigeren bij `InstallationConfig.load`; bij discovery niet naar disk schrijven (bestaand gedrag versterken).
+1. **`type: unknown`:** wordt al geweigerd in `_parse` (`DeviceType(...)` → `InstallationError`). Echte fix: **discovery mag pas persisteren nadat `_parse` slaagt** — nu kan discovery naar disk schrijven vóór validatie.
 2. **Reload-fout:** als `AtomicWriter` slaagt maar `load()` faalt → response `ok: false`, runtime ongewijzigd, error gelogd (geen stille “0 modules applied”).
 3. **`POST /discover` refactor:** intern `append_modules` + merge policy i.p.v. ad-hoc list rebuild — één code-pad met `apply`.
 
@@ -305,6 +332,8 @@ Companion bewaart northbound na eerste entity-setup; herimport met policy A is v
 | `apply` + reload → registry module count | integration |
 | legacy HTML fixture → expected JSON | unit |
 | `apply_installation.py` tegen test server | integration |
+| replace zonder buttons in body → bestaande buttons behouden | unit |
+| merge behoudt bestaande device_id (`id`) op kanaal | unit |
 
 ---
 
@@ -319,18 +348,19 @@ Companion bewaart northbound na eerste entity-setup; herimport met policy A is v
 
 ## 11. Implementatie-volgorde
 
-1. `installation_merge.py` + tests (policy A)
-2. `GET/validate/apply` endpoints + reload contract
-3. `scripts/apply_installation.py`
-4. Refactor `POST /discover` naar shared merge
-5. `import_from_legacy_central.py` + HTML fixtures
-6. Refactor `discover_from_ipbox.py` apply-pad
-7. Docs + companion service (aparte PR)
+1. `InstallationConfig.to_dict()` (full-document serializer incl. `buttons[]`) — bestaat nog niet; nodig als merge-output
+2. `installation_merge.py` + tests (policy A, incl. buttons-behoud §5.5)
+3. `GET/validate/apply` endpoints (validatie via `_parse`) + reload contract (`_apply_installation`)
+4. `scripts/apply_installation.py`
+5. Refactor `POST /discover` naar shared merge
+6. `import_from_legacy_central.py` + HTML fixtures (met URL-decode)
+7. Refactor `discover_from_ipbox.py` apply-pad
+8. Docs + companion service (aparte PR)
 
 ---
 
 ## 12. Open punten (niet blokkerend voor v1)
 
 - Auth op installation-API (add-on supervisor token?)
-- `import_channels` voor alleen knoppen (IP1100) uit legacy centrale
+- Volledige button-import (IP1100) uit legacy centrale — v1 behoudt bestaande buttons maar importeert ze niet (§5.5)
 - WS-event `installation_changed` vs hergebruik `discovery_completed`
