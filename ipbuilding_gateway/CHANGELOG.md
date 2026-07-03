@@ -22,10 +22,13 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
-## [1.2.4] - 2026-07-01
+## [1.2.4] - 2026-07-03
 
 ### Added
 - **`README.md` in the add-on folder** — English About/Features section in the Supervisor UI (store and add-on info), with a clear note that the **IPBuilding Gateway** companion is required for HA entities, a HACS install link via my.home-assistant.io, and a feature list (UDP/1001, northbound API, discovery, health, optional IPBox shim).
+
+### Fixed
+- **Geheugenlek bij langdurig draaien opgelost.** Het RAM-gebruik van de add-on steeg na enkele dagen langzaam op doordat poll-antwoorden op de veldbus onbeperkt werden opgeslagen. Na een update stabiliseert het geheugengebruik weer.
 
 ## [1.2.3] - 2026-07-01
 
