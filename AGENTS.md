@@ -159,3 +159,16 @@ Bron HA-skills: [bradsjm/hassio-addons](https://github.com/bradsjm/hassio-addons
 ## Einddoel
 
 **IPBuilding Gateway** HA Add-on (v0.0.4): UDP/1001 veldbus-hub met runtime auto-discovery; WebSocket `/ws` + REST `/api/v1/` naar **`ipbuilding-gateway-ha`**; optionele REST-shim `:30200` in transitie. Scenes/logica in HA, niet in de gateway.
+
+---
+
+## Cursor Cloud specific instructions
+
+Durable notes for cloud agents (deps are already installed by the startup update script into `.venv`).
+
+- **Python venv:** deps live in `.venv` (Python 3.12; project targets 3.11+). Use `PYTHONPATH=. .venv/bin/python ...` — there is no installed package (`python -m gateway` needs repo root on `PYTHONPATH`). Standard test/run commands are in `README_gateway.md`.
+- **`aiohttp` is pinned `<3.14` on purpose.** The test-only dep `aioresponses` (0.7.9, latest) is incompatible with `aiohttp` 3.14+ (`ClientResponse.__init__() missing ... 'stream_writer'`), which breaks `tests/test_discover_from_ipbox.py`. Runtime works on 3.14 too, but keep `<3.14` so the suite stays green. Don't "fix" those tests — it's a version mismatch, not a code bug.
+- **Run headless (no field hardware):** `GATEWAY_SIMULATED=1 PYTHONPATH=. .venv/bin/python -m gateway` → northbound REST + WebSocket on `:8080`, loads 28 devices from `./devices.json`. Quick check: `bash local/gateway/smoke.sh`.
+- **Expected without hardware (NOT bugs):** `/health` and `/api/v1/status` report `degraded` because `module_metadata` HTTP polling to `10.10.1.30/.40/.50` times out; POST `/api/v1/devices/<id>/command` returns `200 {"ok":true}` but logs `timed out (no reply)` and device `state` stays `unknown`. The simulator is a command/reply stub, not a full module emulator — a real state round-trip needs `bus.register_simulated_reply(...)` (see `tests/test_bus_registry_integration.py`).
+- **Tests take ~2 min** (`PYTHONPATH=. .venv/bin/python -m pytest tests/ -q`); there is no `pytest.ini`/`conftest.py`. No lint tooling is configured; CI (`.github/workflows/`) only builds the Docker add-on on `v*.*.*` tags.
+- **HA add-on / companion:** the add-on Docker build is in `ipbuilding_gateway/` (staged via `prepare-build.sh`); the HA companion integration now lives in a separate repo (`markminnoye/ha-ipbuilding-gateway`), not here. `local/ha-core/setup.sh` is macOS-specific (hardcoded `/Users/...` path) — not usable as-is on the Linux VM.
