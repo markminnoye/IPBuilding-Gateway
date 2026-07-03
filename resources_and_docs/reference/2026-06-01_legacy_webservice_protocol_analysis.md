@@ -1,7 +1,7 @@
 # Legacy IPBox webservice `actions.php` — protocolanalyse & RE-vergelijking
 
-Last updated: 2026-06-01 (local)
-Bron: `reference/legacy-ipbox-webservice/actions.php` (oudere IPBuilding/IPBox API-versie, via e-mail aangeleverd)
+Last updated: 2026-07-03  
+Bron: `reference/legacy-ipbox-webservice/actions.php` (IPBuilding centrale / IPBox mobile webservice; veldbevestigd 2026-07-03 op IP0000 @ `10.10.1.1`, identiek aan eerdere e-mail-levering)
 Canonieke RE-index: [RE_STATE.md](../RE_STATE.md) · Payload-matrix: [evidence/2026-05-14_udp_payload_semantics_matrix.md](../evidence/2026-05-14_udp_payload_semantics_matrix.md)
 
 > **Statuslabel:** dit is **referentiebron-code**, geen wire-bewijs. Het is server-side PHP van de IPBox-weblaag (mobile WebUI → `ipcom`-service). Het bevestigt en verklaart veel van onze veldbus-RE, maar de getoonde strings zijn het **TCP-webservice-protocol** (PHP ↔ `ipcom`), niet rechtstreeks UDP/1001 (`ipcom` ↔ modules). Behandel afgeleide veldbus-conclusies als **hypothese** tenzij ze al wire-confirmed zijn in `RE_STATE.md`.

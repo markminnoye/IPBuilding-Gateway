@@ -52,6 +52,8 @@ Last updated: 2026-05-22 (reorganized)
 | [reference/2026-05-17_scan_modules_http_analysis.md](reference/2026-05-17_scan_modules_http_analysis.md) | Scan Modules HTTP |
 | [reference/2026-05-17_scan_modules_udp_payloads.md](reference/2026-05-17_scan_modules_udp_payloads.md) | UDP/10001 discovery |
 | [reference/2026-06-14-deployment-hardware-evaluation.md](reference/2026-06-14-deployment-hardware-evaluation.md) | Deployment B/C hardware: Pi 3B, ESP32, Pico W — effort & beslissing |
+| [reference/legacy-ipbox-webservice/README.md](reference/legacy-ipbox-webservice/README.md) | Mobile `actions.php` bron + veldbevestiging (IP0000 @ 10.10.1.1) |
+| [reference/2026-06-01_legacy_webservice_protocol_analysis.md](reference/2026-06-01_legacy_webservice_protocol_analysis.md) | TCP-mnemonics (`TGL`/`CLR`/`DIM`) ↔ veldbus RE |
 
 ## `archive/` — historisch / deprecated
 

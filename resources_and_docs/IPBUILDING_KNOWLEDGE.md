@@ -934,7 +934,37 @@ http://10.10.1.1/mobile/core/actions.php?methode=protocolToggleItem&ip=10.10.1.3
 | `ip` | `10.10.1.32` | Doelmodule-IP (hier: relay in range `.30`–`.39`) |
 | `ch` | `00` | Kanaalindex, **nul-gepadded** (kanaal 0) |
 
-Andere `methode`-waarden (dimmen, clear, audio, regime): zie [legacy webservice-analyse](reference/2026-06-01_legacy_webservice_protocol_analysis.md) en broncode `reference/legacy-ipbox-webservice/actions.php`. De PHP-laag vertaalt `protocolToggleItem` intern naar TCP `TGL;<ip>-<ch>` richting de `ipcom`-service, die op zijn beurt UDP/1001 naar de module stuurt.
+**Interne vertaling** (`protocolToggleItem` in broncode):
+
+```php
+$strReq = "TGL;" . $_GET["ip"] . "-" . $_GET["ch"];
+// → TCP naar ipcom-service, daarna UDP/1001 naar module
+```
+
+**Broncode (archief):** [`reference/legacy-ipbox-webservice/actions.php`](reference/legacy-ipbox-webservice/actions.php) — veldbevestigd 2026-07-03 op oudere Centrale eenheid; identiek aan eerdere referentie-extractie. Volledige protocolanalyse: [`reference/2026-06-01_legacy_webservice_protocol_analysis.md`](reference/2026-06-01_legacy_webservice_protocol_analysis.md).
+
+**Data & architectuur:**
+
+- Config in **MS Access** (`C:\Program Files\ipcom\ipcom.mdb`): tabellen `Componenten` (hardware, sidebar-groepen), `SoftComp` (macro's; `ID LIKE 'AAV%'` = regimes/sferen), `Audioswitch`, `paswoord`.
+- Sidebar (`getGroupList`): `Componenten WHERE mobileView=1` → HOOFDGROEPEN; `SoftComp WHERE ID LIKE 'AAV%'` → REGIME.
+- Login (`loginCheck`): op `10.10.x` (en `192.168.x`) mag de UI **zonder wachtwoord** als de `paswoord`-tabel leeg is (`echo "local"`).
+
+**Alle `methode`-handlers** (HTTP GET → PHP):
+
+| Categorie | `methode` | Backend |
+|---|---|---|
+| Auth | `loginCheck`, `changePassword`, `setLoginAccount` | MS Access `paswoord` |
+| UI-navigatie | `getGroupList`, `showGroupItems`, `showGroupItemsSoft`, `showGroupItemsDim`, `searchItems` | MS Access `Componenten` / `SoftComp` → HTML |
+| Veld-bus acties | `protocolToggleItem` → `TGL;…` | TCP → ipcom |
+| | `protocolClearItem` → `CLR;…` | idem |
+| | `protocolSetDimValue` → `DIM;…` | idem |
+| | `protocolCallSoftComp` | rauwe `reqStr` |
+| Regimes | `switchRegime`, `protocolGetCurrRegime` (`AAVX`) | TCP → ipcom |
+| Status | `getStatus` | TCP (long socket) |
+| Thermostaat | `activateTempDeviation` (`TAF;…`), `deleteTempDeviation` (`TAN;…`) | TCP |
+| DMX LED | `getLedStatus`, `setLedColor` | MS Access `DMX.mdb` |
+| Camera | `showVideoImage`, `refreshVideoImage` | HTTP proxy naar camera-IP (`.70`–`.79`) |
+| Audio (Barix) | `loadAudioPlayer`, `getAudioPlayerStatus`, `audioPlayerPower`, `audioPlayerSetValue`, `audioPlayerNavigateValue`, `protocolAudioPlayerLoadPlaylist`, `protocolAudioPlayerLoadSong`, `audioPlayerLoadPlayList` | TCP `SET;` / `INF;` + bestanden `playlist.txt` |
 
 **Implicatie voor onze gateway:** dit is **niet** het northbound-contract dat wij bouwen (`/api/v1/` + WebSocket). Wel nuttig als referentie bij migratie en troubleshooting op bestaande installaties.
 
