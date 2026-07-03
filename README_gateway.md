@@ -123,18 +123,26 @@ python3 scripts/import_ipbox_to_ha.py --no-ipbox --out ./out
 
 | Tool | Requires | Output |
 |------|----------|--------|
-| `python scripts/discover_from_ipbox.py` | IPBox WebConfig + session cookie | Full `devices.json` with `ipbox_id` per channel |
-| `python -m gateway.discover` | IPBuilding VLAN access | Draft `devices.json` — no `ipbox_id`, channels empty |
+| `python scripts/discover_from_ipbox.py` | IPBox WebConfig + session cookie | Full draft with `ipbox_id`; use `--apply http://GATEWAY:8080` |
+| `python scripts/import_from_legacy_central.py` | Legacy centrale mobile UI (`10.10.1.1`) | Channel names from `actions.php`; `--apply` to gateway |
+| `python scripts/apply_installation.py` | Gateway REST | Apply any JSON draft via `POST /api/v1/installation/apply` |
+| `python -m gateway.discover` | IPBuilding VLAN access | Draft `devices.json` — no `ipbox_id`, channels from `backupConfig` when available |
 
 ```bash
 # Migrate from IPBox (full channels + ipbox_id for shim)
 IPBOX_WEB_HOST=http://192.168.0.185 \
 IPBOX_SESSION_COOKIE="ASP.NET_SessionId=<cookie>" \
-python scripts/discover_from_ipbox.py
+python scripts/discover_from_ipbox.py --apply http://127.0.0.1:8080
+
+# Legacy centrale (IP0000) — project names from mobile UI
+python scripts/import_from_legacy_central.py \
+  --central-host 10.10.1.1 \
+  --apply http://127.0.0.1:8080 --mode merge_modules
 
 # Open gateway discovery (no IPBox needed; run RE spike first — see evidence/)
 python -m gateway.discover --range-start 30 --range-end 59
 python -m gateway.discover --no-arp   # HTTP-only fallback
+# Then: python scripts/apply_installation.py --gateway http://127.0.0.1:8080 --file devices.discovered.json
 ```
 
 **ARP-first discovery** (default since 2026-06-03):

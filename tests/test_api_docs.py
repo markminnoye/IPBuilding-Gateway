@@ -25,6 +25,9 @@ EXPECTED_ROUTES: set[tuple[str, str]] = {
     # instead of the generic {{device_id}} — both should be accepted as
     # the same logical route.
     ("POST", "/api/{apiVersion}/devices/{default_device_id}/command"),
+    ("GET", "/api/{apiVersion}/installation"),
+    ("POST", "/api/{apiVersion}/installation/validate"),
+    ("POST", "/api/{apiVersion}/installation/apply"),
     ("POST", "/api/{apiVersion}/discover"),
     ("POST", "/api/{apiVersion}/provision/autonomy"),
 }
@@ -41,6 +44,8 @@ V21_SCHEMA_SUFFIX = "v2.1.0/collection.json"
 
 POST_ROUTES_WITH_BODY: set[str] = {
     "/api/{apiVersion}/modules/refresh",
+    "/api/{apiVersion}/installation/validate",
+    "/api/{apiVersion}/installation/apply",
     # Commands folder uses {default_device_id} — accepted as equivalent.
     "/api/{apiVersion}/devices/{default_device_id}/command",
     "/api/{apiVersion}/devices/{device_id}/command",

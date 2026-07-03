@@ -1082,6 +1082,106 @@
       ]
     },
     {
+      "name": "Installation",
+      "description": "Provisioning API for persisted devices.json. Use these endpoints (or scripts/apply_installation.py) to import channel names and module metadata without hand-editing the add-on config directory. Merge policy A: existing northbound fields (name, room, active) are never overwritten.",
+      "item": [
+        {
+          "name": "Get installation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/installation",
+              "host": [
+                "{{gateway_host}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "installation"
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
+            },
+            "description": "Return the persisted installation configuration from devices.json (modules and top-level buttons). This is the provisioning snapshot, not live registry state — use GET /devices for runtime channel state. Optional query include_validation=true adds schema warnings without modifying the file."
+          },
+          "response": []
+        },
+        {
+          "name": "Validate installation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"merge_modules\",\n  \"modules\": []\n}"
+            },
+            "url": {
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/installation/validate",
+              "host": [
+                "{{gateway_host}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "installation",
+                "validate"
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
+            },
+            "description": "Dry-run merge and schema validation for an installation import payload. Returns preview counts (modules_added, channels_added) and warnings such as missing MAC addresses. Responds with HTTP 422 when InstallationConfig._parse would reject the merged result (for example type unknown)."
+          },
+          "response": []
+        },
+        {
+          "name": "Apply installation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"merge_modules\",\n  \"modules\": [\n    {\n      \"name\": \"IP0200PoE\",\n      \"ip\": \"10.10.1.30\",\n      \"type\": \"relay\",\n      \"mac\": \"00:24:77:52:ac:be\",\n      \"channels\": [\n        {\n          \"ch\": 0,\n          \"name\": \"Keuken LED\",\n          \"room\": \"Keuken\",\n          \"active\": false\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/installation/apply",
+              "host": [
+                "{{gateway_host}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "installation",
+                "apply"
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
+            },
+            "description": "Merge an installation payload and atomically write devices.json. Modes: replace (full swap), merge_modules (MAC/IP match, policy A northbound preservation), append_modules (new modules only), import_channels (channel lists only). On success the gateway reloads InstallationConfig and updates the device registry. Scripts import_from_legacy_central.py and discover_from_ipbox.py --apply call this endpoint."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Provisioning",
       "description": "Operator-driven provisioning flows. The gateway owns a small set of actions that push persistent state to module EEPROM (autonomy tables, button mapping). These endpoints are wired up in the router but most are scheduled for Fase 8 of the implementation roadmap; the autonomy endpoint is currently a stub that returns `501 not yet implemented` so the contract is locked in.\n",
       "item": [

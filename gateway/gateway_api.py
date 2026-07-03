@@ -33,6 +33,8 @@ from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, Relay
 from gateway.discovery import resolve_module_model
 from gateway.health import GatewayHealthMonitor
 from gateway.installation import InstallationConfig
+from gateway.installation_apply import apply_installation_body, validate_installation_body
+from gateway.auto_discovery import AtomicWriter
 from gateway.module_metadata import ModuleMetadataCache, normalize_button_hardware_id
 from gateway.payloads import (
     encode_dim_command,
@@ -159,6 +161,7 @@ class GatewayAPI:
         self._button_cb: Any = None
         # Discovery orchestrator (set after construction via set_orchestrator)
         self._orchestrator: Any = None
+        self._on_installation_changed: Callable[[InstallationConfig], None] | None = None
         self._health_cb: Callable[[], None] | None = None
         # Per-button timing state (key: hardware id lowercase). Tracks the
         # press→release interval so we can emit long_press after the per-button
@@ -196,6 +199,14 @@ class GatewayAPI:
         self._app.router.add_post("/api/v1/modules/refresh", self._post_modules_refresh)
         # Runtime auto-discovery
         self._app.router.add_post("/api/v1/discover", self._post_discover)
+        # Installation provisioning (devices.json)
+        self._app.router.add_get("/api/v1/installation", self._get_installation)
+        self._app.router.add_post(
+            "/api/v1/installation/validate", self._post_installation_validate,
+        )
+        self._app.router.add_post(
+            "/api/v1/installation/apply", self._post_installation_apply,
+        )
 
         # Register registry callbacks
         self._state_cb = self._registry.on_state_changed(self._on_state_changed)
@@ -216,6 +227,12 @@ class GatewayAPI:
     def set_orchestrator(self, orchestrator: Any) -> None:
         """Set the discovery orchestrator (called by main.py after construction)."""
         self._orchestrator = orchestrator
+
+    def set_installation_changed_callback(
+        self, callback: Callable[[InstallationConfig], None] | None,
+    ) -> None:
+        """Register callback invoked after a successful installation apply."""
+        self._on_installation_changed = callback
 
     async def stop(self) -> None:
         """Stop the server and clean up registry callbacks.
@@ -494,6 +511,67 @@ class GatewayAPI:
         except Exception as exc:
             log.exception("POST /api/v1/discover failed")
             raise ApiError(500, "discovery_failed", str(exc))
+
+    async def _get_installation(self, request: web.Request) -> web.Response:
+        """GET /api/v1/installation — return persisted devices.json content."""
+        include_validation = request.query.get("include_validation", "").lower() in (
+            "1", "true", "yes",
+        )
+        try:
+            inst = InstallationConfig.load(self._cfg.devices_file)
+        except InstallationError as exc:
+            raise ApiError(404, "installation_not_found", str(exc))
+
+        body: dict[str, Any] = inst.to_dict()
+        if include_validation:
+            result = validate_installation_body(
+                {"mode": "replace", "modules": body.get("modules", []),
+                 "buttons": body.get("buttons", [])},
+                inst,
+                mode="replace",
+            )
+            body["validation"] = {
+                "ok": result["ok"],
+                "warnings": result.get("warnings", []),
+            }
+        return web.json_response(body)
+
+    async def _post_installation_validate(self, request: web.Request) -> web.Response:
+        """POST /api/v1/installation/validate — dry-run merge + schema check."""
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            raise ApiError(400, "invalid_json", "Request body must be JSON")
+
+        if not isinstance(body, dict):
+            raise ApiError(400, "invalid_body", "Request body must be a JSON object")
+
+        result = validate_installation_body(body, self._cfg.installation)
+        status = 200 if result["ok"] else 422
+        return web.json_response(result, status=status)
+
+    async def _post_installation_apply(self, request: web.Request) -> web.Response:
+        """POST /api/v1/installation/apply — merge, write devices.json, reload."""
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            raise ApiError(400, "invalid_json", "Request body must be JSON")
+
+        if not isinstance(body, dict):
+            raise ApiError(400, "invalid_body", "Request body must be a JSON object")
+
+        writer = AtomicWriter(self._cfg.devices_file)
+        result = apply_installation_body(
+            body,
+            self._cfg.installation,
+            writer=writer,
+            devices_file=self._cfg.devices_file,
+            on_installation_changed=self._on_installation_changed,
+        )
+        if not result["ok"]:
+            status = 422 if result.get("errors") else 500
+            return web.json_response(result, status=status)
+        return web.json_response(result)
 
     # -------------------------------------------------------------------------
     # Command execution

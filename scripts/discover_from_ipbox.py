@@ -50,6 +50,7 @@ import asyncio
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 import aiohttp
@@ -268,10 +269,34 @@ async def run() -> None:
 
     output = await build_devices_json(discovered)
 
+    apply_url = os.getenv("GATEWAY_APPLY_URL", "")
+    if len(sys.argv) > 1 and "--apply" in sys.argv:
+        import argparse
+        p = argparse.ArgumentParser(add_help=False)
+        p.add_argument("--apply", metavar="GATEWAY_URL")
+        p.add_argument("--mode", default="merge_modules")
+        p.add_argument("--dry-run", action="store_true")
+        args, _ = p.parse_known_args()
+        apply_url = args.apply or apply_url
+        if apply_url:
+            import subprocess
+            with open(OUTPUT_PATH, "w", encoding="utf-8") as fh:
+                json.dump(output, fh, indent=2, ensure_ascii=False)
+            cmd = [
+                sys.executable,
+                str(Path(__file__).resolve().parent / "apply_installation.py"),
+                "--gateway", apply_url,
+                "--mode", args.mode,
+                "--file", OUTPUT_PATH,
+            ]
+            if args.dry_run:
+                cmd.append("--dry-run")
+            sys.exit(subprocess.run(cmd).returncode)
+
     with open(OUTPUT_PATH, "w", encoding="utf-8") as fh:
         json.dump(output, fh, indent=2, ensure_ascii=False)
     print(f"\nWritten to: {OUTPUT_PATH}")
-    print("Review and rename to devices.json when satisfied.")
+    print("Review and rename to devices.json when satisfied, or re-run with --apply http://GATEWAY:8080")
 
 
 if __name__ == "__main__":

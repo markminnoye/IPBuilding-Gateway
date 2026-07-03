@@ -98,16 +98,38 @@ python3 scripts/arp_discover_spike.py [--options]
 
 ---
 
+Both `gateway.discover` and `discover_from_ipbox.py` output a draft JSON file. Prefer applying via the installation API (merge policy A) instead of overwriting `devices.json` by hand:
+
+```bash
+# Legacy IP0000 / mobile centrale (10.10.1.1)
+python3 scripts/import_from_legacy_central.py \
+  --central-host 10.10.1.1 \
+  --apply http://127.0.0.1:8080 \
+  --mode merge_modules
+
+# IPBox WebConfig export
+python3 scripts/discover_from_ipbox.py --apply http://127.0.0.1:8080
+
+# Any JSON draft
+python3 scripts/apply_installation.py \
+  --gateway http://127.0.0.1:8080 \
+  --mode merge_modules \
+  --file devices.import.json
+```
+
+`POST /api/v1/discover` (runtime module HTTP discovery) uses the same apply path internally (`merge_modules`). Unidentified modules (`type: unknown`) are never persisted.
+
 ## Choosing a discovery method
 
 | Scenario | Use |
 |----------|-----|
-| Fresh install, no IPBox | `gateway.discover` (ARP-first) |
-| Migrating from IPBox, want `ipbox_id` | `discover_from_ipbox.py` |
+| Fresh install, no IPBox | `gateway.discover` (ARP-first) + `apply_installation.py` |
+| Migrating from IPBox, want `ipbox_id` | `discover_from_ipbox.py --apply` |
+| Legacy centrale (IP0000 mobile UI) | `import_from_legacy_central.py --apply` |
 | Verify ARP cache state manually | `arp_discover_spike.py` |
 | HA add-on runtime discovery | `POST /api/v1/discover` (REST or WebSocket) -- see `rest.md` and `websocket.md` |
 
-Both `gateway.discover` and `discover_from_ipbox.py` output `devices.discovered.json` — review, then overwrite `devices.json` (scratch test — no merge/diff).
+Draft JSON can be reviewed locally, then applied with merge policy A via `POST /api/v1/installation/apply` (see `rest.md` § Installation API).
 
 ---
 

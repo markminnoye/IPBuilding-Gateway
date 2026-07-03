@@ -24,11 +24,14 @@ ID model
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from gateway.types import DeviceType
+
+log = logging.getLogger(__name__)
 
 
 def _normalize_mac(mac: str) -> str:
@@ -87,10 +90,13 @@ class ChannelConfig:
         """Alias for room, for backward compatibility."""
         return self.room
 
-    def to_dict(self) -> dict:
-        """Serialize to dict for devices.json; entity_id is always derived."""
-        # The ``id`` (entity_id) is derived on-the-fly via ``make_entity_id`` —
-        # never stored, never round-tripped. See module-level docstring.
+    def to_dict(self, *, module_ip: str | None = None) -> dict:
+        """Serialize to dict for devices.json.
+
+        The default ``id`` (``{module_ip}-{ch}``) is omitted — only custom
+        slugs are persisted. Pass ``module_ip`` when serialising a full
+        installation document via :meth:`InstallationConfig.to_dict`.
+        """
         d: dict = {
             "ch": self.ch,
             "name": self.name,
@@ -101,6 +107,8 @@ class ChannelConfig:
         }
         if self.ipbox_id is not None:
             d["ipbox_id"] = self.ipbox_id
+        if module_ip is not None and self.id and self.id != f"{module_ip}-{self.ch}":
+            d["id"] = self.id
         return d
 
     @classmethod
@@ -201,7 +209,7 @@ class ModuleConfig:
             "firmware": self.firmware,
             "model": self.model,
             "mac": self.mac,
-            "channels": [c.to_dict() for c in self.channels],
+            "channels": [c.to_dict(module_ip=self.ip) for c in self.channels],
         }
 
     @classmethod
@@ -458,3 +466,10 @@ class InstallationConfig:
         if btn is None:
             return DEFAULT_BUTTON_HOLD_THRESHOLD_S
         return btn.hold_threshold_s
+
+    def to_dict(self) -> dict:
+        """Serialize the full installation document for devices.json."""
+        return {
+            "modules": [mc.to_dict() for mc in self.modules],
+            "buttons": [btn.to_dict() for btn in self.buttons],
+        }

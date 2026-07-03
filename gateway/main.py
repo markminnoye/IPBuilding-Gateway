@@ -144,6 +144,7 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         await orchestrator.start()
 
     api.set_orchestrator(orchestrator)
+    api.set_installation_changed_callback(_apply_installation)
     await api.start()
 
     ha_discovery = HaDiscoveryAdvertiser(

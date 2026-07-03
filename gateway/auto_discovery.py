@@ -31,11 +31,13 @@ from typing import Any, Callable
 from gateway.discovery import (
     discover_modules,
     discovered_module_to_devices_json,
+    is_loadable_device_type,
     parse_arp_table,
     resolve_module_model,
 )
 from gateway.health import GatewayHealthMonitor
 from gateway.installation import InstallationConfig, ModuleConfig
+from gateway.installation_apply import apply_installation_body
 
 log = logging.getLogger(__name__)
 
@@ -369,15 +371,14 @@ class DiscoveryOrchestrator:
     async def run_forced_discovery(self) -> dict:
         """Run ARP-sweep + HTTP identify and return result summary.
 
-        Returns ``{"ok", "added", "changed", "removed", "duration_ms"}``.
-        Writes new modules to devices.json (active:false), updates firmware
-        on existing modules.
+        Returns ``{"ok", "added", "changed", "removed", "duration_ms", ...}``.
+        Discovered modules are merged via the shared installation apply path
+        (``merge_modules``) so validation runs before any disk write.
         """
         import time
         start = time.monotonic()
         now_iso = datetime.now(timezone.utc).isoformat()
 
-        # Run discovery in thread to avoid blocking the event loop
         loop = asyncio.get_running_loop()
         discovered = await loop.run_in_executor(None, self._run_forced_discovery_sync)
 
@@ -391,79 +392,35 @@ class DiscoveryOrchestrator:
         changed: list[dict] = []
         firmware_changed: list[dict] = []
 
-        # Load current devices.json (may have been written since init)
         installation = None
         try:
             installation = InstallationConfig.load(self._devices_file)
         except Exception:
             pass
 
-        # Build the new modules list
-        current_modules: dict[str, dict] = {}
+        current_modules: dict[str, ModuleConfig] = {}
         if installation:
             for mc in installation.modules:
-                current_modules[mc.mac] = mc
+                if mc.mac:
+                    current_modules[mc.mac] = mc
 
-        all_macs = set(current_modules.keys()) | {m.mac for m in discovered if m.mac}
+        import_modules: list[dict] = []
 
-        modules_to_write: list[dict] = []
-
-        # First: preserve existing modules; backfill SKU where missing.
-        if installation:
-            for mc in installation.modules:
-                d = mc.to_dict()
-                # Runtime-only fields (last_seen, last_seen_source) are
-                # intentionally NOT written to devices.json. Update them on
-                # the in-memory object so the WS-emit and ``_apply_gateway_status``
-                # path see the new timestamp, but keep devices.json stable
-                # across discovery runs.
-                mc.last_seen = now_iso
-                mc.last_seen_source = "http"
-                # Backfill missing hardware SKU: modules drafted from a
-                # pre-provisioned install (e.g. legacy IPBox export) often
-                # carry an empty ``model`` and an IP-based ``name``. Replace
-                # those with the canonical SKU so the companion shows a
-                # stable "Apparaat-info" title across installs.
-                resolved_model = resolve_module_model(d.get("model", ""), d.get("type", ""))
-                if resolved_model and not d.get("model"):
-                    d["model"] = resolved_model
-                    d["name"] = resolved_model
-                elif resolved_model and d.get("name") == d.get("ip"):
-                    d["name"] = resolved_model
-                modules_to_write.append(d)
-
-                # Check for IP change
-                disc_by_mac = {m.mac: m for m in discovered if m.mac}
-                if mc.mac in disc_by_mac:
-                    dm = disc_by_mac[mc.mac]
-                    if dm.ip != mc.ip:
-                        d["ip"] = dm.ip
-                        self._emit({
-                            "type": "device_ip_changed",
-                            "mac": mc.mac,
-                            "old_ip": mc.ip,
-                            "new_ip": dm.ip,
-                        })
-                    # Check for firmware change
-                    if dm.firmware and dm.firmware != mc.firmware:
-                        old_firmware = mc.firmware
-                        d["firmware"] = dm.firmware
-                        self._emit({
-                            "type": "device_firmware_changed",
-                            "mac": mc.mac,
-                            "old_firmware": old_firmware,
-                            "new_firmware": dm.firmware,
-                        })
-                        firmware_changed.append({
-                            "mac": mc.mac,
-                            "old_firmware": old_firmware,
-                            "new_firmware": dm.firmware,
-                        })
-
-        # Add newly discovered modules (not in current)
-        existing_macs = set(current_modules.keys())
         for dm in discovered:
-            if dm.mac and dm.mac not in existing_macs:
+            if not dm.mac:
+                continue
+            if not is_loadable_device_type(dm.device_type):
+                log.info(
+                    "DiscoveryOrchestrator: skipping %s "
+                    "(unidentified type %r — HTTP getSysSet/backupConfig required)",
+                    dm.ip,
+                    dm.device_type,
+                )
+                skipped_unidentified.append({
+                    "mac": dm.mac,
+                    "ip": dm.ip,
+                    "device_type": dm.device_type,
+                })
                 self._emit({
                     "type": "device_added",
                     "mac": dm.mac,
@@ -471,57 +428,100 @@ class DiscoveryOrchestrator:
                     "device_type": dm.device_type,
                     "firmware": dm.firmware,
                 })
-                entry = discovered_module_to_devices_json(dm)
-                if entry is None:
-                    log.info(
-                        "DiscoveryOrchestrator: skipping devices.json write for %s "
-                        "(unidentified type %r — HTTP getSysSet/backupConfig required)",
-                        dm.ip,
-                        dm.device_type,
-                    )
-                    skipped_unidentified.append({
-                        "mac": dm.mac,
-                        "ip": dm.ip,
-                        "device_type": dm.device_type,
-                    })
-                    continue
-                modules_to_write.append(entry)
+                continue
+            entry = discovered_module_to_devices_json(dm)
+
+            resolved_model = resolve_module_model(entry.get("model", ""), entry.get("type", ""))
+            if resolved_model and not entry.get("model"):
+                entry["model"] = resolved_model
+                entry["name"] = resolved_model
+            elif resolved_model and entry.get("name") == entry.get("ip"):
+                entry["name"] = resolved_model
+
+            if dm.mac not in current_modules:
+                self._emit({
+                    "type": "device_added",
+                    "mac": dm.mac,
+                    "ip": dm.ip,
+                    "device_type": dm.device_type,
+                    "firmware": dm.firmware,
+                })
                 added.append({"mac": dm.mac, "ip": dm.ip})
+            else:
+                mc = current_modules[dm.mac]
+                mc.last_seen = now_iso
+                mc.last_seen_source = "http"
+                if dm.ip != mc.ip:
+                    self._emit({
+                        "type": "device_ip_changed",
+                        "mac": mc.mac,
+                        "old_ip": mc.ip,
+                        "new_ip": dm.ip,
+                    })
+                    changed.append({"mac": mc.mac, "old_ip": mc.ip, "new_ip": dm.ip})
+                if dm.firmware and dm.firmware != mc.firmware:
+                    self._emit({
+                        "type": "device_firmware_changed",
+                        "mac": mc.mac,
+                        "old_firmware": mc.firmware,
+                        "new_firmware": dm.firmware,
+                    })
+                    firmware_changed.append({
+                        "mac": mc.mac,
+                        "old_firmware": mc.firmware,
+                        "new_firmware": dm.firmware,
+                    })
+
+            import_modules.append(entry)
 
         duration_ms = int((time.monotonic() - start) * 1000)
-        result = {
-            "ok": True,
+
+        if not import_modules:
+            if installation is None:
+                self._clear_unloadable_devices_file()
+            return {
+                "ok": True,
+                "added": added,
+                "changed": changed,
+                "firmware_changed": firmware_changed,
+                "removed": [],
+                "skipped_unidentified": skipped_unidentified,
+                "applied": {"modules": 0, "channels": 0},
+                "reload": False,
+                "duration_ms": duration_ms,
+            }
+
+        apply_body = {"mode": "merge_modules", "modules": import_modules}
+        apply_result = apply_installation_body(
+            apply_body,
+            installation,
+            mode="merge_modules",
+            writer=self._writer,
+            devices_file=self._devices_file,
+            on_installation_changed=self._on_installation_changed,
+        )
+
+        if apply_result.get("reload"):
+            try:
+                self._installation = InstallationConfig.load(self._devices_file)
+            except Exception as exc:
+                log.warning(
+                    "DiscoveryOrchestrator: apply succeeded but reload failed: %s",
+                    exc,
+                )
+
+        return {
+            "ok": apply_result.get("ok", False),
             "added": added,
             "changed": changed,
             "firmware_changed": firmware_changed,
             "removed": [],
             "skipped_unidentified": skipped_unidentified,
+            "applied": apply_result.get("applied", {"modules": 0, "channels": 0}),
+            "reload": apply_result.get("reload", False),
+            "errors": apply_result.get("errors", []),
             "duration_ms": duration_ms,
         }
-
-        # Write updated modules list
-        devices_data = {"modules": modules_to_write}
-        self._writer.write(devices_data)
-
-        # Reload installation so registry picks up changes
-        try:
-            self._installation = InstallationConfig.load(self._devices_file)
-        except Exception as exc:
-            log.warning(
-                "DiscoveryOrchestrator: devices.json written (%d module(s) on disk) "
-                "but reload failed — runtime installation unchanged: %s",
-                len(modules_to_write),
-                exc,
-            )
-
-        if self._installation is not None and self._on_installation_changed is not None:
-            try:
-                self._on_installation_changed(self._installation)
-                log.info("DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)")
-            except Exception:
-                log.exception("DiscoveryOrchestrator: callback failed (forced discovery)")
-
-        return result
 
     def _init_sweep_sync(self) -> list[dict]:
         """Run init-sweep synchronously in thread pool."""
@@ -602,26 +602,34 @@ class DiscoveryOrchestrator:
             self._clear_unloadable_devices_file()
             return
 
-        devices_data = {"modules": modules}
-        self._writer.write(devices_data)
+        apply_result = apply_installation_body(
+            {"mode": "append_modules", "modules": modules},
+            self._installation,
+            mode="append_modules",
+            writer=self._writer,
+            devices_file=self._devices_file,
+            on_installation_changed=self._on_installation_changed,
+        )
+
+        if not apply_result.get("ok"):
+            log.warning(
+                "DiscoveryOrchestrator: init-sweep apply failed: %s",
+                apply_result.get("errors"),
+            )
+            return
 
         try:
             self._installation = InstallationConfig.load(self._devices_file)
         except Exception as exc:
             log.warning(
-                "DiscoveryOrchestrator: init-sweep wrote %d module(s) but reload failed: %s",
-                len(modules),
+                "DiscoveryOrchestrator: init-sweep apply succeeded but reload failed: %s",
                 exc,
             )
 
-        if self._installation is not None and self._on_installation_changed is not None:
-            try:
-                self._on_installation_changed(self._installation)
-                log.info("DiscoveryOrchestrator: on_installation_changed callback invoked (init-sweep)")
-            except Exception:
-                log.exception("DiscoveryOrchestrator: callback failed (init-sweep)")
-
-        log.info("DiscoveryOrchestrator: init-sweep wrote %d modules", len(modules))
+        log.info(
+            "DiscoveryOrchestrator: init-sweep applied %d modules",
+            apply_result.get("applied", {}).get("modules", len(modules)),
+        )
 
     def _needs_init_sweep(self) -> bool:
         """Return True when an init-sweep should populate devices.json.

@@ -370,6 +370,63 @@ and a `"channel inactive"` error.
 
 ---
 
+## Installation API (`devices.json`)
+
+Provisioning endpoints for the persisted installation config. Runtime device state remains on `GET /api/v1/devices`; these routes operate on the on-disk `devices.json` snapshot.
+
+### GET /api/v1/installation
+
+Return the persisted installation (modules + top-level `buttons[]`). Runtime fields (`last_seen`, live registry state) are excluded.
+
+Optional query `?include_validation=true` adds a `validation` block with schema warnings.
+
+### POST /api/v1/installation/validate
+
+Dry-run merge + schema check. Same body shape as `apply`. Returns `422` when `InstallationConfig._parse()` would fail (e.g. `type: unknown`).
+
+**Request body:**
+```json
+{
+  "mode": "merge_modules",
+  "modules": [ … ],
+  "buttons": [ … ]
+}
+```
+
+**Response 200:**
+```json
+{
+  "ok": true,
+  "errors": [],
+  "warnings": ["module 10.10.1.55: no channels"],
+  "preview": { "modules_added": 2, "modules_updated": 1, "channels_added": 24 }
+}
+```
+
+### POST /api/v1/installation/apply
+
+Merge per `mode`, atomically write `devices.json`, reload installation + registry.
+
+| `mode` | Behaviour |
+|--------|-----------|
+| `replace` | Full replacement. Omitting `buttons[]` preserves existing buttons; `"buttons": []` clears them. |
+| `merge_modules` | Match modules by MAC (primary) or IP; policy A — never overwrite existing northbound channel fields. |
+| `append_modules` | Add modules whose MAC/IP is not yet present. |
+| `import_channels` | Merge channel lists inside existing modules only. |
+
+**Response 200:**
+```json
+{
+  "ok": true,
+  "applied": { "modules": 3, "channels": 28 },
+  "reload": true
+}
+```
+
+Import scripts (`scripts/apply_installation.py`, `scripts/import_from_legacy_central.py`, `scripts/discover_from_ipbox.py --apply`) POST to these endpoints. See [`discovery.md`](discovery.md).
+
+---
+
 See also:
 - [`websocket.md`](websocket.md) -- WebSocket message catalog
 - [`modules.md`](modules.md) -- Module resource reference
