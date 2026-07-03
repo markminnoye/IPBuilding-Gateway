@@ -24,13 +24,19 @@ Legacy HA integration (IPBox REST — reference only): https://github.com/markmi
 
 Two L3 domains: **thuis-LAN `192.168.1.0/24`** (internet, HA; IPBox **REST** `:30200` on one NIC) and **IPBuilding-VLAN `10.10.1.x`** (field controllers; **UDP/1001** hub `10.10.1.1` on the other NIC). Same physical IPBox, two Ethernet ports — not a separate “lab network”. Use the actual IPBox host on the home subnet from your router; older repo examples may show `192.168.0.185` from a prior segment.
 
-| Role | IP | Port |
-|------|-----|------|
+| Role | IP range | Port |
+|------|----------|------|
 | IPBox REST (thuis-LAN 192.168.1.0/24) | *your IPBox host* (archive example: 192.168.0.185) | 30200 |
-| IPBox on IPBuilding VLAN (field bus) | 10.10.1.1 | UDP/1001 to `10.10.1.x` — second NIC of same unit |
-| IP200PoE / IP0200PoE relays | 10.10.1.30 | 1001 (UDP), 80 (HTTP embedded; zie knowledge §2A) |
-| IP0300PoE dimmers / 0-10V | 10.10.1.40 only | 1001 (UDP), 80 (HTTP; zie knowledge §2B) |
-| IP1100PoE inputs | 10.10.1.50 | 1001 (UDP), 80 (HTTP; zie knowledge §2C) |
+| IPBox / centrale on IPBuilding VLAN (field bus) | 10.10.1.1 | UDP/1001 to `10.10.1.x` — second NIC of same unit |
+| IP200PoE / IP0200PoE relays | 10.10.1.30–10.10.1.39 | 1001 (UDP), 80 (HTTP; see knowledge §2A) |
+| IP0300PoE dimmers / 0-10V | 10.10.1.40–10.10.1.49 | 1001 (UDP), 80 (HTTP; see knowledge §2B) |
+| IP1100PoE inputs | 10.10.1.50–10.10.1.59 | 1001 (UDP), 80 (HTTP; see knowledge §2C) |
+| Cameras | 10.10.1.70–10.10.1.79 | — |
+| Barix audio modules | 10.10.1.80–10.10.1.89 | — |
+| Audio switch box | 10.10.1.90–10.10.1.94 | — |
+| Router (field segment) | 10.10.1.254 | — |
+
+Full IP schema: `resources_and_docs/IPBUILDING_KNOWLEDGE.md` §12.1. Mobile UI toggle example: `http://10.10.1.1/mobile/core/actions.php?methode=protocolToggleItem&ip=<module>&ch=<ch>` (§12.1.1).
 
 Treat IPs as configurable in code; do not hardcode secrets.
 

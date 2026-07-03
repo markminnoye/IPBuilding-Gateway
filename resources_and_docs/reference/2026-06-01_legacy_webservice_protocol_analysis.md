@@ -10,7 +10,7 @@ Canonieke RE-index: [RE_STATE.md](../RE_STATE.md) · Payload-matrix: [evidence/2
 
 ## 1. Wat dit document is
 
-`actions.php` is de AJAX-backend van de oude IPBox **mobile webinterface**. Architectuur die eruit blijkt:
+`actions.php` is de AJAX-backend van de oude IPBox **mobile webinterface** (`http://10.10.1.1/mobile/`). Zie ook `IPBUILDING_KNOWLEDGE.md` §12.1.1 voor het veldmelding-voorbeeld `protocolToggleItem`. Architectuur die eruit blijkt:
 
 ```
 Browser (mobile WebUI)

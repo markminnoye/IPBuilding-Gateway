@@ -1,6 +1,6 @@
 # IPBuilding System — Knowledge Base
 
-> **Last updated:** 2026-05-22
+> **Last updated:** 2026-07-03
 >
 > **Doel:** Gestructureerde kennis voor het reverse-engineeren en vervangen van de IPBox. **Context-tiers (token-besparend):** laad dit bestand **niet** standaard volledig; gebruik de **TOC** en open alleen secties die bij de vraag passen—bijv. §3–4 voor topologie en architectuur, §5 voor REST, §6 voor UDP, §8–9 voor install/RE en capture-setup. Globaal beleid: `AGENTS.md` en `docs/context-policy.md`. PDFs en grote **pcap**’s horen in **T3**: niet in de chat, tenzij je een beperkte slice analyseert.
 
@@ -324,6 +324,8 @@ De installatie heeft functioneel **thuis- vs veldbus-segmenten**; in UniFi kunne
 **Implicatie voor RE en captures:** REST-acties lopen L3 naar het **thuis-IP** van de IPBox; UDP/1001 op het veld zie je tussen **`10.10.1.1`** en de controllers. Als een pcap alleen één van beide paden toont, zegt dat iets over **mirror-POV**, niet over “een ander lab-netwerk”.
 
 ### 3.1 Logische adressen op het IPBuilding-segment (overzicht)
+
+**Volledig IP-schema (alle moduletypes, fabrieksranges):** zie **§12.1**. Onderstaand alleen de modules in **onze** installatie.
 
 ```
 Subnet 10.10.1.x
@@ -899,16 +901,42 @@ Architectuur: [2026-05-18-gateway-architecture-design.md](../../docs/superpowers
 
 ### 12.1 Standaard IP-adresindeling — volledig schema
 
+> Bron: officieel IPBuilding installatiedocument v6.0 (juli 2012); bevestigd door veldmelding 2026-07-03 (oudere **Centrale eenheid** / IP0000, voorganger van IPBox). Het schema is ongewijzigd over alle generaties centrale.
+
 | Module type | IP-bereik | Onze installatie |
 |---|---|---|
-| Relay control modules (IP0200PoE) | **10.10.1.30 → 10.10.1.39** | `.30` |
-| Dimmer control modules (IP0300PoE) | **10.10.1.40 → 10.10.1.49** | `.40` |
-| Input modules (IP1100PoE) | **10.10.1.50 → 10.10.1.59** | `.50` |
-| Camera's | 10.10.1.70 → 10.10.1.79 | — |
-| Barix audio modules | 10.10.1.80 → 10.10.1.89 | — |
-| Audio switch box | 10.10.1.90 → 10.10.1.94 | — |
-| Router | 10.10.1.254 | — |
+| Relaisstuurmodules (IP0200PoE) | **10.10.1.30 → 10.10.1.39** | `.30` |
+| Dimstuurmodules (IP0300PoE) | **10.10.1.40 → 10.10.1.49** | `.40` |
+| Ingangsmodules (IP1100PoE) | **10.10.1.50 → 10.10.1.59** | `.50` |
+| Camera's | **10.10.1.70 → 10.10.1.79** | — |
+| Barix-audiomodules | **10.10.1.80 → 10.10.1.89** | — |
+| Audio switch box | **10.10.1.90 → 10.10.1.94** | — |
+| Router (veldbus-segment) | **10.10.1.254** | — |
 | Centrale eenheid / **IPBox** | **10.10.1.1** | `10.10.1.1` |
+
+**Notities:**
+
+- Elk bereik biedt **10 adressen** (bv. relays `.30`–`.39`). Meerdere modules van hetzelfde type krijgen opeenvolgende IP's binnen hun range (bv. tweede relaymodule op `.31`, derde op `.32`).
+- De centrale is **voorgeprogrammeerd op `10.10.1.1`** op het IPBuilding-VLAN (`10.10.1.0/24`). Oudere centrales (IP0000/IP0000B) en de IPBox delen dit adres; de **mobiele gebruikersinterface** is bereikbaar op `http://10.10.1.1/mobile/` (alleen op het veldbus-segment, niet via thuis-LAN REST).
+- IP's zijn configureerbaar via DS-manager / service-software; ranges zijn **conventie**, geen harde DHCP-reservatie.
+
+#### 12.1.1 Mobiele webinterface — `actions.php` (centrale)
+
+De centrale (IP0000 / IPBox) host een **mobiele web-UI** op het veldbus-IP. Gebruikers zien groepen (bv. Verlichting, Ventilatie) en regimes (Aanwezig/Afwezig/Vakantie). Acties lopen via HTTP GET naar `actions.php`:
+
+```
+http://10.10.1.1/mobile/core/actions.php?methode=protocolToggleItem&ip=10.10.1.32&ch=00
+```
+
+| Parameter | Voorbeeld | Betekenis |
+|---|---|---|
+| `methode` | `protocolToggleItem` | Actie (toggle uitgang) |
+| `ip` | `10.10.1.32` | Doelmodule-IP (hier: relay in range `.30`–`.39`) |
+| `ch` | `00` | Kanaalindex, **nul-gepadded** (kanaal 0) |
+
+Andere `methode`-waarden (dimmen, clear, audio, regime): zie [legacy webservice-analyse](reference/2026-06-01_legacy_webservice_protocol_analysis.md) en broncode `reference/legacy-ipbox-webservice/actions.php`. De PHP-laag vertaalt `protocolToggleItem` intern naar TCP `TGL;<ip>-<ch>` richting de `ipcom`-service, die op zijn beurt UDP/1001 naar de module stuurt.
+
+**Implicatie voor onze gateway:** dit is **niet** het northbound-contract dat wij bouwen (`/api/v1/` + WebSocket). Wel nuttig als referentie bij migratie en troubleshooting op bestaande installaties.
 
 ### 12.2 Configuratievelden per relay-uitgang (24 per IP0200PoE)
 
