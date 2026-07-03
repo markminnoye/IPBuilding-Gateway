@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import logging
 import time
+from collections import deque
 from dataclasses import dataclass
 from typing import AsyncIterator, Callable
 
@@ -27,6 +28,11 @@ _MODULE_POLL: dict[str, bytes] = {
     "input": _POLL_INPUT,
 }
 
+# Bound correlate_reply buffering during command waits (drop oldest on overflow).
+_CORRELATE_QUEUE_MAX = 64
+# Recent inbound packets for correlate_reply after synchronous send_command.
+_RECENT_PACKETS_MAX = 128
+
 
 @dataclass
 class UDPPacket:
@@ -45,9 +51,9 @@ class UDPBus:
         self.config = config or GatewayConfig.from_env()
         self._transport: asyncio.DatagramTransport | None = None
         self._protocol: _UDPProtocol | None = None
-        self._queue: asyncio.Queue[UDPPacket] = asyncio.Queue()
         self._simulated_replies: dict[bytes, bytes] = {}
         self._listeners: list[ReplyCallback] = []
+        self._recent_packets: deque[UDPPacket] = deque(maxlen=_RECENT_PACKETS_MAX)
         self._poll_task: asyncio.Task[None] | None = None
         self.last_send_ts: float = 0.0  # monotonic ts of last send_command
 
@@ -59,17 +65,51 @@ class UDPBus:
         self._listeners.remove(cb)
 
     def _notify_listeners(self, pkt: UDPPacket) -> None:
+        self._recent_packets.append(pkt)
         for cb in self._listeners:
             try:
                 cb(pkt)
             except Exception:
                 log.exception("Listener callback error")
 
+    def _match_reply(
+        self,
+        pkt: UDPPacket,
+        *,
+        module_ip: str,
+        after_ts: float,
+        predicate: Callable[[bytes], bool] | None,
+    ) -> bool:
+        if pkt.src_ip != module_ip:
+            return False
+        if pkt.monotonic_ts < after_ts:
+            return False
+        if predicate and not predicate(pkt.data):
+            return False
+        return True
+
+    def _find_recent_reply(
+        self,
+        *,
+        module_ip: str,
+        after_ts: float,
+        predicate: Callable[[bytes], bool] | None,
+    ) -> UDPPacket | None:
+        for pkt in reversed(self._recent_packets):
+            if self._match_reply(
+                pkt,
+                module_ip=module_ip,
+                after_ts=after_ts,
+                predicate=predicate,
+            ):
+                return pkt
+        return None
+
     async def start(self) -> None:
         if not self.config.simulated_mode:
             loop = asyncio.get_running_loop()
             self._transport, self._protocol = await loop.create_datagram_endpoint(
-                lambda: _UDPProtocol(self._queue, self._notify_listeners),
+                lambda: _UDPProtocol(self._notify_listeners),
                 local_addr=(self.config.bind_ip, 0),
             )
         self._poll_task = asyncio.create_task(self._poll_loop())
@@ -142,7 +182,6 @@ class UDPBus:
                     monotonic_ts=time.monotonic(),
                 )
                 self.last_send_ts = time.monotonic()
-                await self._queue.put(pkt)
                 self._notify_listeners(pkt)
             return
         if not self._transport:
@@ -151,8 +190,23 @@ class UDPBus:
         self.last_send_ts = time.monotonic()
 
     async def listen_for_replies(self) -> AsyncIterator[UDPPacket]:
-        while True:
-            yield await self._queue.get()
+        queue: asyncio.Queue[UDPPacket] = asyncio.Queue(maxsize=_CORRELATE_QUEUE_MAX)
+
+        def collect(pkt: UDPPacket) -> None:
+            try:
+                queue.put_nowait(pkt)
+            except asyncio.QueueFull:
+                with contextlib.suppress(asyncio.QueueEmpty):
+                    queue.get_nowait()
+                with contextlib.suppress(asyncio.QueueFull):
+                    queue.put_nowait(pkt)
+
+        self.add_listener(collect)
+        try:
+            while True:
+                yield await queue.get()
+        finally:
+            self.remove_listener(collect)
 
     async def correlate_reply(
         self,
@@ -163,33 +217,51 @@ class UDPBus:
         predicate: Callable[[bytes], bool] | None = None,
     ) -> UDPPacket | None:
         """Wait for first reply from module_ip after after_ts."""
-        deadline = time.monotonic() + (timeout_ms or self.config.reply_timeout_ms) / 1000.0
+        wait_queue: asyncio.Queue[UDPPacket] = asyncio.Queue(maxsize=_CORRELATE_QUEUE_MAX)
 
-        while time.monotonic() < deadline:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                break
+        def collect(pkt: UDPPacket) -> None:
             try:
-                pkt = await asyncio.wait_for(self._queue.get(), timeout=remaining)
-            except asyncio.TimeoutError:
-                break
-            if pkt.src_ip != module_ip:
-                continue
-            if pkt.monotonic_ts < after_ts:
-                continue
-            if predicate and not predicate(pkt.data):
-                continue
-            return pkt
-        return None
+                wait_queue.put_nowait(pkt)
+            except asyncio.QueueFull:
+                with contextlib.suppress(asyncio.QueueEmpty):
+                    wait_queue.get_nowait()
+                with contextlib.suppress(asyncio.QueueFull):
+                    wait_queue.put_nowait(pkt)
+
+        self.add_listener(collect)
+        try:
+            matched = self._find_recent_reply(
+                module_ip=module_ip,
+                after_ts=after_ts,
+                predicate=predicate,
+            )
+            if matched is not None:
+                return matched
+
+            deadline = time.monotonic() + (timeout_ms or self.config.reply_timeout_ms) / 1000.0
+
+            while time.monotonic() < deadline:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                try:
+                    pkt = await asyncio.wait_for(wait_queue.get(), timeout=remaining)
+                except asyncio.TimeoutError:
+                    break
+                if self._match_reply(
+                    pkt,
+                    module_ip=module_ip,
+                    after_ts=after_ts,
+                    predicate=predicate,
+                ):
+                    return pkt
+            return None
+        finally:
+            self.remove_listener(collect)
 
 
 class _UDPProtocol(asyncio.DatagramProtocol):
-    def __init__(
-        self,
-        queue: asyncio.Queue[UDPPacket],
-        notify: Callable[[UDPPacket], None],
-    ) -> None:
-        self._queue = queue
+    def __init__(self, notify: Callable[[UDPPacket], None]) -> None:
         self._notify = notify
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
@@ -201,5 +273,4 @@ class _UDPProtocol(asyncio.DatagramProtocol):
             dst_port=0,
             monotonic_ts=time.monotonic(),
         )
-        self._queue.put_nowait(pkt)
         self._notify(pkt)

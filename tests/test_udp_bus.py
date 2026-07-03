@@ -1,11 +1,12 @@
 """Tests for gateway.udp_bus (simulated mode)."""
 
 import asyncio
+import time
 
 import pytest
 
 from gateway.config import GatewayConfig
-from gateway.udp_bus import UDPBus, UDPPacket
+from gateway.udp_bus import UDPBus, UDPPacket, _RECENT_PACKETS_MAX
 
 
 @pytest.mark.asyncio
@@ -114,6 +115,52 @@ async def test_poll_loop_stops_cleanly():
     await bus.stop()
 
     assert bus._poll_task is None
+
+
+@pytest.mark.asyncio
+async def test_poll_replies_do_not_accumulate_unbounded_queue():
+    """Regression: poll replies must not pile up in an internal queue."""
+    cfg = GatewayConfig(simulated_mode=True, poll_interval_s=0.05)
+    bus = UDPBus(cfg)
+
+    received: list[UDPPacket] = []
+    bus.add_listener(received.append)
+    bus.register_simulated_reply(b"P0000", b"P000000000")
+    bus.register_simulated_reply(b"I9900", b"I0154099")
+    bus.register_simulated_reply(b"I0000", b"I000000000")
+
+    await bus.start()
+    await asyncio.sleep(0.2)
+    await bus.stop()
+
+    assert len(received) >= 3
+    assert not hasattr(bus, "_queue")
+    assert len(bus._recent_packets) <= _RECENT_PACKETS_MAX
+
+
+@pytest.mark.asyncio
+async def test_correlate_reply_works_during_active_polling():
+    """correlate_reply must still work while the poll loop is running."""
+    cfg = GatewayConfig(simulated_mode=True, poll_interval_s=0.05)
+    bus = UDPBus(cfg)
+    bus.register_simulated_reply(b"P0000", b"P000000000")
+    bus.register_simulated_reply(b"mJS0000", b"I00000100")
+
+    await bus.start()
+    await asyncio.sleep(0.1)
+
+    ts = time.monotonic()
+    await bus.send_command("10.10.1.30", b"mJS0000")
+    pkt = await bus.correlate_reply(
+        module_ip="10.10.1.30",
+        after_ts=ts,
+        timeout_ms=500,
+        predicate=lambda data: data.startswith(b"I"),
+    )
+    assert pkt is not None
+    assert pkt.data == b"I00000100"
+
+    await bus.stop()
 
 
 @pytest.mark.asyncio
