@@ -1,0 +1,503 @@
+{
+  "@context": {
+    "@vocab": "https://github.com/markminnoye/IPBuilding-Gateway/ipa#",
+    "inputModule": "inputModule",
+    "buttonId": "buttonId",
+    "targetModule": "targetModule",
+    "targetChannel": "targetChannel",
+    "actionCode": "actionCode"
+  },
+  "type": "AutonomyTable",
+  "inputModule": "10.10.1.55",
+  "subnet": "10.10.1",
+  "sourceFile": "10.10.1.55.IPA_0d31.txt",
+  "mappingCount": 33,
+  "mappings": [
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 1,
+      "buttonId": "88196c31",
+      "targetModule": null,
+      "targetChannel": null,
+      "targetChannelRaw": null,
+      "actionCode": "B31",
+      "notes": "global/special action (no relay channel tail)"
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 2,
+      "buttonId": "47507ca8",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 23,
+      "targetChannelRaw": "23",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 3,
+      "buttonId": "9e8a6ba7",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 8,
+      "targetChannelRaw": "08",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 4,
+      "buttonId": "4ff86c3c",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 7,
+      "targetChannelRaw": "07",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 5,
+      "buttonId": "d56c6cea",
+      "targetModule": null,
+      "targetChannel": null,
+      "targetChannelRaw": null,
+      "actionCode": "B30",
+      "notes": "global/special action (no relay channel tail)"
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 6,
+      "buttonId": "8ebe6ce1",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 7,
+      "targetChannelRaw": "07",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 7,
+      "buttonId": "62706c35",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 6,
+      "targetChannelRaw": "06",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 8,
+      "buttonId": "6a9d6b24",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 12,
+      "targetChannelRaw": "12",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 9,
+      "buttonId": "e4096d7c",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 10,
+      "targetChannelRaw": "10",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 10,
+      "buttonId": "a0336c63",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 23,
+      "targetChannelRaw": "23",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 11,
+      "buttonId": "9a437c14",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 10,
+      "targetChannelRaw": "10",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 12,
+      "buttonId": "284f6c64",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 8,
+      "targetChannelRaw": "08",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 13,
+      "buttonId": "b6096d3c",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 9,
+      "targetChannelRaw": "09",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 14,
+      "buttonId": "e0276c75",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 9,
+      "targetChannelRaw": "09",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 15,
+      "buttonId": "ae316cf3",
+      "targetModule": null,
+      "targetChannel": null,
+      "targetChannelRaw": null,
+      "actionCode": "B32",
+      "notes": "global/special action (no relay channel tail)"
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 16,
+      "buttonId": "7a596cc4",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 2,
+      "targetChannelRaw": "02",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 17,
+      "buttonId": "dac46cc3",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 17,
+      "targetChannelRaw": "17",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 18,
+      "buttonId": "418d6b16",
+      "targetModule": null,
+      "targetChannel": null,
+      "targetChannelRaw": null,
+      "actionCode": "B30",
+      "notes": "global/special action (no relay channel tail)"
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 19,
+      "buttonId": "a4ad6b2c",
+      "targetModule": null,
+      "targetChannel": null,
+      "targetChannelRaw": null,
+      "actionCode": "B30",
+      "notes": "global/special action (no relay channel tail)"
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 20,
+      "buttonId": "54f86b19",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 13,
+      "targetChannelRaw": "13",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 21,
+      "buttonId": "0e3c6c43",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 13,
+      "targetChannelRaw": "13",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 22,
+      "buttonId": "1df96cb1",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 2,
+      "targetChannelRaw": "02",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 23,
+      "buttonId": "57d96cf3",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 17,
+      "targetChannelRaw": "17",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 24,
+      "buttonId": "cc006c17",
+      "targetModule": null,
+      "targetChannel": null,
+      "targetChannelRaw": null,
+      "actionCode": "B32",
+      "notes": "global/special action (no relay channel tail)"
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 25,
+      "buttonId": "07fb6ca6",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 23,
+      "targetChannelRaw": "23",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 26,
+      "buttonId": "4ad36c5f",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 6,
+      "targetChannelRaw": "06",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 27,
+      "buttonId": "afeb6ba1",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 21,
+      "targetChannelRaw": "21",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 28,
+      "buttonId": "b7906cc0",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 11,
+      "targetChannelRaw": "11",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 29,
+      "buttonId": "fb3d6d98",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 3,
+      "targetChannelRaw": "03",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 30,
+      "buttonId": "9e0e6d7a",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 8,
+      "targetChannelRaw": "08",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 31,
+      "buttonId": "c3176d91",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 22,
+      "targetChannelRaw": "22",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 32,
+      "buttonId": "b1f06c63",
+      "targetModule": "10.10.1.32",
+      "targetChannel": 0,
+      "targetChannelRaw": "00",
+      "actionCode": "map",
+      "notes": null
+    },
+    {
+      "type": "AutonomyMapping",
+      "recordIndex": 33,
+      "buttonId": "a6d26cc6",
+      "targetModule": "10.10.1.30",
+      "targetChannel": 21,
+      "targetChannelRaw": "21",
+      "actionCode": "map",
+      "notes": null
+    }
+  ],
+  "devicesJsonDraft": {
+    "modules": [
+      {
+        "name": "IP1100PoE",
+        "ip": "10.10.1.55",
+        "type": "input",
+        "model": "IP1100PoE",
+        "mac": "",
+        "firmware": "",
+        "channels": [],
+        "active": false
+      },
+      {
+        "name": "IP0200PoE",
+        "ip": "10.10.1.30",
+        "type": "relay",
+        "model": "IP0200PoE",
+        "mac": "",
+        "firmware": "",
+        "channels": [
+          {
+            "ch": 1,
+            "name": "ch2",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 2,
+            "name": "ch3",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 5,
+            "name": "ch6",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 6,
+            "name": "ch7",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 7,
+            "name": "ch8",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 8,
+            "name": "ch9",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 9,
+            "name": "ch10",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 10,
+            "name": "ch11",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 11,
+            "name": "ch12",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 12,
+            "name": "ch13",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 16,
+            "name": "ch17",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 20,
+            "name": "ch21",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 21,
+            "name": "ch22",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          },
+          {
+            "ch": 22,
+            "name": "ch23",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 60
+          }
+        ],
+        "active": false
+      },
+      {
+        "name": "IP0300PoE",
+        "ip": "10.10.1.32",
+        "type": "dimmer",
+        "model": "IP0300PoE",
+        "mac": "",
+        "firmware": "",
+        "channels": [
+          {
+            "ch": -1,
+            "name": "ch0",
+            "room": "Unconfigured",
+            "semantic_type": "light",
+            "active": false,
+            "max_watt": 200
+          }
+        ],
+        "active": false
+      }
+    ]
+  }
+}

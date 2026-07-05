@@ -1,0 +1,156 @@
+{
+  "modules": [
+    {
+      "name": "IP1100PoE",
+      "ip": "10.10.1.55",
+      "type": "input",
+      "model": "IP1100PoE",
+      "mac": "",
+      "firmware": "",
+      "channels": [],
+      "active": false
+    },
+    {
+      "name": "IP0200PoE",
+      "ip": "10.10.1.30",
+      "type": "relay",
+      "model": "IP0200PoE",
+      "mac": "",
+      "firmware": "",
+      "channels": [
+        {
+          "ch": 1,
+          "name": "ch2",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 2,
+          "name": "ch3",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 5,
+          "name": "ch6",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 6,
+          "name": "ch7",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 7,
+          "name": "ch8",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 8,
+          "name": "ch9",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 9,
+          "name": "ch10",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 10,
+          "name": "ch11",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 11,
+          "name": "ch12",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 12,
+          "name": "ch13",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 16,
+          "name": "ch17",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 20,
+          "name": "ch21",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 21,
+          "name": "ch22",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        },
+        {
+          "ch": 22,
+          "name": "ch23",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        }
+      ],
+      "active": false
+    },
+    {
+      "name": "IP0200PoE",
+      "ip": "10.10.1.32",
+      "type": "relay",
+      "model": "IP0200PoE",
+      "mac": "",
+      "firmware": "",
+      "channels": [
+        {
+          "ch": 0,
+          "name": "ch0",
+          "room": "Unconfigured",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 60
+        }
+      ],
+      "active": false
+    }
+  ]
+}
