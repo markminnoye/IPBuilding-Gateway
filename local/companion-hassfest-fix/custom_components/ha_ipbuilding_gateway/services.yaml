@@ -1,0 +1,20 @@
+dim_start:
+  name: Start dim ramp
+  description: >-
+    Start a continuous hold-to-dim ramp on a dimmer channel. Sends
+    ``D{channel}001003`` to the IP0300PoE; the module ramps and auto-reverses
+    direction on each successive hold. Pair with `dim_stop` to halt the ramp.
+  target:
+    entity:
+      integration: ha_ipbuilding_gateway
+      domain: light
+
+dim_stop:
+  name: Stop dim ramp
+  description: >-
+    Stop a dim ramp started by `dim_start`. Sends ``D{channel}001000``; the
+    dimmer replies with the level reached when the stop landed.
+  target:
+    entity:
+      integration: ha_ipbuilding_gateway
+      domain: light

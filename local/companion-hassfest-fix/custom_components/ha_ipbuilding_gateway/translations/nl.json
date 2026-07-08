@@ -1,0 +1,122 @@
+{
+  "config": {
+    "flow_title": "IPBuilding Gateway ({name})",
+    "step": {
+      "user": {
+        "title": "IPBuilding Gateway",
+        "description": "Voer het IP-adres en de poort van de IPBuilding Gateway in. De standaard host (127.0.0.1) klopt voor de Supervisor add-on; pas aan bij standalone Docker of een externe installatie.",
+        "data": {
+          "host": "Host",
+          "port": "Poort"
+        }
+      },
+      "confirm": {
+        "title": "IPBuilding Gateway gevonden",
+        "description": "De {addon} gateway v{version} is bereikbaar op {url}. Geef deze gateway een herkenbare naam, of laat de standaard staan.",
+        "data": {
+          "name": "Naam"
+        }
+      }
+    },
+    "error": {
+      "gateway_unreachable": "Kan de gateway niet bereiken op {host}:{port}. Draait deze?",
+      "connection_refused": "Verbinding geweigerd — draait de gateway?"
+    },
+    "abort": {
+      "already_configured": "Deze gateway is al geconfigureerd.",
+      "cannot_connect": "Kan de gateway niet bereiken.",
+      "invalid_discovery_info": "Het discovery-payload was onvolledig of ongeldig.",
+      "not_ipbuilding_gateway_addon": "Deze Supervisor add-on is niet de IPBuilding Gateway."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "IPBuilding Gateway Opties",
+        "menu_options": {
+          "map_rooms": "IPBuilding-groepen aan HA-ruimtes toewijzen",
+          "scan_bus": "Modules opzoeken op de veldbus",
+          "refresh_modules": "Knoppen en module-info bijwerken"
+        }
+      },
+      "map_rooms": {
+        "title": "IPBuilding-groepen aan Home Assistant-ruimtes toewijzen",
+        "description": "Wijs {room_count} groep(en) uit je IPBuilding-installatie toe aan ruimtes in Home Assistant. Laat leeg om een ruimte met dezelfde naam aan te maken."
+      },
+      "scan_bus": {
+        "title": "Modules opzoeken",
+        "description": "Doorzoekt je IPBuilding-netwerk naar relay-, dimmer- en inputmodules. Gebruik dit na nieuwe hardware of wanneer een module een ander IP-adres heeft gekregen. Kan tot een halve minuut duren."
+      },
+      "scan_bus_done": {
+        "title": "Scan voltooid",
+        "description": "{summary}"
+      },
+      "refresh_modules": {
+        "title": "Module-instellingen bijwerken",
+        "description": "Haalt de actuele instellingen op van modules die al bekend zijn: knopnamen, lang-drukduur en netwerkgegevens. Gebruik dit na wijzigingen op een wandmodule. Vindt **geen** nieuwe modules — daarvoor gebruik je *Modules opzoeken*."
+      },
+      "refresh_modules_done": {
+        "title": "Bijwerken voltooid",
+        "description": "{summary}"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "pressed": "Knop ingedrukt",
+      "single_pressed": "Kort ingedrukt",
+      "long_pressed": "Lang ingedrukt",
+      "released": "Losgelaten"
+    }
+  },
+  "services": {
+    "dim_start": {
+      "name": "Dim-ramp starten",
+      "description": "Start een continue hold-to-dim ramp op een dimmerkanaal. Verstuurt D{channel}001003 naar de IP0300PoE; de module dimt en draait de richting automatisch om bij elke volgende hold. Combineer met de stop-service om de ramp te stoppen.",
+      "fields": {
+        "target": {
+          "name": "Licht-entiteit",
+          "description": "De companion-lichtentiteit die gekoppeld is aan een IP0300PoE-dimmerkanaal."
+        }
+      }
+    },
+    "dim_stop": {
+      "name": "Dim-ramp stoppen",
+      "description": "Stop een dim-ramp die gestart is met de dim_start-service. Verstuurt D{channel}001000; de dimmer antwoordt met het niveau dat bereikt was bij het loslaten.",
+      "fields": {
+        "target": {
+          "name": "Licht-entiteit",
+          "description": "De companion-lichtentiteit die gekoppeld is aan een IP0300PoE-dimmerkanaal."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "gateway_status": {
+        "name": "Gateway status",
+        "state": {
+          "ok": "OK",
+          "degraded": "Gedegradeerd",
+          "unhealthy": "Ongezond"
+        }
+      }
+    },
+    "button": {
+      "discover_sweep": {
+        "name": "Modules opzoeken op de veldbus"
+      }
+    },
+    "event": {
+      "button": {
+        "name": "Knop {hardware_id}",
+        "state": {
+          "press": "Ingedrukt",
+          "single_press": "Kort ingedrukt",
+          "long_press": "Lang ingedrukt",
+          "release": "Losgelaten"
+        }
+      }
+    }
+  }
+}

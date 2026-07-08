@@ -1,0 +1,122 @@
+{
+  "config": {
+    "flow_title": "IPBuilding Gateway ({name})",
+    "step": {
+      "user": {
+        "title": "IPBuilding Gateway",
+        "description": "Enter the IP address and port of the IPBuilding Gateway. The default host (127.0.0.1) is correct for the Supervisor add-on; adjust for standalone Docker or a remote installation.",
+        "data": {
+          "host": "Host",
+          "port": "Port"
+        }
+      },
+      "confirm": {
+        "title": "IPBuilding Gateway found",
+        "description": "The {addon} gateway v{version} is reachable at {url}. Give it a name to recognise this gateway among others, or leave the default.",
+        "data": {
+          "name": "Name"
+        }
+      }
+    },
+    "error": {
+      "gateway_unreachable": "Cannot reach the gateway at {host}:{port}. Is it running?",
+      "connection_refused": "Connection refused — is the gateway running?"
+    },
+    "abort": {
+      "already_configured": "This gateway is already configured.",
+      "cannot_connect": "Cannot reach the gateway.",
+      "invalid_discovery_info": "The discovery payload was incomplete or invalid.",
+      "not_ipbuilding_gateway_addon": "This Supervisor add-on is not the IPBuilding Gateway."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "IPBuilding Gateway Options",
+        "menu_options": {
+          "map_rooms": "Assign IPBuilding groups to areas",
+          "scan_bus": "Scan field bus for modules",
+          "refresh_modules": "Update buttons and module info"
+        }
+      },
+      "map_rooms": {
+        "title": "Assign IPBuilding groups to Home Assistant areas",
+        "description": "Assign {room_count} group(s) from your IPBuilding installation to Home Assistant areas. Leave empty to create an area with the same name."
+      },
+      "scan_bus": {
+        "title": "Scan for modules",
+        "description": "Scans your IPBuilding network for relay, dimmer, and input modules. Use this after adding new hardware or when a module has been given a new IP address. Can take up to half a minute."
+      },
+      "scan_bus_done": {
+        "title": "Scan complete",
+        "description": "{summary}"
+      },
+      "refresh_modules": {
+        "title": "Refresh module settings",
+        "description": "Fetches the current settings from modules that are already known: button names, long-press duration, and network details. Use this after changing a wall module. This does **not** find new modules — use *Scan for modules* for that."
+      },
+      "refresh_modules_done": {
+        "title": "Refresh complete",
+        "description": "{summary}"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "pressed": "Pressed",
+      "single_pressed": "Single pressed",
+      "long_pressed": "Long pressed",
+      "released": "Released"
+    }
+  },
+  "services": {
+    "dim_start": {
+      "name": "Start dim ramp",
+      "description": "Start a continuous hold-to-dim ramp on a dimmer channel. Sends D{channel}001003 to the IP0300PoE; the module ramps and auto-reverses direction on each successive hold. Pair with the stop service to halt the ramp.",
+      "fields": {
+        "target": {
+          "name": "Light entity",
+          "description": "The companion light entity backed by an IP0300PoE dimmer channel."
+        }
+      }
+    },
+    "dim_stop": {
+      "name": "Stop dim ramp",
+      "description": "Stop a dim ramp started by the dim_start service. Sends D{channel}001000; the dimmer replies with the level reached when the stop landed.",
+      "fields": {
+        "target": {
+          "name": "Light entity",
+          "description": "The companion light entity backed by an IP0300PoE dimmer channel."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "gateway_status": {
+        "name": "Gateway status",
+        "state": {
+          "ok": "OK",
+          "degraded": "Degraded",
+          "unhealthy": "Unhealthy"
+        }
+      }
+    },
+    "button": {
+      "discover_sweep": {
+        "name": "Scan field bus for modules"
+      }
+    },
+    "event": {
+      "button": {
+        "name": "Button {hardware_id}",
+        "state": {
+          "press": "Pressed",
+          "single_press": "Single pressed",
+          "long_press": "Long pressed",
+          "release": "Released"
+        }
+      }
+    }
+  }
+}

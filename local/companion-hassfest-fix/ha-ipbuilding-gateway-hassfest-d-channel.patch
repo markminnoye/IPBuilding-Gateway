@@ -1,0 +1,106 @@
+From e3a70f36196c4ae161d92d236932023a9fbf5238 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <agent@cursor.com>
+Date: Wed, 8 Jul 2026 05:35:26 +0000
+Subject: [PATCH] fix(hassfest): avoid angle-bracket channel placeholder in
+ service descriptions
+
+Hassfest rejects translation strings that look like HTML. Replace D<ch>
+with D{channel} in strings.json, en/nl translations, and services.yaml.
+---
+ custom_components/ha_ipbuilding_gateway/services.yaml        | 4 ++--
+ custom_components/ha_ipbuilding_gateway/strings.json         | 4 ++--
+ custom_components/ha_ipbuilding_gateway/translations/en.json | 4 ++--
+ custom_components/ha_ipbuilding_gateway/translations/nl.json | 4 ++--
+ 4 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/custom_components/ha_ipbuilding_gateway/services.yaml b/custom_components/ha_ipbuilding_gateway/services.yaml
+index 2a91c00..22b7c4b 100644
+--- a/custom_components/ha_ipbuilding_gateway/services.yaml
++++ b/custom_components/ha_ipbuilding_gateway/services.yaml
+@@ -2,7 +2,7 @@ dim_start:
+   name: Start dim ramp
+   description: >-
+     Start a continuous hold-to-dim ramp on a dimmer channel. Sends
+-    ``D<ch>001003`` to the IP0300PoE; the module ramps and auto-reverses
++    ``D{channel}001003`` to the IP0300PoE; the module ramps and auto-reverses
+     direction on each successive hold. Pair with `dim_stop` to halt the ramp.
+   target:
+     entity:
+@@ -12,7 +12,7 @@ dim_start:
+ dim_stop:
+   name: Stop dim ramp
+   description: >-
+-    Stop a dim ramp started by `dim_start`. Sends ``D<ch>001000``; the
++    Stop a dim ramp started by `dim_start`. Sends ``D{channel}001000``; the
+     dimmer replies with the level reached when the stop landed.
+   target:
+     entity:
+diff --git a/custom_components/ha_ipbuilding_gateway/strings.json b/custom_components/ha_ipbuilding_gateway/strings.json
+index 81776f9..49bd1b9 100644
+--- a/custom_components/ha_ipbuilding_gateway/strings.json
++++ b/custom_components/ha_ipbuilding_gateway/strings.json
+@@ -72,7 +72,7 @@
+   "services": {
+     "dim_start": {
+       "name": "Start dim ramp",
+-      "description": "Start a continuous hold-to-dim ramp on a dimmer channel. Sends D<ch>001003 to the IP0300PoE; the module ramps and auto-reverses direction on each successive hold. Pair with the stop service to halt the ramp.",
++      "description": "Start a continuous hold-to-dim ramp on a dimmer channel. Sends D{channel}001003 to the IP0300PoE; the module ramps and auto-reverses direction on each successive hold. Pair with the stop service to halt the ramp.",
+       "fields": {
+         "target": {
+           "name": "Light entity",
+@@ -82,7 +82,7 @@
+     },
+     "dim_stop": {
+       "name": "Stop dim ramp",
+-      "description": "Stop a dim ramp started by the dim_start service. Sends D<ch>001000; the dimmer replies with the level reached when the stop landed.",
++      "description": "Stop a dim ramp started by the dim_start service. Sends D{channel}001000; the dimmer replies with the level reached when the stop landed.",
+       "fields": {
+         "target": {
+           "name": "Light entity",
+diff --git a/custom_components/ha_ipbuilding_gateway/translations/en.json b/custom_components/ha_ipbuilding_gateway/translations/en.json
+index 040107d..2d09fdc 100644
+--- a/custom_components/ha_ipbuilding_gateway/translations/en.json
++++ b/custom_components/ha_ipbuilding_gateway/translations/en.json
+@@ -72,7 +72,7 @@
+   "services": {
+     "dim_start": {
+       "name": "Start dim ramp",
+-      "description": "Start a continuous hold-to-dim ramp on a dimmer channel. Sends D<ch>001003 to the IP0300PoE; the module ramps and auto-reverses direction on each successive hold. Pair with the stop service to halt the ramp.",
++      "description": "Start a continuous hold-to-dim ramp on a dimmer channel. Sends D{channel}001003 to the IP0300PoE; the module ramps and auto-reverses direction on each successive hold. Pair with the stop service to halt the ramp.",
+       "fields": {
+         "target": {
+           "name": "Light entity",
+@@ -82,7 +82,7 @@
+     },
+     "dim_stop": {
+       "name": "Stop dim ramp",
+-      "description": "Stop a dim ramp started by the dim_start service. Sends D<ch>001000; the dimmer replies with the level reached when the stop landed.",
++      "description": "Stop a dim ramp started by the dim_start service. Sends D{channel}001000; the dimmer replies with the level reached when the stop landed.",
+       "fields": {
+         "target": {
+           "name": "Light entity",
+diff --git a/custom_components/ha_ipbuilding_gateway/translations/nl.json b/custom_components/ha_ipbuilding_gateway/translations/nl.json
+index a473932..6d5a110 100644
+--- a/custom_components/ha_ipbuilding_gateway/translations/nl.json
++++ b/custom_components/ha_ipbuilding_gateway/translations/nl.json
+@@ -72,7 +72,7 @@
+   "services": {
+     "dim_start": {
+       "name": "Dim-ramp starten",
+-      "description": "Start een continue hold-to-dim ramp op een dimmerkanaal. Verstuurt D<ch>001003 naar de IP0300PoE; de module dimt en draait de richting automatisch om bij elke volgende hold. Combineer met de stop-service om de ramp te stoppen.",
++      "description": "Start een continue hold-to-dim ramp op een dimmerkanaal. Verstuurt D{channel}001003 naar de IP0300PoE; de module dimt en draait de richting automatisch om bij elke volgende hold. Combineer met de stop-service om de ramp te stoppen.",
+       "fields": {
+         "target": {
+           "name": "Licht-entiteit",
+@@ -82,7 +82,7 @@
+     },
+     "dim_stop": {
+       "name": "Dim-ramp stoppen",
+-      "description": "Stop een dim-ramp die gestart is met de dim_start-service. Verstuurt D<ch>001000; de dimmer antwoordt met het niveau dat bereikt was bij het loslaten.",
++      "description": "Stop een dim-ramp die gestart is met de dim_start-service. Verstuurt D{channel}001000; de dimmer antwoordt met het niveau dat bereikt was bij het loslaten.",
+       "fields": {
+         "target": {
+           "name": "Licht-entiteit",
+-- 
+2.43.0
+
