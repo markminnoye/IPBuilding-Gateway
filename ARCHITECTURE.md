@@ -514,7 +514,7 @@ Companion (HA) → POST /api/v1/provision/autonomy
 | **9** | MQTT adapter | 🔲 Open |
 | **10** | Matter bridge | 🔲 Open |
 | **11** | Cover/screen entities (relay-paren) | 🔲 Open |
-| **12** | ESP32 POC (C++ firmware) | 🔲 Toekomstig |
+| **12** | ESP32 POC (C++ firmware) — embedded Matter hub | 🔲 Design draft [`2026-07-09-embedded-ipbuilding-gateway-design.md`](docs/superpowers/specs/2026-07-09-embedded-ipbuilding-gateway-design.md); lab: ESP32-S3-ETH |
 | **13** | Periodieke 24h ARP-sweep + HTTP-identify voor bestaande modules tijdens passieve monitor | 🔲 Backlog (uit de runtime-discovery spec §15) |
 
 ---

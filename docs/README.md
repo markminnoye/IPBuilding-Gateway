@@ -13,6 +13,7 @@ Last updated: 2026-05-22
 | [2026-05-18-gateway-architecture-design.md](superpowers/specs/2026-05-18-gateway-architecture-design.md) | **Goedgekeurd** | Northbound: HA add-on + `ipbuilding-open`; roadmap Fase 1–8 |
 | [2026-05-17-northbound-architecture-research.md](superpowers/specs/2026-05-17-northbound-architecture-research.md) | Superseded | Achtergrondnotities; beslissing = 2026-05-18 doc |
 | [2026-05-01-ipbuilding-device-inventory-api-design.md](superpowers/specs/2026-05-01-ipbuilding-device-inventory-api-design.md) | Referentie | Device inventory API (northbound-onderdeel) |
+| [2026-07-09-embedded-ipbuilding-gateway-design.md](superpowers/specs/2026-07-09-embedded-ipbuilding-gateway-design.md) | **Draft** | Embedded Matter hub (ESP32-S3-ETH); pending architect review |
 
 ## Referentie (hardware / deployment)
 

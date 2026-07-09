@@ -40,7 +40,7 @@
 **Open:**
 - Optionele RE: input logical flow IPBox-project (referentie, niet blokkerend)
 - **Fase 8** EEPROM-sync (`POST /api/v1/provision/autonomy`) — REST-stub aanwezig; HTTP `saveAutonomy`-call nog niet geïmplementeerd
-- **Fase 9** MQTT adapter · **Fase 10** Matter bridge · **Fase 11** Cover/screen entities · **Fase 12** ESP32 POC
+- **Fase 9** MQTT adapter · **Fase 10** Matter bridge · **Fase 11** Cover/screen entities · **Fase 12** ESP32 POC — **design draft:** [`docs/superpowers/specs/2026-07-09-embedded-ipbuilding-gateway-design.md`](docs/superpowers/specs/2026-07-09-embedded-ipbuilding-gateway-design.md) (lab-hardware: ESP32-S3-ETH besteld; nieuwe repo `embedded-ipbuilding-gateway` na architect-goedkeuring)
 - **Fase 13** Periodieke 24h ARP-sweep + HTTP-identify voor bestaande modules tijdens passieve monitor (backlog uit runtime-discovery spec §15)
 - **Bind `10.10.1.1`** (optioneel) — gateway expliciet op hub-IP wanneer IPBox uit; zonder-mirror hub-validatie **PASS 2026-06-02** — klaar voor gebruik, niet standaard geactiveerd
 
