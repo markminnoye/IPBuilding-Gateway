@@ -26,6 +26,9 @@ Uit `2026-06-12_IPBOX_BOOT.pcapng`, `192.168.0.185` → `10.10.1.30:1001` (t≈7
 
 Daarna: `P0000` → `P000000000` elke 20 s (keepalive), geen verdere I-queries.
 
+### Reproductie (2026-06-12, `2026-06-12_IPBOX_POWER_ON_AND_OFF_DUAL_NETWORK.pcapng`)
+Zelfde sweep opnieuw gevangen bij een volgende cold boot, dit keer **kanalen 16–23** (8 in plaats van 7 — kanaal 16 was in de eerste capture vermoedelijk gemist doordat de capture net te laat startte). Query-interval ~90 ms, identiek formaat `I<CH>00`→`I000<CH><state>`; status op dat moment: alleen 18 en 23 AAN, de rest UIT — consistent met de eerste boot. Bevestigt dat de sweep **reproduceerbaar** is bij elke cold boot van de relay-outputs 16–23 (de in dit project geconfigureerde range).
+
 **Formaat:**
 - Query = `I` + `<CH,2 cijfers>` + `00` (5 bytes ASCII). Kanaal staat in de **eerste twee cijfers**.
 - Reply = `I000` + `<CH,2 cijfers>` + `<VVVV>` (10 bytes ASCII), `VVVV=0100` = AAN, `0000` = UIT.
@@ -64,6 +67,9 @@ De IPBox is **één fysiek apparaat**: een Windows-10 embedded-PC, NetBIOS-hostn
 Bevestigt de "dual-homed" notities in [RE_STATE.md](../RE_STATE.md) / IPBUILDING_KNOWLEDGE.md §3.0, en voegt de OS/host-identiteit toe. Extra waargenomen IPBox-verkeer: HTTPS naar **Azure** (172.187.86.x, 20.42.73.26), **No-IP dynamic DNS** (`dynupdate.noip.com` → remote-access-mechanisme), Windows-telemetrie (msftncsi / vortex-win / wns).
 
 Intern probeert `192.168.0.185` continu TCP naar `10.10.1.1:1024/1025` (vermoedelijk config/app-kanaal tussen de twee helften) — in deze capture **host-unreachable** (router-ICMP type 3/1), dus inhoud niet waargenomen. Kandidaat-kanaal voor config-sync; vereist capture met beide zijden bereikbaar.
+
+### Poging tot simultane dual-network capture (2026-06-12, `..._DUAL_NETWORK.pcapng`)
+Bedoeld om beide NIC's (`192.168.0.185` + `10.10.1.1`) tegelijk te vangen. Resultaat: **`10.10.1.1` komt nul keer voor** in deze capture (nul IP-pakketten, geen ARP, geen NBNS) — ondanks 3624 VLAN-getagde frames (VLAN 1 = internet/thuis-verkeer, VLAN 3 = modules, geen VLAN met `10.10.1.1`). Wel een sterke extra aanwijzing voor de "één toestel, twee NIC's"-hypothese: `.185` draagt hier MAC `00:30:18:00:49:3c`, één hoger dan de eerder waargenomen `10.10.1.1`-MAC `00:30:18:00:49:3b` — opeenvolgende MAC's, typisch voor twee NIC's op hetzelfde moederbord. De TCP-pogingen naar `10.10.1.1:1024/1025` waren dan ook afwezig (want de host was niet op dit segment zichtbaar). **Openstaand:** de mirror/SPAN-configuratie vangt blijkbaar niet beide netwerksegmenten tegelijk; om dit definitief te bevestigen is een capture-opzet nodig die expliciet de poort/VLAN van de `10.10.1.1`-NIC mirrort tijdens dezelfde boot als de module-poort.
 
 ---
 
