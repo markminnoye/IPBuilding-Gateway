@@ -22,6 +22,15 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [1.3.0-rc1] - 2026-07-12
+
+### Changed
+- **Relay-status bij opstart** komt nu van de veldbus (per-kanaal statuspoll) in plaats van HTTP op de module. Na een herstart tonen relays meteen de echte aan/uit-stand in Home Assistant.
+- **Dimmers na herstart** tonen `unknown` tot het eerste commando of een veldbus-wijziging — niet meer het oude niveau via HTTP.
+
+### Removed
+- HTTP `statuses`-hydratatie bij opstart (vervangen door UDP relay sweep).
+
 ## [1.2.4] - 2026-07-03
 
 ### Added

@@ -235,8 +235,8 @@ class TestCallbackError:
 
 class TestSeedState:
     """seed_relay_state / seed_dimmer_state populate the cache directly
-    without firing any state-changed callback. Used by the HTTP
-    ``statuses`` hydrator at startup."""
+    without firing any state-changed callback. Used by the UDP relay
+    status poll at startup."""
 
     def test_seed_relay_state_sets_value(self):
         reg = _registry_with_modules()

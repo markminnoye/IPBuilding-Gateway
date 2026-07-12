@@ -84,8 +84,8 @@ class DeviceRegistry:
     ) -> None:
         """Set relay state without firing state-changed callbacks.
 
-        Used by the HTTP ``statuses`` hydrator at startup to populate the
-        in-memory cache from a module's authoritative channel state. Unlike
+        Used by the UDP relay status poll at startup to populate the
+        in-memory cache from per-channel ``I<CH>00`` reads. Unlike
         ``handle_packet`` this never broadcasts; subscribers are wired in
         later when the gateway API is created.
         """
@@ -99,9 +99,9 @@ class DeviceRegistry:
     ) -> None:
         """Set dimmer state without firing state-changed callbacks.
 
-        Mirror of :meth:`seed_relay_state` for dimmer modules. ``level_percent``
-        is clamped to ``[0, 100]``; ``None`` is rejected — use
-        :meth:`get_dimmer_state` for a miss.
+        Reserved for future bootstrap paths. Dimmers currently have no
+        on-demand status poll; level is unknown until the first UDP event.
+        Unlike ``handle_packet`` this never broadcasts.
         """
         if level_percent is None:
             raise ValueError("level_percent must not be None")

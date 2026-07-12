@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Relay poll payload test — I<ch> vs P0000 reply behavior.
+"""Relay poll payload test — I<CH>00 status read vs P0000 keepalive.
 
-Tests whether relay module 10.10.1.30 responds to I<ch> polls with
-channel status replies (I<CH><state>), or only to P0000 with pulse echo.
+Tests whether relay module responds to on-demand status polls ``I<CH>00``
+with per-channel status ``I000<CH><state>``, or only to ``P0000`` with
+pulse echo.  Correct format (RE 2026-06-12): channel in the **first** two
+digits after ``I``, e.g. ``I1800`` for channel 18 — not ``I0018``.
 
 Run:
     python3 scripts/test_relay_poll.py [--relay HOST] [--port PORT] [--repeat N]
@@ -12,9 +14,8 @@ No args: uses 10.10.1.30:1001, repeat=3.
 
 import argparse
 import socket
-import struct
-import time
 import sys
+import time
 
 RELAY_HOST_DEFAULT = "10.10.1.30"
 RELAY_PORT_DEFAULT = 1001
@@ -22,11 +23,12 @@ REPEAT_DEFAULT = 3
 TIMEOUT_SEC = 2.0
 
 PAYLOADS = [
-    ("P0000",     "baseline pulse poll ch 0"),
-    ("I0000",     "I-poll channel 0"),
-    ("I0010",     "I-poll channel 10"),
-    ("I0016",     "I-poll channel 16"),
-    ("I0023",     "I-poll channel 23"),
+    ("P0000", "baseline pulse keepalive ch 0"),
+    ("I0000", "status poll channel 0"),
+    ("I1000", "status poll channel 10"),
+    ("I1600", "status poll channel 16"),
+    ("I1800", "status poll channel 18"),
+    ("I2300", "status poll channel 23"),
 ]
 
 
@@ -95,7 +97,6 @@ def summarize(results: dict) -> None:
         latencies = data["latencies"]
         avg_lat = sum(latencies) / len(latencies) if latencies else 0
         count_ok = sum(1 for r in replies if r is not None)
-        count_timeout = sum(1 for r in replies if r is None)
 
         if count_ok > 0:
             reply_samples = [r for r in replies if r is not None][:2]
@@ -115,27 +116,38 @@ def summarize(results: dict) -> None:
     print()
 
 
+def _is_relay_status_reply(data: bytes) -> bool:
+    """True when reply looks like I000<CH><state> (10-byte status line)."""
+    if len(data) != 10 or not data.startswith(b"I"):
+        return False
+    try:
+        text = data.decode("ascii")
+    except UnicodeDecodeError:
+        return False
+    return text[1:4] == "000" and text[4:6].isdigit() and text[6:].isdigit()
+
+
 def detect_scenario(results: dict) -> str:
     """Heuristically detect which scenario we're in."""
     p0000_replies = [r for r in results.get("P0000", {}).get("replies", []) if r is not None]
-    i0000_replies = [r for r in results.get("I0000", {}).get("replies", []) if r is not None]
+    status_poll_keys = [k for k in results if k.startswith("I") and k != "I0000" or k == "I0000"]
+    status_replies = []
+    for key in status_poll_keys:
+        status_replies.extend(
+            r for r in results.get(key, {}).get("replies", []) if r is not None
+        )
 
-    # Check P0000: expect P000000000 pulse echo
     p0000_ok = any(
         r is not None and len(r) == 10 and r.startswith(b"P")
         for r in p0000_replies
     )
 
-    # Check I0000: expect I... status (I<CH><state> pattern)
-    i0000_ok = any(
-        r is not None and len(r) >= 7 and r.startswith(b"I")
-        for r in i0000_replies
-    )
+    status_ok = any(_is_relay_status_reply(r) for r in status_replies)
 
-    if p0000_ok and not i0000_ok:
-        return "B"  # P0000 pulse only, no I<ch> status
-    if i0000_ok:
-        return "A"  # I<ch> gives status reply
+    if p0000_ok and status_ok:
+        return "A"  # I<CH>00 gives per-channel status; P0000 keepalive
+    if p0000_ok and not status_ok:
+        return "B"  # P0000 pulse only, no I<CH>00 status
     return "inconclusive"
 
 
@@ -151,9 +163,12 @@ if __name__ == "__main__":
 
     scenario = detect_scenario(results)
     if scenario == "A":
-        print("SCENARIO A: I<ch> poll gives status reply — recommend switch to I<ch> poll")
+        print(
+            "SCENARIO A: I<CH>00 status poll works — use startup sweep "
+            "(gateway.state_poll.sweep_relay_states)"
+        )
     elif scenario == "B":
-        print("SCENARIO B: I<ch> poll gives no status reply — P0000 only confirmed")
+        print("SCENARIO B: I<CH>00 gives no status reply — P0000 only confirmed")
     else:
         print("SCENARIO inconclusive — manual review needed")
 
