@@ -127,3 +127,12 @@ def encode_relay_command(cmd: RelayCommand) -> bytes:
 def encode_hub_to_relay(cmd: RelayCommand) -> bytes:
     """Alias for encode_relay_command."""
     return encode_relay_command(cmd)
+
+
+def encode_relay_status_poll(channel: int) -> bytes:
+    """Encode hub→relay on-demand status read (IPBox cold-boot sweep format).
+
+    Query ``I<CH>00`` (5 bytes ASCII) returns ``I000<CH><state>`` where
+    ``0100`` = on and ``0000`` = off.  See RE evidence 2026-06-12.
+    """
+    return f"I{channel:02d}00".encode("ascii")

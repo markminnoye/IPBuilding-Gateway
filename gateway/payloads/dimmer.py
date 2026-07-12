@@ -1,5 +1,9 @@
 """Dimmer UDP/1001 payload encoder/decoder.
 
+Operator choice (aan/uit vs dim %): see
+``resources_and_docs/2026-05-17_ipbuilding_fieldbus_capability_matrix.md``
+§ "Dimmer: welk commando wanneer?".
+
 ## Hub→dimmer dialect (gateway sends this)
 
 Command frames: ``<S|C><channel><value_code>1030``

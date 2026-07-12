@@ -16,7 +16,7 @@ from gateway.device_registry import DeviceRegistry
 from gateway.ha_discovery import HaDiscoveryAdvertiser, HaDiscoveryConfig
 from gateway.installation import InstallationConfig
 from gateway.module_metadata import ModuleMetadataCache
-from gateway.module_status import hydrate_registry_from_http
+from gateway.state_poll import sweep_relay_states
 from gateway.types import DeviceType
 from gateway.rest_shim import RESTShim
 from gateway.udp_bus import UDPBus
@@ -83,24 +83,38 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
             )
         except Exception:
             log.warning("Module metadata prefetch failed; cache is empty at startup")
-        # Seed the in-memory relay/dimmer registry from each module's
-        # HTTP ``statuses`` endpoint so the very first REST/WS snapshot
-        # already reflects the real physical channel state. Without this
-        # step the registry stays empty until the first ``S``/``C`` UDP
-        # command, and a freshly restarted gateway would report every
-        # channel as "unknown" (relay) or "off" (dimmer).
+        # Seed relay channel state via UDP I<CH>00 status sweep so the first
+        # REST/WS snapshot reflects physical relay outputs. Dimmers stay
+        # unknown until the first command or spontaneous UDP reply (no on-demand
+        # dimmer status poll per RE 2026-06-12).
         try:
-            await hydrate_registry_from_http(
+            await sweep_relay_states(
+                bus,
                 registry,
                 cfg.installation,
-                timeout=cfg.metadata_timeout_s,
+                reply_timeout_ms=cfg.reply_timeout_ms,
             )
         except Exception:
             log.warning(
-                "HTTP status hydration failed; channel state may be stale at startup"
+                "Relay status poll failed; relay channel state may be stale at startup"
             )
 
     api = GatewayAPI(bus, registry, cfg, metadata_cache=meta_cache, health=health)
+
+    async def _safe_relay_sweep(target_inst: InstallationConfig) -> None:
+        try:
+            count = await sweep_relay_states(
+                bus,
+                registry,
+                target_inst,
+                reply_timeout_ms=cfg.reply_timeout_ms,
+            )
+            if count:
+                await api._broadcast(api._build_snapshot())
+        except Exception:
+            log.warning(
+                "Relay status poll (post-discovery) failed; relay state may be stale"
+            )
 
     async def _safe_meta_refresh(target_inst: InstallationConfig) -> None:
         try:
@@ -122,6 +136,7 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         cfg.installation = new_inst
         for mc in new_inst.modules:
             registry.register_module(mc.ip, mc.type)
+        asyncio.create_task(_safe_relay_sweep(new_inst))
         if meta_cache is not None:
             asyncio.create_task(_safe_meta_refresh(new_inst))
         health.set_installation_loaded(True)

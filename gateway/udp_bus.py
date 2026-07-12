@@ -16,8 +16,9 @@ log = logging.getLogger(__name__)
 
 ReplyCallback = Callable[["UDPPacket"], None]
 
-# Poll payloads per module type (RE Sprint 1-5 + relay I<ch> poll test 2026-06-02)
-# Relay: P0000 only — I<ch> returns I000000000 echo, not I<CH><state>; status after S/C commands
+# Steady-state poll payloads per module type (RE Sprint 1-5).
+# Relay: P0000 keepalive (pulse echo only). Per-channel status at startup uses
+# I<CH>00 sweep via gateway.state_poll (not the poll loop).
 _POLL_RELAY = b"P0000"
 _POLL_DIMMER = b"I9900"
 _POLL_INPUT = b"I0000"

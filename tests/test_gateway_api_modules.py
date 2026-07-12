@@ -213,8 +213,7 @@ class TestBuildDeviceList:
     def test_dimmer_no_registry_state_is_unknown(self) -> None:
         """Dimmer channels zonder registry-state rapporteren 'unknown' (geen
         "off"). Voorkomt dat de companion de lamp ten onrechte als uit toont
-        vlak na een gateway-herstart, vóór de HTTP ``statuses``-hydratatie
-        is binnengekomen.
+        vlak na een gateway-herstart (dimmer heeft geen on-demand statuspoll).
         """
         inst = _make_installation([
             {

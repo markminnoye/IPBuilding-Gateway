@@ -1,6 +1,6 @@
 # IPBuilding field bus capability matrix
 
-Last updated: 2026-06-02
+Last updated: 2026-07-12
 
 **Doel:** wat een **eigen centrale** op UDP/1001 vandaag al kan — **zonder** IPBox REST te hoeven nabootsen.
 
@@ -12,8 +12,10 @@ Northbound en centrale-architectuur: [docs/superpowers/specs/2026-05-18-gateway-
 | Relay pulse + echo reply | Confirmed | `P0000` / `P000000000` (hub poll baseline) |
 | Relay hub poll `I<ch>` | **Not supported** | `I0000` etc. → `I000000000` echo only — [2026-06-02_relay_poll_i_ch_test.md](evidence/2026-06-02_relay_poll_i_ch_test.md) |
 | Relay status read | Confirmed (post-command) | `I<channel><state>` after `S`/`C` only — not via poll |
-| Dimmer DIM 0–100 (command) | Confirmed | `S<ch><val>1030` |
-| Dimmer OFF | Confirmed | `C<ch>991030` |
+| Dimmer set level 10–100% | Confirmed | `S<ch><val>1030` — absolute dim (slider/scene) |
+| Dimmer OFF | Confirmed | `C<ch>991030` — **niet** `S<ch>001030` (DIM 0) |
+| Dimmer TOGGLE on/off | Confirmed | `T<ch>991000` — aan naar **laatste niveau**, uit naar off; hub + gateway API `TOGGLE` |
+| Dimmer hold ramp (start/stop) | Confirmed | `D<ch>001003` start, `D<ch>001000` stop — module ramp + auto-richting; gateway `DIM_START`/`DIM_STOP` |
 | Dimmer status read | Confirmed | `I0154<C><VV>` (kanaal + waarde-code; live test 2026-06-03) |
 | Input hub poll | Confirmed | `I0000` |
 | Input idle status reply | Confirmed | 14-byte `I\x02R…E` |
@@ -22,6 +24,19 @@ Northbound en centrale-architectuur: [docs/superpowers/specs/2026-05-18-gateway-
 | Scene trigger on wire | Not reversed | — |
 | Module discovery (UDP/10001) | Documented, no mirror replies | RE Wizards |
 | Provisioning (WebConfig wizards) | Documented, not in code | RE Wizards |
+
+## Dimmer: welk commando wanneer?
+
+Twee **hub-dialecten** op UDP/1001 (suffix `…1030` vs `…1000`/`…1003`). Kies op **doel**, niet op REST-naam:
+
+| Doel | Gebruik | Wire (hub) | Niet gebruiken |
+|------|---------|------------|----------------|
+| Aan/uit (behoud laatste dim-niveau) | **TOGGLE** | `T<ch>991000` | REST `DIM 100` / `DIM 0` |
+| Expliciet uit | **OFF** | `C<ch>991030` | `S<ch>001030` |
+| Vast percentage (slider, scene) | **DIM** | `S<ch><val>1030` (`99` = 100%) | — |
+| Lang indrukken dimmen | **DIM_START** / **DIM_STOP** | `D<ch>001003` / `D<ch>001000` | `brightness_step_pct`-loop in HA |
+
+Detail + bewijs: [IPBUILDING_KNOWLEDGE.md](IPBUILDING_KNOWLEDGE.md) §6.6, [2026-05-17_dimmer_I0154xxx_full_decode.md](evidence/2026-05-17_dimmer_I0154xxx_full_decode.md), [2026-06-22_dimmer_p2p_hold_dim_capture.md](evidence/2026-06-22_dimmer_p2p_hold_dim_capture.md). Encoders: `gateway/payloads/dimmer.py`.
 
 ## Code references
 

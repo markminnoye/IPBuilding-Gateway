@@ -1,6 +1,6 @@
 # UDP/1001 payload semantics matrix (compact)
 
-Last updated: 2026-06-02 (local)
+Last updated: 2026-07-12 (local)
 Canonieke RE-index: [RE_STATE.md](../RE_STATE.md). Detailbewijs: gelinkte evidence per rij.
 
 | Family / pattern | Context (module / path) | Direction notes | Label | Evidence pointer |
@@ -22,7 +22,9 @@ Canonieke RE-index: [RE_STATE.md](../RE_STATE.md). Detailbewijs: gelinkte eviden
 | `[pfx]J` + `S\|C\|P…` | Hub→relay wire envelope | `[1 byte prefix]` + literal `J` (0x4a) + bekende 5-char kern; UDP payload len typ. 13 | **confirmed** (shape + REST timing) | `/tmp/rest_stimulus_capture_20260516.pcapng` (2026-05-16) |
 | `<pfx>J` prefix mapping | Hub→relay prefix-byte per commando-type | `p` (0x70) → `P0000` idle pulse; `m` (0x6d) → `S<CH>00` ON; `}` (0x7d) → `C<CH>00` OFF; `g` (0x67) → `S1600` ON; `w` (0x77) → `C1600` OFF; `v` (0x76) → `C1700` OFF (nieuw); `{` (0x7b) → `C0200` OFF (nieuw); `J` (0x4a) is separator; prefix-byte is transmission-sequence marker, niet puur commando-type | **confirmed** (2026-05-17) | `/Users/markminnoye/Downloads/00:55.pcapng` |
 | `I0154<C><VV>` (8-byte ASCII) | Dimmer→hub status reply | `I` + `01` (device) + `54` (family) + **`<C>` kanaalcijfer (0–7)** + **`<VV>` waarde-code** (`00`=uit, `10..98`=%, `99`=100%). Bv. `130`=ch1 30%, `100`=ch1 uit. `999`=idle/poll (geen setpoint). **Correctie 2026-06-03:** niet alle 3 cijfers zijn waarde-code (gold enkel voor ch0). | **confirmed** | [2026-05-17_dimmer_I0154xxx_full_decode.md](2026-05-17_dimmer_I0154xxx_full_decode.md), `01:01.pcapng`, live test 2026-06-03 |
-| `S<ch><val>1030` / `C<ch><val>1030` | Hub→dimmer command | Geen `J`-separator; `S`=dim, `C`=off; value-code `10`–`90`, `99`=100% | **confirmed** | [2026-05-04_dimmer_channel_value_sweep.md](2026-05-04_dimmer_channel_value_sweep.md) |
+| `S<ch><val>1030` / `C<ch><val>1030` | Hub→dimmer absolute command | Geen `J`-separator; `S`=set level, `C`=off; value-code `10`–`98`, `99`=100%; **OFF = `C…`, niet `S…00…`** | **confirmed** | [2026-05-04_dimmer_channel_value_sweep.md](2026-05-04_dimmer_channel_value_sweep.md), [2026-05-17_dimmer_I0154xxx_full_decode.md](2026-05-17_dimmer_I0154xxx_full_decode.md) |
+| `T<ch><vv>1000` | Hub→dimmer toggle | Aan = laatste niveau, uit = off; gateway `T<ch>991000` | **confirmed** | [2026-06-22_dimmer_p2p_hold_dim_capture.md](2026-06-22_dimmer_p2p_hold_dim_capture.md), `gateway/payloads/dimmer.py` |
+| `D<ch><vv>1003` / `D<ch><vv>1000` | Hub→dimmer hold ramp start/stop | Start = geen ack; stop → `I0154<ch><vv>`; richting door module | **confirmed** | [2026-06-22_dimmer_p2p_hold_dim_capture.md](2026-06-22_dimmer_p2p_hold_dim_capture.md) |
 | `I9900` | Dimmer idle poll | Hub→dimmer background | **confirmed** | dimmer sweep |
 | `I0000` | Input hub poll | Hub→`10.10.1.50` ~2s cadence | **confirmed** | [2026-05-17_ip1100_input_payload_decode.md](2026-05-17_ip1100_input_payload_decode.md) |
 | `I\x02R…E` (14-byte) | Input→hub idle reply | Constant between polls when no press | **confirmed** | `pov_a_7x15.pcapng`, Sprint 5 `10:25` |
