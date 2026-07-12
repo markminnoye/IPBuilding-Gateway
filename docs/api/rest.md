@@ -243,6 +243,76 @@ and a `"channel inactive"` error.
 
 ---
 
+## PATCH /api/v1/devices/{device_id}
+
+**Description:** Update northbound-only configuration fields for a channel or button in `devices.json` at runtime. Changes are persisted atomically (advisory lock + tempfile rename) and do not require a gateway restart. A WebSocket `snapshot` broadcast is sent to all connected clients after a successful patch.
+
+**Allowed fields — channel (relay/dimmer):**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `name` | string | Operator-friendly label |
+| `room` | string | Room / area name |
+| `semantic_type` | string | One of: `light`, `fan`, `cover`, `switch`, `plug` |
+| `active` | boolean | `false` = do not poll or expose |
+| `max_watt` | integer | Non-negative wattage cap |
+
+**Allowed fields — button (IP1100PoE, id from `devices.json` `buttons[]`):**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `name` | string | Operator-friendly label |
+| `room` | string | Room / area name |
+| `active` | boolean | `false` = disable button entity |
+
+Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`) returns **400** `unknown_field`.
+
+**Request headers:** `Content-Type: application/json`
+
+**Request body example (channel):**
+```json
+{"room": "Keuken", "semantic_type": "light", "active": true, "max_watt": 60}
+```
+
+**Request body example (button):**
+```json
+{"name": "Badkamer knop", "room": "1e verdieping", "active": true}
+```
+
+**Response 200:** Same shape as `GET /api/v1/devices/{device_id}` for the updated device, plus `schema_version: 2`.
+
+**Response 400** (invalid JSON):
+```json
+{"error": "invalid_json", "message": "Body must be valid JSON"}
+```
+
+**Response 400** (empty body — no fields to update):
+```json
+{"error": "empty_body", "message": "Body must include at least one field to update"}
+```
+
+**Response 400** (unknown field):
+```json
+{"error": "unknown_field", "message": "Unknown field(s): ip", "details": {"fields": ["ip"]}}
+```
+
+**Response 400** (validation):
+```json
+{"error": "validation", "message": "semantic_type must be one of ['cover', 'fan', 'light', 'plug', 'switch']"}
+```
+
+**Response 404:**
+```json
+{"error": "device_not_found", "details": {"device_id": "10.10.1.99-0"}}
+```
+
+**Response 503** (lock timeout — another writer holds `devices.json.lock`):
+```json
+{"error": "write_locked", "message": "devices.json is locked; retry later"}
+```
+
+---
+
 ## POST /api/v1/devices/{device_id}/command
 
 **Description:** Send a command to a relay or dimmer channel.

@@ -133,6 +133,88 @@ def test_atomic_writer_lock_timeout_on_contention(tmp_path: Path):
         os.close(lock_fd)
 
 
+def test_atomic_writer_read_modify_write_success(tmp_path: Path):
+    devices_file = tmp_path / "devices.json"
+    devices_file.write_text(
+        json.dumps({
+            "modules": [{
+                "name": "IP0200PoE",
+                "ip": "10.10.1.30",
+                "type": "relay",
+                "mac": "00:24:77:52:ac:be",
+                "channels": [{"ch": 0, "name": "Old", "room": "A", "active": True, "max_watt": 0}],
+            }],
+            "buttons": [{"id": "abc", "module_id": "00:24:77:52:ad:aa", "name": "Btn", "room": "", "active": True}],
+        }),
+        encoding="utf-8",
+    )
+
+    writer = AtomicWriter(str(devices_file), lock_timeout_s=1.0)
+
+    def mutate(raw: dict) -> dict:
+        raw["modules"][0]["channels"][0]["room"] = "B"
+        return raw
+
+    ok, new_raw = writer.read_modify_write(mutate)
+    assert ok is True
+    assert new_raw is not None
+    assert new_raw["modules"][0]["channels"][0]["room"] == "B"
+    assert len(new_raw["buttons"]) == 1
+
+    loaded = json.loads(devices_file.read_text(encoding="utf-8"))
+    assert loaded["modules"][0]["channels"][0]["room"] == "B"
+    assert len(loaded["buttons"]) == 1
+
+
+def test_atomic_writer_read_modify_write_abort_on_error(tmp_path: Path):
+    from gateway.device_config import DeviceConfigError
+
+    devices_file = tmp_path / "devices.json"
+    devices_file.write_text('{"modules": [], "buttons": []}', encoding="utf-8")
+    writer = AtomicWriter(str(devices_file), lock_timeout_s=1.0)
+
+    def mutate(_raw: dict) -> dict:
+        raise DeviceConfigError("validation", "bad patch")
+
+    with pytest.raises(DeviceConfigError):
+        writer.read_modify_write(mutate)
+
+    assert json.loads(devices_file.read_text(encoding="utf-8")) == {"modules": [], "buttons": []}
+
+
+def test_atomic_writer_read_modify_write_missing_file(tmp_path: Path):
+    devices_file = tmp_path / "devices.json"
+    writer = AtomicWriter(str(devices_file), lock_timeout_s=1.0)
+
+    def mutate(raw: dict) -> dict:
+        assert raw == {"modules": [], "buttons": []}
+        raw["modules"] = [{"name": "new", "ip": "10.10.1.30", "type": "relay", "channels": []}]
+        return raw
+
+    ok, new_raw = writer.read_modify_write(mutate)
+    assert ok is True
+    assert new_raw is not None
+    assert devices_file.exists()
+    assert len(new_raw["modules"]) == 1
+
+
+def test_atomic_writer_read_modify_write_lock_timeout(tmp_path: Path):
+    devices_file = tmp_path / "devices.json"
+    devices_file.write_text('{"modules":[]}', encoding="utf-8")
+
+    lock_file = tmp_path / "devices.json.lock"
+    lock_fd = os.open(str(lock_file), os.O_RDONLY | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        writer = AtomicWriter(str(devices_file), lock_timeout_s=0.3)
+        ok, result = writer.read_modify_write(lambda raw: raw)
+        assert ok is False
+        assert result is None
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        os.close(lock_fd)
+
+
 # ---------------------------------------------------------------------------
 # ArpMonitor — mocked parse_arp_table
 # ---------------------------------------------------------------------------

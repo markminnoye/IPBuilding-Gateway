@@ -43,7 +43,7 @@ De gateway mag **nooit** impliciet beslissen om een northbound-veld te schrijven
 
 | Categorie | Velden in `devices.json` | Eigenaar | Gateway-gedrag |
 |-----------|--------------------------|----------|----------------|
-| **Noordbound (HA-domein)** | `name`, `room`, `active`, `max_watt`, `semantic_type`, kanaal-specs | Companion / gebruiker | Alleen **lezen** |
+| **Noordbound (HA-domein)** | `name`, `room`, `active`, `max_watt`, `semantic_type`, kanaal-specs | Companion / gebruiker | **Lezen** standaard; **schrijven** alleen via expliciete `PATCH /api/v1/devices/{device_id}` (nooit impliciet) |
 | **Fysiek (module-EEPROM)** | `backupConfig`-kanalen, button-mapping, autonomy | Module zelf (WebConfig) of gateway op expliciete `POST /api/v1/provision/autonomy` | **Nooit** impliciet schrijven |
 | **Netwerk / runtime** | `ip`, `mac`, `firmware`, `last_seen`, `last_seen_source` | Gateway zelf | `ip`/`mac` in runtime-registry; `firmware` naar `devices.json` bij wijziging; `last_seen*` is runtime-only |
 

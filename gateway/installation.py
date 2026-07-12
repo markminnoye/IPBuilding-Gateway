@@ -24,11 +24,14 @@ ID model
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from gateway.types import DeviceType
+
+log = logging.getLogger(__name__)
 
 
 def _normalize_mac(mac: str) -> str:

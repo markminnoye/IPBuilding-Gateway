@@ -29,6 +29,15 @@ from aiohttp import web
 from aiohttp.web import WebSocketResponse
 
 from gateway.config import GatewayConfig
+from gateway.auto_discovery import AtomicWriter
+from gateway.device_config import (
+    DeviceConfigError,
+    apply_button_patch,
+    apply_channel_patch,
+    installation_to_raw_dict,
+    validate_button_fields,
+    validate_channel_fields,
+)
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.discovery import resolve_module_model
 from gateway.health import GatewayHealthMonitor
@@ -165,6 +174,10 @@ class GatewayAPI:
         # hold_threshold_s elapses. Only classification lives here — direction
         # and dim-loop logic belong in HA (see plan §6).
         self._button_state: dict[str, _ButtonState] = {}
+        lock_timeout_s = (
+            config.discovery.lock_timeout_s if config.discovery else 15.0
+        )
+        self._writer = AtomicWriter(config.devices_file, lock_timeout_s=lock_timeout_s)
 
     # -------------------------------------------------------------------------
     # Lifecycle
@@ -180,6 +193,10 @@ class GatewayAPI:
         self._app.router.add_get(
             "/api/v1/devices/{device_id}",
             self._get_device,
+        )
+        self._app.router.add_patch(
+            "/api/v1/devices/{device_id}",
+            self._patch_device,
         )
         self._app.router.add_post(
             "/api/v1/devices/{device_id}/command",
@@ -397,6 +414,75 @@ class GatewayAPI:
             if d["id"] == device_id:
                 return web.json_response(d)
         raise ApiError(404, "device_not_found", details={"device_id": device_id})
+
+    async def _patch_device(self, request: web.Request) -> web.Response:
+        """PATCH /api/v1/devices/{device_id} — update northbound config fields."""
+        device_id = request.match_info["device_id"]
+        try:
+            body = await request.json()
+        except Exception:
+            raise ApiError(400, "invalid_json", "Body must be valid JSON")
+
+        if not isinstance(body, dict):
+            raise ApiError(400, "invalid_json", "Body must be a JSON object")
+
+        if not body:
+            raise ApiError(
+                400,
+                "empty_body",
+                "Body must include at least one field to update",
+            )
+
+        installation = self._cfg.installation
+        if installation is None:
+            raise ApiError(500, "no_installation", "No installation loaded")
+
+        channel_entry = installation.device_id_to_entry(device_id)
+        button_cfg = installation.button_by_id(device_id) if channel_entry is None else None
+
+        if channel_entry is None and button_cfg is None:
+            raise ApiError(404, "device_not_found", details={"device_id": device_id})
+
+        if channel_entry is not None:
+            _module_ip, module_ip, channel = channel_entry
+            try:
+                validated = validate_channel_fields(body)
+            except DeviceConfigError as exc:
+                raise ApiError(400, exc.code, exc.message, exc.details)
+
+            def mutate(raw: dict) -> dict:
+                inst = InstallationConfig._parse(raw)
+                apply_channel_patch(inst, module_ip, channel, validated)
+                return installation_to_raw_dict(inst)
+        else:
+            try:
+                validated = validate_button_fields(body)
+            except DeviceConfigError as exc:
+                raise ApiError(400, exc.code, exc.message, exc.details)
+
+            def mutate(raw: dict) -> dict:
+                inst = InstallationConfig._parse(raw)
+                apply_button_patch(inst, device_id, validated)
+                return installation_to_raw_dict(inst)
+
+        try:
+            ok, _new_raw = await asyncio.to_thread(
+                self._writer.read_modify_write, mutate
+            )
+        except DeviceConfigError as exc:
+            if exc.code == "device_not_found":
+                raise ApiError(404, exc.code, exc.message, exc.details)
+            raise ApiError(400, exc.code, exc.message, exc.details)
+        if not ok:
+            raise ApiError(503, "write_locked", "devices.json is locked; retry later")
+
+        self._cfg.installation = InstallationConfig.load(self._cfg.devices_file)
+        asyncio.create_task(self._broadcast(self._build_snapshot()))
+
+        device = self._device_dict_for_id(device_id)
+        if device is None:
+            raise ApiError(404, "device_not_found", details={"device_id": device_id})
+        return web.json_response({**device, "schema_version": 2})
 
     async def _post_command(self, request: web.Request) -> web.Response:
         """POST /api/v1/devices/{device_id}/command — send a command."""
@@ -832,27 +918,58 @@ class GatewayAPI:
                         if not raw_id:
                             continue
                         device_id = normalize_button_hardware_id(str(raw_id))
-                        devices.append(
-                            {
-                                "id": device_id,
-                                "module_id": mc.mac,
-                                "module_ip": mc.ip,
-                                "name": btn.get("descr")
-                                or btn.get("name")
-                                or f"Button {device_id}",
-                                "room": btn.get("gr") or btn.get("room") or "",
-                                "semantic_type": "button",
-                                "device_type": "input",
-                                # No 'active' key on purpose: absence is
-                                # treated as enabled-by-default by the
-                                # companion, so freshly installed buttons
-                                # are immediately usable. Operators can
-                                # still disable individual buttons from
-                                # the entity registry if they want.
-                            }
+                        meta_name = (
+                            btn.get("descr")
+                            or btn.get("name")
+                            or f"Button {device_id}"
                         )
+                        meta_room = btn.get("gr") or btn.get("room") or ""
+                        cfg_btn = (
+                            installation.button_by_id(device_id)
+                            if installation
+                            else None
+                        )
+                        entry: dict[str, Any] = {
+                            "id": device_id,
+                            "module_id": mc.mac,
+                            "module_ip": mc.ip,
+                            "name": cfg_btn.name or meta_name if cfg_btn else meta_name,
+                            "room": cfg_btn.room if cfg_btn is not None else meta_room,
+                            "semantic_type": "button",
+                            "device_type": "input",
+                        }
+                        if cfg_btn is not None:
+                            entry["active"] = cfg_btn.active
+                        devices.append(entry)
 
         return devices
+
+    def _device_dict_for_id(self, device_id: str) -> dict[str, Any] | None:
+        """Return a single device dict (GET/PATCH shape) by device id."""
+        for d in self._build_device_list():
+            if d["id"] == device_id:
+                return d
+
+        installation = self._cfg.installation
+        if installation is None:
+            return None
+
+        btn = installation.button_by_id(device_id)
+        if btn is None:
+            return None
+
+        mc = installation.module_by_mac(btn.module_id)
+        entry: dict[str, Any] = {
+            "id": btn.id.lower(),
+            "module_id": btn.module_id,
+            "module_ip": mc.ip if mc is not None else "",
+            "name": btn.name or f"Button {btn.id}",
+            "room": btn.room,
+            "semantic_type": "button",
+            "device_type": "input",
+            "active": btn.active,
+        }
+        return entry
 
     def _build_state_changed(self, key: DeviceKey, new: Any) -> dict[str, Any] | None:
         """Build a state_changed message for a given device key."""
