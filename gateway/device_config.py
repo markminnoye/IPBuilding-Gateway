@@ -6,7 +6,7 @@ scope) and installation.py (parsing/schema only).
 
 from __future__ import annotations
 
-from gateway.installation import InstallationConfig
+from gateway.installation import InstallationConfig, InstallationError
 
 NORTHBOUND_CHANNEL_FIELDS = {"name", "room", "semantic_type", "active", "max_watt"}
 NORTHBOUND_PUSHBUTTON_FIELDS = {"name", "room", "active"}
@@ -95,6 +95,26 @@ def validate_pushbutton_fields(fields: dict) -> dict:
                 raise DeviceConfigError("validation", "active must be a boolean")
             result["active"] = value
     return result
+
+
+def validate_devices_document(raw: object) -> dict:
+    """Validate a full devices.json document for import (POST /api/v1/devices/import).
+
+    Runs it through InstallationConfig._parse — the same code the gateway uses
+    at boot — so "if it imports, the gateway boots with it". Returns ``raw``
+    unchanged on success. Raises DeviceConfigError (matching the PATCH error
+    model) on any structural problem: not a dict, invalid module type,
+    duplicate MAC/IP/device id, or the old flat top-level "buttons" format.
+    """
+    if not isinstance(raw, dict):
+        raise DeviceConfigError(
+            "invalid_devices_file", "Document must be a JSON object"
+        )
+    try:
+        InstallationConfig._parse(raw)
+    except InstallationError as exc:
+        raise DeviceConfigError("invalid_devices_file", str(exc)) from exc
+    return raw
 
 
 def apply_channel_patch(

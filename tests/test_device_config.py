@@ -13,6 +13,7 @@ from gateway.device_config import (
     apply_pushbutton_patch,
     installation_to_raw_dict,
     validate_channel_fields,
+    validate_devices_document,
     validate_pushbutton_fields,
 )
 from gateway.installation import InstallationConfig
@@ -149,3 +150,64 @@ class TestInstallationToRawDict:
         inst = InstallationConfig._parse({"modules": []})
         raw = installation_to_raw_dict(inst)
         assert raw == {"modules": []}
+
+
+class TestValidateDevicesDocument:
+    def test_accepts_empty_modules(self) -> None:
+        raw = {"modules": []}
+        assert validate_devices_document(raw) == raw
+
+    def test_accepts_well_formed_document(self) -> None:
+        raw = {
+            "modules": [
+                {
+                    "name": "IP0200PoE",
+                    "ip": "10.10.1.30",
+                    "type": "relay",
+                    "mac": "00:24:77:52:ac:be",
+                    "channels": [
+                        {
+                            "ch": 0,
+                            "name": "Keuken LED",
+                            "room": "Keuken",
+                            "semantic_type": "light",
+                            "active": True,
+                            "max_watt": 60,
+                        }
+                    ],
+                },
+            ]
+        }
+        assert validate_devices_document(raw) == raw
+
+    def test_rejects_non_dict(self) -> None:
+        with pytest.raises(DeviceConfigError) as exc_info:
+            validate_devices_document([1, 2, 3])
+        assert exc_info.value.code == "invalid_devices_file"
+
+    def test_rejects_duplicate_mac(self) -> None:
+        raw = {
+            "modules": [
+                {"name": "A", "ip": "10.10.1.30", "type": "relay",
+                 "mac": "00:24:77:52:ac:be", "channels": []},
+                {"name": "B", "ip": "10.10.1.31", "type": "relay",
+                 "mac": "00:24:77:52:ac:be", "channels": []},
+            ]
+        }
+        with pytest.raises(DeviceConfigError) as exc_info:
+            validate_devices_document(raw)
+        assert exc_info.value.code == "invalid_devices_file"
+        assert "Duplicate module MAC" in exc_info.value.message
+
+    def test_rejects_unknown_module_type(self) -> None:
+        raw = {"modules": [{"name": "A", "ip": "10.10.1.30", "type": "bogus"}]}
+        with pytest.raises(DeviceConfigError) as exc_info:
+            validate_devices_document(raw)
+        assert exc_info.value.code == "invalid_devices_file"
+
+    def test_rejects_old_flat_buttons_format(self) -> None:
+        raw = {"modules": [], "buttons": []}
+        with pytest.raises(DeviceConfigError) as exc_info:
+            validate_devices_document(raw)
+        assert exc_info.value.code == "invalid_devices_file"
+        assert "Old flat devices.json format" in exc_info.value.message
