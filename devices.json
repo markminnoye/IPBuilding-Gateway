@@ -36,16 +36,16 @@
           "ch": 3,
           "name": "Straatkant OP",
           "room": "Bureau",
-          "semantic_type": "light",
-          "active": true,
+          "semantic_type": "cover",
+          "active": false,
           "max_watt": 60
         },
         {
           "ch": 4,
           "name": "Straatkant NEER",
           "room": "Bureau",
-          "semantic_type": "light",
-          "active": true,
+          "semantic_type": "cover",
+          "active": false,
           "max_watt": 60
         },
         {
@@ -60,16 +60,16 @@
           "ch": 6,
           "name": "Tuinkant OP",
           "room": "Woonkamer",
-          "semantic_type": "light",
-          "active": true,
+          "semantic_type": "cover",
+          "active": false,
           "max_watt": 60
         },
         {
           "ch": 7,
           "name": "Tuinkant NEER",
           "room": "Woonkamer",
-          "semantic_type": "light",
-          "active": true,
+          "semantic_type": "cover",
+          "active": false,
           "max_watt": 60
         },
         {
@@ -84,7 +84,7 @@
           "ch": 9,
           "name": "Badkamer ventilatie",
           "room": "Badkamer",
-          "semantic_type": "light",
+          "semantic_type": "fan",
           "active": true,
           "max_watt": 60
         },
@@ -132,8 +132,8 @@
           "ch": 15,
           "name": "Traphal \u00bfrookmelder?",
           "room": "Traphal",
-          "semantic_type": "light",
-          "active": true,
+          "semantic_type": "switch",
+          "active": false,
           "max_watt": 60
         },
         {
@@ -156,7 +156,7 @@
           "ch": 18,
           "name": "Keuken rookmelder",
           "room": "Keuken",
-          "semantic_type": "light",
+          "semantic_type": "switch",
           "active": true,
           "max_watt": 60
         },
@@ -196,7 +196,7 @@
           "ch": 23,
           "name": "Keuken Ventilatie",
           "room": "Keuken",
-          "semantic_type": "light",
+          "semantic_type": "fan",
           "active": true,
           "max_watt": 60
         }
@@ -213,7 +213,7 @@
         {
           "ch": 0,
           "name": "Living [40.1.1]",
-          "room": "Gelijkvloers",
+          "room": "Woonkamer",
           "semantic_type": "light",
           "active": true,
           "max_watt": 200
@@ -221,7 +221,7 @@
         {
           "ch": 1,
           "name": "Bureau [40.1.2]",
-          "room": "Gelijkvloers",
+          "room": "Bureau",
           "semantic_type": "light",
           "active": true,
           "max_watt": 200
@@ -239,7 +239,7 @@
           "name": "40.1.4",
           "room": "Vrij",
           "semantic_type": "light",
-          "active": true,
+          "active": false,
           "max_watt": 200
         }
       ]
@@ -253,5 +253,6 @@
       "mac": "00:24:77:52:ad:aa",
       "channels": []
     }
-  ]
+  ],
+  "buttons": []
 }
