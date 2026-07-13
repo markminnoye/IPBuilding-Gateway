@@ -19,6 +19,17 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [1.3.1] - 2026-07-13
+
+### Changed
+- **Knoppen in `devices.json` genest per module** (`modules[].pushbuttons[]`) i.p.v. een aparte top-level `buttons`-lijst. Discovery en de Web UI bewaren geconfigureerde knoppen nu betrouwbaar.
+
+### Breaking
+- **Oud plat `buttons[]`-formaat in `devices.json` wordt geweigerd.** Converteer handmatig bewerkte bestanden met `scripts/migrate_buttons_to_nested.py` vóór de update, of laat discovery opnieuw vullen.
+
+### Fixed
+- Discovery en lege seeds laten geen verouderde top-level `buttons`-key meer achter.
+
 ## [1.3.0] - 2026-07-12
 
 ### Changed
