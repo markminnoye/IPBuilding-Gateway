@@ -36,6 +36,7 @@ from gateway.device_config import (
     apply_pushbutton_patch,
     installation_to_raw_dict,
     validate_channel_fields,
+    validate_devices_document,
     validate_pushbutton_fields,
 )
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
@@ -197,6 +198,9 @@ class GatewayAPI:
         # order, and {device_id} matches literal segments like "export" too.
         self._app.router.add_get(
             "/api/v1/devices/export", self._get_devices_export
+        )
+        self._app.router.add_post(
+            "/api/v1/devices/import", self._post_devices_import
         )
         self._app.router.add_get(
             "/api/v1/devices/{device_id}",
@@ -442,6 +446,41 @@ class GatewayAPI:
             content_type="application/octet-stream",
             headers={"Content-Disposition": 'attachment; filename="devices.json"'},
         )
+
+    async def _post_devices_import(self, request: web.Request) -> web.Response:
+        """POST /api/v1/devices/import — replace devices.json wholesale.
+
+        Body is the full replacement document (raw JSON, not multipart). Validated
+        via validate_devices_document (the same InstallationConfig._parse used at
+        boot) before anything is written.
+        """
+        try:
+            body = await request.json()
+        except Exception:
+            raise ApiError(400, "invalid_json", "Body must be valid JSON")
+
+        try:
+            validated = validate_devices_document(body)
+        except DeviceConfigError as exc:
+            raise ApiError(400, exc.code, exc.message, exc.details)
+
+        ok = await asyncio.to_thread(self._writer.write, validated)
+        if not ok:
+            raise ApiError(503, "write_locked", "devices.json is locked; retry later")
+
+        self._cfg.installation = InstallationConfig.load(self._cfg.devices_file)
+        self._meta_cache.clear()
+        asyncio.create_task(self._broadcast(self._build_snapshot()))
+
+        installation = self._cfg.installation
+        channel_count = sum(len(mc.channels) for mc in installation.modules)
+        return web.json_response({
+            "ok": True,
+            "modules": len(installation.modules),
+            "channels": channel_count,
+            "pushbuttons": len(installation.pushbuttons),
+            "schema_version": 2,
+        })
 
     async def _get_device(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices/{device_id} — return single device."""
