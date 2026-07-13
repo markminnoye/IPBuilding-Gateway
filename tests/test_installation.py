@@ -378,3 +378,62 @@ class TestDetectorConfig:
         assert det.name == ""
         assert det.room == ""
         assert det.active is True
+
+
+class TestNestedPushbuttons:
+    def test_parse_reads_nested_pushbuttons(self, tmp_path: Path) -> None:
+        data = {
+            "modules": [
+                {
+                    "name": "IP1100PoE", "ip": "10.10.1.50", "type": "input",
+                    "mac": "00:24:77:52:ad:aa",
+                    "pushbuttons": [
+                        {"id": "2f8185190000df", "channel": 1, "name": "Badkamer knop", "room": "1e verdieping"}
+                    ],
+                }
+            ]
+        }
+        p = tmp_path / "nested.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        cfg = InstallationConfig.load(p)
+
+        assert len(cfg.pushbuttons) == 1
+        btn = cfg.pushbutton_by_id("2f8185190000df")
+        assert btn is not None
+        assert btn.channel == 1
+        assert btn.module_id == "00:24:77:52:ad:aa"
+
+    def test_pushbutton_threshold_default_when_unknown(self, tmp_path: Path) -> None:
+        p = tmp_path / "empty.json"
+        p.write_text(json.dumps({"modules": []}), encoding="utf-8")
+        cfg = InstallationConfig.load(p)
+        from gateway.installation import DEFAULT_BUTTON_HOLD_THRESHOLD_S
+        assert cfg.pushbutton_threshold("unknown") == DEFAULT_BUTTON_HOLD_THRESHOLD_S
+
+    def test_old_flat_buttons_format_rejected(self, tmp_path: Path) -> None:
+        data = {
+            "modules": [{"name": "IP1100PoE", "ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa"}],
+            "buttons": [{"id": "2f8185190000df", "module_id": "00:24:77:52:ad:aa"}],
+        }
+        p = tmp_path / "old_format.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        with pytest.raises(InstallationError, match="migrate_buttons_to_nested"):
+            InstallationConfig.load(p)
+
+    def test_duplicate_pushbutton_id_rejected(self, tmp_path: Path) -> None:
+        data = {
+            "modules": [
+                {
+                    "name": "IP1100PoE", "ip": "10.10.1.50", "type": "input",
+                    "mac": "00:24:77:52:ad:aa",
+                    "pushbuttons": [
+                        {"id": "2f8185190000df", "name": "A"},
+                        {"id": "2f8185190000df", "name": "B"},
+                    ],
+                }
+            ]
+        }
+        p = tmp_path / "dup.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        with pytest.raises(InstallationError, match="Duplicate"):
+            InstallationConfig.load(p)
