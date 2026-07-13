@@ -187,7 +187,7 @@ def test_atomic_writer_read_modify_write_missing_file(tmp_path: Path):
     writer = AtomicWriter(str(devices_file), lock_timeout_s=1.0)
 
     def mutate(raw: dict) -> dict:
-        assert raw == {"modules": [], "buttons": []}
+        assert raw == {"modules": []}
         raw["modules"] = [{"name": "new", "ip": "10.10.1.30", "type": "relay", "channels": []}]
         return raw
 

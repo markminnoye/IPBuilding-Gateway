@@ -44,7 +44,7 @@ _LOCK_SUFFIX = ".lock"
 
 T = TypeVar("T")
 
-_EMPTY_DEVICES_JSON: dict[str, list] = {"modules": [], "buttons": []}
+_EMPTY_DEVICES_JSON: dict[str, list] = {"modules": []}
 
 
 # ---------------------------------------------------------------------------
@@ -228,17 +228,19 @@ class AtomicWriter:
         to persist. It may raise :class:`gateway.device_config.DeviceConfigError`
         to abort without writing. Returns ``(False, None)`` on lock timeout
         (same as :meth:`write`). A missing ``devices.json`` is treated as
-        ``{"modules": [], "buttons": []}``.
+        ``{"modules": []}``.
         """
         def work() -> dict:
             raw = self._read_json_dict()
             new_data = mutate(raw)
             self._write_json_dict(new_data)
+            modules = new_data.get("modules", [])
+            pushbutton_count = sum(len(m.get("pushbuttons", [])) for m in modules)
             log.info(
-                "AtomicWriter: read_modify_write %s (%d modules, %d buttons)",
+                "AtomicWriter: read_modify_write %s (%d modules, %d pushbuttons)",
                 self._devices_file,
-                len(new_data.get("modules", [])),
-                len(new_data.get("buttons", [])),
+                len(modules),
+                pushbutton_count,
             )
             return new_data
 

@@ -251,8 +251,9 @@
       "firmware": "",
       "model": "IP1100PoE",
       "mac": "00:24:77:52:ad:aa",
-      "channels": []
+      "channels": [],
+      "pushbuttons": [],
+      "detectors": []
     }
-  ],
-  "buttons": []
+  ]
 }
