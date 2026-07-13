@@ -683,6 +683,48 @@ class TestDiscoveryEndpoint:
         }
 
 
+class TestModuleRefreshOne:
+    """POST /api/v1/modules/{module_id}/refresh — single-module metadata refresh."""
+
+    @pytest.mark.asyncio
+    async def test_module_refresh_one_calls_cache_and_broadcasts(self) -> None:
+        inst = _make_installation([
+            {
+                "name": "IP0200PoE", "ip": "10.10.1.30", "type": "relay",
+                "mac": "00:24:77:52:ac:be", "model": "IP0200PoE",
+                "firmware": "5.1", "channels": [],
+            }
+        ])
+        api = _make_api(inst)
+        api._meta_cache.refresh_one = AsyncMock(return_value=None)  # type: ignore[assignment]
+
+        with patch("asyncio.create_task") as create_task:
+            request = MagicMock()
+            request.match_info = {"module_id": "00:24:77:52:ac:be"}
+            response = await api._post_module_refresh(request)
+
+        assert response.status == 200
+        body = json.loads(response.text)
+        assert body["id"] == "00:24:77:52:ac:be"
+        assert body["schema_version"] == 2
+        api._meta_cache.refresh_one.assert_awaited_once()
+        assert create_task.called
+
+    @pytest.mark.asyncio
+    async def test_module_refresh_unknown_mac_returns_404(self) -> None:
+        inst = _make_installation([
+            {"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": []}
+        ])
+        api = _make_api(inst)
+        request = MagicMock()
+        request.match_info = {"module_id": "00:24:77:00:00:00"}
+
+        with pytest.raises(gateway_api.ApiError) as exc_info:
+            await api._post_module_refresh(request)
+        assert exc_info.value.status == 404
+        assert exc_info.value.code == "module_not_found"
+
+
 class TestModulesRefreshBroadcast:
     """POST /api/v1/modules/refresh must broadcast a new snapshot to WS clients.
 

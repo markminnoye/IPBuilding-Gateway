@@ -175,7 +175,8 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         )
         install_info = f"  install={module_summary}"
     log.info(
-        "IPBuilding Gateway v%s  rest=%s:%d  shim_enabled=%s  api=%s:%d  poll=%.1fs  simulated=%s%s",
+        "IPBuilding Gateway v%s  rest=%s:%d  shim_enabled=%s  api=%s:%d  "
+        "input_poll=%.1fs  actuator_poll=%.1fs  simulated=%s%s",
         __version__,
         cfg.rest_host,
         cfg.rest_port,
@@ -183,6 +184,7 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         cfg.api_host,
         cfg.api_port,
         cfg.poll_interval_s,
+        cfg.actuator_poll_interval_s,
         cfg.simulated_mode,
         install_info,
     )

@@ -46,6 +46,7 @@ Installatie*.pdf
 *Installatie*.pdf
 
 .venv/
+.worktrees/
 __pycache__/
 *.pyc
 probe_output.log

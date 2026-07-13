@@ -95,7 +95,8 @@ Bekijk logs voor de opstartstatus:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `hub_ip` | `10.10.1.1` | Hub/adres waar modules op reageren |
-| `poll_interval` | `2.0` | Polling interval in seconden |
+| `poll_interval` | `2.0` | Input-poll interval in seconden (`I0000`) |
+| `actuator_poll_interval` | `20.0` | Relay/dimmer keep-alive interval in seconden (`P0000` / `I9900`) |
 | `api_port` | `8080` | WebSocket + REST northbound API poort |
 | `rest_shim_enabled` | `false` | IPBox REST shim op poort `30200` (enkel migratie) |
 | `log_level` | `info` | Log niveau: `debug`, `info`, `warning`, `error` |

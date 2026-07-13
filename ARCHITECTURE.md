@@ -43,7 +43,7 @@ De gateway mag **nooit** impliciet beslissen om een northbound-veld te schrijven
 
 | Categorie | Velden in `devices.json` | Eigenaar | Gateway-gedrag |
 |-----------|--------------------------|----------|----------------|
-| **Noordbound (HA-domein)** | `name`, `room`, `active`, `max_watt`, `semantic_type`, kanaal-specs | Companion / gebruiker | Alleen **lezen** |
+| **Noordbound (HA-domein)** | `name`, `room`, `active`, `max_watt`, `semantic_type`, kanaal-specs | Companion / gebruiker | **Lezen** standaard; **schrijven** alleen via expliciete `PATCH /api/v1/devices/{device_id}` (nooit impliciet) |
 | **Fysiek (module-EEPROM)** | `backupConfig`-kanalen, button-mapping, autonomy | Module zelf (WebConfig) of gateway op expliciete `POST /api/v1/provision/autonomy` | **Nooit** impliciet schrijven |
 | **Netwerk / runtime** | `ip`, `mac`, `firmware`, `last_seen`, `last_seen_source` | Gateway zelf | `ip`/`mac` in runtime-registry; `firmware` naar `devices.json` bij wijziging; `last_seen*` is runtime-only |
 
@@ -138,7 +138,7 @@ graph TB
     WS --> NR
 ```
 
-**Deployment A** is de primaire target: gateway als HA add-on (Docker, beheerd door HA Supervisor), companion als HACS custom component op hetzelfde device.
+**Deployment A** is de primaire target: gateway als HA add-on (Docker, beheerd door HA Supervisor), companion als HACS custom component op hetzelfde device. Sinds de ingress-webui heeft Deployment A ook een "Open Web UI"-knop (Supervisor Ingress, zelfde `:8080`-listener als de REST/WS-API — geen aparte `ingress_port`; als het trust-model ooit verandert kan dit alsnog een eigen listener krijgen).
 
 **Deployment B** gebruikt exact dezelfde Python-code als A, maar zonder Supervisor-wrapper. Draait als `docker run` of `python -m gateway` op elke Linux-machine (o.a. **Raspberry Pi 3B/4**). Praktisch patroon op Pi: **eth0** op IPBuilding-VLAN (`10.10.1.1`, veldbus) + **wlan0** op thuis-LAN (northbound `:8080` naar HA Green). Effort en platformvergelijking: [`resources_and_docs/reference/2026-06-14-deployment-hardware-evaluation.md`](resources_and_docs/reference/2026-06-14-deployment-hardware-evaluation.md).
 
@@ -190,7 +190,7 @@ graph LR
 
 | Module | Bestand | Verantwoordelijkheid |
 |---|---|---|
-| `udp_bus.py` | `gateway/udp_bus.py` | asyncio UDP socket; polling (2s), command send, event listen |
+| `udp_bus.py` | `gateway/udp_bus.py` | asyncio UDP socket; per-type polling (input ~2s, relay/dimmer ~20s), command send, event listen |
 | `device_registry.py` | `gateway/device_registry.py` | In-memory state van alle devices; update bij elk event |
 | `installation.py` | `gateway/installation.py` | Laadt en valideert `devices.json`; levert entity-IDs; runtime-only `last_seen*` |
 | `discovery.py` | `gateway/discovery.py` | ARP-sweep → OUI 00:24:77 filter → HTTP getSysSet/getButtons; configureerbare range; no ipbox_id |
@@ -349,19 +349,27 @@ De gateway bewaart een persistente config met alle metadata die de veldbus zelf 
       "ip": "10.10.1.50",
       "type": "input",
       "firmware": "5.2.4",
-      "channels": []                // gevuld door Discovery via getButtons
-    }
-  ],
-  "buttons": [
-    {
-      "id": "2DE341851900001F",      // hardware-ID van IP1100PoE
-      "name": "Badkamer knop",
-      "room": "1e verdieping",
-      "active": true
+      "channels": [],                // gevuld door Discovery via getButtons
+      "pushbuttons": [
+        {
+          "id": "2f8185190000df",    // hardware-ID van IP1100PoE
+          "channel": 0,              // fysieke poort-index op de module; read-only
+          "name": "Badkamer knop",
+          "room": "1e verdieping",
+          "active": true
+        }
+      ],
+      "detectors": []                // schema-placeholder, nog geen runtime-gedrag
     }
   ]
 }
 ```
+
+Pushbuttons en detectors nesten per input-module op dezelfde manier als
+`channels` nesten per relay/dimmer-module (niet langer een apart top-level
+`buttons[]`-array); zie
+[docs/superpowers/specs/2026-07-13-pushbuttons-detectors-nested-schema-design.md](docs/superpowers/specs/2026-07-13-pushbuttons-detectors-nested-schema-design.md)
+voor het volledige ontwerp.
 
 **Vermogen:**
 - `max_watt` = geconfigureerde waarde (theoretisch maximum)

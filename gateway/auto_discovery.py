@@ -26,7 +26,7 @@ import os
 import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar
 
 from gateway.discovery import (
     discover_modules,
@@ -41,6 +41,10 @@ log = logging.getLogger(__name__)
 
 # Lock file kept alongside devices.json
 _LOCK_SUFFIX = ".lock"
+
+T = TypeVar("T")
+
+_EMPTY_DEVICES_JSON: dict[str, list] = {"modules": []}
 
 
 # ---------------------------------------------------------------------------
@@ -129,19 +133,16 @@ class AtomicWriter:
         self._lock_file = self._devices_file + _LOCK_SUFFIX
         self._lock_timeout_s = lock_timeout_s
 
-    def write(self, data: dict) -> bool:
-        """Atomically replace devices.json with ``data``.
+    def _run_under_lock(self, work: Callable[[], T]) -> tuple[bool, T | None]:
+        """Acquire exclusive lock, run ``work()``, release lock.
 
-        Returns ``True`` on success, ``False`` on lock-timeout (file unchanged).
-        The advisory lock file (``devices_file.lock``) is always removed on
-        exit, even on exception, so it does not leak into the working tree
-        as an untracked artefact.
+        Returns ``(False, None)`` on lock timeout. ``work()`` exceptions
+        propagate after the lock is released.
         """
         lock_fd = None
         try:
             lock_fd = os.open(self._lock_file, os.O_RDONLY | os.O_CREAT, 0o644)
             start = os.times().elapsed
-            timeout_ns = int(self._lock_timeout_s * 1e9)
 
             while True:
                 try:
@@ -155,26 +156,11 @@ class AtomicWriter:
                             self._lock_timeout_s,
                             self._devices_file,
                         )
-                        return False
-                    # brief sleep before retry
+                        return False, None
                     import time as _time
                     _time.sleep(0.05)
 
-            # Write to a temp file in the same directory so rename is atomic
-            dir_path = os.path.dirname(self._devices_file) or "."
-            fd, tmp_path = tempfile.mkstemp(dir=dir_path, suffix=".tmp")
-            try:
-                with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                    json.dump(data, fh, indent=2)
-                    fh.write("\n")
-                os.rename(tmp_path, self._devices_file)
-                log.info("AtomicWriter: wrote %s (%d modules)", self._devices_file, len(data.get("modules", [])))
-            except Exception:
-                try:
-                    os.unlink(tmp_path)
-                except OSError:
-                    pass
-                raise
+            return True, work()
         finally:
             if lock_fd is not None:
                 try:
@@ -182,15 +168,86 @@ class AtomicWriter:
                     os.close(lock_fd)
                 except OSError:
                     pass
-            # Always remove the lock file so it never leaks as an untracked
-            # artefact (e.g. after a crash or test interruption).
             try:
                 os.unlink(self._lock_file)
             except FileNotFoundError:
                 pass
             except OSError as exc:
                 log.debug("AtomicWriter: could not remove %s: %s", self._lock_file, exc)
-        return True
+
+    def _read_json_dict(self) -> dict:
+        """Load devices.json; missing file yields an empty installation."""
+        try:
+            with open(self._devices_file, encoding="utf-8") as fh:
+                return json.load(fh)
+        except FileNotFoundError:
+            return dict(_EMPTY_DEVICES_JSON)
+
+    def _write_json_dict(self, data: dict) -> None:
+        """Atomically replace devices.json with ``data`` (caller holds lock)."""
+        dir_path = os.path.dirname(self._devices_file) or "."
+        fd, tmp_path = tempfile.mkstemp(dir=dir_path, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                json.dump(data, fh, indent=2)
+                fh.write("\n")
+            os.rename(tmp_path, self._devices_file)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+
+    def write(self, data: dict) -> bool:
+        """Atomically replace devices.json with ``data``.
+
+        Returns ``True`` on success, ``False`` on lock-timeout (file unchanged).
+        The advisory lock file (``devices_file.lock``) is always removed on
+        exit, even on exception, so it does not leak into the working tree
+        as an untracked artefact.
+        """
+        def work() -> bool:
+            self._write_json_dict(data)
+            log.info(
+                "AtomicWriter: wrote %s (%d modules)",
+                self._devices_file,
+                len(data.get("modules", [])),
+            )
+            return True
+
+        ok, _ = self._run_under_lock(work)
+        return ok
+
+    def read_modify_write(
+        self, mutate: Callable[[dict], dict]
+    ) -> tuple[bool, dict | None]:
+        """Hold the lock across read → mutate → write.
+
+        ``mutate`` receives the parsed JSON dict and must return the new dict
+        to persist. It may raise :class:`gateway.device_config.DeviceConfigError`
+        to abort without writing. Returns ``(False, None)`` on lock timeout
+        (same as :meth:`write`). A missing ``devices.json`` is treated as
+        ``{"modules": []}``.
+        """
+        def work() -> dict:
+            raw = self._read_json_dict()
+            new_data = mutate(raw)
+            self._write_json_dict(new_data)
+            modules = new_data.get("modules", [])
+            pushbutton_count = sum(len(m.get("pushbuttons", [])) for m in modules)
+            log.info(
+                "AtomicWriter: read_modify_write %s (%d modules, %d pushbuttons)",
+                self._devices_file,
+                len(modules),
+                pushbutton_count,
+            )
+            return new_data
+
+        ok, result = self._run_under_lock(work)
+        if ok:
+            return True, result
+        return False, None
 
 
 # ---------------------------------------------------------------------------

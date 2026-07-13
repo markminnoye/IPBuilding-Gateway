@@ -18,9 +18,9 @@ import pytest
 from gateway import gateway_api
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, ButtonEvent
 from gateway.installation import (
-    ButtonConfig,
     DEFAULT_BUTTON_HOLD_THRESHOLD_S,
     InstallationConfig,
+    PushbuttonConfig,
 )
 
 
@@ -30,19 +30,16 @@ from gateway.installation import (
 
 
 def _make_installation(buttons: list[dict[str, Any]] | None = None) -> InstallationConfig:
-    raw: dict[str, Any] = {
-        "modules": [
-            {
-                "name": "IP1100PoE",
-                "ip": "10.10.1.50",
-                "type": "input",
-                "mac": "00:24:77:52:ad:aa",
-                "channels": [],
-            }
-        ]
+    module: dict[str, Any] = {
+        "name": "IP1100PoE",
+        "ip": "10.10.1.50",
+        "type": "input",
+        "mac": "00:24:77:52:ad:aa",
+        "channels": [],
     }
     if buttons:
-        raw["buttons"] = buttons
+        module["pushbuttons"] = buttons
+    raw: dict[str, Any] = {"modules": [module]}
     return InstallationConfig._parse(raw)
 
 
@@ -84,20 +81,20 @@ async def _drain_broadcasts(api: gateway_api.GatewayAPI) -> list[dict[str, Any]]
 class TestButtonThreshold:
     def test_default_threshold_when_no_button(self) -> None:
         inst = _make_installation()
-        assert inst.button_threshold("2f8185190000df") == DEFAULT_BUTTON_HOLD_THRESHOLD_S
+        assert inst.pushbutton_threshold("2f8185190000df") == DEFAULT_BUTTON_HOLD_THRESHOLD_S
 
     def test_explicit_threshold_from_config(self) -> None:
         inst = _make_installation([
             {"id": "2f8185190000df", "module_id": "00:24:77:52:ad:aa",
              "name": "Keuken knop", "hold_threshold_s": 2.0}
         ])
-        assert inst.button_threshold("2f8185190000df") == 2.0
+        assert inst.pushbutton_threshold("2f8185190000df") == 2.0
 
     def test_threshold_lookup_is_case_insensitive(self) -> None:
         inst = _make_installation([
             {"id": "2F8185190000DF", "hold_threshold_s": 1.0}
         ])
-        assert inst.button_threshold("2f8185190000df") == 1.0
+        assert inst.pushbutton_threshold("2f8185190000df") == 1.0
 
 
 class TestButtonStateMachine:

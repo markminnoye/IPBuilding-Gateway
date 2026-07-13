@@ -7,6 +7,8 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
 
 **Module-ID:** the normalised MAC address of a physical controller (`00:24:77:52:ac:be`). Stable across DHCP IP changes.
 
+**Ingress / Web UI:** `GET /` serves a self-contained HTML page (device list + inline edit via the existing `PATCH /api/v1/devices/{id}` endpoint) when the add-on is opened through HA Supervisor's "Open Web UI" / Ingress panel. Not a documented API contract -- internal to the add-on UI.
+
 ---
 
 ## GET /health
@@ -55,7 +57,8 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   ],
   "fieldbus": {
     "polling_enabled": true,
-    "poll_interval_s": 2.0
+    "poll_interval_s": 2.0,
+    "actuator_poll_interval_s": 20.0
   },
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
@@ -143,6 +146,18 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 
 ---
 
+## POST /api/v1/modules/{module_id}/refresh
+
+**Description:** Re-fetch getSysSet (and getButtons for input modules) from a single module identified by MAC. Updates the in-memory cache for that module only and broadcasts a WebSocket snapshot.
+
+**Request body:** none
+
+**Response 200:** single module object (same shape as `GET /api/v1/modules/{module_id}`) plus `"schema_version": 2`.
+
+**Response 404:** `{ "error": "module_not_found", ... }` when the MAC is not in `devices.json`.
+
+---
+
 ## GET /api/v1/devices
 
 **Description:** Return the full device list with current state.
@@ -184,6 +199,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
       "id": "2f8185190000df",
       "module_id": "00:24:77:52:ad:aa",
       "module_ip": "10.10.1.50",
+      "channel": 1,
       "name": "Badkamer knop",
       "room": "1e verdieping",
       "semantic_type": "button",
@@ -201,7 +217,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `id` | string | Device-ID: `{module_ip}-{channel}` (relay/dimmer) or `custom slug`, or the IP1100PoE button **hardware id** (lowercase, 14 hex chars) for input modules |
 | `module_id` | string | Parent module MAC (stable, use for grouping) |
 | `module_ip` | string | Current module IP (mutable, use for display) |
-| `channel` | integer | Channel index on the module (relay/dimmer only; absent for buttons) |
+| `channel` | integer | Channel index on the module (relay/dimmer), or physical wiring position for buttons. For buttons this is **read-only** (from the module's physical wiring), not PATCH-able |
 | `name` | string | Channel name from `devices.json` (or `descr` from `getButtons` for input) |
 | `room` | string | Room from config (or `gr` from `getButtons` for input) |
 | `semantic_type` | string | `light` / `fan` / `switch` / `button` |
@@ -213,8 +229,9 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `level` | integer | Dimmer percentage 0-100 (dimmer only) |
 
 **Input modules (`device_type: "input"`)** carry one entry per physical button
-fetched via HTTP `getButtons` on the IP1100PoE. There is no `channel`/`state`/
-`max_watt` — buttons are event-only. The `id` matches the `id` field of the
+fetched via HTTP `getButtons` on the IP1100PoE. There is no `state`/`max_watt`
+— buttons are event-only. `channel` is present but **read-only** (derived from
+the module's physical wiring, not PATCH-able). The `id` matches the `id` field of the
 `button_event` WebSocket frame so the companion can route presses to the right
 entity. Buttons appear in the snapshot only after `getButtons` has been fetched
 (automatic at startup + after `POST /api/v1/modules/refresh` or a discovery
@@ -239,6 +256,76 @@ and a `"channel inactive"` error.
 **Response 404:**
 ```json
 {"error": "not found"}
+```
+
+---
+
+## PATCH /api/v1/devices/{device_id}
+
+**Description:** Update northbound-only configuration fields for a channel or button in `devices.json` at runtime. Changes are persisted atomically (advisory lock + tempfile rename) and do not require a gateway restart. A WebSocket `snapshot` broadcast is sent to all connected clients after a successful patch.
+
+**Allowed fields — channel (relay/dimmer):**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `name` | string | Operator-friendly label |
+| `room` | string | Room / area name |
+| `semantic_type` | string | One of: `light`, `fan`, `cover`, `switch`, `plug` |
+| `active` | boolean | `false` = do not poll or expose |
+| `max_watt` | integer | Non-negative wattage cap |
+
+**Allowed fields — button (IP1100PoE, id from `devices.json` `modules[].pushbuttons[]`):**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `name` | string | Operator-friendly label |
+| `room` | string | Room / area name |
+| `active` | boolean | `false` = disable button entity |
+
+Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`) returns **400** `unknown_field`.
+
+**Request headers:** `Content-Type: application/json`
+
+**Request body example (channel):**
+```json
+{"room": "Keuken", "semantic_type": "light", "active": true, "max_watt": 60}
+```
+
+**Request body example (button):**
+```json
+{"name": "Badkamer knop", "room": "1e verdieping", "active": true}
+```
+
+**Response 200:** Same shape as `GET /api/v1/devices/{device_id}` for the updated device, plus `schema_version: 2`.
+
+**Response 400** (invalid JSON):
+```json
+{"error": "invalid_json", "message": "Body must be valid JSON"}
+```
+
+**Response 400** (empty body — no fields to update):
+```json
+{"error": "empty_body", "message": "Body must include at least one field to update"}
+```
+
+**Response 400** (unknown field):
+```json
+{"error": "unknown_field", "message": "Unknown field(s): ip", "details": {"fields": ["ip"]}}
+```
+
+**Response 400** (validation):
+```json
+{"error": "validation", "message": "semantic_type must be one of ['cover', 'fan', 'light', 'plug', 'switch']"}
+```
+
+**Response 404:**
+```json
+{"error": "device_not_found", "details": {"device_id": "10.10.1.99-0"}}
+```
+
+**Response 503** (lock timeout — another writer holds `devices.json.lock`):
+```json
+{"error": "write_locked", "message": "devices.json is locked; retry later"}
 ```
 
 ---
@@ -334,7 +421,7 @@ and a `"channel inactive"` error.
 
 ## POST /api/v1/debug/fieldbus-polling
 
-**Description:** Runtime debug toggle for the UDP/1001 keep-alive poll loop. Surfaces in the companion as the `Veldbus polling (debug)` switch on the gateway device. **Not persistent** — the gateway restarts with `poll_interval` config defaults on the next start.
+**Description:** Runtime debug toggle for the UDP/1001 keep-alive poll loop. Surfaces in the companion as the `Veldbus polling (debug)` switch on the gateway device. **Not persistent** — the gateway restarts with `poll_interval` / `actuator_poll_interval` config defaults on the next start.
 
 **Request headers:** `Content-Type: application/json`
 
@@ -349,7 +436,7 @@ and a `"channel inactive"` error.
 
 **Behaviour while polling is disabled:**
 
-- The background `_poll_loop` keeps running on the `poll_interval_s` cadence but skips the per-round `_poll_all_modules()` step. The loop stays alive so flipping the flag back on resumes polling almost immediately, without a bus restart.
+- The background `_poll_loop` keeps running on the faster of `poll_interval_s` and `actuator_poll_interval_s` but skips the per-round due-module poll step. The loop stays alive so flipping the flag back on resumes polling almost immediately, without a bus restart.
 - On-demand `send_command` calls (light on/off, dimmer set level, relay toggle) keep working — only the periodic keep-alive polls stop.
 - Input modules cache the last hub IP and may direct `B-…E` events to the IPBox instead of this gateway while polling is off.
 - A `fieldbus.polling_disabled` warning is reported in `/api/v1/status` (`level: warning`, `subsystems.fieldbus: degraded`).
@@ -358,7 +445,8 @@ and a `"channel inactive"` error.
 ```json
 {
   "polling_enabled": false,
-  "poll_interval_s": 2.0
+  "poll_interval_s": 2.0,
+  "actuator_poll_interval_s": 20.0
 }
 ```
 

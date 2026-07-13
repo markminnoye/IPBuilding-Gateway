@@ -24,11 +24,14 @@ ID model
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from gateway.types import DeviceType
+
+log = logging.getLogger(__name__)
 
 
 def _normalize_mac(mac: str) -> str:
@@ -124,10 +127,10 @@ DEFAULT_BUTTON_HOLD_THRESHOLD_S = 1.5
 
 
 @dataclass
-class ButtonConfig:
-    """A single physical button on an IP1100PoE input module.
+class PushbuttonConfig:
+    """A single physical pushbutton on an IP1100PoE input module.
 
-    Buttons are not channels — they have no entity_id of the form
+    Pushbuttons are not channels — they have no entity_id of the form
     `{module_ip}-{ch}`. They are event sources on a module. The gateway
     uses :attr:`hold_threshold_s` to classify press→release timing into
     ``press`` vs ``long_press`` events; the value is normally seeded from
@@ -136,34 +139,67 @@ class ButtonConfig:
     """
 
     id: str  # hardware hex, e.g. "2f8185190000df" (14 lowercase hex chars)
-    module_id: str = ""  # parent module MAC (stable)
+    module_id: str = ""  # parent module MAC — derived from nesting position, never read from the button's own dict
+    channel: int | None = None  # physical port index; from getButtons/backupConfig "index"
     name: str = ""  # operator-friendly description, default from getButtons.descr
     room: str = ""  # from getButtons.gr
     active: bool = True
     hold_threshold_s: float = DEFAULT_BUTTON_HOLD_THRESHOLD_S
 
     def to_dict(self) -> dict:
-        """Serialize to dict for devices.json."""
-        return {
+        """Serialize to dict for devices.json. module_id is implied by nesting, so it is excluded."""
+        d: dict = {
             "id": self.id,
-            "module_id": self.module_id,
             "name": self.name,
             "room": self.room,
             "active": self.active,
             "hold_threshold_s": self.hold_threshold_s,
         }
+        if self.channel is not None:
+            d["channel"] = self.channel
+        return d
 
     @classmethod
-    def from_dict(cls, data: dict) -> "ButtonConfig":
+    def from_dict(cls, data: dict, module_id: str = "") -> "PushbuttonConfig":
         return cls(
             id=data["id"],
-            module_id=data.get("module_id", ""),
+            module_id=module_id,
+            channel=data.get("channel"),
             name=data.get("name", ""),
             room=data.get("room", ""),
             active=data.get("active", True),
             hold_threshold_s=float(
                 data.get("hold_threshold_s", DEFAULT_BUTTON_HOLD_THRESHOLD_S)
             ),
+        )
+
+
+@dataclass
+class DetectorConfig:
+    """A single physical detector on an IP1100PoE input module.
+
+    Schema placeholder only — no runtime behaviour, no UDP protocol
+    decoding, not exposed via the REST API. There is no confirmed
+    ``getDetectors`` sample to base a richer schema on yet; this exists
+    purely so a devices.json ``detectors[]`` array round-trips without
+    data loss.
+    """
+
+    id: str
+    name: str = ""
+    room: str = ""
+    active: bool = True
+
+    def to_dict(self) -> dict:
+        return {"id": self.id, "name": self.name, "room": self.room, "active": self.active}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "DetectorConfig":
+        return cls(
+            id=data["id"],
+            name=data.get("name", ""),
+            room=data.get("room", ""),
+            active=data.get("active", True),
         )
 
 
@@ -178,6 +214,8 @@ class ModuleConfig:
     model: str = ""    # factory product label, e.g. "IP200PoE"; optional
     mac: str = ""      # factory MAC (OUI 00:24:77); normalised lowercase
     channels: list[ChannelConfig] = field(default_factory=list)
+    pushbuttons: list[PushbuttonConfig] = field(default_factory=list)
+    detectors: list[DetectorConfig] = field(default_factory=list)
     # Runtime-only fields — NOT serialized to devices.json
     last_seen: str | None = None       # ISO timestamp of last ARP/HTTP contact
     last_seen_source: str = ""         # "arp" | "http" | "udp"
@@ -193,29 +231,46 @@ class ModuleConfig:
         return self.ip.rsplit(".", 1)[-1]
 
     def to_dict(self) -> dict:
-        """Serialize to dict for devices.json, excluding runtime-only fields."""
-        return {
+        """Serialize to dict for devices.json, excluding runtime-only fields.
+
+        Type-conditional: an input module's entry shows pushbuttons/detectors
+        (never channels); a relay/dimmer module's entry shows channels
+        (never pushbuttons/detectors). A module entry only ever carries the
+        fields relevant to its own type.
+        """
+        d: dict = {
             "name": self.name,
             "ip": self.ip,
             "type": self.type.value,
             "firmware": self.firmware,
             "model": self.model,
             "mac": self.mac,
-            "channels": [c.to_dict() for c in self.channels],
         }
+        if self.type == DeviceType.INPUT:
+            d["pushbuttons"] = [b.to_dict() for b in self.pushbuttons]
+            d["detectors"] = [x.to_dict() for x in self.detectors]
+        else:
+            d["channels"] = [c.to_dict() for c in self.channels]
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> "ModuleConfig":
         """Reconstruct from a devices.json dict entry, skipping runtime fields."""
-        return cls(
+        mac = data.get("mac", "")
+        mc = cls(
             name=data.get("name", data.get("ip", "")),
             ip=data["ip"],
             type=DeviceType(data["type"]),
             firmware=data.get("firmware", ""),
             model=data.get("model", ""),
-            mac=data.get("mac", ""),
+            mac=mac,
             channels=[ChannelConfig.from_dict(c) for c in data.get("channels", [])],
         )
+        mc.pushbuttons = [
+            PushbuttonConfig.from_dict(b, module_id=mac) for b in data.get("pushbuttons", [])
+        ]
+        mc.detectors = [DetectorConfig.from_dict(x) for x in data.get("detectors", [])]
+        return mc
 
 
 @dataclass
@@ -223,9 +278,10 @@ class InstallationConfig:
     """Loaded and validated installation configuration."""
 
     modules: list[ModuleConfig] = field(default_factory=list)
-    # Physical buttons (IP1100PoE). Authoritative for hold_threshold_s and
-    # event routing. Persisted in devices.json under top-level "buttons" key.
-    buttons: list[ButtonConfig] = field(default_factory=list)
+    # Physical pushbuttons (IP1100PoE). Authoritative for hold_threshold_s and
+    # event routing. Persisted nested under each input module's
+    # "pushbuttons" key (see ModuleConfig.to_dict()).
+    pushbuttons: list[PushbuttonConfig] = field(default_factory=list)
 
     # Derived indices — keyed by ipbox_id (IPBox component ID)
     _ipbox_id_to_entry: dict[int, tuple[DeviceType, str, int]] = field(default_factory=dict)
@@ -237,8 +293,8 @@ class InstallationConfig:
     _device_id_to_entry: dict[str, tuple[DeviceType, str, int]] = field(default_factory=dict)
     # (DeviceType, module_ip, channel) -> device_id
     _entry_to_device_id: dict[tuple[DeviceType, str, int], str] = field(default_factory=dict)
-    # button hardware id (lowercase) -> ButtonConfig
-    _buttons_by_id: dict[str, ButtonConfig] = field(default_factory=dict)
+    # pushbutton hardware id (lowercase) -> PushbuttonConfig
+    _pushbuttons_by_id: dict[str, PushbuttonConfig] = field(default_factory=dict)
 
     @classmethod
     def load(
@@ -268,16 +324,23 @@ class InstallationConfig:
     @classmethod
     def _parse(cls, raw: dict) -> InstallationConfig:
         """Parse a devices.json dict into InstallationConfig."""
+        if "buttons" in raw:
+            raise InstallationError(
+                "Old flat devices.json format detected (top-level 'buttons' key). "
+                "Run scripts/migrate_buttons_to_nested.py to convert it to "
+                "modules[].pushbuttons[] before loading."
+            )
+
         seen_ipbox_ids: set[int] = set()
         seen_device_ids: set[str] = set()
         modules: list[ModuleConfig] = []
-        buttons: list[ButtonConfig] = []
+        pushbuttons: list[PushbuttonConfig] = []
         ipbox_id_to_entry: dict[int, tuple[DeviceType, str, int]] = {}
         device_id_to_entry: dict[str, tuple[DeviceType, str, int]] = {}
         entry_to_device_id: dict[tuple[DeviceType, str, int], str] = {}
         modules_by_ip: dict[str, ModuleConfig] = {}
         modules_by_mac: dict[str, ModuleConfig] = {}
-        buttons_by_id: dict[str, ButtonConfig] = {}
+        pushbuttons_by_id: dict[str, PushbuttonConfig] = {}
 
         for mod in raw.get("modules", []):
             mod_type_str = mod.get("type", "")
@@ -350,6 +413,22 @@ class InstallationConfig:
                     )
                 )
 
+            pushbuttons_for_module: list[PushbuttonConfig] = []
+            for btn_entry in mod.get("pushbuttons", []):
+                btn_id = btn_entry.get("id")
+                if not btn_id:
+                    log.warning("Skipping pushbutton entry without id: %r", btn_entry)
+                    continue
+                key = btn_id.lower()
+                if key in pushbuttons_by_id:
+                    raise InstallationError(f"Duplicate pushbutton id {btn_id!r}")
+                btn = PushbuttonConfig.from_dict(btn_entry, module_id=mac_normalised)
+                pushbuttons_for_module.append(btn)
+                pushbuttons_by_id[key] = btn
+                pushbuttons.append(btn)
+
+            detectors = [DetectorConfig.from_dict(d) for d in mod.get("detectors", [])]
+
             mc = ModuleConfig(
                 name=mod.get("name", mod_ip),
                 ip=mod_ip,
@@ -358,36 +437,21 @@ class InstallationConfig:
                 model=mod.get("model", ""),
                 mac=mac_normalised,
                 channels=channels,
+                pushbuttons=pushbuttons_for_module,
+                detectors=detectors,
             )
             modules.append(mc)
             modules_by_ip[mod_ip] = mc
             if mac_normalised:
                 modules_by_mac[mac_normalised] = mc
 
-        # Parse top-level "buttons" list. Authoritative for hold_threshold_s
-        # and event routing. Module may not have an HTTP cache yet — the
-        # gateway seeds / merges these from getButtons at runtime.
-        for btn_entry in raw.get("buttons", []):
-            btn_id = btn_entry.get("id")
-            if not btn_id:
-                log.warning("Skipping button entry without id: %r", btn_entry)
-                continue
-            key = btn_id.lower()
-            if key in buttons_by_id:
-                raise InstallationError(
-                    f"Duplicate button id {btn_id!r}"
-                )
-            btn = ButtonConfig.from_dict(btn_entry)
-            buttons.append(btn)
-            buttons_by_id[key] = btn
-
-        inst = cls(modules=modules, buttons=buttons)
+        inst = cls(modules=modules, pushbuttons=pushbuttons)
         inst._ipbox_id_to_entry = ipbox_id_to_entry
         inst._modules_by_ip = modules_by_ip
         inst._modules_by_mac = modules_by_mac
         inst._device_id_to_entry = device_id_to_entry
         inst._entry_to_device_id = entry_to_device_id
-        inst._buttons_by_id = buttons_by_id
+        inst._pushbuttons_by_id = pushbuttons_by_id
         return inst
 
     def device_id_to_entry(
@@ -441,20 +505,20 @@ class InstallationConfig:
         """All known legacy (IPBox component) IDs in installation order."""
         return list(self._ipbox_id_to_entry.keys())
 
-    def button_by_id(self, button_id: str) -> ButtonConfig | None:
-        """Look up a button by hardware id (case-insensitive). Returns None if unknown."""
+    def pushbutton_by_id(self, button_id: str) -> PushbuttonConfig | None:
+        """Look up a pushbutton by hardware id (case-insensitive). Returns None if unknown."""
         if not button_id:
             return None
-        return self._buttons_by_id.get(button_id.lower())
+        return self._pushbuttons_by_id.get(button_id.lower())
 
-    def button_threshold(self, button_id: str) -> float:
-        """Return the hold threshold (seconds) for a button.
+    def pushbutton_threshold(self, button_id: str) -> float:
+        """Return the hold threshold (seconds) for a pushbutton.
 
         Falls back to :data:`DEFAULT_BUTTON_HOLD_THRESHOLD_S` when the
-        button is not (yet) in the installation config. The timing
+        pushbutton is not (yet) in the installation config. The timing
         detector in gateway_api.py uses this when no override is present.
         """
-        btn = self.button_by_id(button_id)
+        btn = self.pushbutton_by_id(button_id)
         if btn is None:
             return DEFAULT_BUTTON_HOLD_THRESHOLD_S
         return btn.hold_threshold_s

@@ -1,5 +1,5 @@
 name: IPBuilding Gateway
-version: "1.3.0"
+version: "1.3.1"
 slug: ipbuilding_gateway
 description: Open IPBuilding field-bus gateway (UDP/1001) — replaces proprietary IPBox hub
 url: https://github.com/markminnoye/IPBuilding-Gateway
@@ -15,6 +15,10 @@ ports:
   30200/tcp: null
 host_network: true
 hassio_api: true
+ingress: true
+ingress_port: 8080
+panel_icon: mdi:home-variant-outline
+panel_title: IPBuilding Gateway
 discovery:
   - ha_ipbuilding_gateway
 privileged: []
@@ -33,8 +37,10 @@ options:
   metadata_timeout_s: 5.0
 
   # --- Hub / field bus --------------------------------------------------
-  # Seconden tussen opeenvolgende UDP/1001 polls per module (P0000, I9900, I0000).
+  # Seconden tussen UDP/1001 input-polls (I0000) — IPBox ~2 s.
   poll_interval: 2.0
+  # Seconden tussen relay/dimmer keep-alive polls (P0000 / I9900) — IPBox ~20 s.
+  actuator_poll_interval: 20.0
   # Pad naar installatie-specifieke data (modules, namen, kamers, active flags).
   devices_file: /config/devices.json
 
@@ -68,6 +74,7 @@ schema:
   metadata_timeout_s: float
   # --- Hub / field bus ---
   poll_interval: float
+  actuator_poll_interval: float
   devices_file: str
   # --- Discovery ---
   discovery_subnet: str

@@ -604,7 +604,7 @@ Browser → IPBox :30200 POST /general/Hardware/Relais/UpdateRelay
 - **Protocol:** UDP
 - **Poort:** 1001 (op elke veldmodule)
 - **Richting polling:** hub (IPBox of gateway) → module (initiator)
-- **Poll interval:** ~**2 seconden** (IPBox én open gateway; env `GATEWAY_POLL_INTERVAL`, default `2.0`)
+- **Poll interval:** per moduletype (IPBox steady-state): input **~2 s** (`I0000`), relay + dimmer **~20 s** (`P0000` / `I9900`). Open gateway: `GATEWAY_POLL_INTERVAL` (input, default `2.0`) en `GATEWAY_ACTUATOR_POLL_INTERVAL` (relay/dimmer, default `20.0`).
 
 ### 6.2 Hub-poll per moduletype
 

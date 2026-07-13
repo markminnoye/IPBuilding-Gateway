@@ -13,6 +13,8 @@ from gateway.module_metadata import (
     ModuleMetadataCache,
     _parse_get_sysset_body,
     normalize_button_hardware_id,
+    extract_pushbutton_config,
+    extract_pushbuttons_from_getbuttons,
 )
 
 
@@ -125,6 +127,33 @@ class TestModuleMetadataCache:
         assert dimmer_meta is None
 
     @pytest.mark.asyncio
+    async def test_refresh_one_updates_single_module_only(self) -> None:
+        installation = self._make_installation([
+            {"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": []},
+            {"ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:9e:a8", "channels": []},
+        ])
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:9e:a8"] = ModuleMetadata(
+            network={"ip": "10.10.1.40"},
+            fetched_at="2026-01-01T00:00:00Z",
+        )
+
+        async def fake_http(ip, method, sess, timeout):
+            if ip == "10.10.1.30" and method == "getSysSet":
+                return '{"dhcp": "0", "ip": "10.10.1.30", "subnet": "255.255.255.0", "gateway": "10.10.1.1"}'
+            return None
+
+        with patch("gateway.module_metadata._http_get_text", side_effect=fake_http):
+            await cache.refresh_one(installation.modules[0], timeout=1.0)
+
+        relay_meta = cache.get("00:24:77:52:ac:be")
+        assert relay_meta is not None
+        assert relay_meta.network["ip"] == "10.10.1.30"
+        dimmer_meta = cache.get("00:24:77:52:9e:a8")
+        assert dimmer_meta is not None
+        assert dimmer_meta.fetched_at == "2026-01-01T00:00:00Z"
+
+    @pytest.mark.asyncio
     async def test_input_module_fetches_getbuttons(self) -> None:
         installation = self._make_installation([
             {"ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa", "channels": []},
@@ -163,3 +192,50 @@ class TestNormalizeButtonHardwareId:
 
     def test_handles_whitespace(self) -> None:
         assert normalize_button_hardware_id("  2D2F8185190000DF\n") == "2f8185190000df"
+
+
+class TestExtractPushbuttonConfig:
+    def test_extracts_channel_from_index(self) -> None:
+        raw = {
+            "index": 1, "id": "2D2F8185190000DF", "descr": "Badkamer", "gr": "Badkamer",
+            "func1": {"ip": 30, "ch": 12, "outType": 0, "action": 2},
+            "func2": {"ip": 30, "ch": 9, "outType": 0, "action": 2},
+        }
+        btn = extract_pushbutton_config("00:24:77:52:ad:aa", raw)
+        assert btn.channel == 1
+        assert btn.id == "2f8185190000df"
+        assert btn.module_id == "00:24:77:52:ad:aa"
+        assert btn.name == "Badkamer"
+        assert btn.room == "Badkamer"
+
+    def test_missing_index_leaves_channel_none(self) -> None:
+        raw = {"id": "2D2F8185190000DF", "descr": "Badkamer"}
+        btn = extract_pushbutton_config("mac1", raw)
+        assert btn.channel is None
+
+    def test_missing_id_raises(self) -> None:
+        with pytest.raises(ValueError, match="no 'id'"):
+            extract_pushbutton_config("mac1", {"descr": "no id"})
+
+    def test_hold_threshold_from_func2(self) -> None:
+        raw = {"id": "abc", "func2": {"holdSeconds": 2.5}}
+        btn = extract_pushbutton_config("mac1", raw)
+        assert btn.hold_threshold_s == 2.5
+
+
+class TestExtractPushbuttonsFromGetbuttons:
+    def test_extracts_multiple_with_channel(self) -> None:
+        raw = [
+            {"index": 0, "id": "2DE341851900001F", "descr": "Badkamer"},
+            {"index": 1, "id": "2DD68C5219000050", "descr": "Slaapkamer"},
+        ]
+        buttons = extract_pushbuttons_from_getbuttons("mac1", raw)
+        assert len(buttons) == 2
+        assert buttons[0].channel == 0
+        assert buttons[1].channel == 1
+
+    def test_skips_invalid_entries(self, caplog) -> None:
+        raw = [{"descr": "no id, invalid"}, {"index": 5, "id": "2Dabc123", "descr": "valid"}]
+        buttons = extract_pushbuttons_from_getbuttons("mac1", raw)
+        assert len(buttons) == 1
+        assert buttons[0].channel == 5

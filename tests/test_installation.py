@@ -10,9 +10,11 @@ from gateway.device_registry import DeviceType
 from gateway.gateway_api import _resolve_entity_id
 from gateway.installation import (
     ChannelConfig,
+    DetectorConfig,
     InstallationConfig,
     InstallationError,
     ModuleConfig,
+    PushbuttonConfig,
     make_entity_id,
 )
 
@@ -315,3 +317,123 @@ class TestResolveEntityId:
 
     def test_none_installation_rejected(self) -> None:
         assert _resolve_entity_id("10.10.1.30-0", None) is None
+
+
+class TestPushbuttonConfig:
+    def test_to_dict_excludes_module_id(self) -> None:
+        btn = PushbuttonConfig(
+            id="2f8185190000df",
+            module_id="00:24:77:52:ad:aa",
+            channel=1,
+            name="Badkamer knop",
+            room="1e verdieping",
+            active=True,
+            hold_threshold_s=1.5,
+        )
+        d = btn.to_dict()
+        assert "module_id" not in d
+        assert d == {
+            "id": "2f8185190000df",
+            "channel": 1,
+            "name": "Badkamer knop",
+            "room": "1e verdieping",
+            "active": True,
+            "hold_threshold_s": 1.5,
+        }
+
+    def test_to_dict_omits_channel_when_none(self) -> None:
+        btn = PushbuttonConfig(id="abc")
+        d = btn.to_dict()
+        assert "channel" not in d
+
+    def test_from_dict_takes_module_id_as_argument(self) -> None:
+        raw = {
+            "id": "2f8185190000df",
+            "channel": 1,
+            "name": "Badkamer knop",
+            "room": "1e verdieping",
+            "active": True,
+            "hold_threshold_s": 1.5,
+        }
+        btn = PushbuttonConfig.from_dict(raw, module_id="00:24:77:52:ad:aa")
+        assert btn.module_id == "00:24:77:52:ad:aa"
+        assert btn.channel == 1
+        assert btn.name == "Badkamer knop"
+
+    def test_from_dict_defaults_channel_to_none(self) -> None:
+        btn = PushbuttonConfig.from_dict({"id": "abc"}, module_id="mac1")
+        assert btn.channel is None
+
+
+class TestDetectorConfig:
+    def test_to_dict_round_trip(self) -> None:
+        det = DetectorConfig(id="det1", name="Voordeur", room="Inkomhal", active=False)
+        d = det.to_dict()
+        assert d == {"id": "det1", "name": "Voordeur", "room": "Inkomhal", "active": False}
+        reloaded = DetectorConfig.from_dict(d)
+        assert reloaded == det
+
+    def test_from_dict_defaults(self) -> None:
+        det = DetectorConfig.from_dict({"id": "det1"})
+        assert det.name == ""
+        assert det.room == ""
+        assert det.active is True
+
+
+class TestNestedPushbuttons:
+    def test_parse_reads_nested_pushbuttons(self, tmp_path: Path) -> None:
+        data = {
+            "modules": [
+                {
+                    "name": "IP1100PoE", "ip": "10.10.1.50", "type": "input",
+                    "mac": "00:24:77:52:ad:aa",
+                    "pushbuttons": [
+                        {"id": "2f8185190000df", "channel": 1, "name": "Badkamer knop", "room": "1e verdieping"}
+                    ],
+                }
+            ]
+        }
+        p = tmp_path / "nested.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        cfg = InstallationConfig.load(p)
+
+        assert len(cfg.pushbuttons) == 1
+        btn = cfg.pushbutton_by_id("2f8185190000df")
+        assert btn is not None
+        assert btn.channel == 1
+        assert btn.module_id == "00:24:77:52:ad:aa"
+
+    def test_pushbutton_threshold_default_when_unknown(self, tmp_path: Path) -> None:
+        p = tmp_path / "empty.json"
+        p.write_text(json.dumps({"modules": []}), encoding="utf-8")
+        cfg = InstallationConfig.load(p)
+        from gateway.installation import DEFAULT_BUTTON_HOLD_THRESHOLD_S
+        assert cfg.pushbutton_threshold("unknown") == DEFAULT_BUTTON_HOLD_THRESHOLD_S
+
+    def test_old_flat_buttons_format_rejected(self, tmp_path: Path) -> None:
+        data = {
+            "modules": [{"name": "IP1100PoE", "ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa"}],
+            "buttons": [{"id": "2f8185190000df", "module_id": "00:24:77:52:ad:aa"}],
+        }
+        p = tmp_path / "old_format.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        with pytest.raises(InstallationError, match="migrate_buttons_to_nested"):
+            InstallationConfig.load(p)
+
+    def test_duplicate_pushbutton_id_rejected(self, tmp_path: Path) -> None:
+        data = {
+            "modules": [
+                {
+                    "name": "IP1100PoE", "ip": "10.10.1.50", "type": "input",
+                    "mac": "00:24:77:52:ad:aa",
+                    "pushbuttons": [
+                        {"id": "2f8185190000df", "name": "A"},
+                        {"id": "2f8185190000df", "name": "B"},
+                    ],
+                }
+            ]
+        }
+        p = tmp_path / "dup.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        with pytest.raises(InstallationError, match="Duplicate"):
+            InstallationConfig.load(p)

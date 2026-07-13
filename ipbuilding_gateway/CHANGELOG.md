@@ -1,7 +1,4 @@
-# Changelog
-
-All notable changes to the IPBuilding Gateway add-on are documented here.
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+# Changelog All notable changes to the IPBuilding Gateway add-on are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Versiebeleid
 
@@ -22,11 +19,27 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [1.3.1] - 2026-07-13
+
+### Changed
+- **Knoppen in `devices.json` genest per module** (`modules[].pushbuttons[]`) i.p.v. een aparte top-level `buttons`-lijst. Discovery en de Web UI bewaren geconfigureerde knoppen nu betrouwbaar.
+
+### Breaking
+- **Oud plat `buttons[]`-formaat in `devices.json` wordt geweigerd.** Converteer handmatig bewerkte bestanden met `scripts/migrate_buttons_to_nested.py` vóór de update, of laat discovery opnieuw vullen.
+
+### Fixed
+- Discovery en lege seeds laten geen verouderde top-level `buttons`-key meer achter.
+
 ## [1.3.0] - 2026-07-12
 
 ### Changed
+- **Veldbus-poll cadans gelijk aan IPBox:** input-modules elke ~2 s (`I0000`); relay en dimmer elke ~20 s (`P0000` / `I9900`). Nieuwe add-on optie `actuator_poll_interval` (standaard 20).
 - **Relay-status bij opstart** komt nu van de veldbus (per-kanaal statuspoll) in plaats van HTTP op de module. Na een herstart tonen relays meteen de echte aan/uit-stand in Home Assistant.
 - **Dimmers na herstart** tonen `unknown` tot het eerste commando of een veldbus-wijziging — niet meer het oude niveau via HTTP.
+
+### Added
+- **HA Supervisor Ingress Web UI:** built-in page to view and edit device names, rooms, and types.
+- **Per-module refresh:** ververs de metadata van één module (bijv. knoppenlijst op een input-module) zonder de volledige installatie te refreshen.
 
 ### Removed
 - HTTP `statuses`-hydratatie bij opstart (vervangen door UDP relay sweep).
@@ -41,7 +54,6 @@ anders meldt.
 - HTTP `statuses`-hydratatie bij opstart (vervangen door UDP relay sweep).
 
 ## [1.2.4] - 2026-07-03
-
 ### Added
 - **`README.md` in the add-on folder** — English About/Features section in the Supervisor UI (store and add-on info), with a clear note that the **IPBuilding Gateway** companion is required for HA entities, a HACS install link via my.home-assistant.io, and a feature list (UDP/1001, northbound API, discovery, health, optional IPBox shim).
 

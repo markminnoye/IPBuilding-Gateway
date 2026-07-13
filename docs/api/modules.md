@@ -13,10 +13,16 @@ A **module** is a physical IPBuilding field-bus controller (relay, dimmer, or in
 
 Module network info (`dhcp`, `ip`, `subnet`, `gateway`) is fetched at gateway startup via HTTP `getSysSet` on each module. It is **not** persisted to `devices.json` -- it lives only in memory.
 
-To refresh:
+To refresh all modules:
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/modules/refresh
+```
+
+To refresh one module (by MAC):
+
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/00:24:77:52:ac:be/refresh
 ```
 
 ## Input modules and `buttons`
@@ -29,7 +35,8 @@ For `type=input` modules, the cache also includes `buttons[]` fetched via `getBu
 |--------|------|-------------|
 | GET | `/api/v1/modules` | All modules with cached metadata |
 | GET | `/api/v1/modules/{module_id}` | Single module by MAC |
-| POST | `/api/v1/modules/refresh` | Re-fetch getSysSet/getButtons |
+| POST | `/api/v1/modules/refresh` | Re-fetch getSysSet/getButtons (all modules) |
+| POST | `/api/v1/modules/{module_id}/refresh` | Re-fetch one module by MAC |
 
 See [`rest.md`](rest.md) for full response schemas.
 

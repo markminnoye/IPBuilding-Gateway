@@ -79,6 +79,9 @@ GATEWAY_HUB_IP=$(json_str_or "hub_ip" "10.10.1.1")
 export GATEWAY_POLL_INTERVAL
 GATEWAY_POLL_INTERVAL=$(json_str_or "poll_interval" "2.0")
 
+export GATEWAY_ACTUATOR_POLL_INTERVAL
+GATEWAY_ACTUATOR_POLL_INTERVAL=$(json_str_or "actuator_poll_interval" "20.0")
+
 # ── API ──────────────────────────────────────────────────────────────────────
 export GATEWAY_API_PORT
 GATEWAY_API_PORT=$(json_int_or "api_port" "8080")
@@ -153,6 +156,8 @@ export GATEWAY_SIMULATED
 GATEWAY_SIMULATED="${GATEWAY_SIMULATED:-0}"
 
 echo "[run.sh] GATEWAY_HUB_IP=$GATEWAY_HUB_IP"
+echo "[run.sh] GATEWAY_POLL_INTERVAL=$GATEWAY_POLL_INTERVAL"
+echo "[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=$GATEWAY_ACTUATOR_POLL_INTERVAL"
 echo "[run.sh] GATEWAY_API_PORT=$GATEWAY_API_PORT"
 echo "[run.sh] GATEWAY_DEVICES_FILE=$GATEWAY_DEVICES_FILE"
 echo "[run.sh] GATEWAY_REST_SHIM_ENABLED=$GATEWAY_REST_SHIM_ENABLED"

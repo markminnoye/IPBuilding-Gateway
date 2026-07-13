@@ -73,7 +73,11 @@ async def test_remove_listener():
 @pytest.mark.asyncio
 async def test_poll_loop_sends_to_all_modules():
     """Poll loop should send poll payloads to all configured modules."""
-    cfg = GatewayConfig(simulated_mode=True, poll_interval_s=0.05)
+    cfg = GatewayConfig(
+        simulated_mode=True,
+        poll_interval_s=0.05,
+        actuator_poll_interval_s=0.05,
+    )
     bus = UDPBus(cfg)
 
     sent_commands: list[tuple[str, bytes]] = []
@@ -105,7 +109,11 @@ async def test_poll_loop_sends_to_all_modules():
 @pytest.mark.asyncio
 async def test_poll_loop_stops_cleanly():
     """Poll loop task should cancel without error on stop()."""
-    cfg = GatewayConfig(simulated_mode=True, poll_interval_s=0.05)
+    cfg = GatewayConfig(
+        simulated_mode=True,
+        poll_interval_s=0.05,
+        actuator_poll_interval_s=0.05,
+    )
     bus = UDPBus(cfg)
     await bus.start()
 
@@ -120,7 +128,11 @@ async def test_poll_loop_stops_cleanly():
 @pytest.mark.asyncio
 async def test_poll_replies_do_not_accumulate_unbounded_queue():
     """Regression: poll replies must not pile up in an internal queue."""
-    cfg = GatewayConfig(simulated_mode=True, poll_interval_s=0.05)
+    cfg = GatewayConfig(
+        simulated_mode=True,
+        poll_interval_s=0.05,
+        actuator_poll_interval_s=0.05,
+    )
     bus = UDPBus(cfg)
 
     received: list[UDPPacket] = []
@@ -141,7 +153,11 @@ async def test_poll_replies_do_not_accumulate_unbounded_queue():
 @pytest.mark.asyncio
 async def test_correlate_reply_works_during_active_polling():
     """correlate_reply must still work while the poll loop is running."""
-    cfg = GatewayConfig(simulated_mode=True, poll_interval_s=0.05)
+    cfg = GatewayConfig(
+        simulated_mode=True,
+        poll_interval_s=0.05,
+        actuator_poll_interval_s=0.05,
+    )
     bus = UDPBus(cfg)
     bus.register_simulated_reply(b"P0000", b"P000000000")
     bus.register_simulated_reply(b"mJS0000", b"I00000100")
@@ -161,6 +177,39 @@ async def test_correlate_reply_works_during_active_polling():
     assert pkt.data == b"I00000100"
 
     await bus.stop()
+
+
+@pytest.mark.asyncio
+async def test_poll_loop_per_type_cadence():
+    """Input polls faster than relay/dimmer when intervals differ (IPBox parity)."""
+    cfg = GatewayConfig(
+        simulated_mode=True,
+        poll_interval_s=0.05,
+        actuator_poll_interval_s=0.2,
+    )
+    bus = UDPBus(cfg)
+
+    sent_commands: list[tuple[str, bytes]] = []
+    _original_send = bus.send_command
+
+    async def _tracking_send(module_ip: str, payload: bytes, port: int | None = None) -> None:
+        sent_commands.append((module_ip, payload))
+        await _original_send(module_ip, payload, port)
+
+    bus.send_command = _tracking_send  # type: ignore[assignment]
+    await bus.start()
+
+    await asyncio.sleep(0.35)
+    await bus.stop()
+
+    input_polls = [p for _, p in sent_commands if p == b"I0000"]
+    relay_polls = [p for _, p in sent_commands if p == b"P0000"]
+
+    assert len(input_polls) > len(relay_polls), (
+        f"input should poll more often: input={len(input_polls)} relay={len(relay_polls)}"
+    )
+    assert len(relay_polls) >= 1
+    assert len(input_polls) >= 3
 
 
 @pytest.mark.asyncio
