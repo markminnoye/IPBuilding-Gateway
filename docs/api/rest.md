@@ -187,6 +187,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
       "id": "2f8185190000df",
       "module_id": "00:24:77:52:ad:aa",
       "module_ip": "10.10.1.50",
+      "channel": 1,
       "name": "Badkamer knop",
       "room": "1e verdieping",
       "semantic_type": "button",
@@ -204,7 +205,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `id` | string | Device-ID: `{module_ip}-{channel}` (relay/dimmer) or `custom slug`, or the IP1100PoE button **hardware id** (lowercase, 14 hex chars) for input modules |
 | `module_id` | string | Parent module MAC (stable, use for grouping) |
 | `module_ip` | string | Current module IP (mutable, use for display) |
-| `channel` | integer | Channel index on the module (relay/dimmer only; absent for buttons) |
+| `channel` | integer | Channel index on the module (relay/dimmer), or physical wiring position for buttons. For buttons this is **read-only** (from the module's physical wiring), not PATCH-able |
 | `name` | string | Channel name from `devices.json` (or `descr` from `getButtons` for input) |
 | `room` | string | Room from config (or `gr` from `getButtons` for input) |
 | `semantic_type` | string | `light` / `fan` / `switch` / `button` |
@@ -216,8 +217,9 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `level` | integer | Dimmer percentage 0-100 (dimmer only) |
 
 **Input modules (`device_type: "input"`)** carry one entry per physical button
-fetched via HTTP `getButtons` on the IP1100PoE. There is no `channel`/`state`/
-`max_watt` — buttons are event-only. The `id` matches the `id` field of the
+fetched via HTTP `getButtons` on the IP1100PoE. There is no `state`/`max_watt`
+— buttons are event-only. `channel` is present but **read-only** (derived from
+the module's physical wiring, not PATCH-able). The `id` matches the `id` field of the
 `button_event` WebSocket frame so the companion can route presses to the right
 entity. Buttons appear in the snapshot only after `getButtons` has been fetched
 (automatic at startup + after `POST /api/v1/modules/refresh` or a discovery
@@ -260,7 +262,7 @@ and a `"channel inactive"` error.
 | `active` | boolean | `false` = do not poll or expose |
 | `max_watt` | integer | Non-negative wattage cap |
 
-**Allowed fields — button (IP1100PoE, id from `devices.json` `buttons[]`):**
+**Allowed fields — button (IP1100PoE, id from `devices.json` `modules[].pushbuttons[]`):**
 
 | Field | Type | Notes |
 |-------|------|-------|

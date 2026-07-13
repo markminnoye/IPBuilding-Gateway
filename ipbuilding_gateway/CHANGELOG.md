@@ -26,6 +26,7 @@ anders meldt.
 
 ### Changed
 - **Veldbus-poll cadans gelijk aan IPBox:** input-modules elke ~2 s (`I0000`); relay en dimmer elke ~20 s (`P0000` / `I9900`). Nieuwe add-on optie `actuator_poll_interval` (standaard 20).
+- **devices.json**: pushbuttons (and a new, still-empty detectors placeholder) now live nested inside their owning input module (`modules[].pushbuttons[]`), instead of a separate top-level `buttons[]` array. This fixes a bug where a "Discover new modules" run silently wiped all configured pushbuttons. Existing installations must run `python scripts/migrate_buttons_to_nested.py /path/to/devices.json` once before upgrading — the gateway now refuses to load the old flat format with a clear error pointing at the script.
 
 ### Added
 - HA Supervisor **Ingress** web UI (`GET /`) — simple device list/editor served

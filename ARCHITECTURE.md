@@ -349,19 +349,27 @@ De gateway bewaart een persistente config met alle metadata die de veldbus zelf 
       "ip": "10.10.1.50",
       "type": "input",
       "firmware": "5.2.4",
-      "channels": []                // gevuld door Discovery via getButtons
-    }
-  ],
-  "buttons": [
-    {
-      "id": "2DE341851900001F",      // hardware-ID van IP1100PoE
-      "name": "Badkamer knop",
-      "room": "1e verdieping",
-      "active": true
+      "channels": [],                // gevuld door Discovery via getButtons
+      "pushbuttons": [
+        {
+          "id": "2f8185190000df",    // hardware-ID van IP1100PoE
+          "channel": 0,              // fysieke poort-index op de module; read-only
+          "name": "Badkamer knop",
+          "room": "1e verdieping",
+          "active": true
+        }
+      ],
+      "detectors": []                // schema-placeholder, nog geen runtime-gedrag
     }
   ]
 }
 ```
+
+Pushbuttons en detectors nesten per input-module op dezelfde manier als
+`channels` nesten per relay/dimmer-module (niet langer een apart top-level
+`buttons[]`-array); zie
+[docs/superpowers/specs/2026-07-13-pushbuttons-detectors-nested-schema-design.md](docs/superpowers/specs/2026-07-13-pushbuttons-detectors-nested-schema-design.md)
+voor het volledige ontwerp.
 
 **Vermogen:**
 - `max_watt` = geconfigureerde waarde (theoretisch maximum)
