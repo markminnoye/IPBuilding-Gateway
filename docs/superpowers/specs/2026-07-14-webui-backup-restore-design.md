@@ -57,25 +57,40 @@ gap and gives a safe recovery path when an installation gets into a bad state.
 
 ### New REST endpoints (`gateway/gateway_api.py`)
 
-Registered alongside the existing `/api/v1/devices*` routes in `start()`.
+Registered alongside the existing `/api/v1/devices*` routes in `start()`, and
+**before** `add_get("/api/v1/devices/{device_id}", ...)`. aiohttp's router
+resolves resources in registration order; `{device_id}` is a dynamic segment
+that matches the literal string `"export"` (or `"import"`, `"reset"`) just as
+readily as a real device id. If the dynamic route were registered first, `GET
+/api/v1/devices/export` would be swallowed by `_get_device` (device_id="export",
+404) instead of reaching the export handler. The three new static routes must
+therefore be added ahead of the existing dynamic `/api/v1/devices/{device_id}`
+GET/PATCH routes.
 
 #### `GET /api/v1/devices/export`
 
 - Reads the raw bytes of `cfg.devices_file` from disk.
 - Returns them with:
-  - `Content-Type: application/json`
+  - `Content-Type: application/octet-stream` (see note below — **not**
+    `application/json`)
   - `Content-Disposition: attachment; filename="devices.json"`
 - Serves the exact on-disk content — **not** re-serialized from
   `installation_to_raw_dict()` — so the download equals what is persisted.
 - If the file does not exist: `ApiError(404, "devices_file_missing")`.
 
-Note: this response is intentionally raw bytes with an attachment header. The
-`_api_error_middleware` only stamps `schema_version` on `application/json`
-responses that parse as a JSON **object**; the export body does parse as JSON, so
-to avoid an injected `schema_version` key mutating the downloaded file, the export
-handler builds a `web.Response(body=..., content_type="application/json")` and the
-middleware's stamping is skipped for it. Implementation detail to verify in tests:
-the downloaded bytes are byte-identical to the file on disk.
+Note on content type: `_api_error_middleware` inspects every successful
+`web.Response` whose `content_type == "application/json"`; if the body parses as
+a JSON dict, the middleware **rebuilds the response via `web.json_response(...)`**
+to stamp `schema_version`. A fresh `web.json_response` call discards any headers
+set on the original response — it would silently drop `Content-Disposition` and
+break the browser download. Since `devices.json`'s content (`{"modules": [...]}`)
+always parses as a JSON dict, this is not a hypothetical: it fires on every
+export. The export handler therefore uses `content_type="application/octet-stream"`
+so the middleware's `content_type == "application/json"` guard is `False` and the
+response passes through untouched, headers intact. The browser still downloads
+correctly — `Content-Disposition: attachment` forces save-as regardless of MIME
+type. Verify in tests: the response has the `Content-Disposition` header AND the
+body is byte-identical to the file on disk.
 
 #### `POST /api/v1/devices/import`
 
