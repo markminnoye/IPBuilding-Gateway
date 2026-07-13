@@ -44,6 +44,29 @@ INDEX_HTML = """<!doctype html>
   button:disabled { cursor: not-allowed; opacity: 0.5; }
   .btn-icon { display: inline-flex; align-items: center; gap: 0.35rem; }
   .btn-icon-svg { flex: none; width: 15px; height: 15px; fill: currentColor; }
+  .btn-scan {
+    background: transparent;
+    border-color: #b26a00;
+    color: #b26a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    .btn-scan { border-color: #d9922e; color: #d9922e; }
+  }
+  .danger-zone {
+    margin-top: 1.5rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid #b26a00;
+    border-radius: 6px;
+  }
+  .danger-zone h2 { font-size: 1rem; margin: 0 0 0.35rem; color: #b26a00; }
+  .danger-note { font-size: 0.8rem; color: #888; margin: 0 0 0.85rem; }
+  .danger-action { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+  .danger-action:last-child { margin-bottom: 0; }
+  .danger-desc { font-size: 0.78rem; color: #888; margin: 0; flex-basis: 100%; }
+  @media (prefers-color-scheme: dark) {
+    .danger-zone { border-color: #d9922e; }
+    .danger-zone h2 { color: #d9922e; }
+  }
   table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
   th, td { border: 1px solid var(--border); padding: 0.3rem 0.5rem; text-align: left; }
   th { background: var(--bg-alt); position: sticky; top: 0; }
@@ -143,10 +166,25 @@ INDEX_HTML = """<!doctype html>
 <body>
 <h1>IPBuilding Gateway — devices</h1>
 <div class="toolbar">
-  <button id="reload" class="btn-icon">Reload</button>
+  <button id="reload" class="btn-icon" title="Reload the device list from the gateway. Read-only — makes no changes.">Reload</button>
   <span id="toolbarStatus" class="status"></span>
 </div>
 <div id="content">Loading…</div>
+
+<section class="danger-zone">
+  <h2>Field-bus scanning</h2>
+  <p class="danger-note">These actions talk to the physical field bus and can change devices.json. They are separate from the device list above — use with care.</p>
+  <div class="danger-action">
+    <button id="refreshModules" class="btn-scan">Refresh known modules</button>
+    <span id="refreshStatus" class="status"></span>
+    <p class="danger-desc">Re-reads getSysSet/getButtons from modules already known to this gateway. Fast, no field-bus scan.</p>
+  </div>
+  <div class="danger-action">
+    <button id="discoverModules" class="btn-scan">Discover new modules</button>
+    <span id="discoverStatus" class="status"></span>
+    <p class="danger-desc">Runs a full ARP sweep + HTTP identify across the field-bus subnet to find physically new modules. Can take a while, and writes newly found modules to devices.json (inactive by default).</p>
+  </div>
+</section>
 
 <script>
 (function () {
@@ -171,7 +209,17 @@ INDEX_HTML = """<!doctype html>
     plug: "M16,7V3H14V7H10V3H8V7H8C7,7 6,8 6,9V14.5L9.5,18V21H14.5V18L18,14.5V9C18,8 17,7 16,7Z",
     button: "M13 5C15.21 5 17 6.79 17 9C17 10.5 16.2 11.77 15 12.46V11.24C15.61 10.69 16 9.89 16 9C16 7.34 14.66 6 13 6S10 7.34 10 9C10 9.89 10.39 10.69 11 11.24V12.46C9.8 11.77 9 10.5 9 9C9 6.79 10.79 5 13 5M20 20.5C19.97 21.32 19.32 21.97 18.5 22H13C12.62 22 12.26 21.85 12 21.57L8 17.37L8.74 16.6C8.93 16.39 9.2 16.28 9.5 16.28H9.7L12 18V9C12 8.45 12.45 8 13 8S14 8.45 14 9V13.47L15.21 13.6L19.15 15.79C19.68 16.03 20 16.56 20 17.14V20.5M20 2H4C2.9 2 2 2.9 2 4V12C2 13.11 2.9 14 4 14H8V12L4 12L4 4H20L20 12H18V14H20V13.96L20.04 14C21.13 14 22 13.09 22 12V4C22 2.9 21.11 2 20 2Z",
     reload: "M2 12C2 16.97 6.03 21 11 21C13.39 21 15.68 20.06 17.4 18.4L15.9 16.9C14.63 18.25 12.86 19 11 19C4.76 19 1.64 11.46 6.05 7.05C10.46 2.64 18 5.77 18 12H15L19 16H19.1L23 12H20C20 7.03 15.97 3 11 3C6.03 3 2 7.03 2 12Z",
+    // Dimmer-on-light special case (see below).
+    brightness6: "M12,18V6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,15.31L23.31,12L20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31Z",
   };
+
+  // Mirrors the HA companion's entity_icon() (entity.py): a dimmer channel
+  // typed "light" gets the brightness icon instead of the plain lightbulb,
+  // since it's brightness-capable rather than a plain relay-driven light.
+  function iconPathFor(semanticType, deviceType) {
+    if (semanticType === "light" && deviceType === "dimmer") return ICONS.brightness6;
+    return ICONS[semanticType];
+  }
 
   function svgIcon(pathData, className) {
     var svgNS = "http://www.w3.org/2000/svg";
@@ -184,8 +232,8 @@ INDEX_HTML = """<!doctype html>
     return svg;
   }
 
-  function buildTypeIcon(type) {
-    return svgIcon(ICONS[type], "type-icon");
+  function buildTypeIcon(type, deviceType) {
+    return svgIcon(iconPathFor(type, deviceType), "type-icon");
   }
 
   function el(tag, attrs, children) {
@@ -239,9 +287,9 @@ INDEX_HTML = """<!doctype html>
       select.appendChild(opt);
     });
     state.semantic_type = select;
-    var typeIcon = buildTypeIcon(device.semantic_type);
+    var typeIcon = buildTypeIcon(device.semantic_type, device.device_type);
     select.addEventListener("change", function () {
-      typeIcon.querySelector("path").setAttribute("d", ICONS[select.value] || "");
+      typeIcon.querySelector("path").setAttribute("d", iconPathFor(select.value, device.device_type) || "");
     });
     return el("td", {}, [el("div", { class: "type-cell" }, [typeIcon, select])]);
   }
@@ -298,6 +346,15 @@ INDEX_HTML = """<!doctype html>
     if (status === 503) return "Busy, try again";
     if (body && body.message) return body.message;
     return "Save failed (" + status + ")";
+  }
+
+  // Backend message for scan-action errors (503 orchestrator_unavailable,
+  // 500 no_installation, ...) means something different per action, so
+  // (unlike errorMessage() above) this just surfaces the server's own
+  // message rather than guessing a fixed phrase per status code.
+  function describeActionError(status, body) {
+    if (body && body.message) return body.message;
+    return "Failed (" + status + ")";
   }
 
   function saveRow(device, state, statusSpan, onSaved) {
@@ -519,6 +576,57 @@ INDEX_HTML = """<!doctype html>
         setStatus(toolbarStatus, "Could not load devices", "err");
       });
   }
+
+  function wireScanButton(buttonId, statusId, opts) {
+    var button = document.getElementById(buttonId);
+    var status = document.getElementById(statusId);
+    button.addEventListener("click", function () {
+      button.disabled = true;
+      setStatus(status, opts.runningText, "");
+      fetch(opts.url, { method: "POST" })
+        .then(function (resp) {
+          return resp.json().then(function (body) {
+            return { status: resp.status, body: body };
+          });
+        })
+        .then(function (result) {
+          if (result.status === 200) {
+            setStatus(status, opts.summarize(result.body), "ok");
+            load();
+          } else {
+            setStatus(status, describeActionError(result.status, result.body), "err");
+          }
+        })
+        .catch(function () {
+          setStatus(status, "Network error", "err");
+        })
+        .then(function () {
+          button.disabled = false;
+        });
+    });
+  }
+
+  wireScanButton("refreshModules", "refreshStatus", {
+    url: MODULES_URL + "/refresh",
+    runningText: "Refreshing…",
+    summarize: function () {
+      return "Refreshed";
+    },
+  });
+
+  wireScanButton("discoverModules", "discoverStatus", {
+    url: "api/v1/discover",
+    runningText: "Scanning…",
+    summarize: function (body) {
+      var added = (body.added || []).length;
+      var firmwareChanged = (body.firmware_changed || []).length;
+      if (!added && !firmwareChanged) return "No changes";
+      var parts = [];
+      if (added) parts.push(added + " new module" + (added === 1 ? "" : "s"));
+      if (firmwareChanged) parts.push(firmwareChanged + " firmware updated");
+      return parts.join(", ");
+    },
+  });
 
   document.getElementById("reload").prepend(svgIcon(ICONS.reload, "btn-icon-svg"));
   document.getElementById("reload").addEventListener("click", load);
