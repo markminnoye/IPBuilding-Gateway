@@ -214,6 +214,8 @@ class ModuleConfig:
     model: str = ""    # factory product label, e.g. "IP200PoE"; optional
     mac: str = ""      # factory MAC (OUI 00:24:77); normalised lowercase
     channels: list[ChannelConfig] = field(default_factory=list)
+    pushbuttons: list[PushbuttonConfig] = field(default_factory=list)
+    detectors: list[DetectorConfig] = field(default_factory=list)
     # Runtime-only fields — NOT serialized to devices.json
     last_seen: str | None = None       # ISO timestamp of last ARP/HTTP contact
     last_seen_source: str = ""         # "arp" | "http" | "udp"
@@ -229,29 +231,46 @@ class ModuleConfig:
         return self.ip.rsplit(".", 1)[-1]
 
     def to_dict(self) -> dict:
-        """Serialize to dict for devices.json, excluding runtime-only fields."""
-        return {
+        """Serialize to dict for devices.json, excluding runtime-only fields.
+
+        Type-conditional: an input module's entry shows pushbuttons/detectors
+        (never channels); a relay/dimmer module's entry shows channels
+        (never pushbuttons/detectors). A module entry only ever carries the
+        fields relevant to its own type.
+        """
+        d: dict = {
             "name": self.name,
             "ip": self.ip,
             "type": self.type.value,
             "firmware": self.firmware,
             "model": self.model,
             "mac": self.mac,
-            "channels": [c.to_dict() for c in self.channels],
         }
+        if self.type == DeviceType.INPUT:
+            d["pushbuttons"] = [b.to_dict() for b in self.pushbuttons]
+            d["detectors"] = [x.to_dict() for x in self.detectors]
+        else:
+            d["channels"] = [c.to_dict() for c in self.channels]
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> "ModuleConfig":
         """Reconstruct from a devices.json dict entry, skipping runtime fields."""
-        return cls(
+        mac = data.get("mac", "")
+        mc = cls(
             name=data.get("name", data.get("ip", "")),
             ip=data["ip"],
             type=DeviceType(data["type"]),
             firmware=data.get("firmware", ""),
             model=data.get("model", ""),
-            mac=data.get("mac", ""),
+            mac=mac,
             channels=[ChannelConfig.from_dict(c) for c in data.get("channels", [])],
         )
+        mc.pushbuttons = [
+            PushbuttonConfig.from_dict(b, module_id=mac) for b in data.get("pushbuttons", [])
+        ]
+        mc.detectors = [DetectorConfig.from_dict(x) for x in data.get("detectors", [])]
+        return mc
 
 
 @dataclass

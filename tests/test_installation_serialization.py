@@ -14,7 +14,7 @@ from unittest.mock import patch
 import pytest
 
 from gateway.device_registry import DeviceType
-from gateway.installation import ChannelConfig, ModuleConfig
+from gateway.installation import ChannelConfig, DetectorConfig, ModuleConfig, PushbuttonConfig
 
 
 def test_module_to_dict_excludes_runtime_fields() -> None:
@@ -188,3 +188,61 @@ async def test_forced_discovery_writes_clean_devices_json(tmp_path: Path) -> Non
 
     # And no orphan lock file leaked into the working directory.
     assert not (tmp_path / "devices.json.lock").exists()
+
+
+def test_relay_module_to_dict_has_channels_not_pushbuttons() -> None:
+    mc = ModuleConfig(
+        name="IP0200PoE", ip="10.10.1.30", type=DeviceType.RELAY,
+        mac="00:24:77:52:ac:be",
+        channels=[ChannelConfig(ch=0, name="Keuken LED", room="", semantic_type="light", active=True, max_watt=0)],
+    )
+    d = mc.to_dict()
+    assert "channels" in d
+    assert len(d["channels"]) == 1
+    assert "pushbuttons" not in d
+    assert "detectors" not in d
+
+
+def test_input_module_to_dict_has_pushbuttons_and_detectors_not_channels() -> None:
+    mc = ModuleConfig(
+        name="IP1100PoE", ip="10.10.1.50", type=DeviceType.INPUT,
+        mac="00:24:77:52:ad:aa",
+        pushbuttons=[PushbuttonConfig(id="2f8185190000df", channel=1, name="Badkamer knop")],
+        detectors=[DetectorConfig(id="det1", name="Voordeur")],
+    )
+    d = mc.to_dict()
+    assert "channels" not in d
+    assert len(d["pushbuttons"]) == 1
+    assert d["pushbuttons"][0]["id"] == "2f8185190000df"
+    assert len(d["detectors"]) == 1
+    assert d["detectors"][0]["id"] == "det1"
+
+
+def test_input_module_to_dict_empty_pushbuttons_and_detectors() -> None:
+    mc = ModuleConfig(name="IP1100PoE", ip="10.10.1.50", type=DeviceType.INPUT, mac="00:24:77:52:ad:aa")
+    d = mc.to_dict()
+    assert d["pushbuttons"] == []
+    assert d["detectors"] == []
+    assert "channels" not in d
+
+
+def test_module_from_dict_parses_nested_pushbuttons_with_module_id() -> None:
+    raw = {
+        "name": "IP1100PoE", "ip": "10.10.1.50", "type": "input",
+        "mac": "00:24:77:52:ad:aa",
+        "pushbuttons": [{"id": "2f8185190000df", "channel": 1, "name": "Badkamer knop"}],
+        "detectors": [{"id": "det1", "name": "Voordeur"}],
+    }
+    mc = ModuleConfig.from_dict(raw)
+    assert len(mc.pushbuttons) == 1
+    assert mc.pushbuttons[0].module_id == "00:24:77:52:ad:aa"
+    assert mc.pushbuttons[0].channel == 1
+    assert len(mc.detectors) == 1
+    assert mc.detectors[0].id == "det1"
+
+
+def test_module_from_dict_defaults_pushbuttons_and_detectors_to_empty() -> None:
+    raw = {"name": "IP0200PoE", "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": []}
+    mc = ModuleConfig.from_dict(raw)
+    assert mc.pushbuttons == []
+    assert mc.detectors == []
