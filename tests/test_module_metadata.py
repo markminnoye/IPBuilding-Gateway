@@ -239,3 +239,15 @@ class TestExtractPushbuttonsFromGetbuttons:
         buttons = extract_pushbuttons_from_getbuttons("mac1", raw)
         assert len(buttons) == 1
         assert buttons[0].channel == 5
+
+
+class TestModuleMetadataCacheClear:
+    def test_clear_empties_cache(self) -> None:
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:ac:be"] = ModuleMetadata(
+            network={}, button="", allow="", buttons=None, fetched_at=None
+        )
+        assert cache.all_macs() == ["00:24:77:52:ac:be"]
+        cache.clear()
+        assert cache.all_macs() == []
+        assert cache.get("00:24:77:52:ac:be") is None
