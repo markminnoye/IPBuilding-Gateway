@@ -202,6 +202,9 @@ class GatewayAPI:
         self._app.router.add_post(
             "/api/v1/devices/import", self._post_devices_import
         )
+        self._app.router.add_post(
+            "/api/v1/devices/reset", self._post_devices_reset
+        )
         self._app.router.add_get(
             "/api/v1/devices/{device_id}",
             self._get_device,
@@ -481,6 +484,22 @@ class GatewayAPI:
             "pushbuttons": len(installation.pushbuttons),
             "schema_version": 2,
         })
+
+    async def _post_devices_reset(self, request: web.Request) -> web.Response:
+        """POST /api/v1/devices/reset — empty devices.json to {"modules": []}.
+
+        Same write/reload/broadcast path as import; the "document" is fixed
+        rather than client-supplied.
+        """
+        ok = await asyncio.to_thread(self._writer.write, {"modules": []})
+        if not ok:
+            raise ApiError(503, "write_locked", "devices.json is locked; retry later")
+
+        self._cfg.installation = InstallationConfig.load(self._cfg.devices_file)
+        self._meta_cache.clear()
+        asyncio.create_task(self._broadcast(self._build_snapshot()))
+
+        return web.json_response({"ok": True, "schema_version": 2})
 
     async def _get_device(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices/{device_id} — return single device."""

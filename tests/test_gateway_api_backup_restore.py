@@ -49,6 +49,7 @@ def _app_with_routes(api: gateway_api.GatewayAPI) -> web.Application:
     app = web.Application(middlewares=[api._api_error_middleware])
     app.router.add_get("/api/v1/devices/export", api._get_devices_export)
     app.router.add_post("/api/v1/devices/import", api._post_devices_import)
+    app.router.add_post("/api/v1/devices/reset", api._post_devices_reset)
     app.router.add_get("/api/v1/devices/{device_id}", api._get_device)
     return app
 
@@ -283,6 +284,48 @@ class TestImport:
                 data=json.dumps({"modules": []}),
                 headers={"Content-Type": "application/json"},
             )
+            assert resp.status == 200
+
+        assert cache.all_macs() == []
+
+
+class TestReset:
+    @pytest.mark.asyncio
+    async def test_reset_empties_devices_file(
+        self, tmp_path: Path, sample_installation: InstallationConfig
+    ) -> None:
+        devices_file = tmp_path / "devices.json"
+        _write_devices_file(devices_file, sample_installation)
+        api = _make_api(sample_installation, devices_file)
+        app = _app_with_routes(api)
+
+        async with TestClient(TestServer(app)) as client:
+            resp = await client.post("/api/v1/devices/reset")
+            assert resp.status == 200
+            body = await resp.json()
+            assert body["ok"] is True
+
+        on_disk = json.loads(devices_file.read_text(encoding="utf-8"))
+        assert on_disk == {"modules": []}
+        assert api._cfg.installation.modules == []
+
+    @pytest.mark.asyncio
+    async def test_reset_clears_metadata_cache(
+        self, tmp_path: Path, sample_installation: InstallationConfig
+    ) -> None:
+        from gateway.module_metadata import ModuleMetadata, ModuleMetadataCache
+
+        devices_file = tmp_path / "devices.json"
+        _write_devices_file(devices_file, sample_installation)
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:ac:be"] = ModuleMetadata(
+            network={}, button="", allow="", buttons=None, fetched_at=None
+        )
+        api = _make_api(sample_installation, devices_file, metadata_cache=cache)
+        app = _app_with_routes(api)
+
+        async with TestClient(TestServer(app)) as client:
+            resp = await client.post("/api/v1/devices/reset")
             assert resp.status == 200
 
         assert cache.all_macs() == []
