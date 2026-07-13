@@ -19,6 +19,11 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [Unreleased]
+
+### Added
+- **Backup & restore in de Web UI.** Download het huidige `devices.json`, upload een handmatig bewerkt bestand (gevalideerd vóór het wordt weggeschreven — een ongeldig bestand wijzigt niets), of reset naar een lege installatie. Nieuwe endpoints: `GET /api/v1/devices/export`, `POST /api/v1/devices/import`, `POST /api/v1/devices/reset`.
+
 ## [1.3.1] - 2026-07-13
 
 ### Changed
