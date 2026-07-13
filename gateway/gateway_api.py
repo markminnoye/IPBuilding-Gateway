@@ -192,6 +192,12 @@ class GatewayAPI:
         self._app.router.add_get("/health", self._get_health)
         self._app.router.add_get("/api/v1/status", self._get_status)
         self._app.router.add_get("/api/v1/devices", self._get_devices)
+        # Static devices/* sub-routes MUST be registered before the dynamic
+        # {device_id} route below — aiohttp resolves routes in registration
+        # order, and {device_id} matches literal segments like "export" too.
+        self._app.router.add_get(
+            "/api/v1/devices/export", self._get_devices_export
+        )
         self._app.router.add_get(
             "/api/v1/devices/{device_id}",
             self._get_device,
@@ -414,6 +420,28 @@ class GatewayAPI:
         """GET /api/v1/devices — return full device list as JSON."""
         device_list = self._build_device_list()
         return web.json_response({"devices": device_list, "schema_version": 2})
+
+    async def _get_devices_export(self, request: web.Request) -> web.Response:
+        """GET /api/v1/devices/export — download devices.json as-is from disk.
+
+        Returns the exact on-disk bytes (not re-serialized) so the download is
+        byte-identical to what the running gateway loaded. Uses
+        application/octet-stream (not application/json) so
+        _api_error_middleware's schema_version stamping — which rebuilds the
+        response via web.json_response() and would silently drop the
+        Content-Disposition header — never triggers for this route.
+        """
+        try:
+            with open(self._cfg.devices_file, "rb") as fh:
+                data = fh.read()
+        except FileNotFoundError:
+            raise ApiError(404, "devices_file_missing")
+
+        return web.Response(
+            body=data,
+            content_type="application/octet-stream",
+            headers={"Content-Disposition": 'attachment; filename="devices.json"'},
+        )
 
     async def _get_device(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices/{device_id} — return single device."""
