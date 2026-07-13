@@ -243,18 +243,19 @@ async def _fetch_buttons(
 # ---------------------------------------------------------------------------
 
 
-def extract_button_config(
+def extract_pushbutton_config(
     module_id: str,
     button_json: dict[str, Any],
     default_threshold_s: float | None = None,
 ):
     """Convert a raw getButtons entry into a :class:`PushbuttonConfig`.
 
-    The hold threshold is seeded from ``func2.holdSeconds`` when present —
-    this is the same drempelwaarde the IPBox hanteert for its long_press
-    detection (operator-bevestigd 2026-06-16, IPBUILDING_KNOWLEDGE.md §12.7).
+    ``channel`` is read from the wire ``"index"`` field. The hold threshold
+    is seeded from ``func2.holdSeconds`` when present — this is the same
+    drempelwaarde the IPBox hanteert for its long_press detection
+    (operator-bevestigd 2026-06-16, IPBUILDING_KNOWLEDGE.md §12.7).
     """
-    from gateway.installation import PushbuttonConfig, DEFAULT_BUTTON_HOLD_THRESHOLD_S
+    from gateway.installation import DEFAULT_BUTTON_HOLD_THRESHOLD_S, PushbuttonConfig
 
     raw_id = button_json.get("id")
     if not raw_id:
@@ -277,6 +278,7 @@ def extract_button_config(
     return PushbuttonConfig(
         id=btn_id,
         module_id=module_id,
+        channel=button_json.get("index"),
         name=button_json.get("descr", "") or button_json.get("name", ""),
         room=button_json.get("gr", "") or button_json.get("room", ""),
         active=True,
@@ -284,10 +286,10 @@ def extract_button_config(
     )
 
 
-def extract_buttons_from_getbuttons(
+def extract_pushbuttons_from_getbuttons(
     module_id: str, buttons_json: list[dict[str, Any]]
 ) -> list:
-    """Apply :func:`extract_button_config` to a full getButtons list.
+    """Apply :func:`extract_pushbutton_config` to a full getButtons list.
 
     Skips entries that fail to parse (logged at WARNING); the caller still
     gets a partial list back. Used by the runtime auto-discovery to seed
@@ -298,7 +300,7 @@ def extract_buttons_from_getbuttons(
     out: list[PushbuttonConfig] = []
     for entry in buttons_json or []:
         try:
-            out.append(extract_button_config(module_id, entry))
+            out.append(extract_pushbutton_config(module_id, entry))
         except ValueError as exc:
             log.warning("Skipping getButtons entry: %s", exc)
     return out
