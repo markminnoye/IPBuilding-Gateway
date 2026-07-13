@@ -22,7 +22,6 @@ anders meldt.
 ## [Unreleased]
 
 ### Changed
-- **Veldbus-poll cadans gelijk aan IPBox:** input-modules elke ~2 s (`I0000`); relay en dimmer elke ~20 s (`P0000` / `I9900`). Nieuwe add-on optie `actuator_poll_interval` (standaard 20).
 
 ### Added
 - HA Supervisor **Ingress** web UI (`GET /`) — simple device list/editor served
@@ -32,6 +31,7 @@ anders meldt.
 ## [1.3.0] - 2026-07-12
 
 ### Changed
+- **Veldbus-poll cadans gelijk aan IPBox:** input-modules elke ~2 s (`I0000`); relay en dimmer elke ~20 s (`P0000` / `I9900`). Nieuwe add-on optie `actuator_poll_interval` (standaard 20).
 - **Relay-status bij opstart** komt nu van de veldbus (per-kanaal statuspoll) in plaats van HTTP op de module. Na een herstart tonen relays meteen de echte aan/uit-stand in Home Assistant.
 - **Dimmers na herstart** tonen `unknown` tot het eerste commando of een veldbus-wijziging — niet meer het oude niveau via HTTP.
 
