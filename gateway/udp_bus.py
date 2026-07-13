@@ -56,6 +56,7 @@ class UDPBus:
         self._listeners: list[ReplyCallback] = []
         self._recent_packets: deque[UDPPacket] = deque(maxlen=_RECENT_PACKETS_MAX)
         self._poll_task: asyncio.Task[None] | None = None
+        self._next_poll_ts: dict[str, float] = {}
         self.last_send_ts: float = 0.0  # monotonic ts of last send_command
 
     def add_listener(self, cb: ReplyCallback) -> None:
@@ -119,8 +120,9 @@ class UDPBus:
         else:
             modules_list = [f"{k}:{v}" for k, v in self.config.field_modules.items()]
         log.info(
-            "UDPBus started  poll_interval=%.1fs  modules=%s  simulated=%s",
+            "UDPBus started  input_poll=%.1fs  actuator_poll=%.1fs  modules=%s  simulated=%s",
             self.config.poll_interval_s,
+            self.config.actuator_poll_interval_s,
             modules_list,
             self.config.simulated_mode,
         )
@@ -136,28 +138,50 @@ class UDPBus:
             self._transport = None
         log.info("UDPBus stopped")
 
+    def _interval_for_type(self, module_type: str) -> float:
+        if module_type == "input":
+            return self.config.poll_interval_s
+        return self.config.actuator_poll_interval_s
+
+    def _poll_tick_s(self) -> float:
+        return min(self.config.poll_interval_s, self.config.actuator_poll_interval_s)
+
     async def _poll_loop(self) -> None:
-        """Background task: poll all modules at fixed interval."""
+        """Background task: poll modules on per-type schedules (IPBox cadence)."""
         try:
             while True:
-                await self._poll_all_modules()
-                await asyncio.sleep(self.config.poll_interval_s)
+                await self._poll_due_modules(time.monotonic())
+                await asyncio.sleep(self._poll_tick_s())
         except asyncio.CancelledError:
             log.info("Poll loop cancelled")
             raise
 
-    async def _poll_all_modules(self) -> None:
+    async def _poll_due_modules(self, now: float) -> None:
+        due_types: set[str] = set()
+        for module_type in _MODULE_POLL:
+            if now >= self._next_poll_ts.get(module_type, 0.0):
+                due_types.add(module_type)
+                self._next_poll_ts[module_type] = now + self._interval_for_type(module_type)
+
+        if not due_types:
+            return
+
         if self.config.installation:
             for mc in self.config.installation.modules:
-                poll_payload = _MODULE_POLL.get(mc.type.value)
+                module_type = mc.type.value
+                if module_type not in due_types:
+                    continue
+                poll_payload = _MODULE_POLL.get(module_type)
                 if not poll_payload:
                     continue
                 try:
                     await self.send_command(mc.ip, poll_payload)
                 except Exception:
-                    log.warning("Poll failed for %s (%s)", mc.type.value, mc.ip, exc_info=True)
+                    log.warning("Poll failed for %s (%s)", module_type, mc.ip, exc_info=True)
         else:
             for module_type, module_ip in self.config.field_modules.items():
+                if module_type not in due_types:
+                    continue
                 poll_payload = _MODULE_POLL.get(module_type)
                 if not poll_payload:
                     continue

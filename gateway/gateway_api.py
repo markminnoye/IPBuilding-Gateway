@@ -53,6 +53,7 @@ from gateway.payloads import (
 )
 from gateway.models import RelayAction, RelayCommand, DimmerCommand
 from gateway.udp_bus import UDPBus
+from gateway.webui import INDEX_HTML
 
 log = logging.getLogger(__name__)
 
@@ -186,6 +187,7 @@ class GatewayAPI:
     async def start(self) -> None:
         """Start the aiohttp API server and register registry callbacks."""
         self._app = web.Application(middlewares=[self._api_error_middleware])
+        self._app.router.add_get("/", self._get_webui)
         self._app.router.add_get("/ws", self._ws_handler)
         self._app.router.add_get("/health", self._get_health)
         self._app.router.add_get("/api/v1/status", self._get_status)
@@ -388,6 +390,10 @@ class GatewayAPI:
     # -------------------------------------------------------------------------
     # REST handlers
     # -------------------------------------------------------------------------
+
+    async def _get_webui(self, request: web.Request) -> web.Response:
+        """GET / — serve the self-contained ingress web UI (device list/editor)."""
+        return web.Response(text=INDEX_HTML, content_type="text/html")
 
     async def _get_health(self, request: web.Request) -> web.Response:
         """GET /health — liveness probe for HA Supervisor watchdog."""

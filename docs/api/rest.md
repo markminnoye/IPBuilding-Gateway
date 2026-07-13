@@ -7,6 +7,8 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
 
 **Module-ID:** the normalised MAC address of a physical controller (`00:24:77:52:ac:be`). Stable across DHCP IP changes.
 
+**Ingress / Web UI:** `GET /` serves a self-contained HTML page (device list + inline edit via the existing `PATCH /api/v1/devices/{id}` endpoint) when the add-on is opened through HA Supervisor's "Open Web UI" / Ingress panel. Not a documented API contract -- internal to the add-on UI.
+
 ---
 
 ## GET /health
@@ -55,7 +57,8 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   ],
   "fieldbus": {
     "polling_enabled": true,
-    "poll_interval_s": 2.0
+    "poll_interval_s": 2.0,
+    "actuator_poll_interval_s": 20.0
   },
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
@@ -404,7 +407,7 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`) returns **400** `
 
 ## POST /api/v1/debug/fieldbus-polling
 
-**Description:** Runtime debug toggle for the UDP/1001 keep-alive poll loop. Surfaces in the companion as the `Veldbus polling (debug)` switch on the gateway device. **Not persistent** — the gateway restarts with `poll_interval` config defaults on the next start.
+**Description:** Runtime debug toggle for the UDP/1001 keep-alive poll loop. Surfaces in the companion as the `Veldbus polling (debug)` switch on the gateway device. **Not persistent** — the gateway restarts with `poll_interval` / `actuator_poll_interval` config defaults on the next start.
 
 **Request headers:** `Content-Type: application/json`
 
@@ -419,7 +422,7 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`) returns **400** `
 
 **Behaviour while polling is disabled:**
 
-- The background `_poll_loop` keeps running on the `poll_interval_s` cadence but skips the per-round `_poll_all_modules()` step. The loop stays alive so flipping the flag back on resumes polling almost immediately, without a bus restart.
+- The background `_poll_loop` keeps running on the faster of `poll_interval_s` and `actuator_poll_interval_s` but skips the per-round due-module poll step. The loop stays alive so flipping the flag back on resumes polling almost immediately, without a bus restart.
 - On-demand `send_command` calls (light on/off, dimmer set level, relay toggle) keep working — only the periodic keep-alive polls stop.
 - Input modules cache the last hub IP and may direct `B-…E` events to the IPBox instead of this gateway while polling is off.
 - A `fieldbus.polling_disabled` warning is reported in `/api/v1/status` (`level: warning`, `subsystems.fieldbus: degraded`).
@@ -428,7 +431,8 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`) returns **400** `
 ```json
 {
   "polling_enabled": false,
-  "poll_interval_s": 2.0
+  "poll_interval_s": 2.0,
+  "actuator_poll_interval_s": 20.0
 }
 ```
 

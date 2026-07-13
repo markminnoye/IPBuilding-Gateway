@@ -138,7 +138,7 @@ graph TB
     WS --> NR
 ```
 
-**Deployment A** is de primaire target: gateway als HA add-on (Docker, beheerd door HA Supervisor), companion als HACS custom component op hetzelfde device.
+**Deployment A** is de primaire target: gateway als HA add-on (Docker, beheerd door HA Supervisor), companion als HACS custom component op hetzelfde device. Sinds de ingress-webui heeft Deployment A ook een "Open Web UI"-knop (Supervisor Ingress, zelfde `:8080`-listener als de REST/WS-API — geen aparte `ingress_port`; als het trust-model ooit verandert kan dit alsnog een eigen listener krijgen).
 
 **Deployment B** gebruikt exact dezelfde Python-code als A, maar zonder Supervisor-wrapper. Draait als `docker run` of `python -m gateway` op elke Linux-machine (o.a. **Raspberry Pi 3B/4**). Praktisch patroon op Pi: **eth0** op IPBuilding-VLAN (`10.10.1.1`, veldbus) + **wlan0** op thuis-LAN (northbound `:8080` naar HA Green). Effort en platformvergelijking: [`resources_and_docs/reference/2026-06-14-deployment-hardware-evaluation.md`](resources_and_docs/reference/2026-06-14-deployment-hardware-evaluation.md).
 
@@ -190,7 +190,7 @@ graph LR
 
 | Module | Bestand | Verantwoordelijkheid |
 |---|---|---|
-| `udp_bus.py` | `gateway/udp_bus.py` | asyncio UDP socket; polling (2s), command send, event listen |
+| `udp_bus.py` | `gateway/udp_bus.py` | asyncio UDP socket; per-type polling (input ~2s, relay/dimmer ~20s), command send, event listen |
 | `device_registry.py` | `gateway/device_registry.py` | In-memory state van alle devices; update bij elk event |
 | `installation.py` | `gateway/installation.py` | Laadt en valideert `devices.json`; levert entity-IDs; runtime-only `last_seen*` |
 | `discovery.py` | `gateway/discovery.py` | ARP-sweep → OUI 00:24:77 filter → HTTP getSysSet/getButtons; configureerbare range; no ipbox_id |

@@ -87,7 +87,10 @@ class GatewayConfig:
     api_port: int = 8080
     bind_ip: str = "0.0.0.0"
     reply_timeout_ms: int = 500
+    # Input (IP1100) poll cadence — IPBox steady-state ~2 s (I0000).
     poll_interval_s: float = 2.0
+    # Relay + dimmer poll cadence — IPBox steady-state ~20 s (P0000 / I9900).
+    actuator_poll_interval_s: float = 20.0
     simulated_mode: bool = False
     log_level: str = "INFO"
     # When True, poll the env-derived relay/dimmer/input IPs when devices.json
@@ -186,6 +189,9 @@ class GatewayConfig:
             bind_ip=os.getenv("GATEWAY_BIND_IP", "0.0.0.0"),
             reply_timeout_ms=int(os.getenv("GATEWAY_REPLY_TIMEOUT_MS", "500")),
             poll_interval_s=float(os.getenv("GATEWAY_POLL_INTERVAL", "2.0")),
+            actuator_poll_interval_s=float(
+                os.getenv("GATEWAY_ACTUATOR_POLL_INTERVAL", "20.0")
+            ),
             simulated_mode=simulated_mode,
             log_level=os.getenv("GATEWAY_LOG_LEVEL", "INFO").upper(),
             use_env_defaults=use_env_defaults,

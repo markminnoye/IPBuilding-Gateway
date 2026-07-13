@@ -22,6 +22,16 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
+## [Unreleased]
+
+### Changed
+- **Veldbus-poll cadans gelijk aan IPBox:** input-modules elke ~2 s (`I0000`); relay en dimmer elke ~20 s (`P0000` / `I9900`). Nieuwe add-on optie `actuator_poll_interval` (standaard 20).
+
+### Added
+- HA Supervisor **Ingress** web UI (`GET /`) — simple device list/editor served
+  from the existing aiohttp app; no new backend logic, reuses
+  `PATCH /api/v1/devices/{id}`.
+
 ## [1.3.0] - 2026-07-12
 
 ### Changed
