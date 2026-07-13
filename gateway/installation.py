@@ -127,10 +127,10 @@ DEFAULT_BUTTON_HOLD_THRESHOLD_S = 1.5
 
 
 @dataclass
-class ButtonConfig:
-    """A single physical button on an IP1100PoE input module.
+class PushbuttonConfig:
+    """A single physical pushbutton on an IP1100PoE input module.
 
-    Buttons are not channels — they have no entity_id of the form
+    Pushbuttons are not channels — they have no entity_id of the form
     `{module_ip}-{ch}`. They are event sources on a module. The gateway
     uses :attr:`hold_threshold_s` to classify press→release timing into
     ``press`` vs ``long_press`` events; the value is normally seeded from
@@ -139,34 +139,67 @@ class ButtonConfig:
     """
 
     id: str  # hardware hex, e.g. "2f8185190000df" (14 lowercase hex chars)
-    module_id: str = ""  # parent module MAC (stable)
+    module_id: str = ""  # parent module MAC — derived from nesting position, never read from the button's own dict
+    channel: int | None = None  # physical port index; from getButtons/backupConfig "index"
     name: str = ""  # operator-friendly description, default from getButtons.descr
     room: str = ""  # from getButtons.gr
     active: bool = True
     hold_threshold_s: float = DEFAULT_BUTTON_HOLD_THRESHOLD_S
 
     def to_dict(self) -> dict:
-        """Serialize to dict for devices.json."""
-        return {
+        """Serialize to dict for devices.json. module_id is implied by nesting, so it is excluded."""
+        d: dict = {
             "id": self.id,
-            "module_id": self.module_id,
             "name": self.name,
             "room": self.room,
             "active": self.active,
             "hold_threshold_s": self.hold_threshold_s,
         }
+        if self.channel is not None:
+            d["channel"] = self.channel
+        return d
 
     @classmethod
-    def from_dict(cls, data: dict) -> "ButtonConfig":
+    def from_dict(cls, data: dict, module_id: str = "") -> "PushbuttonConfig":
         return cls(
             id=data["id"],
-            module_id=data.get("module_id", ""),
+            module_id=module_id,
+            channel=data.get("channel"),
             name=data.get("name", ""),
             room=data.get("room", ""),
             active=data.get("active", True),
             hold_threshold_s=float(
                 data.get("hold_threshold_s", DEFAULT_BUTTON_HOLD_THRESHOLD_S)
             ),
+        )
+
+
+@dataclass
+class DetectorConfig:
+    """A single physical detector on an IP1100PoE input module.
+
+    Schema placeholder only — no runtime behaviour, no UDP protocol
+    decoding, not exposed via the REST API. There is no confirmed
+    ``getDetectors`` sample to base a richer schema on yet; this exists
+    purely so a devices.json ``detectors[]`` array round-trips without
+    data loss.
+    """
+
+    id: str
+    name: str = ""
+    room: str = ""
+    active: bool = True
+
+    def to_dict(self) -> dict:
+        return {"id": self.id, "name": self.name, "room": self.room, "active": self.active}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "DetectorConfig":
+        return cls(
+            id=data["id"],
+            name=data.get("name", ""),
+            room=data.get("room", ""),
+            active=data.get("active", True),
         )
 
 

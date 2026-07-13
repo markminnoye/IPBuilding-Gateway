@@ -315,3 +315,67 @@ class TestResolveEntityId:
 
     def test_none_installation_rejected(self) -> None:
         assert _resolve_entity_id("10.10.1.30-0", None) is None
+
+
+from gateway.installation import DetectorConfig, PushbuttonConfig
+
+
+class TestPushbuttonConfig:
+    def test_to_dict_excludes_module_id(self) -> None:
+        btn = PushbuttonConfig(
+            id="2f8185190000df",
+            module_id="00:24:77:52:ad:aa",
+            channel=1,
+            name="Badkamer knop",
+            room="1e verdieping",
+            active=True,
+            hold_threshold_s=1.5,
+        )
+        d = btn.to_dict()
+        assert "module_id" not in d
+        assert d == {
+            "id": "2f8185190000df",
+            "channel": 1,
+            "name": "Badkamer knop",
+            "room": "1e verdieping",
+            "active": True,
+            "hold_threshold_s": 1.5,
+        }
+
+    def test_to_dict_omits_channel_when_none(self) -> None:
+        btn = PushbuttonConfig(id="abc")
+        d = btn.to_dict()
+        assert "channel" not in d
+
+    def test_from_dict_takes_module_id_as_argument(self) -> None:
+        raw = {
+            "id": "2f8185190000df",
+            "channel": 1,
+            "name": "Badkamer knop",
+            "room": "1e verdieping",
+            "active": True,
+            "hold_threshold_s": 1.5,
+        }
+        btn = PushbuttonConfig.from_dict(raw, module_id="00:24:77:52:ad:aa")
+        assert btn.module_id == "00:24:77:52:ad:aa"
+        assert btn.channel == 1
+        assert btn.name == "Badkamer knop"
+
+    def test_from_dict_defaults_channel_to_none(self) -> None:
+        btn = PushbuttonConfig.from_dict({"id": "abc"}, module_id="mac1")
+        assert btn.channel is None
+
+
+class TestDetectorConfig:
+    def test_to_dict_round_trip(self) -> None:
+        det = DetectorConfig(id="det1", name="Voordeur", room="Inkomhal", active=False)
+        d = det.to_dict()
+        assert d == {"id": "det1", "name": "Voordeur", "room": "Inkomhal", "active": False}
+        reloaded = DetectorConfig.from_dict(d)
+        assert reloaded == det
+
+    def test_from_dict_defaults(self) -> None:
+        det = DetectorConfig.from_dict({"id": "det1"})
+        assert det.name == ""
+        assert det.room == ""
+        assert det.active is True
