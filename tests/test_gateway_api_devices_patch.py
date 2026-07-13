@@ -22,14 +22,8 @@ from gateway.installation import InstallationConfig
 from gateway.module_metadata import ModuleMetadata, ModuleMetadataCache
 
 
-def _make_installation(
-    modules: list[dict[str, Any]] | None = None,
-    buttons: list[dict[str, Any]] | None = None,
-) -> InstallationConfig:
-    payload: dict[str, Any] = {"modules": modules or []}
-    if buttons is not None:
-        payload["buttons"] = buttons
-    return InstallationConfig._parse(payload)
+def _make_installation(modules: list[dict[str, Any]] | None = None) -> InstallationConfig:
+    return InstallationConfig._parse({"modules": modules or []})
 
 
 def _write_devices_file(path: Path, installation: InstallationConfig) -> None:
@@ -83,28 +77,25 @@ def channel_installation() -> InstallationConfig:
 
 
 @pytest.fixture
-def button_installation() -> InstallationConfig:
-    return _make_installation(
-        modules=[
-            {
-                "name": "IP1100PoE",
-                "ip": "10.10.1.50",
-                "type": "input",
-                "mac": "00:24:77:52:ad:aa",
-                "channels": [],
-            }
-        ],
-        buttons=[
-            {
-                "id": "2f8185190000df",
-                "module_id": "00:24:77:52:ad:aa",
-                "name": "Badkamer knop",
-                "room": "1e verdieping",
-                "active": True,
-                "hold_threshold_s": 1.5,
-            }
-        ],
-    )
+def pushbutton_installation() -> InstallationConfig:
+    return _make_installation([
+        {
+            "name": "IP1100PoE",
+            "ip": "10.10.1.50",
+            "type": "input",
+            "mac": "00:24:77:52:ad:aa",
+            "pushbuttons": [
+                {
+                    "id": "2f8185190000df",
+                    "channel": 1,
+                    "name": "Badkamer knop",
+                    "room": "1e verdieping",
+                    "active": True,
+                    "hold_threshold_s": 1.5,
+                }
+            ],
+        }
+    ])
 
 
 class TestPatchDeviceHandler:
@@ -135,12 +126,12 @@ class TestPatchDeviceHandler:
         mock_broadcast.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_patch_button_success(
-        self, tmp_path: Path, button_installation: InstallationConfig
+    async def test_patch_pushbutton_success(
+        self, tmp_path: Path, pushbutton_installation: InstallationConfig
     ) -> None:
         devices_file = tmp_path / "devices.json"
-        _write_devices_file(devices_file, button_installation)
-        api = _make_api(button_installation, devices_file)
+        _write_devices_file(devices_file, pushbutton_installation)
+        api = _make_api(pushbutton_installation, devices_file)
 
         request = MagicMock()
         request.json = AsyncMock(return_value={"name": "Douche knop", "active": False})
@@ -153,44 +144,44 @@ class TestPatchDeviceHandler:
         assert body["name"] == "Douche knop"
         assert body["active"] is False
         assert body["semantic_type"] == "button"
+        assert body["channel"] == 1
 
         disk = json.loads(devices_file.read_text(encoding="utf-8"))
-        assert disk["buttons"][0]["name"] == "Douche knop"
-        assert disk["buttons"][0]["active"] is False
+        input_module = next(m for m in disk["modules"] if m["type"] == "input")
+        assert input_module["pushbuttons"][0]["name"] == "Douche knop"
+        assert input_module["pushbuttons"][0]["active"] is False
 
     @pytest.mark.asyncio
-    async def test_patch_preserves_buttons_when_updating_channel(
+    async def test_patch_preserves_pushbuttons_when_updating_other_module_channel(
         self, tmp_path: Path
     ) -> None:
-        combined = _make_installation(
-            modules=[
-                {
-                    "name": "IP0200PoE",
-                    "ip": "10.10.1.30",
-                    "type": "relay",
-                    "mac": "00:24:77:52:ac:be",
-                    "channels": [
-                        {
-                            "ch": 0,
-                            "name": "Keuken LED",
-                            "room": "Keuken",
-                            "semantic_type": "light",
-                            "active": True,
-                            "max_watt": 60,
-                        }
-                    ],
-                }
-            ],
-            buttons=[
-                {
-                    "id": "2f8185190000df",
-                    "module_id": "00:24:77:52:ad:aa",
-                    "name": "Badkamer knop",
-                    "room": "1e verdieping",
-                    "active": True,
-                }
-            ],
-        )
+        combined = _make_installation([
+            {
+                "name": "IP0200PoE",
+                "ip": "10.10.1.30",
+                "type": "relay",
+                "mac": "00:24:77:52:ac:be",
+                "channels": [
+                    {
+                        "ch": 0,
+                        "name": "Keuken LED",
+                        "room": "Keuken",
+                        "semantic_type": "light",
+                        "active": True,
+                        "max_watt": 60,
+                    }
+                ],
+            },
+            {
+                "name": "IP1100PoE",
+                "ip": "10.10.1.50",
+                "type": "input",
+                "mac": "00:24:77:52:ad:aa",
+                "pushbuttons": [
+                    {"id": "2f8185190000df", "name": "Badkamer knop", "room": "1e verdieping", "active": True}
+                ],
+            },
+        ])
         devices_file = tmp_path / "devices.json"
         _write_devices_file(devices_file, combined)
         api = _make_api(combined, devices_file)
@@ -201,8 +192,10 @@ class TestPatchDeviceHandler:
         await api._patch_device(request)
 
         disk = json.loads(devices_file.read_text(encoding="utf-8"))
-        assert len(disk["buttons"]) == 1
-        assert disk["buttons"][0]["id"] == "2f8185190000df"
+        assert "buttons" not in disk
+        input_module = next(m for m in disk["modules"] if m["type"] == "input")
+        assert len(input_module["pushbuttons"]) == 1
+        assert input_module["pushbuttons"][0]["id"] == "2f8185190000df"
 
     @pytest.mark.asyncio
     async def test_patch_invalid_json(
@@ -389,11 +382,11 @@ class TestPatchReviewFixes:
         assert exc.value.code == "device_not_found"
 
     @pytest.mark.asyncio
-    async def test_patch_button_response_overlays_installation_over_meta_cache(
-        self, tmp_path: Path, button_installation: InstallationConfig
+    async def test_patch_pushbutton_response_overlays_installation_over_meta_cache(
+        self, tmp_path: Path, pushbutton_installation: InstallationConfig
     ) -> None:
         devices_file = tmp_path / "devices.json"
-        _write_devices_file(devices_file, button_installation)
+        _write_devices_file(devices_file, pushbutton_installation)
         mac = "00:24:77:52:ad:aa"
         meta_cache = ModuleMetadataCache()
         meta_cache._by_mac[mac] = ModuleMetadata(
@@ -405,7 +398,7 @@ class TestPatchReviewFixes:
                 }
             ]
         )
-        api = _make_api(button_installation, devices_file, metadata_cache=meta_cache)
+        api = _make_api(pushbutton_installation, devices_file, metadata_cache=meta_cache)
 
         request = MagicMock()
         request.json = AsyncMock(
@@ -420,3 +413,29 @@ class TestPatchReviewFixes:
         assert body["name"] == "Patched name"
         assert body["room"] == "Patched room"
         assert body["schema_version"] == 2
+
+
+class TestUnconfiguredPushbuttonHasChannelFromMeta:
+    @pytest.mark.asyncio
+    async def test_unconfigured_pushbutton_channel_from_index(self, tmp_path: Path) -> None:
+        """A pushbutton only known via getButtons metadata still surfaces 'channel' (from 'index')."""
+        installation = _make_installation([
+            {"name": "IP1100PoE", "ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa"}
+        ])
+        devices_file = tmp_path / "devices.json"
+        _write_devices_file(devices_file, installation)
+        mac = "00:24:77:52:ad:aa"
+        meta_cache = ModuleMetadataCache()
+        meta_cache._by_mac[mac] = ModuleMetadata(
+            buttons=[{"id": "2D2F8185190000DF", "index": 3, "descr": "Bureau L", "gr": "Bureau"}]
+        )
+        api = _make_api(installation, devices_file, metadata_cache=meta_cache)
+
+        devices = api._build_device_list()
+        pushbutton = next(d for d in devices if d["id"] == "2f8185190000df")
+        assert pushbutton["channel"] == 3
+        # 'active' is intentionally omitted for unconfigured input-buttons
+        # (see test_gateway_api_modules.py::test_input_button_omits_active_field) —
+        # the companion treats a missing key as enabled-by-default via
+        # device.get("active", True).
+        assert "active" not in pushbutton

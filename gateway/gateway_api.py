@@ -32,11 +32,11 @@ from gateway.config import GatewayConfig
 from gateway.auto_discovery import AtomicWriter
 from gateway.device_config import (
     DeviceConfigError,
-    apply_button_patch,
     apply_channel_patch,
+    apply_pushbutton_patch,
     installation_to_raw_dict,
-    validate_button_fields,
     validate_channel_fields,
+    validate_pushbutton_fields,
 )
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.discovery import resolve_module_model
@@ -444,7 +444,7 @@ class GatewayAPI:
             raise ApiError(500, "no_installation", "No installation loaded")
 
         channel_entry = installation.device_id_to_entry(device_id)
-        button_cfg = installation.button_by_id(device_id) if channel_entry is None else None
+        button_cfg = installation.pushbutton_by_id(device_id) if channel_entry is None else None
 
         if channel_entry is None and button_cfg is None:
             raise ApiError(404, "device_not_found", details={"device_id": device_id})
@@ -462,13 +462,13 @@ class GatewayAPI:
                 return installation_to_raw_dict(inst)
         else:
             try:
-                validated = validate_button_fields(body)
+                validated = validate_pushbutton_fields(body)
             except DeviceConfigError as exc:
                 raise ApiError(400, exc.code, exc.message, exc.details)
 
             def mutate(raw: dict) -> dict:
                 inst = InstallationConfig._parse(raw)
-                apply_button_patch(inst, device_id, validated)
+                apply_pushbutton_patch(inst, device_id, validated)
                 return installation_to_raw_dict(inst)
 
         try:
@@ -763,7 +763,7 @@ class GatewayAPI:
         if installation is None:
             from gateway.installation import DEFAULT_BUTTON_HOLD_THRESHOLD_S
             return DEFAULT_BUTTON_HOLD_THRESHOLD_S
-        return installation.button_threshold(id_hex)
+        return installation.pushbutton_threshold(id_hex)
 
     def _on_health_changed(self) -> None:
         payload = self._health.snapshot(include_actions=False)
@@ -931,7 +931,7 @@ class GatewayAPI:
                         )
                         meta_room = btn.get("gr") or btn.get("room") or ""
                         cfg_btn = (
-                            installation.button_by_id(device_id)
+                            installation.pushbutton_by_id(device_id)
                             if installation
                             else None
                         )
@@ -943,6 +943,7 @@ class GatewayAPI:
                             "room": cfg_btn.room if cfg_btn is not None else meta_room,
                             "semantic_type": "button",
                             "device_type": "input",
+                            "channel": cfg_btn.channel if cfg_btn is not None else btn.get("index"),
                         }
                         if cfg_btn is not None:
                             entry["active"] = cfg_btn.active
@@ -960,7 +961,7 @@ class GatewayAPI:
         if installation is None:
             return None
 
-        btn = installation.button_by_id(device_id)
+        btn = installation.pushbutton_by_id(device_id)
         if btn is None:
             return None
 
@@ -974,6 +975,7 @@ class GatewayAPI:
             "semantic_type": "button",
             "device_type": "input",
             "active": btn.active,
+            "channel": btn.channel,
         }
         return entry
 
