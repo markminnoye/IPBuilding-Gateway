@@ -239,7 +239,7 @@ async def _fetch_buttons(
 
 
 # ---------------------------------------------------------------------------
-# ButtonConfig extraction
+# PushbuttonConfig extraction
 # ---------------------------------------------------------------------------
 
 
@@ -248,13 +248,13 @@ def extract_button_config(
     button_json: dict[str, Any],
     default_threshold_s: float | None = None,
 ):
-    """Convert a raw getButtons entry into a :class:`ButtonConfig`.
+    """Convert a raw getButtons entry into a :class:`PushbuttonConfig`.
 
     The hold threshold is seeded from ``func2.holdSeconds`` when present —
     this is the same drempelwaarde the IPBox hanteert for its long_press
     detection (operator-bevestigd 2026-06-16, IPBUILDING_KNOWLEDGE.md §12.7).
     """
-    from gateway.installation import ButtonConfig, DEFAULT_BUTTON_HOLD_THRESHOLD_S
+    from gateway.installation import PushbuttonConfig, DEFAULT_BUTTON_HOLD_THRESHOLD_S
 
     raw_id = button_json.get("id")
     if not raw_id:
@@ -274,7 +274,7 @@ def extract_button_config(
             else DEFAULT_BUTTON_HOLD_THRESHOLD_S
         )
 
-    return ButtonConfig(
+    return PushbuttonConfig(
         id=btn_id,
         module_id=module_id,
         name=button_json.get("descr", "") or button_json.get("name", ""),
@@ -291,11 +291,11 @@ def extract_buttons_from_getbuttons(
 
     Skips entries that fail to parse (logged at WARNING); the caller still
     gets a partial list back. Used by the runtime auto-discovery to seed
-    missing ButtonConfig entries into ``devices.json`` (Fase 8 hook).
+    missing PushbuttonConfig entries into ``devices.json`` (Fase 8 hook).
     """
-    from gateway.installation import ButtonConfig
+    from gateway.installation import PushbuttonConfig
 
-    out: list[ButtonConfig] = []
+    out: list[PushbuttonConfig] = []
     for entry in buttons_json or []:
         try:
             out.append(extract_button_config(module_id, entry))

@@ -10,9 +10,11 @@ from gateway.device_registry import DeviceType
 from gateway.gateway_api import _resolve_entity_id
 from gateway.installation import (
     ChannelConfig,
+    DetectorConfig,
     InstallationConfig,
     InstallationError,
     ModuleConfig,
+    PushbuttonConfig,
     make_entity_id,
 )
 
@@ -315,9 +317,6 @@ class TestResolveEntityId:
 
     def test_none_installation_rejected(self) -> None:
         assert _resolve_entity_id("10.10.1.30-0", None) is None
-
-
-from gateway.installation import DetectorConfig, PushbuttonConfig
 
 
 class TestPushbuttonConfig:

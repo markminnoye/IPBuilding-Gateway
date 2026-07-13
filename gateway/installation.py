@@ -261,7 +261,7 @@ class InstallationConfig:
     modules: list[ModuleConfig] = field(default_factory=list)
     # Physical buttons (IP1100PoE). Authoritative for hold_threshold_s and
     # event routing. Persisted in devices.json under top-level "buttons" key.
-    buttons: list[ButtonConfig] = field(default_factory=list)
+    buttons: list[PushbuttonConfig] = field(default_factory=list)
 
     # Derived indices — keyed by ipbox_id (IPBox component ID)
     _ipbox_id_to_entry: dict[int, tuple[DeviceType, str, int]] = field(default_factory=dict)
@@ -273,8 +273,8 @@ class InstallationConfig:
     _device_id_to_entry: dict[str, tuple[DeviceType, str, int]] = field(default_factory=dict)
     # (DeviceType, module_ip, channel) -> device_id
     _entry_to_device_id: dict[tuple[DeviceType, str, int], str] = field(default_factory=dict)
-    # button hardware id (lowercase) -> ButtonConfig
-    _buttons_by_id: dict[str, ButtonConfig] = field(default_factory=dict)
+    # button hardware id (lowercase) -> PushbuttonConfig
+    _buttons_by_id: dict[str, PushbuttonConfig] = field(default_factory=dict)
 
     @classmethod
     def load(
@@ -307,13 +307,13 @@ class InstallationConfig:
         seen_ipbox_ids: set[int] = set()
         seen_device_ids: set[str] = set()
         modules: list[ModuleConfig] = []
-        buttons: list[ButtonConfig] = []
+        buttons: list[PushbuttonConfig] = []
         ipbox_id_to_entry: dict[int, tuple[DeviceType, str, int]] = {}
         device_id_to_entry: dict[str, tuple[DeviceType, str, int]] = {}
         entry_to_device_id: dict[tuple[DeviceType, str, int], str] = {}
         modules_by_ip: dict[str, ModuleConfig] = {}
         modules_by_mac: dict[str, ModuleConfig] = {}
-        buttons_by_id: dict[str, ButtonConfig] = {}
+        buttons_by_id: dict[str, PushbuttonConfig] = {}
 
         for mod in raw.get("modules", []):
             mod_type_str = mod.get("type", "")
@@ -413,7 +413,7 @@ class InstallationConfig:
                 raise InstallationError(
                     f"Duplicate button id {btn_id!r}"
                 )
-            btn = ButtonConfig.from_dict(btn_entry)
+            btn = PushbuttonConfig.from_dict(btn_entry, module_id=btn_entry.get("module_id", ""))
             buttons.append(btn)
             buttons_by_id[key] = btn
 
@@ -477,7 +477,7 @@ class InstallationConfig:
         """All known legacy (IPBox component) IDs in installation order."""
         return list(self._ipbox_id_to_entry.keys())
 
-    def button_by_id(self, button_id: str) -> ButtonConfig | None:
+    def button_by_id(self, button_id: str) -> PushbuttonConfig | None:
         """Look up a button by hardware id (case-insensitive). Returns None if unknown."""
         if not button_id:
             return None

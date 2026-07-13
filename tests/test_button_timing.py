@@ -18,9 +18,9 @@ import pytest
 from gateway import gateway_api
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, ButtonEvent
 from gateway.installation import (
-    ButtonConfig,
     DEFAULT_BUTTON_HOLD_THRESHOLD_S,
     InstallationConfig,
+    PushbuttonConfig,
 )
 
 
