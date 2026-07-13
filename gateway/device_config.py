@@ -9,7 +9,7 @@ from __future__ import annotations
 from gateway.installation import InstallationConfig
 
 NORTHBOUND_CHANNEL_FIELDS = {"name", "room", "semantic_type", "active", "max_watt"}
-NORTHBOUND_BUTTON_FIELDS = {"name", "room", "active"}
+NORTHBOUND_PUSHBUTTON_FIELDS = {"name", "room", "active"}
 SEMANTIC_TYPES = {"light", "fan", "cover", "switch", "plug"}
 
 
@@ -70,9 +70,9 @@ def validate_channel_fields(fields: dict) -> dict:
     return result
 
 
-def validate_button_fields(fields: dict) -> dict:
-    """Validate and normalize northbound button fields from a PATCH body."""
-    unknown = set(fields.keys()) - NORTHBOUND_BUTTON_FIELDS
+def validate_pushbutton_fields(fields: dict) -> dict:
+    """Validate and normalize northbound pushbutton fields from a PATCH body."""
+    unknown = set(fields.keys()) - NORTHBOUND_PUSHBUTTON_FIELDS
     if unknown:
         raise DeviceConfigError(
             "unknown_field",
@@ -122,17 +122,17 @@ def apply_channel_patch(
         setattr(ch_cfg, key, value)
 
 
-def apply_button_patch(
+def apply_pushbutton_patch(
     installation: InstallationConfig,
     button_id: str,
     fields: dict,
 ) -> None:
-    """Apply validated northbound fields to a button in-memory."""
-    btn = installation.button_by_id(button_id)
+    """Apply validated northbound fields to a pushbutton in-memory."""
+    btn = installation.pushbutton_by_id(button_id)
     if btn is None:
         raise DeviceConfigError(
             "device_not_found",
-            f"Button {button_id!r} not found",
+            f"Pushbutton {button_id!r} not found",
             {"device_id": button_id},
         )
     for key, value in fields.items():
@@ -142,10 +142,10 @@ def apply_button_patch(
 def installation_to_raw_dict(installation: InstallationConfig) -> dict:
     """Serialize installation to devices.json shape.
 
-    Always includes ``buttons`` so PATCH writes never drop the top-level
-    buttons array (regression guard for forced-discovery rewrite path).
+    No separate "buttons" key: each module's own to_dict() already carries
+    its nested pushbuttons/detectors (or channels), so there is no write
+    path left that can independently forget to include them.
     """
     return {
         "modules": [m.to_dict() for m in installation.modules],
-        "buttons": [b.to_dict() for b in installation.buttons],
     }

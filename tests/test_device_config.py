@@ -9,11 +9,11 @@ import pytest
 
 from gateway.device_config import (
     DeviceConfigError,
-    apply_button_patch,
     apply_channel_patch,
+    apply_pushbutton_patch,
     installation_to_raw_dict,
-    validate_button_fields,
     validate_channel_fields,
+    validate_pushbutton_fields,
 )
 from gateway.installation import InstallationConfig
 
@@ -36,17 +36,22 @@ def _sample_installation() -> InstallationConfig:
                         "max_watt": 60,
                     }
                 ],
-            }
-        ],
-        "buttons": [
+            },
             {
-                "id": "2f8185190000df",
-                "module_id": "00:24:77:52:ad:aa",
-                "name": "Badkamer",
-                "room": "1e verdieping",
-                "active": True,
-                "hold_threshold_s": 1.5,
-            }
+                "name": "IP1100PoE",
+                "ip": "10.10.1.50",
+                "type": "input",
+                "mac": "00:24:77:52:ad:aa",
+                "pushbuttons": [
+                    {
+                        "id": "2f8185190000df",
+                        "name": "Badkamer",
+                        "room": "1e verdieping",
+                        "active": True,
+                        "hold_threshold_s": 1.5,
+                    }
+                ],
+            },
         ],
     })
 
@@ -86,14 +91,19 @@ class TestValidateChannelFields:
         assert exc.value.code == "validation"
 
 
-class TestValidateButtonFields:
+class TestValidatePushbuttonFields:
     def test_valid_fields(self) -> None:
-        result = validate_button_fields({"name": "Knop", "room": "Bad", "active": True})
+        result = validate_pushbutton_fields({"name": "Knop", "room": "Bad", "active": True})
         assert result == {"name": "Knop", "room": "Bad", "active": True}
 
     def test_unknown_field_raises(self) -> None:
         with pytest.raises(DeviceConfigError) as exc:
-            validate_button_fields({"hold_threshold_s": 2.0})
+            validate_pushbutton_fields({"hold_threshold_s": 2.0})
+        assert exc.value.code == "unknown_field"
+
+    def test_channel_not_patchable(self) -> None:
+        with pytest.raises(DeviceConfigError) as exc:
+            validate_pushbutton_fields({"channel": 2})
         assert exc.value.code == "unknown_field"
 
 
@@ -106,34 +116,36 @@ class TestApplyPatches:
         assert ch.max_watt == 40
         assert ch.name == "Keuken LED"
 
-    def test_apply_button_patch(self) -> None:
+    def test_apply_pushbutton_patch(self) -> None:
         inst = _sample_installation()
-        apply_button_patch(inst, "2f8185190000df", {"name": "Douche", "active": False})
-        btn = inst.button_by_id("2f8185190000df")
+        apply_pushbutton_patch(inst, "2f8185190000df", {"name": "Douche", "active": False})
+        btn = inst.pushbutton_by_id("2f8185190000df")
         assert btn is not None
         assert btn.name == "Douche"
         assert btn.active is False
 
 
 class TestInstallationToRawDict:
-    def test_buttons_preserved_on_channel_patch_round_trip(self, tmp_path: Path) -> None:
-        """Regression: channel PATCH serialization must keep buttons[]."""
+    def test_pushbuttons_preserved_on_channel_patch_round_trip(self, tmp_path: Path) -> None:
+        """Regression: channel PATCH serialization must keep the other module's pushbuttons."""
         inst = _sample_installation()
         apply_channel_patch(inst, "10.10.1.30", 0, {"room": "Nieuwe kamer"})
 
         raw = installation_to_raw_dict(inst)
-        assert "buttons" in raw
-        assert len(raw["buttons"]) == 1
-        assert raw["buttons"][0]["id"] == "2f8185190000df"
-        assert raw["modules"][0]["channels"][0]["room"] == "Nieuwe kamer"
+        assert "buttons" not in raw
+        input_module = next(m for m in raw["modules"] if m["type"] == "input")
+        assert len(input_module["pushbuttons"]) == 1
+        assert input_module["pushbuttons"][0]["id"] == "2f8185190000df"
+        relay_module = next(m for m in raw["modules"] if m["type"] == "relay")
+        assert relay_module["channels"][0]["room"] == "Nieuwe kamer"
 
         devices_file = tmp_path / "devices.json"
         devices_file.write_text(json.dumps(raw), encoding="utf-8")
         reloaded = InstallationConfig.load(devices_file)
-        assert len(reloaded.buttons) == 1
+        assert len(reloaded.pushbuttons) == 1
         assert reloaded.module_by_ip("10.10.1.30").channels[0].room == "Nieuwe kamer"
 
-    def test_empty_buttons_array_included(self) -> None:
+    def test_no_top_level_buttons_key(self) -> None:
         inst = InstallationConfig._parse({"modules": []})
         raw = installation_to_raw_dict(inst)
-        assert raw == {"modules": [], "buttons": []}
+        assert raw == {"modules": []}
