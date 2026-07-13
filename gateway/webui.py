@@ -210,12 +210,36 @@ INDEX_HTML = """<!doctype html>
   </div>
 </section>
 
+<section class="danger-zone">
+  <h2>Backup &amp; restore</h2>
+  <p class="danger-note">Manage devices.json directly. Upload and Reset overwrite the running configuration.</p>
+  <div class="danger-action">
+    <button id="exportDevices" class="btn-icon" type="button">Download devices.json</button>
+    <span id="exportStatus" class="status"></span>
+    <p class="danger-desc">Downloads the exact file currently on disk.</p>
+  </div>
+  <div class="danger-action">
+    <button id="importDevices" class="btn-icon" type="button">Upload devices.json</button>
+    <input id="importFile" type="file" accept=".json,application/json" style="display:none">
+    <span id="importStatus" class="status"></span>
+    <p class="danger-desc">Validates the file before replacing devices.json. Rejected on any structural error — nothing is written.</p>
+  </div>
+  <div class="danger-action">
+    <button id="resetDevices" class="btn-icon btn-scan" type="button">Reset devices.json</button>
+    <span id="resetStatus" class="status"></span>
+    <p class="danger-desc">Empties devices.json (removes all modules and devices). Cannot be undone — download a backup first.</p>
+  </div>
+</section>
+
 <script>
 (function () {
   "use strict";
 
   var DEVICES_URL = "api/v1/devices";
   var MODULES_URL = "api/v1/modules";
+  var EXPORT_URL = "api/v1/devices/export";
+  var IMPORT_URL = "api/v1/devices/import";
+  var RESET_URL = "api/v1/devices/reset";
   var SEMANTIC_TYPES = ["light", "fan", "cover", "switch", "plug"];
   var NOT_IMPLEMENTED = "Not yet implemented";
   // Exactly the icons the HA companion assigns per semantic_type (source of
@@ -709,6 +733,125 @@ INDEX_HTML = """<!doctype html>
       return parts.join(", ");
     },
   });
+
+  function wireExportButton() {
+    var button = document.getElementById("exportDevices");
+    var status = document.getElementById("exportStatus");
+    button.addEventListener("click", function () {
+      button.disabled = true;
+      setStatus(status, "Downloading…", "");
+      fetch(EXPORT_URL)
+        .then(function (resp) {
+          if (!resp.ok) {
+            return resp.json().then(function (body) {
+              throw new Error(describeActionError(resp.status, body));
+            });
+          }
+          return resp.blob();
+        })
+        .then(function (blob) {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = "devices.json";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          setStatus(status, "Downloaded", "ok");
+        })
+        .catch(function (err) {
+          setStatus(status, err.message || "Network error", "err");
+        })
+        .then(function () {
+          button.disabled = false;
+        });
+    });
+  }
+
+  function wireImportButton() {
+    var button = document.getElementById("importDevices");
+    var fileInput = document.getElementById("importFile");
+    var status = document.getElementById("importStatus");
+    button.addEventListener("click", function () {
+      fileInput.click();
+    });
+    fileInput.addEventListener("change", function () {
+      var file = fileInput.files[0];
+      fileInput.value = "";
+      if (!file) return;
+      setStatus(status, "Uploading…", "");
+      var reader = new FileReader();
+      reader.onload = function () {
+        fetch(IMPORT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: reader.result,
+        })
+          .then(function (resp) {
+            return resp.json().then(function (body) {
+              return { status: resp.status, body: body };
+            });
+          })
+          .then(function (result) {
+            if (result.status === 200) {
+              setStatus(
+                status,
+                "Loaded " + result.body.modules + " module(s), " +
+                  result.body.channels + " channel(s)",
+                "ok"
+              );
+              load();
+            } else {
+              setStatus(status, describeActionError(result.status, result.body), "err");
+            }
+          })
+          .catch(function () {
+            setStatus(status, "Network error", "err");
+          });
+      };
+      reader.onerror = function () {
+        setStatus(status, "Could not read file", "err");
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  function wireResetButton() {
+    var button = document.getElementById("resetDevices");
+    var status = document.getElementById("resetStatus");
+    button.addEventListener("click", function () {
+      if (!confirm("This empties devices.json and removes all devices. Continue?")) {
+        return;
+      }
+      button.disabled = true;
+      setStatus(status, "Resetting…", "");
+      fetch(RESET_URL, { method: "POST" })
+        .then(function (resp) {
+          return resp.json().then(function (body) {
+            return { status: resp.status, body: body };
+          });
+        })
+        .then(function (result) {
+          if (result.status === 200) {
+            setStatus(status, "Reset", "ok");
+            load();
+          } else {
+            setStatus(status, describeActionError(result.status, result.body), "err");
+          }
+        })
+        .catch(function () {
+          setStatus(status, "Network error", "err");
+        })
+        .then(function () {
+          button.disabled = false;
+        });
+    });
+  }
+
+  wireExportButton();
+  wireImportButton();
+  wireResetButton();
 
   document.getElementById("reload").prepend(svgIcon(ICONS.reload, "btn-icon-svg"));
   document.getElementById("reload").addEventListener("click", load);
