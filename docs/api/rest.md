@@ -146,6 +146,18 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 
 ---
 
+## POST /api/v1/modules/{module_id}/refresh
+
+**Description:** Re-fetch getSysSet (and getButtons for input modules) from a single module identified by MAC. Updates the in-memory cache for that module only and broadcasts a WebSocket snapshot.
+
+**Request body:** none
+
+**Response 200:** single module object (same shape as `GET /api/v1/modules/{module_id}`) plus `"schema_version": 2`.
+
+**Response 404:** `{ "error": "module_not_found", ... }` when the MAC is not in `devices.json`.
+
+---
+
 ## GET /api/v1/devices
 
 **Description:** Return the full device list with current state.

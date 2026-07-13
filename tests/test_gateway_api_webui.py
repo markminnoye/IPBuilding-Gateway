@@ -59,8 +59,17 @@ class TestWebUiRoute:
 
         assert "api/v1/devices" in body
         assert "api/v1/modules" in body
-        assert "fetch('/api/v1" not in body
         assert 'fetch("/api/v1' not in body
+        assert "fetch('/api/v1" not in body
+        assert ">Refresh</button>" in body
+        assert "Reload</button>" not in body
+        assert "Search for new modules" in body
+        assert "Installation &amp; network" in body
+        assert "refreshModules" not in body
+        assert "Refresh known modules" not in body
+        assert '"/refresh"' in body or "/refresh" in body
+        assert "module-action-btn" in body
+        assert "Update" in body
 
     @pytest.mark.asyncio
     async def test_webui_route_does_not_shadow_existing_routes(

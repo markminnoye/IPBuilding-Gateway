@@ -212,6 +212,9 @@ class GatewayAPI:
         self._app.router.add_get(
             "/api/v1/modules/{module_id}", self._get_module
         )
+        self._app.router.add_post(
+            "/api/v1/modules/{module_id}/refresh", self._post_module_refresh
+        )
         self._app.router.add_post("/api/v1/modules/refresh", self._post_modules_refresh)
         # Runtime auto-discovery
         self._app.router.add_post("/api/v1/discover", self._post_discover)
@@ -553,6 +556,35 @@ class GatewayAPI:
             if m["id"] == module_id:
                 return web.json_response(m)
         raise ApiError(404, "module_not_found", details={"module_id": module_id})
+
+    async def _post_module_refresh(self, request: web.Request) -> web.Response:
+        """POST /api/v1/modules/{module_id}/refresh — reload one module from field bus."""
+        installation = self._cfg.installation
+        if installation is None:
+            raise ApiError(500, "no_installation", "No installation loaded")
+
+        module_id = request.match_info["module_id"].lower()
+        mc = installation.module_by_mac(module_id)
+        if mc is None:
+            raise ApiError(
+                404, "module_not_found", details={"module_id": module_id},
+            )
+
+        try:
+            await self._meta_cache.refresh_one(
+                mc, timeout=self._cfg.metadata_timeout_s,
+            )
+        except Exception as exc:
+            log.warning("module refresh failed for %s: %s", module_id, exc)
+
+        asyncio.create_task(self._broadcast(self._build_snapshot()))
+        module_list = self._build_module_list()
+        for m in module_list:
+            if m["id"] == module_id:
+                return web.json_response({**m, "schema_version": 2})
+        raise ApiError(
+            404, "module_not_found", details={"module_id": module_id},
+        )
 
     async def _post_modules_refresh(self, request: web.Request) -> web.Response:
         """POST /api/v1/modules/refresh — reload getSysSet/getButtons from all modules."""

@@ -134,7 +134,36 @@ INDEX_HTML = """<!doctype html>
     padding: 0.05rem 0.35rem;
   }
   .module-sub { font-size: 0.75rem; color: #888; }
-  .module-actions { display: flex; align-items: center; gap: 0.7rem; }
+  .module-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .module-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    min-width: 3.25rem;
+  }
+  .module-action-label { font-size: 0.62rem; color: #888; text-align: center; line-height: 1.1; }
+  .module-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border-radius: 4px;
+  }
+  .module-action-icon { width: 18px; height: 18px; fill: currentColor; }
+  .module-action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .module-action-btn--push { border-color: #b26a00; color: #b26a00; }
+  .module-action--enable .switch { flex-direction: column; gap: 0; }
+  .module-action--enable .switch-label { display: none; }
+  .module-action-status { font-size: 0.58rem; min-height: 0.75rem; }
   .module-table { margin: 0; }
 
   .switch { position: relative; display: inline-flex; align-items: center; gap: 0.4rem; }
@@ -166,23 +195,18 @@ INDEX_HTML = """<!doctype html>
 <body>
 <h1>IPBuilding Gateway — devices</h1>
 <div class="toolbar">
-  <button id="reload" class="btn-icon" title="Reload the device list from the gateway. Read-only — makes no changes.">Reload</button>
+  <button id="reload" class="btn-icon" title="Reload the list on screen. Read-only — no changes saved.">Refresh</button>
   <span id="toolbarStatus" class="status"></span>
 </div>
 <div id="content">Loading…</div>
 
 <section class="danger-zone">
-  <h2>Field-bus scanning</h2>
-  <p class="danger-note">These actions talk to the physical field bus and can change devices.json. They are separate from the device list above — use with care.</p>
+  <h2>Installation &amp; network</h2>
+  <p class="danger-note">Talks to your physical modules. Separate from editing the table above.</p>
   <div class="danger-action">
-    <button id="refreshModules" class="btn-scan">Refresh known modules</button>
-    <span id="refreshStatus" class="status"></span>
-    <p class="danger-desc">Re-reads getSysSet/getButtons from modules already known to this gateway. Fast, no field-bus scan.</p>
-  </div>
-  <div class="danger-action">
-    <button id="discoverModules" class="btn-scan">Discover new modules</button>
+    <button id="discoverModules" class="btn-scan">Search for new modules</button>
     <span id="discoverStatus" class="status"></span>
-    <p class="danger-desc">Runs a full ARP sweep + HTTP identify across the field-bus subnet to find physically new modules. Can take a while, and writes newly found modules to devices.json (inactive by default).</p>
+    <p class="danger-desc">Scans the field-bus network for new modules. Can take a minute. New modules are added disabled — enable them in the table above.</p>
   </div>
 </section>
 
@@ -209,6 +233,8 @@ INDEX_HTML = """<!doctype html>
     plug: "M16,7V3H14V7H10V3H8V7H8C7,7 6,8 6,9V14.5L9.5,18V21H14.5V18L18,14.5V9C18,8 17,7 16,7Z",
     button: "M13 5C15.21 5 17 6.79 17 9C17 10.5 16.2 11.77 15 12.46V11.24C15.61 10.69 16 9.89 16 9C16 7.34 14.66 6 13 6S10 7.34 10 9C10 9.89 10.39 10.69 11 11.24V12.46C9.8 11.77 9 10.5 9 9C9 6.79 10.79 5 13 5M20 20.5C19.97 21.32 19.32 21.97 18.5 22H13C12.62 22 12.26 21.85 12 21.57L8 17.37L8.74 16.6C8.93 16.39 9.2 16.28 9.5 16.28H9.7L12 18V9C12 8.45 12.45 8 13 8S14 8.45 14 9V13.47L15.21 13.6L19.15 15.79C19.68 16.03 20 16.56 20 17.14V20.5M20 2H4C2.9 2 2 2.9 2 4V12C2 13.11 2.9 14 4 14H8V12L4 12L4 4H20L20 12H18V14H20V13.96L20.04 14C21.13 14 22 13.09 22 12V4C22 2.9 21.11 2 20 2Z",
     reload: "M2 12C2 16.97 6.03 21 11 21C13.39 21 15.68 20.06 17.4 18.4L15.9 16.9C14.63 18.25 12.86 19 11 19C4.76 19 1.64 11.46 6.05 7.05C10.46 2.64 18 5.77 18 12H15L19 16H19.1L23 12H20C20 7.03 15.97 3 11 3C6.03 3 2 7.03 2 12Z",
+    download: "M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z",
+    upload: "M9,16V10H5L12,3L19,10H15V16H9Z",
     // Dimmer-on-light special case (see below).
     brightness6: "M12,18V6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,15.31L23.31,12L20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31Z",
   };
@@ -483,18 +509,82 @@ INDEX_HTML = """<!doctype html>
     return label;
   }
 
-  function buildModuleActions() {
-    var wrap = el("div", { class: "module-actions" });
-    // No backend field exists yet to drive this — defaults to Enabled since
-    // every module in devices.json is actively polled today. Placeholder
-    // for the future per-module enable/disable toggle.
+  function buildIconAction(label, iconPath, opts) {
+    opts = opts || {};
+    var wrap = el("div", { class: "module-action" });
+    var btnClass = "module-action-btn";
+    if (opts.push) btnClass += " module-action-btn--push";
+    var btn = el("button", { type: "button", class: btnClass, title: opts.title || label });
+    if (opts.disabled) btn.disabled = true;
+    btn.appendChild(svgIcon(iconPath, "module-action-icon"));
+    wrap.appendChild(btn);
+    wrap.appendChild(el("span", { class: "module-action-label", text: label }));
+    var statusSpan = el("span", { class: "module-action-status status" });
+    wrap.appendChild(statusSpan);
+    return { wrap: wrap, button: btn, status: statusSpan };
+  }
+
+  function buildEnableAction() {
+    var wrap = el("div", { class: "module-action module-action--enable", title: NOT_IMPLEMENTED });
     wrap.appendChild(buildDisabledSwitch(NOT_IMPLEMENTED, true));
-    wrap.appendChild(
-      el("button", { text: "Fetch (EEPROM)", disabled: "disabled", title: NOT_IMPLEMENTED })
-    );
-    wrap.appendChild(
-      el("button", { text: "Push (EEPROM)", disabled: "disabled", title: NOT_IMPLEMENTED })
-    );
+    wrap.appendChild(el("span", { class: "module-action-label", text: "Enable" }));
+    return wrap;
+  }
+
+  function wireModuleUpdate(module, btn, statusSpan) {
+    btn.addEventListener("click", function () {
+      if (!module.id) return;
+      btn.disabled = true;
+      setStatus(statusSpan, "Updating…", "");
+      fetch(
+        MODULES_URL + "/" + encodeURIComponent(module.id) + "/refresh",
+        { method: "POST" }
+      )
+        .then(function (resp) {
+          return resp.json().then(function (body) {
+            return { status: resp.status, body: body };
+          });
+        })
+        .then(function (result) {
+          if (result.status === 200) {
+            setStatus(statusSpan, "Updated", "ok");
+            load();
+          } else {
+            setStatus(statusSpan, describeActionError(result.status, result.body), "err");
+          }
+        })
+        .catch(function () {
+          setStatus(statusSpan, "Network error", "err");
+        })
+        .then(function () {
+          btn.disabled = false;
+        });
+    });
+  }
+
+  function buildModuleActions(module) {
+    var wrap = el("div", { class: "module-actions" });
+    // DOM order left-to-right: Push, Fetch, Enable, Update (Update rightmost).
+    var push = buildIconAction("Push", ICONS.upload, {
+      disabled: true,
+      push: true,
+      title: NOT_IMPLEMENTED,
+    });
+    var fetchAct = buildIconAction("Fetch", ICONS.download, {
+      disabled: true,
+      title: NOT_IMPLEMENTED,
+    });
+    var update = buildIconAction("Update", ICONS.reload, {
+      title: "Re-read this module. No changes saved.",
+    });
+    if (module.type === "input") {
+      update.button.title = "Re-read this module and refresh its button list.";
+    }
+    wireModuleUpdate(module, update.button, update.status);
+    wrap.appendChild(push.wrap);
+    wrap.appendChild(fetchAct.wrap);
+    wrap.appendChild(buildEnableAction());
+    wrap.appendChild(update.wrap);
     return wrap;
   }
 
@@ -516,7 +606,7 @@ INDEX_HTML = """<!doctype html>
       el("div", { class: "module-sub", text: subParts.join(" · ") }),
     ]);
 
-    return el("div", { class: "module-header" }, [title, buildModuleActions()]);
+    return el("div", { class: "module-header" }, [title, buildModuleActions(module)]);
   }
 
   function buildModuleSection(group) {
@@ -605,14 +695,6 @@ INDEX_HTML = """<!doctype html>
         });
     });
   }
-
-  wireScanButton("refreshModules", "refreshStatus", {
-    url: MODULES_URL + "/refresh",
-    runningText: "Refreshing…",
-    summarize: function () {
-      return "Refreshed";
-    },
-  });
 
   wireScanButton("discoverModules", "discoverStatus", {
     url: "api/v1/discover",

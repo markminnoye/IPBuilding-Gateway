@@ -1,6 +1,7 @@
 """Module metadata cache — live HTTP read of getSysSet and getButtons.
 
-Fetched once at gateway startup and on explicit POST /api/v1/modules/refresh.
+Fetched once at gateway startup and on explicit POST /api/v1/modules/refresh
+(or POST /api/v1/modules/{module_id}/refresh for a single module).
 Does NOT persist to devices.json; network/button data is runtime-only.
 """
 
@@ -14,7 +15,7 @@ from typing import Any
 import aiohttp
 
 from gateway.health import GatewayHealthMonitor
-from gateway.installation import InstallationConfig
+from gateway.installation import InstallationConfig, ModuleConfig
 from gateway.types import DeviceType
 
 log = logging.getLogger(__name__)
@@ -107,67 +108,46 @@ class ModuleMetadataCache:
     def all_macs(self) -> list[str]:
         return list(self._by_mac.keys())
 
-    async def refresh(self, installation: InstallationConfig, timeout: float = 5.0) -> None:
-        """Fetch getSysSet (all) and getButtons (input only).
+    async def refresh_one(
+        self,
+        mc: ModuleConfig,
+        timeout: float = 5.0,
+        *,
+        sess: aiohttp.ClientSession | None = None,
+    ) -> None:
+        """Fetch getSysSet (and getButtons for input) for one module.
 
-        Requests are fanned out with bounded concurrency (3 in flight at
-        a time) to avoid flooding a small /24 subnet when the cache is
-        refreshed during discovery bursts. A small ``Semaphore`` is more
-        predictable than ``asyncio.gather`` over all modules, which on
-        busy boot-time could starve either the kernel TCP buffers or
-        the aiohttp connection pool.
-
-        Partial failure is logged; entries for failed modules keep their old cache.
+        Updates ``self._by_mac[mc.mac]`` on success. On failure the previous
+        cache entry is kept when available.
         """
-        # One ClientSession is shared across all requests, with a bounded
-        # TCP connector so we never open more than 8 sockets at once
-        # (keeps the /24 ARP table and kernel buffers happy).
-        connector = aiohttp.TCPConnector(limit=8)
-        async with aiohttp.ClientSession(connector=connector) as sess:
-            sem = asyncio.Semaphore(3)
+        if not mc.mac:
+            log.debug("Skipping refresh for %s - no MAC", mc.ip)
+            return
 
-            async def _one(ip: str) -> str | None:
-                async with sem:
-                    return await _http_get_text(ip, "getSysSet", sess, timeout)
+        mac = mc.mac
+        close_sess = False
+        if sess is None:
+            connector = aiohttp.TCPConnector(limit=2)
+            sess = aiohttp.ClientSession(connector=connector)
+            close_sess = True
 
-            pending: dict[str, tuple[Any, asyncio.Task[str | None]]] = {}
-
-            for mc in installation.modules:
-                if not mc.mac:
-                    log.debug("Skipping refresh for %s - no MAC", mc.ip)
-                    continue
-                task = asyncio.create_task(
-                    _one(mc.ip), name=f"getSysSet:{mc.mac}",
-                )
-                pending[mc.mac] = (mc, task)
-
-            results = await asyncio.gather(
-                *[t for _, t in pending.values()], return_exceptions=True
-            )
-
-        now = _iso_now()
-        new_by_mac: dict[str, ModuleMetadata] = {}
-
-        for (mac, (mc, _task)), result in zip(pending.items(), results):
-            meta = ModuleMetadata()
-
-            if isinstance(result, Exception):
+        try:
+            try:
+                result = await _http_get_text(mc.ip, "getSysSet", sess, timeout)
+            except Exception as exc:
                 log.warning(
                     "getSysSet %s (%s) failed: %s: %r",
-                    mc.ip, mac, type(result).__name__, result,
+                    mc.ip, mac, type(exc).__name__, exc,
                 )
                 if self._health is not None:
                     self._health.report_issue(
                         f"module_metadata.getSysSet.{mc.ip}",
                         "module_metadata.http_failed",
                         "warning",
-                        f"getSysSet {mc.ip} ({mac}) failed: {type(result).__name__}: {result!r}",
+                        f"getSysSet {mc.ip} ({mac}) failed: {type(exc).__name__}: {exc!r}",
                         {"ip": mc.ip, "method": "getSysSet"},
                     )
-                existing = self._by_mac.get(mac)
-                if existing:
-                    new_by_mac[mac] = existing
-                continue
+                return
 
             if result is None:
                 if self._health is not None:
@@ -178,15 +158,12 @@ class ModuleMetadataCache:
                         f"HTTP getSysSet {mc.ip} failed",
                         {"ip": mc.ip, "method": "getSysSet"},
                     )
-                # HTTP failed: keep old cache entry if available, otherwise skip.
-                existing = self._by_mac.get(mac)
-                if existing:
-                    new_by_mac[mac] = existing
-                continue
+                return
 
             if self._health is not None:
                 self._health.clear_issue(f"module_metadata.getSysSet.{mc.ip}")
 
+            meta = ModuleMetadata()
             fields = _parse_get_sysset_body(result)
             network: dict[str, str] = {}
             for k in ("dhcp", "ip", "subnet", "gateway"):
@@ -198,13 +175,44 @@ class ModuleMetadataCache:
             meta.allow = fields.get("allow", "")
 
             if mc.type == DeviceType.INPUT:
-                buttons = await _fetch_buttons(mc.ip, timeout, self._health)
-                meta.buttons = buttons
+                meta.buttons = await _fetch_buttons(mc.ip, timeout, self._health)
 
-            meta.fetched_at = now
-            new_by_mac[mac] = meta
+            meta.fetched_at = _iso_now()
+            self._by_mac[mac] = meta
+        finally:
+            if close_sess:
+                await sess.close()
 
-        self._by_mac = new_by_mac
+    async def refresh(self, installation: InstallationConfig, timeout: float = 5.0) -> None:
+        """Fetch getSysSet (all) and getButtons (input only).
+
+        Requests are fanned out with bounded concurrency (3 in flight at
+        a time) to avoid flooding a small /24 subnet when the cache is
+        refreshed during discovery bursts.
+
+        Partial failure is logged; entries for failed modules keep their old cache.
+        """
+        connector = aiohttp.TCPConnector(limit=8)
+        async with aiohttp.ClientSession(connector=connector) as sess:
+            sem = asyncio.Semaphore(3)
+
+            async def _bounded(mc: ModuleConfig) -> None:
+                async with sem:
+                    await self.refresh_one(mc, timeout, sess=sess)
+
+            await asyncio.gather(
+                *[
+                    asyncio.create_task(_bounded(mc), name=f"refresh:{mc.mac}")
+                    for mc in installation.modules
+                    if mc.mac
+                ],
+                return_exceptions=True,
+            )
+
+        install_macs = {mc.mac for mc in installation.modules if mc.mac}
+        self._by_mac = {
+            mac: meta for mac, meta in self._by_mac.items() if mac in install_macs
+        }
         log.info("ModuleMetadataCache refreshed %d modules", len(self._by_mac))
 
 

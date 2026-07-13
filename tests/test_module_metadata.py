@@ -127,6 +127,33 @@ class TestModuleMetadataCache:
         assert dimmer_meta is None
 
     @pytest.mark.asyncio
+    async def test_refresh_one_updates_single_module_only(self) -> None:
+        installation = self._make_installation([
+            {"ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be", "channels": []},
+            {"ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:9e:a8", "channels": []},
+        ])
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:9e:a8"] = ModuleMetadata(
+            network={"ip": "10.10.1.40"},
+            fetched_at="2026-01-01T00:00:00Z",
+        )
+
+        async def fake_http(ip, method, sess, timeout):
+            if ip == "10.10.1.30" and method == "getSysSet":
+                return '{"dhcp": "0", "ip": "10.10.1.30", "subnet": "255.255.255.0", "gateway": "10.10.1.1"}'
+            return None
+
+        with patch("gateway.module_metadata._http_get_text", side_effect=fake_http):
+            await cache.refresh_one(installation.modules[0], timeout=1.0)
+
+        relay_meta = cache.get("00:24:77:52:ac:be")
+        assert relay_meta is not None
+        assert relay_meta.network["ip"] == "10.10.1.30"
+        dimmer_meta = cache.get("00:24:77:52:9e:a8")
+        assert dimmer_meta is not None
+        assert dimmer_meta.fetched_at == "2026-01-01T00:00:00Z"
+
+    @pytest.mark.asyncio
     async def test_input_module_fetches_getbuttons(self) -> None:
         installation = self._make_installation([
             {"ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa", "channels": []},
