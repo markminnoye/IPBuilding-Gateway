@@ -19,15 +19,6 @@ Backward compatibiliteit is de norm — een versie in deze add-on
 blijft werken met de huidige companion tot een `### Breaking:`-regel
 anders meldt.
 
-## [Unreleased]
-
-### Changed
-
-### Added
-- HA Supervisor **Ingress** web UI (`GET /`) — simple device list/editor served
-  from the existing aiohttp app; no new backend logic, reuses
-  `PATCH /api/v1/devices/{id}`.
-
 ## [1.3.0] - 2026-07-12
 
 ### Changed
@@ -36,7 +27,7 @@ anders meldt.
 - **Dimmers na herstart** tonen `unknown` tot het eerste commando of een veldbus-wijziging — niet meer het oude niveau via HTTP.
 
 ### Added
-- **Ingress Web UI verbeterd:** per-module actietoolbar met update-knop en duidelijkere teksten (veiliger en sneller dan “scan alles”).
+- **HA Supervisor Ingress Web UI:** built-in page to view and edit device names, rooms, and types.
 - **Per-module refresh:** ververs de metadata van één module (bijv. knoppenlijst op een input-module) zonder de volledige installatie te refreshen.
 
 ### Removed
