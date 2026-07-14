@@ -544,9 +544,9 @@ class GatewayAPI:
             raise ApiError(404, "device_not_found", details={"device_id": device_id})
 
         if channel_entry is not None:
-            _module_ip, module_ip, channel = channel_entry
+            dtype, module_ip, channel = channel_entry
             try:
-                validated = validate_channel_fields(body)
+                validated = validate_channel_fields(body, module_type=dtype)
             except DeviceConfigError as exc:
                 raise ApiError(400, exc.code, exc.message, exc.details)
 

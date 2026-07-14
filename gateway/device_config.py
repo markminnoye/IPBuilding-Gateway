@@ -34,7 +34,10 @@ class DeviceConfigError(Exception):
         self.details = details or {}
 
 
-def validate_channel_fields(fields: dict) -> dict:
+def validate_channel_fields(
+    fields: dict,
+    module_type: DeviceType | None = None,
+) -> dict:
     """Validate and normalize northbound channel fields from a PATCH body."""
     unknown = set(fields.keys()) - NORTHBOUND_CHANNEL_FIELDS
     if unknown:
@@ -60,6 +63,12 @@ def validate_channel_fields(fields: dict) -> dict:
                     "validation",
                     f"semantic_type must be one of {sorted(SEMANTIC_TYPES)}",
                     {"allowed": sorted(SEMANTIC_TYPES)},
+                )
+            if module_type == DeviceType.DIMMER and value != "light":
+                raise DeviceConfigError(
+                    "validation",
+                    "dimmer channels only support semantic_type 'light'",
+                    {"allowed": ["light"]},
                 )
             result["semantic_type"] = value
         elif key == "active":

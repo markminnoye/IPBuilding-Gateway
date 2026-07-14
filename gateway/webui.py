@@ -104,6 +104,17 @@ INDEX_HTML = """<!doctype html>
   .muted { color: #888; }
   .type-cell { display: flex; align-items: center; gap: 0.35rem; }
   .type-icon { flex: none; width: 16px; height: 16px; fill: #888; }
+  /* Icon sits inside the native <select> (padding-left); dropdown stays OS-native. */
+  .type-select-native { position: relative; min-width: 6.5rem; }
+  .type-select-native .type-icon {
+    position: absolute;
+    left: 0.35rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .type-select-native select { padding-left: 1.6rem; }
   .status { font-size: 0.78rem; white-space: nowrap; }
   .status.ok { color: var(--ok); }
   .status.err { color: var(--err); }
@@ -137,7 +148,7 @@ INDEX_HTML = """<!doctype html>
   .module-actions {
     display: flex;
     flex-direction: row;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: flex-end;
     gap: 0.5rem;
   }
@@ -156,12 +167,24 @@ INDEX_HTML = """<!doctype html>
     width: 2rem;
     height: 2rem;
     padding: 0;
+    border: none;
+    background: transparent;
     border-radius: 4px;
   }
   .module-action-icon { width: 18px; height: 18px; fill: currentColor; }
   .module-action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-  .module-action-btn--push { border-color: #b26a00; color: #b26a00; }
-  .module-action--enable .switch { flex-direction: column; gap: 0; }
+  .module-action-btn--push { color: #b26a00; }
+  @media (prefers-color-scheme: dark) {
+    .module-action-btn--push { color: #d9922e; }
+  }
+  .module-action--enable .switch {
+    flex-direction: column;
+    gap: 0;
+    width: 2rem;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+  }
   .module-action--enable .switch-label { display: none; }
   .module-action-status { font-size: 0.58rem; min-height: 0.75rem; }
   .module-table { margin: 0; }
@@ -337,6 +360,13 @@ INDEX_HTML = """<!doctype html>
       var label = document.createTextNode(device.device_type || "—");
       return el("td", {}, [el("div", { class: "type-cell muted" }, [icon, label])]);
     }
+    // Dimmer hardware is always a brightness-capable light in HA/Matter.
+    if (device.device_type === "dimmer") {
+      state.semantic_type = null;
+      var dimmerIcon = buildTypeIcon("light", "dimmer");
+      var dimmerLabel = document.createTextNode("light");
+      return el("td", {}, [el("div", { class: "type-cell muted" }, [dimmerIcon, dimmerLabel])]);
+    }
     var select = el("select", {});
     SEMANTIC_TYPES.forEach(function (t) {
       var opt = el("option", { value: t, text: t });
@@ -344,11 +374,17 @@ INDEX_HTML = """<!doctype html>
       select.appendChild(opt);
     });
     state.semantic_type = select;
+    var wrap = el("div", { class: "type-cell type-select-native" });
     var typeIcon = buildTypeIcon(device.semantic_type, device.device_type);
     select.addEventListener("change", function () {
-      typeIcon.querySelector("path").setAttribute("d", iconPathFor(select.value, device.device_type) || "");
+      typeIcon.querySelector("path").setAttribute(
+        "d",
+        iconPathFor(select.value, device.device_type) || ""
+      );
     });
-    return el("td", {}, [el("div", { class: "type-cell" }, [typeIcon, select])]);
+    wrap.appendChild(typeIcon);
+    wrap.appendChild(select);
+    return el("td", {}, [wrap]);
   }
 
   function buildActiveCell(device, state) {
@@ -557,6 +593,7 @@ INDEX_HTML = """<!doctype html>
     var wrap = el("div", { class: "module-action module-action--enable", title: NOT_IMPLEMENTED });
     wrap.appendChild(buildDisabledSwitch(NOT_IMPLEMENTED, true));
     wrap.appendChild(el("span", { class: "module-action-label", text: "Enable" }));
+    wrap.appendChild(el("span", { class: "module-action-status status" }));
     return wrap;
   }
 

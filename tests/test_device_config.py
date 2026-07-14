@@ -19,6 +19,7 @@ from gateway.device_config import (
 )
 from gateway.installation import InstallationConfig
 from gateway.module_metadata import ModuleMetadata, ModuleMetadataCache
+from gateway.types import DeviceType
 
 
 def _sample_installation() -> InstallationConfig:
@@ -92,6 +93,29 @@ class TestValidateChannelFields:
         with pytest.raises(DeviceConfigError) as exc:
             validate_channel_fields({"max_watt": -1})
         assert exc.value.code == "validation"
+
+    def test_dimmer_rejects_non_light_semantic_type(self) -> None:
+        with pytest.raises(DeviceConfigError) as exc:
+            validate_channel_fields(
+                {"semantic_type": "fan"},
+                module_type=DeviceType.DIMMER,
+            )
+        assert exc.value.code == "validation"
+        assert "dimmer" in exc.value.message
+
+    def test_dimmer_accepts_light_semantic_type(self) -> None:
+        result = validate_channel_fields(
+            {"semantic_type": "light"},
+            module_type=DeviceType.DIMMER,
+        )
+        assert result == {"semantic_type": "light"}
+
+    def test_relay_accepts_fan_semantic_type(self) -> None:
+        result = validate_channel_fields(
+            {"semantic_type": "fan"},
+            module_type=DeviceType.RELAY,
+        )
+        assert result == {"semantic_type": "fan"}
 
 
 class TestValidatePushbuttonFields:

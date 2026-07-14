@@ -22,6 +22,12 @@ with the current companion until a `### Breaking:` entry says otherwise.
 
 ## [Unreleased]
 
+### Changed
+- **Web UI: dimmer channels are always lights.** Dimmer rows no longer show a type dropdown — only relay channels can be set to fan, cover, switch, or plug. Uploading or editing `devices.json` normalises dimmer types to light; the API rejects other values on PATCH.
+
+### Fixed
+- **Module search no longer duplicates modules without a MAC.** Installations imported from IPA (or other sources with empty `mac`) are matched by IP during a sweep; the gateway backfills the MAC and firmware on the existing entry instead of adding a second module at the same address.
+
 ## [1.4.1] - 2026-07-14
 
 ### Added

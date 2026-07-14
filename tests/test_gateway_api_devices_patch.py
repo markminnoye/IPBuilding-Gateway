@@ -77,6 +77,28 @@ def channel_installation() -> InstallationConfig:
 
 
 @pytest.fixture
+def dimmer_installation() -> InstallationConfig:
+    return _make_installation([
+        {
+            "name": "IP0300PoE",
+            "ip": "10.10.1.40",
+            "type": "dimmer",
+            "mac": "00:24:77:52:9e:a8",
+            "channels": [
+                {
+                    "ch": 0,
+                    "name": "Living",
+                    "room": "Gelijkvloers",
+                    "semantic_type": "light",
+                    "active": True,
+                    "max_watt": 200,
+                }
+            ],
+        }
+    ])
+
+
+@pytest.fixture
 def pushbutton_installation() -> InstallationConfig:
     return _make_installation([
         {
@@ -247,6 +269,42 @@ class TestPatchDeviceHandler:
             await api._patch_device(request)
         assert exc.value.status == 400
         assert exc.value.code == "validation"
+
+    @pytest.mark.asyncio
+    async def test_patch_dimmer_rejects_non_light_semantic_type(
+        self, tmp_path: Path, dimmer_installation: InstallationConfig
+    ) -> None:
+        devices_file = tmp_path / "devices.json"
+        _write_devices_file(devices_file, dimmer_installation)
+        api = _make_api(dimmer_installation, devices_file)
+
+        request = MagicMock()
+        request.json = AsyncMock(return_value={"semantic_type": "fan"})
+        request.match_info = {"device_id": "10.10.1.40-0"}
+
+        with pytest.raises(gateway_api.ApiError) as exc:
+            await api._patch_device(request)
+        assert exc.value.status == 400
+        assert exc.value.code == "validation"
+        assert "dimmer" in exc.value.message
+
+    @pytest.mark.asyncio
+    async def test_patch_dimmer_room_without_semantic_type(
+        self, tmp_path: Path, dimmer_installation: InstallationConfig
+    ) -> None:
+        devices_file = tmp_path / "devices.json"
+        _write_devices_file(devices_file, dimmer_installation)
+        api = _make_api(dimmer_installation, devices_file)
+
+        request = MagicMock()
+        request.json = AsyncMock(return_value={"room": "Salon"})
+        request.match_info = {"device_id": "10.10.1.40-0"}
+
+        resp = await api._patch_device(request)
+        assert resp.status == 200
+        body = json.loads(resp.text)
+        assert body["room"] == "Salon"
+        assert body["semantic_type"] == "light"
 
     @pytest.mark.asyncio
     async def test_patch_device_not_found(
