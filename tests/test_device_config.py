@@ -12,11 +12,13 @@ from gateway.device_config import (
     apply_channel_patch,
     apply_pushbutton_patch,
     installation_to_raw_dict,
+    sync_input_pushbuttons_from_cache,
     validate_channel_fields,
     validate_devices_document,
     validate_pushbutton_fields,
 )
 from gateway.installation import InstallationConfig
+from gateway.module_metadata import ModuleMetadata, ModuleMetadataCache
 
 
 def _sample_installation() -> InstallationConfig:
@@ -150,6 +152,130 @@ class TestInstallationToRawDict:
         inst = InstallationConfig._parse({"modules": []})
         raw = installation_to_raw_dict(inst)
         assert raw == {"modules": []}
+
+
+class TestSyncInputPushbuttonsFromCache:
+    def test_merge_preserves_operator_fields_and_seeds_new_button(self) -> None:
+        inst = _sample_installation()
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:ad:aa"] = ModuleMetadata(
+            network={},
+            buttons=[
+                {
+                    "index": 1,
+                    "id": "2D2F8185190000DF",
+                    "descr": "Wire Badkamer",
+                    "gr": "Wire verdieping",
+                    "func2": {"holdSeconds": 2.0},
+                },
+                {
+                    "index": 2,
+                    "id": "2DE341851900001F",
+                    "descr": "Nieuwe knop",
+                    "gr": "Hal",
+                },
+            ],
+        )
+
+        count = sync_input_pushbuttons_from_cache(inst, cache)
+        assert count == 1
+
+        existing = inst.pushbutton_by_id("2f8185190000df")
+        assert existing is not None
+        assert existing.name == "Badkamer"
+        assert existing.room == "1e verdieping"
+        assert existing.active is True
+        assert existing.hold_threshold_s == 1.5
+        assert existing.channel == 1
+
+        new_btn = inst.pushbutton_by_id("e341851900001f")
+        assert new_btn is not None
+        assert new_btn.name == "Nieuwe knop"
+        assert new_btn.room == "Hal"
+        assert new_btn.channel == 2
+
+    def test_merge_fills_missing_name_room_and_channel_from_wire(self) -> None:
+        inst = InstallationConfig._parse({
+            "modules": [
+                {
+                    "name": "IP1100PoE",
+                    "ip": "10.10.1.50",
+                    "type": "input",
+                    "mac": "00:24:77:52:ad:aa",
+                    "pushbuttons": [
+                        {
+                            "id": "2f8185190000df",
+                            "name": "",
+                            "room": "",
+                            "active": True,
+                            "hold_threshold_s": 1.5,
+                        }
+                    ],
+                }
+            ],
+        })
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:ad:aa"] = ModuleMetadata(
+            network={},
+            buttons=[
+                {
+                    "index": 3,
+                    "id": "2D2F8185190000DF",
+                    "descr": "From wire",
+                    "gr": "From room",
+                }
+            ],
+        )
+
+        sync_input_pushbuttons_from_cache(inst, cache)
+        btn = inst.pushbutton_by_id("2f8185190000df")
+        assert btn is not None
+        assert btn.name == "From wire"
+        assert btn.room == "From room"
+        assert btn.channel == 3
+
+    def test_merge_canonicalizes_legacy_button_id_casing_and_prefix(self) -> None:
+        inst = InstallationConfig._parse({
+            "modules": [
+                {
+                    "name": "IP1100PoE",
+                    "ip": "10.10.1.50",
+                    "type": "input",
+                    "mac": "00:24:77:52:ad:aa",
+                    "pushbuttons": [
+                        {
+                            "id": "2D2F8185190000DF",
+                            "name": "Badkamer",
+                            "room": "1e verdieping",
+                            "active": True,
+                            "hold_threshold_s": 1.5,
+                        }
+                    ],
+                }
+            ],
+        })
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:ad:aa"] = ModuleMetadata(
+            network={},
+            buttons=[
+                {
+                    "index": 1,
+                    "id": "2D2F8185190000DF",
+                    "descr": "Wire Badkamer",
+                    "gr": "Wire verdieping",
+                }
+            ],
+        )
+
+        sync_input_pushbuttons_from_cache(inst, cache)
+
+        input_module = next(m for m in inst.modules if m.type.value == "input")
+        assert len(input_module.pushbuttons) == 1
+        assert input_module.pushbuttons[0].id == "2f8185190000df"
+        assert input_module.pushbuttons[0].name == "Badkamer"
+
+        reloaded = InstallationConfig._parse(installation_to_raw_dict(inst))
+        assert reloaded.pushbutton_by_id("2f8185190000df") is not None
 
 
 class TestValidateDevicesDocument:

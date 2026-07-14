@@ -35,6 +35,7 @@ from gateway.device_config import (
     apply_channel_patch,
     apply_pushbutton_patch,
     installation_to_raw_dict,
+    sync_input_pushbuttons_from_cache,
     validate_channel_fields,
     validate_devices_document,
     validate_pushbutton_fields,
@@ -629,6 +630,40 @@ class GatewayAPI:
     # Module resource (REST)
     # -------------------------------------------------------------------------
 
+    async def persist_pushbuttons_from_cache(
+        self, module_mac: str | None = None,
+    ) -> None:
+        """Public wrapper: write cached getButtons into devices.json."""
+        await self._persist_pushbuttons_from_cache(module_mac)
+
+    async def _persist_pushbuttons_from_cache(
+        self, module_mac: str | None = None,
+    ) -> None:
+        """Merge ModuleMetadataCache getButtons into devices.json on disk."""
+        if self._cfg.installation is None:
+            return
+
+        def mutate(raw: dict) -> dict:
+            inst = InstallationConfig._parse(raw)
+            sync_input_pushbuttons_from_cache(
+                inst, self._meta_cache, module_mac=module_mac,
+            )
+            return installation_to_raw_dict(inst)
+
+        try:
+            ok, _new_raw = await asyncio.to_thread(
+                self._writer.read_modify_write, mutate,
+            )
+        except Exception:
+            log.warning(
+                "Failed to persist pushbuttons to devices.json", exc_info=True,
+            )
+            return
+        if not ok:
+            log.warning("devices.json locked; pushbuttons not persisted")
+            return
+        self._cfg.installation = InstallationConfig.load(self._cfg.devices_file)
+
     async def _get_modules(self, request: web.Request) -> web.Response:
         """GET /api/v1/modules — return all modules with cached metadata."""
         module_list = self._build_module_list()
@@ -663,6 +698,8 @@ class GatewayAPI:
         except Exception as exc:
             log.warning("module refresh failed for %s: %s", module_id, exc)
 
+        await self._persist_pushbuttons_from_cache(module_mac=module_id)
+
         asyncio.create_task(self._broadcast(self._build_snapshot()))
         module_list = self._build_module_list()
         for m in module_list:
@@ -683,6 +720,7 @@ class GatewayAPI:
             )
         except Exception as exc:
             log.warning("modules refresh failed: %s", exc)
+        await self._persist_pushbuttons_from_cache()
         # Push the new module + device state to connected clients so freshly
         # discovered input buttons appear in the companion without a reload.
         asyncio.create_task(self._broadcast(self._build_snapshot()))

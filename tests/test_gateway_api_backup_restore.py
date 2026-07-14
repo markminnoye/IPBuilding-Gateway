@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from aiohttp import web
@@ -50,6 +50,7 @@ def _app_with_routes(api: gateway_api.GatewayAPI) -> web.Application:
     app.router.add_get("/api/v1/devices/export", api._get_devices_export)
     app.router.add_post("/api/v1/devices/import", api._post_devices_import)
     app.router.add_post("/api/v1/devices/reset", api._post_devices_reset)
+    app.router.add_post("/api/v1/modules/refresh", api._post_modules_refresh)
     app.router.add_get("/api/v1/devices/{device_id}", api._get_device)
     return app
 
@@ -125,6 +126,56 @@ class TestExport:
             # would mean the dynamic route won — the real bug this test guards against.
             assert resp.status == 200
             assert "Content-Disposition" in resp.headers
+
+
+class TestExportAfterRefresh:
+    @pytest.mark.asyncio
+    async def test_export_includes_pushbuttons_after_modules_refresh(
+        self, tmp_path: Path,
+    ) -> None:
+        from gateway.module_metadata import ModuleMetadata, ModuleMetadataCache
+
+        installation = _make_installation([
+            {
+                "name": "IP1100PoE",
+                "ip": "10.10.1.50",
+                "type": "input",
+                "mac": "00:24:77:52:ad:aa",
+                "pushbuttons": [],
+            }
+        ])
+        devices_file = tmp_path / "devices.json"
+        _write_devices_file(devices_file, installation)
+
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:ad:aa"] = ModuleMetadata(
+            network={},
+            buttons=[
+                {
+                    "index": 1,
+                    "id": "2D2F8185190000DF",
+                    "descr": "Badkamer",
+                    "gr": "Badkamer",
+                }
+            ],
+        )
+
+        api = _make_api(installation, devices_file, metadata_cache=cache)
+        api._meta_cache.refresh = AsyncMock(return_value=None)  # type: ignore[assignment]
+        app = _app_with_routes(api)
+
+        async with TestClient(TestServer(app)) as client:
+            refresh_resp = await client.post("/api/v1/modules/refresh")
+            assert refresh_resp.status == 200
+
+            export_resp = await client.get("/api/v1/devices/export")
+            assert export_resp.status == 200
+            exported = json.loads(await export_resp.read())
+
+        input_module = next(m for m in exported["modules"] if m["type"] == "input")
+        assert len(input_module["pushbuttons"]) == 1
+        assert input_module["pushbuttons"][0]["id"] == "2f8185190000df"
+        assert "channels" not in input_module
 
 
 class TestImport:

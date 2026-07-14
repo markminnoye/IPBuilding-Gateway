@@ -125,16 +125,17 @@ def discovered_module_to_devices_json(
     if not is_loadable_device_type(module.device_type):
         return None
     resolved_model = resolve_module_model(module.model, module.device_type)
-    return {
+    base: dict[str, Any] = {
         "name": resolved_model or module.ip,
         "model": resolved_model,
         "ip": module.ip,
         "type": module.device_type,
         "firmware": module.firmware,
         "mac": module.mac,
-        "channels": list(module.channels),
-        "active": False,
     }
+    if module.device_type == "input":
+        return {**base, "pushbuttons": [], "detectors": []}
+    return {**base, "channels": list(module.channels)}
 
 UDP_PROBE_PAYLOAD = b"\x01\x00\x00\x00"
 UDP_LISTEN_PORT = 10001

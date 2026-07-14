@@ -201,33 +201,33 @@ INDEX_HTML = """<!doctype html>
 <div id="content">Loading…</div>
 
 <section class="danger-zone">
+  <h2>Backup &amp; restore</h2>
+  <p class="danger-note">Save or restore your full installation — channel names, rooms, wattages, and which devices are active. Upload and Reset replace what the gateway is using now.</p>
+  <div class="danger-action">
+    <button id="exportDevices" class="btn-icon" type="button">Download backup</button>
+    <span id="exportStatus" class="status"></span>
+    <p class="danger-desc">Save your current setup to your computer. Do this before updates, network scans, or other major changes.</p>
+  </div>
+  <div class="danger-action">
+    <button id="importDevices" class="btn-icon" type="button">Restore from backup</button>
+    <input id="importFile" type="file" accept=".json,application/json" style="display:none">
+    <span id="importStatus" class="status"></span>
+    <p class="danger-desc">Replace the running setup with a file you saved earlier. The gateway checks the file first — if anything is invalid, nothing changes.</p>
+  </div>
+  <div class="danger-action">
+    <button id="resetDevices" class="btn-icon btn-scan" type="button">Clear all devices</button>
+    <span id="resetStatus" class="status"></span>
+    <p class="danger-desc">Remove every module and channel from the gateway. Entities in Home Assistant disappear until you search for modules again. Download a backup first — this cannot be undone.</p>
+  </div>
+</section>
+
+<section class="danger-zone">
   <h2>Installation &amp; network</h2>
   <p class="danger-note">Talks to your physical modules. Separate from editing the table above.</p>
   <div class="danger-action">
     <button id="discoverModules" class="btn-scan">Search for new modules</button>
     <span id="discoverStatus" class="status"></span>
     <p class="danger-desc">Scans the field-bus network for new modules. Can take a minute. New modules are added disabled — enable them in the table above.</p>
-  </div>
-</section>
-
-<section class="danger-zone">
-  <h2>Backup &amp; restore</h2>
-  <p class="danger-note">Manage devices.json directly. Upload and Reset overwrite the running configuration.</p>
-  <div class="danger-action">
-    <button id="exportDevices" class="btn-icon" type="button">Download devices.json</button>
-    <span id="exportStatus" class="status"></span>
-    <p class="danger-desc">Downloads the exact file currently on disk.</p>
-  </div>
-  <div class="danger-action">
-    <button id="importDevices" class="btn-icon" type="button">Upload devices.json</button>
-    <input id="importFile" type="file" accept=".json,application/json" style="display:none">
-    <span id="importStatus" class="status"></span>
-    <p class="danger-desc">Validates the file before replacing devices.json. Rejected on any structural error — nothing is written.</p>
-  </div>
-  <div class="danger-action">
-    <button id="resetDevices" class="btn-icon btn-scan" type="button">Reset devices.json</button>
-    <span id="resetStatus" class="status"></span>
-    <p class="danger-desc">Empties devices.json (removes all modules and devices). Cannot be undone — download a backup first.</p>
   </div>
 </section>
 
@@ -758,7 +758,7 @@ INDEX_HTML = """<!doctype html>
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
-          setStatus(status, "Downloaded", "ok");
+          setStatus(status, "Backup saved", "ok");
         })
         .catch(function (err) {
           setStatus(status, err.message || "Network error", "err");
@@ -821,7 +821,7 @@ INDEX_HTML = """<!doctype html>
     var button = document.getElementById("resetDevices");
     var status = document.getElementById("resetStatus");
     button.addEventListener("click", function () {
-      if (!confirm("This empties devices.json and removes all devices. Continue?")) {
+      if (!confirm("This removes all modules and channels from your gateway setup. Download a backup first if you want to keep your names and settings. Continue?")) {
         return;
       }
       button.disabled = true;
@@ -834,7 +834,7 @@ INDEX_HTML = """<!doctype html>
         })
         .then(function (result) {
           if (result.status === 200) {
-            setStatus(status, "Reset", "ok");
+            setStatus(status, "Configuration cleared", "ok");
             load();
           } else {
             setStatus(status, describeActionError(result.status, result.body), "err");
