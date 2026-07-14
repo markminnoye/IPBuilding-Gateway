@@ -350,6 +350,27 @@ class TestBuildSnapshot:
         device_module_ids = {d["module_id"] for d in snapshot["devices"]}
         assert device_module_ids <= module_ids, "all device.module_id values must appear in modules list"
 
+    def test_snapshot_empty_mac_modules_use_ip_as_id(self) -> None:
+        """IPA imports may leave MAC blank; module_id must still be unique per module."""
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay", "mac": "",
+                "channels": [{"ch": 0, "name": "R0", "active": True, "max_watt": 60}],
+            },
+            {
+                "ip": "10.10.1.42", "type": "dimmer", "mac": "",
+                "channels": [{"ch": 0, "name": "D0", "active": True, "max_watt": 200}],
+            },
+        ])
+        api = _make_api(inst)
+        snapshot = api._build_snapshot()
+        module_ids = {m["id"] for m in snapshot["modules"]}
+        assert module_ids == {"10.10.1.30", "10.10.1.42"}
+        by_module: dict[str, list[int]] = {}
+        for d in snapshot["devices"]:
+            by_module.setdefault(d["module_id"], []).append(d["channel"])
+        assert by_module == {"10.10.1.30": [0], "10.10.1.42": [0]}
+
     def test_snapshot_includes_inactive_devices(self) -> None:
         inst = _make_installation([
             {

@@ -50,6 +50,26 @@ class InstallationError(Exception):
     """Raised when devices.json is missing, invalid, or inconsistent."""
 
 
+def northbound_module_id(mac: str, ip: str) -> str:
+    """Stable module identifier for API/UI grouping.
+
+    Prefer normalised MAC when known; fall back to IP while discovery has not
+    yet populated hardware addresses (e.g. IPA-imported configs).
+    """
+    return mac if mac else ip
+
+
+def module_by_northbound_id(
+    installation: "InstallationConfig", module_id: str,
+) -> "ModuleConfig | None":
+    """Resolve a module from API ``module_id`` (MAC or IP fallback)."""
+    key = module_id.lower()
+    mc = installation.module_by_mac(key)
+    if mc is not None:
+        return mc
+    return installation.module_by_ip(module_id)
+
+
 def make_entity_id(module_ip: str, channel: int) -> str:
     """Derive a stable, fieldbus-native entity ID.
 
