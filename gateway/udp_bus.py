@@ -171,6 +171,8 @@ class UDPBus:
                 module_type = mc.type.value
                 if module_type not in due_types:
                     continue
+                if module_type == "input" and not self.config.claims_input_modules:
+                    continue
                 poll_payload = _MODULE_POLL.get(module_type)
                 if not poll_payload:
                     continue
@@ -181,6 +183,8 @@ class UDPBus:
         else:
             for module_type, module_ip in self.config.field_modules.items():
                 if module_type not in due_types:
+                    continue
+                if module_type == "input" and not self.config.claims_input_modules:
                     continue
                 poll_payload = _MODULE_POLL.get(module_type)
                 if not poll_payload:

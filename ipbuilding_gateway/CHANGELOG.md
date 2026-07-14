@@ -20,13 +20,20 @@ mean a bump in the other.
 Backward compatibility is the norm — an add-on version keeps working
 with the current companion until a `### Breaking:` entry says otherwise.
 
-## [Unreleased]
+## [1.5.0] - 2026-07-14
+
+### Added
+- **Input hub role (master/slave) via add-on Configuration.** New nested option `fieldbus.hub_role`: `full` (Slave — input poll + button events) or `actuators_only` (Master — EEPROM autonomy, no input claim). For migration/dual-hub when relay/dimmer run on this gateway but IP1100 inputs must stay autonomous. NL/EN translations in Configuration UI; see DOCS.md § Input-centrale. Web UI shows read-only Slave/Master badge on input modules (green styling for Slave). Status API: `hub_role`, `input_mode_label`. Add-on restart required after change.
 
 ### Changed
+- **Add-on Configuration nested schema.** Options grouped under `network`, `fieldbus`, `installation`, `discovery`, `logging`. Legacy flat keys still work via `run.sh` fallback until re-saved.
 - **Web UI: dimmer channels are always lights.** Dimmer rows no longer show a type dropdown — only relay channels can be set to fan, cover, switch, or plug. Uploading or editing `devices.json` normalises dimmer types to light; the API rejects other values on PATCH.
+- **Web UI: removed placeholder Enable toggle** on module headers; hub role is read-only from add-on config.
 
 ### Fixed
 - **Module search no longer duplicates modules without a MAC.** Installations imported from IPA (or other sources with empty `mac`) are matched by IP during a sweep; the gateway backfills the MAC and firmware on the existing entry instead of adding a second module at the same address.
+
+## [Unreleased]
 
 ## [1.4.1] - 2026-07-14
 

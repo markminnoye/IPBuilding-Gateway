@@ -1,0 +1,81 @@
+configuration:
+  network:
+    name: Network / API
+    description: Hub address, northbound API, and HTTP timeouts to field modules.
+    fields:
+      hub_ip:
+        name: Hub IP address
+        description: IP where this gateway acts as the field-bus centrale on UDP/1001 (default 10.10.1.1).
+      api_port:
+        name: API port
+        description: Port for WebSocket /ws and REST /api/v1/ (companion, Web UI).
+      rest_shim_enabled:
+        name: IPBox REST shim
+        description: Legacy IPBox REST on port 30200 — migration only.
+      http_timeout_s:
+        name: HTTP timeout (discovery)
+        description: Timeout (s) for HTTP calls during ARP/identify discovery.
+      metadata_timeout_s:
+        name: HTTP timeout (modules)
+        description: Timeout (s) for getSysSet / getButtons on modules (raise on slow VLAN).
+  fieldbus:
+    name: Field bus
+    description: UDP/1001 polling and input centrale mode (master/slave).
+    fields:
+      poll_interval:
+        name: Input poll interval
+        description: Seconds between I0000 polls to IP1100 input modules (IPBox ~2 s).
+      actuator_poll_interval:
+        name: Actuator poll interval
+        description: Seconds between relay/dimmer keep-alive polls (P0000 / I9900, IPBox ~20 s).
+      hub_role:
+        name: Input centrale mode
+        description: >-
+          Controls how IP1100PoE input modules behave relative to this gateway as the field-bus centrale.
+
+
+          Slave (full) — default: the gateway polls the input module (I0000) and receives button events (B-…E). The module acts as slave: green LED steady, buttons send events to the centrale. Scenes and automation belong in Home Assistant (not in the gateway).
+
+
+          Master / autonomous (actuators_only) — migration: the gateway does not poll inputs and does not claim the module. The IP1100 falls back to the autonomy table in EEPROM (as when the original centrale fails): green LED blinking, buttons drive basic lighting locally. Scenes, audio, cameras, and motion-detector logic via the centrale are unavailable.
+
+
+          Use actuators_only during migration or dual-hub: relay/dimmer via this gateway while buttons keep working locally without this gateway claiming the input. Add-on restart required after change.
+  installation:
+    name: Installation
+    description: Path to devices.json (names, rooms, active flags).
+    fields:
+      devices_file:
+        name: devices.json path
+        description: Installation backup; visible via Samba under addon_configs/…/devices.json.
+  discovery:
+    name: Discovery
+    description: Runtime auto-discovery on the field-bus subnet.
+    fields:
+      discovery_subnet:
+        name: Discovery subnet
+        description: /24 subnet for ARP sweep and passive monitor (e.g. 10.10.1).
+      discovery_range_start:
+        name: Scan range start
+        description: First host in ARP/HTTP scan range (0 = full /24).
+      discovery_range_end:
+        name: Scan range end
+        description: Last host in ARP/HTTP scan range.
+      auto_discover_on_start:
+        name: Discover on start
+        description: Active ARP sweep + HTTP identify on add-on start (empty devices.json always triggers sweep).
+      passive_arp_monitor:
+        name: Passive ARP monitor
+        description: Watch ARP traffic without broadcast (detect new/removed modules).
+      arp_poll_interval_s:
+        name: ARP poll interval
+        description: Interval (s) for passive ARP polling.
+      use_env_defaults:
+        name: Lab/RE fixed IPs
+        description: Poll .30/.40/.50 when devices.json is missing — leave off in production.
+  logging:
+    name: Logging
+    fields:
+      log_level:
+        name: Log level
+        description: debug, info, warning, or error.

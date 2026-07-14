@@ -26,6 +26,29 @@ def _load_config() -> dict:
     return yaml.safe_load(_CONFIG.read_text(encoding="utf-8"))
 
 
+def _schema_keys(schema: dict, prefix: str = "") -> set[str]:
+    """Flatten nested schema keys to dotted paths."""
+    keys: set[str] = set()
+    for key, value in schema.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            keys.update(_schema_keys(value, path))
+        else:
+            keys.add(path)
+    return keys
+
+
+def _options_keys(options: dict, prefix: str = "") -> set[str]:
+    keys: set[str] = set()
+    for key, value in options.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            keys.update(_options_keys(value, path))
+        else:
+            keys.add(path)
+    return keys
+
+
 def test_watchdog_matches_supervisor_regex() -> None:
     """Watchdog must use [PORT:<container-port>], not bare [PORT].
 
@@ -45,12 +68,29 @@ def test_watchdog_matches_supervisor_regex() -> None:
 
 def test_options_and_schema_keys_match() -> None:
     cfg = _load_config()
-    options = set(cfg.get("options", {}).keys())
-    schema = set(cfg.get("schema", {}).keys())
+    options = _options_keys(cfg.get("options", {}))
+    schema = _schema_keys(cfg.get("schema", {}))
     assert options == schema, (
         f"options/schema key mismatch: "
         f"only in options={options - schema}, only in schema={schema - options}"
     )
+
+
+def test_fieldbus_hub_role_schema() -> None:
+    cfg = _load_config()
+    assert cfg["schema"]["fieldbus"]["hub_role"] == "list(full|actuators_only)"
+    assert cfg["options"]["fieldbus"]["hub_role"] == "full"
+
+
+def test_translations_present_for_hub_role() -> None:
+    for lang in ("nl", "en"):
+        path = _CONFIG.parent / "translations" / f"{lang}.yaml"
+        assert path.is_file(), f"missing translation file: {path}"
+        trans = yaml.safe_load(path.read_text(encoding="utf-8"))
+        hub = trans["configuration"]["fieldbus"]["fields"]["hub_role"]
+        assert hub.get("name")
+        assert hub.get("description")
+        assert "Slave" in hub["description"] or "slave" in hub["description"].lower()
 
 
 def test_required_manifest_fields() -> None:

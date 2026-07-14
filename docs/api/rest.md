@@ -55,11 +55,8 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
       "since": "2026-06-15T11:40:00Z"
     }
   ],
-  "fieldbus": {
-    "polling_enabled": true,
-    "poll_interval_s": 2.0,
-    "actuator_poll_interval_s": 20.0
-  },
+  "hub_role": "full",
+  "input_mode_label": "Slave",
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
     "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" },

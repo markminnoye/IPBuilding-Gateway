@@ -426,7 +426,14 @@ class GatewayAPI:
 
     async def _get_status(self, request: web.Request) -> web.Response:
         """GET /api/v1/status — full gateway health snapshot."""
-        return web.json_response(self._health.snapshot())
+        return web.json_response(self._status_payload())
+
+    def _status_payload(self) -> dict[str, Any]:
+        """Health snapshot plus deployment-specific hub role fields."""
+        body = self._health.snapshot()
+        body["hub_role"] = self._cfg.hub_role
+        body["input_mode_label"] = self._cfg.input_mode_label
+        return body
 
     async def _get_devices(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices — return full device list as JSON."""
@@ -859,6 +866,8 @@ class GatewayAPI:
         if no long_press fired we emit single_press (the short click), then
         always emit release.
         """
+        if not self._cfg.claims_input_modules:
+            return
         id_hex = (evt.id_hex or "").lower()
         action = (evt.action or "").lower()
         if not id_hex or action not in ("press", "release"):
@@ -930,6 +939,8 @@ class GatewayAPI:
 
     def _on_health_changed(self) -> None:
         payload = self._health.snapshot(include_actions=False)
+        payload["hub_role"] = self._cfg.hub_role
+        payload["input_mode_label"] = self._cfg.input_mode_label
         asyncio.create_task(
             self._broadcast({"type": "gateway_status", **payload})
         )
@@ -1011,7 +1022,11 @@ class GatewayAPI:
             "schema_version": 2,
             "modules": self._build_module_list(),
             "devices": self._build_device_list(),
-            "gateway_status": self._health.snapshot(include_actions=False),
+            "gateway_status": self._health.snapshot(include_actions=False)
+            | {
+                "hub_role": self._cfg.hub_role,
+                "input_mode_label": self._cfg.input_mode_label,
+            },
         }
 
     def _build_device_list(self) -> list[dict[str, Any]]:
@@ -1081,7 +1096,7 @@ class GatewayAPI:
 
                 devices.append(device)
 
-            if mc.type == DeviceType.INPUT:
+            if mc.type == DeviceType.INPUT and self._cfg.claims_input_modules:
                 meta = self._meta_cache.get(mc.mac)
                 if meta is not None and meta.buttons:
                     for btn in meta.buttons:

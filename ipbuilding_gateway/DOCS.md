@@ -111,6 +111,33 @@ Bekijk logs voor de opstartstatus:
 | `http_timeout_s` | `2.0` | Timeout voor HTTP getSysSet calls tijdens discovery |
 | `metadata_timeout_s` | `5.0` | Per-request timeout (s) voor HTTP `getSysSet` / `getButtons` op de modules. Verhoog bij trage veldbus (bijv. druk VLAN). |
 
+Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Configuration** (nested schema). Oude flat keys blijven werken tot je de configuratie opnieuw opslaat.
+
+| Option (nested) | Default | Description |
+|-----------------|---------|-------------|
+| `fieldbus.hub_role` | `full` | Input-centrale modus: `full` = Slave (poll + button events), `actuators_only` = Master (EEPROM autonomie, geen input-claim). Zie hieronder. |
+
+### Input-centrale (master/slave)
+
+De IP1100PoE kent twee modi ten opzichte van de **centrale** (IPBox of deze gateway), zoals in de installatiehandleiding § autonomie:
+
+| Modus | Config | LED | Gateway-gedrag | Wanneer kiezen |
+|-------|--------|-----|----------------|----------------|
+| **Slave** | `fieldbus.hub_role: full` | Groen **continu** | Poll `I0000`, ontvang `B-…E`, stuur events naar Home Assistant | Normale productie: knoppen in HA-automatisering |
+| **Master / autonoom** | `fieldbus.hub_role: actuators_only` | Groen **knipperend** | Geen input-poll, geen button-events; knoppen werken lokaal via EEPROM-tabel | Migratie / dual-hub: relay/dimmer via gateway, input nog niet claimen |
+
+**Migratie (dual-hub):**
+
+1. Zet `fieldbus.hub_role` op `actuators_only`.
+2. **Herstart** de add-on.
+3. Controleer op de IP1100: LED knippert groen; fysieke knoppen bedienen basisverlichting lokaal.
+4. Relay/dimmer worden normaal gepolled en zijn beschikbaar in de companion.
+5. Na cutover: zet terug op `full` en herstart — LED brandt continu; knop-events komen in Home Assistant.
+
+**Verschil met kanaal `active`:** `active: false` op een drukknop schakelt alleen de northbound/HA-entity uit; bij `full` pollt de gateway de input-module nog steeds. `hub_role` bepaalt of **deze gateway** de veldbus-centrale-claim voor ingangen overneemt.
+
+Uitgebreide uitleg staat ook in de Configuration-UI (translations) en in de add-on docs tab.
+
 ---
 
 ## Network
