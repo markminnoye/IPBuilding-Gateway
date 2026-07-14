@@ -155,8 +155,8 @@ See [`resources_and_docs/evidence/2026-06-03_arp_discover_spike.md`](resources_a
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `GATEWAY_HUB_IP` | `10.10.1.1` | Documented hub address (modules send replies here) |
 | `GATEWAY_RELAY_IP` / `GATEWAY_DIMMER_IP` / `GATEWAY_INPUT_IP` | `.30` / `.40` / `.50` | Lab poll targets when `GATEWAY_USE_ENV_DEFAULTS=1` or `GATEWAY_SIMULATED=1` |
+| `GATEWAY_BIND_IP` | `0.0.0.0` | IP address the UDP field-bus socket binds to; set to a specific NIC IP (e.g. `10.10.1.1`) to bind explicitly |
 | `GATEWAY_USE_ENV_DEFAULTS` | `0` | Opt-in: poll env relay/dimmer/input IPs when `devices.json` is missing or invalid (off in production) |
 | `GATEWAY_POLL_INTERVAL` | `2.0` | Seconds between input (IP1100) poll rounds (`I0000`) |
 | `GATEWAY_ACTUATOR_POLL_INTERVAL` | `20.0` | Seconds between relay/dimmer keep-alive polls (`P0000` / `I9900`) |

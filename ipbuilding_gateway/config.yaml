@@ -1,5 +1,5 @@
 name: IPBuilding Gateway
-version: "1.5.0"
+version: "1.5.1"
 slug: ipbuilding_gateway
 description: Open IPBuilding field-bus gateway (UDP/1001) — replaces proprietary IPBox hub
 url: https://github.com/markminnoye/IPBuilding-Gateway
@@ -23,16 +23,15 @@ discovery:
   - ha_ipbuilding_gateway
 privileged: []
 options:
+  fieldbus:
+    hub_role: slave
+    poll_interval: 2.0
+    actuator_poll_interval: 20.0
   network:
-    hub_ip: 10.10.1.1
-    api_port: 8080
+    bind_ip: 0.0.0.0
     rest_shim_enabled: false
     http_timeout_s: 2.0
     metadata_timeout_s: 5.0
-  fieldbus:
-    poll_interval: 2.0
-    actuator_poll_interval: 20.0
-    hub_role: full
   installation:
     devices_file: /config/devices.json
   discovery:
@@ -47,16 +46,15 @@ options:
     log_level: info
 
 schema:
+  fieldbus:
+    hub_role: list(slave|master)
+    poll_interval: float
+    actuator_poll_interval: float
   network:
-    hub_ip: str
-    api_port: port
+    bind_ip: str
     rest_shim_enabled: bool
     http_timeout_s: float
     metadata_timeout_s: float
-  fieldbus:
-    poll_interval: float
-    actuator_poll_interval: float
-    hub_role: list(full|actuators_only)
   installation:
     devices_file: str
   discovery:

@@ -83,8 +83,8 @@ python scripts/discover_from_ipbox.py
 
 Bekijk logs voor de opstartstatus:
 ```
-[run.sh] GATEWAY_HUB_IP=10.10.1.1
-[run.sh] GATEWAY_API_PORT=8080
+[run.sh] GATEWAY_HUB_ROLE=slave
+[run.sh] GATEWAY_BIND_IP=0.0.0.0
 [run.sh] GATEWAY_DEVICES_FILE=/config/devices.json
 ```
 
@@ -92,49 +92,53 @@ Bekijk logs voor de opstartstatus:
 
 ## Configuration
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `hub_ip` | `10.10.1.1` | Hub/adres waar modules op reageren |
-| `poll_interval` | `2.0` | Input-poll interval in seconden (`I0000`) |
-| `actuator_poll_interval` | `20.0` | Relay/dimmer keep-alive interval in seconden (`P0000` / `I9900`) |
-| `api_port` | `8080` | WebSocket + REST northbound API poort |
-| `rest_shim_enabled` | `false` | IPBox REST shim op poort `30200` (enkel migratie) |
-| `log_level` | `info` | Log niveau: `debug`, `info`, `warning`, `error` |
-| `devices_file` | `/config/devices.json` | Pad naar installatie configuratie (Samba: `addon_configs/.../devices.json`) |
-| `discovery_subnet` | `10.10.1` | Subnet voor ARP-sweep en passieve monitor |
-| `discovery_range_start` | `0` | Start van IP-range voor init-sweep (0 = volledige /24) |
-| `discovery_range_end` | `254` | Eind van IP-range voor init-sweep |
-| `auto_discover_on_start` | `false` | Re-sweep van een leeg `devices.json` forceren. Ontbrekend of ongeldig `devices.json` triggert altijd een init-sweep, ook als deze optie uit staat. |
-| `passive_arp_monitor` | `true` | Passieve ARP-monitor inschakelen (30 s poll interval) |
-| `arp_poll_interval_s` | `30.0` | Interval voor passieve ARP-polling in seconden |
-| `use_env_defaults` | `false` | Lab/RE: poll vaste `.30/.40/.50` IPs wanneer `devices.json` ontbreekt of ongeldig is. Productie: uit laten; discovery vult `devices.json`. |
-| `http_timeout_s` | `2.0` | Timeout voor HTTP getSysSet calls tijdens discovery |
-| `metadata_timeout_s` | `5.0` | Per-request timeout (s) voor HTTP `getSysSet` / `getButtons` op de modules. Verhoog bij trage veldbus (bijv. druk VLAN). |
-
-Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Configuration** (nested schema). Oude flat keys blijven werken tot je de configuratie opnieuw opslaat.
+Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Configuration** (nested schema), met **Modules** als eerste groep.
 
 | Option (nested) | Default | Description |
 |-----------------|---------|-------------|
-| `fieldbus.hub_role` | `full` | Input-centrale modus: `full` = Slave (poll + button events), `actuators_only` = Master (EEPROM autonomie, geen input-claim). Zie hieronder. |
+| `fieldbus.hub_role` | `slave` | Modus ingangsmodule (IP1100): `slave` of `master`. Zie hieronder. |
+| `fieldbus.poll_interval` | `2.0` | Input-poll interval in seconden (`I0000`), enkel relevant bij `slave` |
+| `fieldbus.actuator_poll_interval` | `20.0` | Relay/dimmer keep-alive interval in seconden (`P0000` / `I9900`) |
+| `network.bind_ip` | `0.0.0.0` | IP-adres waarop de UDP-veldbussocket bindt. Standaard alle interfaces; zet op bijv. `10.10.1.1` om expliciet aan de veldbus-NIC te binden. |
+| `network.rest_shim_enabled` | `false` | IPBox REST-shim op poort `30200` (enkel migratie) |
+| `network.http_timeout_s` | `2.0` | Timeout voor HTTP getSysSet calls tijdens discovery |
+| `network.metadata_timeout_s` | `5.0` | Per-request timeout (s) voor HTTP `getSysSet` / `getButtons` op de modules. Verhoog bij trage veldbus (bijv. druk VLAN). |
+| `installation.devices_file` | `/config/devices.json` | Pad naar installatie configuratie (Samba: `addon_configs/.../devices.json`) |
+| `discovery.discovery_subnet` | `10.10.1` | Subnet voor ARP-sweep en passieve monitor |
+| `discovery.discovery_range_start` | `0` | Start van IP-range voor init-sweep (0 = volledige /24) |
+| `discovery.discovery_range_end` | `254` | Eind van IP-range voor init-sweep |
+| `discovery.auto_discover_on_start` | `false` | Re-sweep van een leeg `devices.json` forceren. Ontbrekend of ongeldig `devices.json` triggert altijd een init-sweep, ook als deze optie uit staat. |
+| `discovery.passive_arp_monitor` | `true` | Passieve ARP-monitor inschakelen (30 s poll interval) |
+| `discovery.arp_poll_interval_s` | `30.0` | Interval voor passieve ARP-polling in seconden |
+| `discovery.use_env_defaults` | `false` | Lab/RE: poll vaste `.30/.40/.50` IPs wanneer `devices.json` ontbreekt of ongeldig is. Productie: uit laten; discovery vult `devices.json`. |
+| `logging.log_level` | `info` | Log niveau: `debug`, `info`, `warning`, `error` |
+
+De northbound API-poort (`8080`) en de IPBox REST-shim-poort (`30200`) liggen vast en staan **niet** in deze tabel — ze zijn gedocumenteerd onder Supervisor's eigen **Network**-sectie op de add-on info-pagina (zie [Ports](#ports)).
+
+Oude flat keys (zonder groepering) blijven werken tot je de configuratie opnieuw opslaat.
 
 ### Input-centrale (master/slave)
 
-De IP1100PoE kent twee modi ten opzichte van de **centrale** (IPBox of deze gateway), zoals in de installatiehandleiding § autonomie:
+De IP1100PoE kent twee modi ten opzichte van de **centrale** (deze gateway):
 
-| Modus | Config | LED | Gateway-gedrag | Wanneer kiezen |
-|-------|--------|-----|----------------|----------------|
-| **Slave** | `fieldbus.hub_role: full` | Groen **continu** | Poll `I0000`, ontvang `B-…E`, stuur events naar Home Assistant | Normale productie: knoppen in HA-automatisering |
-| **Master / autonoom** | `fieldbus.hub_role: actuators_only` | Groen **knipperend** | Geen input-poll, geen button-events; knoppen werken lokaal via EEPROM-tabel | Migratie / dual-hub: relay/dimmer via gateway, input nog niet claimen |
+| Modus | Config | LED | Wie stuurt knoppen aan? | Wanneer kiezen |
+|-------|--------|-----|-------------------------|----------------|
+| **Slave** | `fieldbus.hub_role: slave` | Groen **continu** | Gateway → events → **Home Assistant** | Standaard: knoppen in HA-automatisering |
+| **Master** | `fieldbus.hub_role: master` | Groen **knipperend** | **Ingangsmodule** zelf (eigen opgeslagen koppelingen) | Knoppen nog niet via HA, of tijdelijk terwijl de rest al via deze gateway loopt |
 
-**Migratie (dual-hub):**
+**Wat verandert er niet bij master:** relais en dimmers blijven via deze gateway en Home Assistant bedienbaar (app, automatiseringen zonder drukknop). Alleen het **knop-pad** wijzigt.
 
-1. Zet `fieldbus.hub_role` op `actuators_only`.
+**Fallback:** als de gateway uitvalt of geen verbinding heeft, neemt de ingangsmodule het over volgens zijn eigen opgeslagen koppelingen (niet noodzakelijk hetzelfde als in Home Assistant). De gateway schrijft die module-configuratie nog niet weg. Bij slave blijft de configuratie op de module als noodvoorziening actief.
+
+**Tijdelijk master gebruiken:**
+
+1. Zet `fieldbus.hub_role` op `master`.
 2. **Herstart** de add-on.
-3. Controleer op de IP1100: LED knippert groen; fysieke knoppen bedienen basisverlichting lokaal.
-4. Relay/dimmer worden normaal gepolled en zijn beschikbaar in de companion.
-5. Na cutover: zet terug op `full` en herstart — LED brandt continu; knop-events komen in Home Assistant.
+3. Controleer op de IP1100: LED knippert groen; knoppen bedienen verlichting volgens de module-configuratie.
+4. Relais en dimmers blijven beschikbaar in de companion.
+5. Na cutover: zet terug op `slave` en herstart — LED brandt continu; knop-events komen in Home Assistant.
 
-**Verschil met kanaal `active`:** `active: false` op een drukknop schakelt alleen de northbound/HA-entity uit; bij `full` pollt de gateway de input-module nog steeds. `hub_role` bepaalt of **deze gateway** de veldbus-centrale-claim voor ingangen overneemt.
+**Verschil met kanaal `active`:** `active: false` op een drukknop schakelt alleen de northbound/HA-entity uit; bij `slave` pollt de gateway de input-module nog steeds. `hub_role` bepaalt of **deze gateway** de veldbus-centrale-claim voor ingangen overneemt.
 
 Uitgebreide uitleg staat ook in de Configuration-UI (translations) en in de add-on docs tab.
 
@@ -164,8 +168,10 @@ ping -c1 10.10.1.50
 
 | Poort | Protocol | Gebruik |
 |-------|----------|---------|
-| `8080` | HTTP + WebSocket | Northbound API — companion, apps, Node-RED |
-| `30200` | HTTP REST | IPBox compatibiliteits Shim — **uitgeschakeld tenzij `rest_shim_enabled: true`** |
+| `8080` | HTTP + WebSocket | Northbound API — companion, apps, Node-RED. Vast, niet configureerbaar (`host_network: true` maakt Supervisor's eigen poort-remapping irrelevant). |
+| `30200` | HTTP REST | IPBox compatibiliteits Shim — **uitgeschakeld tenzij `network.rest_shim_enabled: true`** |
+
+Beide poorten staan met een korte omschrijving onder Supervisor's eigen **Network**-sectie op de add-on info-pagina (via `translations/{taal}.yaml` → top-level `network:` key), naast deze tabel.
 
 ---
 
@@ -184,7 +190,7 @@ Zoek naar `[run.sh]` — als die ontbreekt is `devices.json` niet geladen.
 - Add-on moet **draaien** (niet enkel geïnstalleerd)
 - Companion en add-on hoeven niet dezelfde versie te hebben — beide volgen onafhankelijk semver. Controleer [de companion releases](https://github.com/markminnoye/ha-ipbuilding-gateway/releases) en [de add-on releases](https://github.com/markminnoye/IPBuilding-Gateway/releases) voor de meest recente versies.
 - Check **Settings → Devices & Services → Discovered** (niet alleen “Add integration”)
-- Check `api_port` is `8080`
+- De northbound API luistert altijd op poort `8080` (vast, niet configureerbaar)
 - Supervisor discovery vereist HA OS / Supervised; op standalone gateway gebruikt de companion mDNS (`_ipbgw._tcp.local.`)
 
 ### Geen entities met namen — "10.10.1.30:0"

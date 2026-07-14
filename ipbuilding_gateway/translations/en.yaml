@@ -1,14 +1,39 @@
 configuration:
-  network:
-    name: Network / API
-    description: Hub address, northbound API, and HTTP timeouts to field modules.
+  fieldbus:
+    name: Modules
+    description: Communication with relay, dimmer, and input modules.
     fields:
-      hub_ip:
-        name: Hub IP address
-        description: IP where this gateway acts as the field-bus centrale on UDP/1001 (default 10.10.1.1).
-      api_port:
-        name: API port
-        description: Port for WebSocket /ws and REST /api/v1/ (companion, Web UI).
+      hub_role:
+        name: Input module mode (IP1100)
+        description: >-
+          The IP1100PoE input module has two modes. Check the green LED on the module: steady = slave, blinking = master.
+
+
+          slave — Gateway and Home Assistant control buttons (default)
+          This gateway is the centrale for wall buttons on the field bus. Buttons send events to Home Assistant; you build automations, scenes, and routing in HA. On the module: green LED steady on.
+
+
+          master — Input module controls buttons locally
+          This gateway does not claim the input module: buttons do not appear in Home Assistant. Buttons drive relays and dimmers directly from pairings stored on the input module. Relays and dimmers remain available via this gateway and Home Assistant (app, automations without buttons). Button-triggered scenes and advanced routing are unavailable. On the module: green LED blinking. Choose master if you are not ready to route buttons through HA yet, or temporarily while the rest already runs on this gateway.
+
+
+          Fallback: if the gateway fails or loses connection, the input module takes over using its own stored pairings (not necessarily the same as in Home Assistant). The LED blinks and basic button lighting keeps working. In slave mode that on-module configuration remains as a safety net.
+
+
+          Restart the add-on after changing this.
+      poll_interval:
+        name: Input poll interval
+        description: Only relevant in slave mode. Seconds between polls to the input module (default ~2 s).
+      actuator_poll_interval:
+        name: Actuator poll interval
+        description: Seconds between relay/dimmer keep-alive polls (default ~20 s).
+  network:
+    name: Network
+    description: Field-bus bind address, IPBox REST shim, and HTTP timeouts to field modules. The northbound API/web UI port is fixed and shown under the add-on's Network section (not here).
+    fields:
+      bind_ip:
+        name: Field-bus bind address
+        description: IP address the gateway's UDP field-bus socket binds to. Default 0.0.0.0 (all interfaces). Set to a specific interface IP, e.g. 10.10.1.1, to explicitly bind to the field-bus NIC.
       rest_shim_enabled:
         name: IPBox REST shim
         description: Legacy IPBox REST on port 30200 — migration only.
@@ -18,29 +43,6 @@ configuration:
       metadata_timeout_s:
         name: HTTP timeout (modules)
         description: Timeout (s) for getSysSet / getButtons on modules (raise on slow VLAN).
-  fieldbus:
-    name: Field bus
-    description: UDP/1001 polling and input centrale mode (master/slave).
-    fields:
-      poll_interval:
-        name: Input poll interval
-        description: Seconds between I0000 polls to IP1100 input modules (IPBox ~2 s).
-      actuator_poll_interval:
-        name: Actuator poll interval
-        description: Seconds between relay/dimmer keep-alive polls (P0000 / I9900, IPBox ~20 s).
-      hub_role:
-        name: Input centrale mode
-        description: >-
-          Controls how IP1100PoE input modules behave relative to this gateway as the field-bus centrale.
-
-
-          Slave (full) — default: the gateway polls the input module (I0000) and receives button events (B-…E). The module acts as slave: green LED steady, buttons send events to the centrale. Scenes and automation belong in Home Assistant (not in the gateway).
-
-
-          Master / autonomous (actuators_only) — migration: the gateway does not poll inputs and does not claim the module. The IP1100 falls back to the autonomy table in EEPROM (as when the original centrale fails): green LED blinking, buttons drive basic lighting locally. Scenes, audio, cameras, and motion-detector logic via the centrale are unavailable.
-
-
-          Use actuators_only during migration or dual-hub: relay/dimmer via this gateway while buttons keep working locally without this gateway claiming the input. Add-on restart required after change.
   installation:
     name: Installation
     description: Path to devices.json (names, rooms, active flags).
@@ -79,3 +81,6 @@ configuration:
       log_level:
         name: Log level
         description: debug, info, warning, or error.
+network:
+  8080/tcp: Northbound API — WebSocket /ws and REST /api/v1/ (companion, Web UI via Ingress).
+  30200/tcp: Legacy IPBox REST shim (only used when enabled under Network → IPBox REST shim).

@@ -20,13 +20,13 @@ from gateway.udp_bus import UDPBus
 
 
 def test_normalize_hub_role_default() -> None:
-    cfg = GatewayConfig(hub_role="full")
+    cfg = GatewayConfig(hub_role="slave")
     assert cfg.claims_input_modules is True
     assert cfg.input_mode_label == "Slave"
 
 
-def test_actuators_only_master_label() -> None:
-    cfg = GatewayConfig(hub_role="actuators_only")
+def test_master_label() -> None:
+    cfg = GatewayConfig(hub_role="master")
     assert cfg.claims_input_modules is False
     assert cfg.input_mode_label == "Master"
 
@@ -35,15 +35,15 @@ def test_from_env_hub_role(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     devices_file = tmp_path / "devices.json"
     devices_file.write_text(json.dumps({"modules": []}), encoding="utf-8")
     monkeypatch.setenv("GATEWAY_DEVICES_FILE", str(devices_file))
-    monkeypatch.setenv("GATEWAY_HUB_ROLE", "actuators_only")
+    monkeypatch.setenv("GATEWAY_HUB_ROLE", "master")
     monkeypatch.delenv("GATEWAY_SIMULATED", raising=False)
     monkeypatch.delenv("GATEWAY_USE_ENV_DEFAULTS", raising=False)
 
     cfg = GatewayConfig.from_env()
-    assert cfg.hub_role == "actuators_only"
+    assert cfg.hub_role == "master"
 
 
-def test_from_env_invalid_hub_role_falls_back_to_full(
+def test_from_env_invalid_hub_role_falls_back_to_slave(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
     devices_file = tmp_path / "devices.json"
@@ -54,16 +54,16 @@ def test_from_env_invalid_hub_role_falls_back_to_full(
     monkeypatch.delenv("GATEWAY_USE_ENV_DEFAULTS", raising=False)
 
     cfg = GatewayConfig.from_env()
-    assert cfg.hub_role == "full"
+    assert cfg.hub_role == "slave"
 
 
 @pytest.mark.asyncio
-async def test_poll_loop_skips_input_when_actuators_only() -> None:
+async def test_poll_loop_skips_input_when_master() -> None:
     cfg = GatewayConfig(
         simulated_mode=True,
         poll_interval_s=0.05,
         actuator_poll_interval_s=0.05,
-        hub_role="actuators_only",
+        hub_role="master",
     )
     bus = UDPBus(cfg)
 
@@ -81,8 +81,8 @@ async def test_poll_loop_skips_input_when_actuators_only() -> None:
 
     input_polls = [p for _, p in sent_commands if p == b"I0000"]
     relay_polls = [p for _, p in sent_commands if p == b"P0000"]
-    assert relay_polls, "Relay polls should continue in actuators_only mode"
-    assert not input_polls, "Input polls must be skipped in actuators_only mode"
+    assert relay_polls, "Relay polls should continue in master mode"
+    assert not input_polls, "Input polls must be skipped in master mode"
 
 
 def _installation_with_input() -> InstallationConfig:
@@ -112,7 +112,7 @@ def _installation_with_input() -> InstallationConfig:
     })
 
 
-def _make_api(tmp_path: Path, hub_role: str = "full") -> GatewayAPI:
+def _make_api(tmp_path: Path, hub_role: str = "slave") -> GatewayAPI:
     installation = _installation_with_input()
     devices_file = tmp_path / "devices.json"
     devices_file.write_text(json.dumps({"modules": []}), encoding="utf-8")
@@ -123,8 +123,8 @@ def _make_api(tmp_path: Path, hub_role: str = "full") -> GatewayAPI:
     cfg.installation = installation
     cfg.devices_file = str(devices_file)
     cfg.hub_role = hub_role
-    cfg.claims_input_modules = hub_role == "full"
-    cfg.input_mode_label = "Master" if hub_role == "actuators_only" else "Slave"
+    cfg.claims_input_modules = hub_role == "slave"
+    cfg.input_mode_label = "Master" if hub_role == "master" else "Slave"
     cfg.metadata_timeout_s = 5
     cfg.reply_timeout_ms = 500
     cfg.discovery = MagicMock()
@@ -143,7 +143,7 @@ def _make_api(tmp_path: Path, hub_role: str = "full") -> GatewayAPI:
 class TestHubRoleGatewayAPI:
     @pytest.mark.asyncio
     async def test_status_includes_hub_role(self, tmp_path: Path) -> None:
-        api = _make_api(tmp_path, hub_role="actuators_only")
+        api = _make_api(tmp_path, hub_role="master")
         app = web.Application()
         app.router.add_get("/api/v1/status", api._get_status)
 
@@ -151,14 +151,14 @@ class TestHubRoleGatewayAPI:
             resp = await client.get("/api/v1/status")
             body = await resp.json()
 
-        assert body["hub_role"] == "actuators_only"
+        assert body["hub_role"] == "master"
         assert body["input_mode_label"] == "Master"
 
     @pytest.mark.asyncio
-    async def test_devices_omit_pushbuttons_when_actuators_only(
+    async def test_devices_omit_pushbuttons_when_master(
         self, tmp_path: Path,
     ) -> None:
-        api = _make_api(tmp_path, hub_role="actuators_only")
+        api = _make_api(tmp_path, hub_role="master")
         app = web.Application()
         app.router.add_get("/api/v1/devices", api._get_devices)
 
@@ -170,8 +170,8 @@ class TestHubRoleGatewayAPI:
         assert "button" not in device_types
 
     @pytest.mark.asyncio
-    async def test_devices_include_pushbuttons_when_full(self, tmp_path: Path) -> None:
-        api = _make_api(tmp_path, hub_role="full")
+    async def test_devices_include_pushbuttons_when_slave(self, tmp_path: Path) -> None:
+        api = _make_api(tmp_path, hub_role="slave")
         app = web.Application()
         app.router.add_get("/api/v1/devices", api._get_devices)
 
@@ -181,8 +181,8 @@ class TestHubRoleGatewayAPI:
 
         assert any(d.get("semantic_type") == "button" for d in body["devices"])
 
-    def test_button_event_suppressed_when_actuators_only(self, tmp_path: Path) -> None:
-        api = _make_api(tmp_path, hub_role="actuators_only")
+    def test_button_event_suppressed_when_master(self, tmp_path: Path) -> None:
+        api = _make_api(tmp_path, hub_role="master")
         broadcasts: list[dict[str, Any]] = []
 
         async def capture(msg: dict[str, Any]) -> None:
