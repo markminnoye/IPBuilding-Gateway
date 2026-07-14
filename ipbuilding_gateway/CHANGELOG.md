@@ -1,109 +1,111 @@
-# Changelog All notable changes to the IPBuilding Gateway add-on are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+# Changelog
 
-## Versiebeleid
+All notable changes to the IPBuilding Gateway add-on are documented here.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-De IPBuilding Gateway add-on en de `ipbuilding-gateway-ha` companion
-volgen **onafhankelijk semver**. Een bump in de ene repo betekent
-niet automatisch een bump in de andere.
+## Version policy
 
-- **Patch (0.3.x)**: cosmetisch, geen impact op de REST/WS wire.
-  Werkt met alle companion-versies die de huidige wire ondersteunen.
-- **Minor (0.x.0)**: nieuwe REST endpoints of optionele velden in
-  bestaande responses. De oude companion blijft werken, maar ziet
-  de nieuwe velden niet.
-- **Major (x.0.0)**: breaking change. De gateway- of companion-CHANGELOG
-  bevat dan een `### Breaking:` entry die de incompatibele combinaties
-  opsomt.
+The IPBuilding Gateway add-on and the `ipbuilding-gateway-ha` companion
+follow **independent semver**. A bump in one repo does not automatically
+mean a bump in the other.
 
-Backward compatibiliteit is de norm — een versie in deze add-on
-blijft werken met de huidige companion tot een `### Breaking:`-regel
-anders meldt.
+- **Patch (0.3.x)**: cosmetic, no impact on the REST/WS wire.
+  Works with all companion versions that support the current wire.
+- **Minor (0.x.0)**: new REST endpoints or optional fields in
+  existing responses. The older companion keeps working but does not
+  see the new fields.
+- **Major (x.0.0)**: breaking change. The gateway or companion CHANGELOG
+  then includes a `### Breaking:` entry listing incompatible combinations.
+
+Backward compatibility is the norm — an add-on version keeps working
+with the current companion until a `### Breaking:` entry says otherwise.
 
 ## [Unreleased]
 
 ## [1.4.1] - 2026-07-14
 
 ### Added
-- **Web UI: Port-kolom bij input-modules.** Drukknoppen tonen de fysieke ingangspoort op de IP1100 (0–7) onder **Port** i.p.v. **Ch**; relay- en dimmerkanalen blijven **Ch**.
-- **IPA-import voor legacy-installaties.** Nieuw werkstation-script `scripts/import_ipa_to_devices.py` bouwt een upload-klaar `devices.json` uit IP1100-autonomie-EEPROM (`.IPA`), zonder live `getButtons`/`getSysSet`. Referentie-output: `resources_and_docs/reference/devices.ipa-reference.json`.
+- **Web UI: Port column on input modules.** Pushbuttons show the physical IP1100 input port (0–7) under **Port** instead of **Ch**; relay and dimmer channels keep **Ch**.
+- **IPA import for legacy installations.** New workstation script `scripts/import_ipa_to_devices.py` builds an upload-ready `devices.json` from IP1100 autonomy EEPROM (`.IPA`) without live `getButtons`/`getSysSet`. Reference output: `resources_and_docs/reference/devices.ipa-reference.json`.
 
 ### Fixed
-- **Web UI: verkeerde module-groepering bij lege MAC.** IPA-import en andere configs zonder MAC-adres kregen `module_id: ""` op alle modules; de Web UI groepeerde alle kanalen onder de laatste module (bijv. drie× Ch 0 op één dimmer). De API gebruikt nu IP als fallback-id tot discovery de MAC invult.
+- **Web UI: wrong module grouping when MAC is empty.** IPA import and other configs without a MAC address assigned `module_id: ""` on every module; the Web UI grouped all channels under the last module (e.g. three× Ch 0 on one dimmer). The API now falls back to IP as the module id until discovery fills in the MAC.
 
 ## [1.4.0] - 2026-07-14
 
 ### Added
-- **Backup & restore in de Web UI.** Download het huidige `devices.json`, upload een handmatig bewerkt bestand (gevalideerd vóór het wordt weggeschreven — een ongeldig bestand wijzigt niets), of reset naar een lege installatie. Nieuwe endpoints: `GET /api/v1/devices/export`, `POST /api/v1/devices/import`, `POST /api/v1/devices/reset`.
-- **Knoppen in backup na module-refresh.** Na een metadata-refresh (opstart, discovery of **Update** in de Web UI) worden fysieke knoppen van input-modules opgeslagen in `devices.json`; een gedownloade backup bevat daarna de volledige geneste `pushbuttons`-lijst. Discovery schrijft voor input-modules het juiste schema (`pushbuttons`/`detectors`, geen `channels`).
+- **Backup & restore in the Web UI.** Download the current `devices.json`, upload a manually edited file (validated before write — an invalid file changes nothing), or reset to an empty installation. New endpoints: `GET /api/v1/devices/export`, `POST /api/v1/devices/import`, `POST /api/v1/devices/reset`.
+- **Buttons included in backup after module refresh.** After a metadata refresh (startup, discovery, or **Update** in the Web UI), physical pushbuttons on input modules are persisted in `devices.json`; a downloaded backup then contains the full nested `pushbuttons` list. Discovery writes the correct schema for input modules (`pushbuttons`/`detectors`, not `channels`).
 
 ### Fixed
-- **Canonieke pushbutton-ID bij module-refresh.** Legacy `2D`-prefix of afwijkende casing in `devices.json` wordt bij merge genormaliseerd, zodat knoppen niet dubbel verschijnen en herladen niet faalt.
+- **Canonical pushbutton ID on module refresh.** Legacy `2D` prefix or mismatched casing in `devices.json` is normalised on merge so buttons do not duplicate and reload does not fail.
 
 ## [1.3.1] - 2026-07-13
 
 ### Changed
-- **Knoppen in `devices.json` genest per module** (`modules[].pushbuttons[]`) i.p.v. een aparte top-level `buttons`-lijst. Discovery en de Web UI bewaren geconfigureerde knoppen nu betrouwbaar.
+- **Pushbuttons nested per module in `devices.json`** (`modules[].pushbuttons[]`) instead of a separate top-level `buttons` list. Discovery and the Web UI now persist configured buttons reliably.
 
 ### Breaking
-- **Oud plat `buttons[]`-formaat in `devices.json` wordt geweigerd.** Converteer handmatig bewerkte bestanden met `scripts/migrate_buttons_to_nested.py` vóór de update, of laat discovery opnieuw vullen.
+- **Legacy flat `buttons[]` format in `devices.json` is rejected.** Convert manually edited files with `scripts/migrate_buttons_to_nested.py` before upgrading, or let discovery repopulate.
 
 ### Fixed
-- Discovery en lege seeds laten geen verouderde top-level `buttons`-key meer achter.
+- Discovery and empty seeds no longer leave a stale top-level `buttons` key behind.
 
 ## [1.3.0] - 2026-07-12
 
 ### Changed
-- **Veldbus-poll cadans gelijk aan IPBox:** input-modules elke ~2 s (`I0000`); relay en dimmer elke ~20 s (`P0000` / `I9900`). Nieuwe add-on optie `actuator_poll_interval` (standaard 20).
-- **Relay-status bij opstart** komt nu van de veldbus (per-kanaal statuspoll) in plaats van HTTP op de module. Na een herstart tonen relays meteen de echte aan/uit-stand in Home Assistant.
-- **Dimmers na herstart** tonen `unknown` tot het eerste commando of een veldbus-wijziging — niet meer het oude niveau via HTTP.
+- **Field-bus poll cadence matches IPBox:** input modules every ~2 s (`I0000`); relay and dimmer every ~20 s (`P0000` / `I9900`). New add-on option `actuator_poll_interval` (default 20).
+- **Relay state on startup** now comes from the field bus (per-channel status poll) instead of HTTP on the module. After a restart, relays show the real on/off state in Home Assistant immediately.
+- **Dimmers after restart** show `unknown` until the first command or a field-bus change — no longer the stale level from HTTP.
 
 ### Added
 - **HA Supervisor Ingress Web UI:** built-in page to view and edit device names, rooms, and types.
-- **Per-module refresh:** ververs de metadata van één module (bijv. knoppenlijst op een input-module) zonder de volledige installatie te refreshen.
+- **Per-module refresh:** refresh metadata for one module (e.g. the button list on an input module) without refreshing the full installation.
 
 ### Removed
-- HTTP `statuses`-hydratatie bij opstart (vervangen door UDP relay sweep).
+- HTTP `statuses` hydration on startup (replaced by UDP relay sweep).
 
 ## [1.3.0-rc1] - 2026-07-12
 
 ### Changed
-- **Relay-status bij opstart** komt nu van de veldbus (per-kanaal statuspoll) in plaats van HTTP op de module. Na een herstart tonen relays meteen de echte aan/uit-stand in Home Assistant.
-- **Dimmers na herstart** tonen `unknown` tot het eerste commando of een veldbus-wijziging — niet meer het oude niveau via HTTP.
+- **Relay state on startup** now comes from the field bus (per-channel status poll) instead of HTTP on the module. After a restart, relays show the real on/off state in Home Assistant immediately.
+- **Dimmers after restart** show `unknown` until the first command or a field-bus change — no longer the stale level from HTTP.
 
 ### Removed
-- HTTP `statuses`-hydratatie bij opstart (vervangen door UDP relay sweep).
+- HTTP `statuses` hydration on startup (replaced by UDP relay sweep).
 
 ## [1.2.4] - 2026-07-03
+
 ### Added
 - **`README.md` in the add-on folder** — English About/Features section in the Supervisor UI (store and add-on info), with a clear note that the **IPBuilding Gateway** companion is required for HA entities, a HACS install link via my.home-assistant.io, and a feature list (UDP/1001, northbound API, discovery, health, optional IPBox shim).
 
 ### Fixed
-- **Geheugenlek bij langdurig draaien opgelost.** Het RAM-gebruik van de add-on steeg na enkele dagen langzaam op doordat poll-antwoorden op de veldbus onbeperkt werden opgeslagen. Na een update stabiliseert het geheugengebruik weer.
+- **Memory leak on long-running installs.** RAM usage slowly climbed over several days because poll responses on the field bus were stored without bound. After this update, memory use stabilises again.
 
 ## [1.2.3] - 2026-07-01
 
 ### Fixed
-- **Add-on store-validatie hersteld.** De `watchdog`-URL in `config.yaml` gebruikte per ongeluk `http://[HOST]:[PORT]/health`. De Supervisor verwacht `http://[HOST]:[PORT:8080]/health` (interne containerpoort). Daardoor kon de add-on na een store-refresh verdwijnen uit de catalogus met fouten als *"does not exist in the store"* of *"has no source location"*.
+- **Add-on store validation restored.** The `watchdog` URL in `config.yaml` accidentally used `http://[HOST]:[PORT]/health`. The Supervisor expects `http://[HOST]:[PORT:8080]/health` (internal container port). After a store refresh the add-on could disappear from the catalogue with errors such as *"does not exist in the store"* or *"has no source location"*.
 
 ## [1.2.2] - 2026-06-30
 
 ### Changed
-- **Env-default UDP poll targets (`.30/.40/.50`) zijn niet langer stille fallback** wanneer `devices.json` ontbreekt of ongeldig is. Productie-installaties starten zonder UDP-polling tot discovery `devices.json` vult. Lab/RE: zet add-on optie `use_env_defaults` aan of `GATEWAY_USE_ENV_DEFAULTS=1`; `GATEWAY_SIMULATED=1` gedraagt zich zoals voorheen.
-- **Init-sweep bij ongeldig `devices.json`** — parse/validatiefouten (bijv. `type: unknown`) triggeren nu dezelfde startup-sweep als een ontbrekend bestand.
-- **Discovery schrijft geen `type: unknown` meer naar `devices.json`.** Ongeïdentificeerde modules (ARP-only of HTTP zonder herkenbare `refNr`) verschijnen via WebSocket `device_added` en in `skipped_unidentified` op `POST /api/v1/discover`, maar blokkeren de loader niet meer. Init-sweep wist een ongeldig bestand naar `{"modules":[]}`.
+- **Env-default UDP poll targets (`.30/.40/.50`) are no longer a silent fallback** when `devices.json` is missing or invalid. Production installs start without UDP polling until discovery fills `devices.json`. Lab/RE: enable add-on option `use_env_defaults` or `GATEWAY_USE_ENV_DEFAULTS=1`; `GATEWAY_SIMULATED=1` behaves as before.
+- **Init-sweep on invalid `devices.json`** — parse/validation errors (e.g. `type: unknown`) now trigger the same startup sweep as a missing file.
+- **Discovery no longer writes `type: unknown` to `devices.json`.** Unidentified modules (ARP-only or HTTP without a recognisable `refNr`) appear via WebSocket `device_added` and in `skipped_unidentified` on `POST /api/v1/discover`, but no longer block the loader. Init-sweep resets an invalid file to `{"modules":[]}`.
 
 ### Added
-- **Diagnostische discovery-logging** — HTTP-identify fouten, onopgeloste moduletypes en `devices.json` reload-fouten verschijnen in de add-on logs.
-- **Health issue `installation.load_failed`** wanneer `devices.json` bestaat maar niet geladen kan worden.
-- **`refNr`/productnaam prefix-fallback** — varianten zoals `ip0200poe` of `IP0300…` worden herkend als relay/dimmer/input.
+- **Diagnostic discovery logging** — HTTP identify errors, unresolved module types, and `devices.json` reload failures appear in the add-on logs.
+- **Health issue `installation.load_failed`** when `devices.json` exists but cannot be loaded.
+- **`refNr`/product name prefix fallback** — variants such as `ip0200poe` or `IP0300…` are recognised as relay/dimmer/input.
 
 ## [1.2.1] - 2026-06-23
 
 ### Fixed
-- **Meer fysieke knoppen worden herkend.** Sommige IP1100PoE-knoppen sturen een ander
-  event-type op de veldbus dan de eerder gedocumenteerde variant. De gateway negeerde
-  die drukken volledig; ze worden nu als normale press/release doorgegeven aan Home
-  Assistant.
+- **More physical buttons are recognised.** Some IP1100PoE buttons send a different
+  event type on the field bus than the previously documented variant. The gateway
+  ignored those presses entirely; they are now forwarded to Home Assistant as normal
+  press/release events.
 
 ## [1.2.0] - 2026-06-23
 
@@ -113,11 +115,10 @@ anders meldt.
 ## [1.1.1] - 2026-06-22
 
 ### Fixed
-- `single_press` wordt niet meer dubbel uitgestuurd wanneer een duplicate of
-  wees-release frame binnenkomt (geen actief ingedrukte knop). Alleen echte
-  korte indrukken genereren een `single_press`; overtollige release-frames
-  leiden nog uitsluitend tot een `released` event. Voorkomt ongewenste dubbele
-  schakelacties bij gebruik met HA-automations.
+- `single_press` is no longer emitted twice when a duplicate or orphan release
+  frame arrives (no active press). Only genuine short presses generate a
+  `single_press`; surplus release frames still produce only a `released` event.
+  Prevents unwanted double switch actions when used with HA automations.
 
 ## [1.1.0] - 2026-06-21
 
@@ -132,47 +133,47 @@ anders meldt.
 ## [1.0.4] - 2026-06-19
 
 ### Added
-- **Discovery TXT record schema v2.** `_build_txt_properties` zendt nu expliciet `host`, `port`, `sw` (alias van `version`) en `mac` naast de bestaande velden. Companion v1.2.2+ gebruikt deze velden om meerdere gateways van elkaar te onderscheiden.
-- **`instance_id` in HassIO discovery payload.** De Supervisor `/supervisor/discovery` POST bevat nu `instance_id` in `config`, zodat de companion dezelfde unieke ID kan gebruiken als voor zeroconf discovery.
+- **Discovery TXT record schema v2.** `_build_txt_properties` now sends explicit `host`, `port`, `sw` (alias of `version`) and `mac` alongside the existing fields. Companion v1.2.2+ uses these fields to distinguish multiple gateways.
+- **`instance_id` in HassIO discovery payload.** The Supervisor `/supervisor/discovery` POST now includes `instance_id` in `config`, so the companion can use the same unique ID as for zeroconf discovery.
 
 ## [1.0.3] - 2026-06-19
 
 ### Removed
-- **Tijdelijke fb376d debug-file logging uit HassIO discovery.** De `_start_hassio` en `_hassio_announce_once` methodes schreven tijdens de diagnose van het 1.0.1 discovery-probleem gestructureerde events naar `/config/debug-fb376d.log`. Die zijn niet meer nodig; de reguliere `HassIO discovery announced: uuid=…` info-log en waarschuwingen op POST-fouten blijven.
+- **Temporary fb376d debug-file logging from HassIO discovery.** During diagnosis of the 1.0.1 discovery issue, `_start_hassio` and `_hassio_announce_once` wrote structured events to `/config/debug-fb376d.log`. That is no longer needed; the regular `HassIO discovery announced: uuid=…` info log and warnings on POST failures remain.
 
 ### Changed
-- `ipbuilding_gateway/config.yaml` `options:` en `schema:` secties in dezelfde volgorde gezet (Network / API → Hub / field bus → Discovery → Logging). Cosmetisch; geen impact op wire, defaults of schema-validatie.
+- `ipbuilding_gateway/config.yaml` `options:` and `schema:` sections reordered to match (Network / API → Hub / field bus → Discovery → Logging). Cosmetic; no impact on wire, defaults or schema validation.
 
 ## [1.0.2] - 2026-06-19
 
 ### Added
-- **Diagnostische logging** bij Supervisor discovery-registratie bij opstarten, zodat te verifiëren is of de gateway correct wordt aangeboden aan Home Assistant.
+- **Diagnostic logging** on Supervisor discovery registration at startup, so it can be verified that the gateway is offered correctly to Home Assistant.
 
 ## [1.0.1] - 2026-06-19
 
 ### Fixed
-- **Add-on verschijnt nu automatisch in Home Assistant → Devices & Services → Discovered** wanneer de companion geïnstalleerd is. De HassIO-discovery-call naar `http://supervisor/discovery` werd door Supervisor geweigerd omdat de add-on de `hassio_api` permissie miste; daardoor kreeg de add-on geen `SUPERVISOR_TOKEN` en werd de discovery-stap in stilte overgeslagen. De `discovery:` service key (`ha_ipbuilding_gateway`) was al aanwezig; alleen de permissie ontbrak. Geen wijziging aan de REST/WS wire of `devices.json`.
+- **Add-on now appears automatically in Home Assistant → Devices & Services → Discovered** when the companion is installed. The HassIO discovery call to `http://supervisor/discovery` was rejected by the Supervisor because the add-on lacked the `hassio_api` permission; the add-on received no `SUPERVISOR_TOKEN` and the discovery step was silently skipped. The `discovery:` service key (`ha_ipbuilding_gateway`) was already present; only the permission was missing. No change to the REST/WS wire or `devices.json`.
 
 ## [1.0.0] - 2026-06-19
 
 ### Breaking
-- **HA integration domain hernoemd** van `ipbuilding_gateway_ha` naar `ha_ipbuilding_gateway`, in lockstep met companion `ha-ipbuilding-gateway` v1.0.0. De add-on `discovery:` key, `gateway/ha_discovery.py` service-payload en `scripts/import_ipbox_to_ha.py` event types gebruiken nu overal de nieuwe domeinnaam. **Oudere add-on versies (< 1.0.0) blijven werken met de oude `ipbuilding_gateway_ha` discovery key**; de nieuwe add-on + nieuwe companion (≥ 1.0.0) gebruiken de nieuwe. Het oude/nieuwe-paar is incompatibel als de versies uit sync zijn (oude add-on + nieuwe companion: Supervisor discovery faalt, handmatige config-flow werkt nog; nieuwe add-on + oude companion: Supervisor discovery faalt). **Geen impact** op REST/WS wire-format of `devices.json`. Operators die de Supervisor discovery gebruiken: update add-on en companion in dezelfde HA-sessie.
+- **HA integration domain renamed** from `ipbuilding_gateway_ha` to `ha_ipbuilding_gateway`, in lockstep with companion `ha-ipbuilding-gateway` v1.0.0. The add-on `discovery:` key, `gateway/ha_discovery.py` service payload and `scripts/import_ipbox_to_ha.py` event types now all use the new domain name. **Older add-on versions (< 1.0.0) keep working with the old `ipbuilding_gateway_ha` discovery key**; the new add-on + new companion (≥ 1.0.0) use the new one. The old/new pair is incompatible when versions are out of sync (old add-on + new companion: Supervisor discovery fails, manual config flow still works; new add-on + old companion: Supervisor discovery fails). **No impact** on REST/WS wire format or `devices.json`. Operators using Supervisor discovery: update add-on and companion in the same HA session.
 
 ### Removed
-- **Runtime endpoint `POST /api/v1/debug/fieldbus-polling`** en het bijbehorende `fieldbus` blok uit `/api/v1/status` (`polling_enabled`, `poll_interval_s`). De gateway heeft geen runtime-toggle voor de field-bus polling meer; de companion `Fieldbus polling (debug)` switch is eveneens verwijderd.
+- **Runtime endpoint `POST /api/v1/debug/fieldbus-polling`** and the associated `fieldbus` block from `/api/v1/status` (`polling_enabled`, `poll_interval_s`). The gateway no longer has a runtime toggle for field-bus polling; the companion "Fieldbus polling (debug)" switch was removed as well.
 
 ### Notes
-- **Versiebeleid wijziging** — de add-on bereikt `1.0.0` bij deze breaking rename. Hierna volgt de add-on onafhankelijk semver van de companion: patch-level bumps in één repo betekenen niet automatisch een bump in de andere. Backward compatibiliteit blijft de norm tot een `### Breaking:` regel anders meldt.
+- **Version policy change** — the add-on reaches `1.0.0` with this breaking rename. After this, the add-on follows independent semver from the companion: patch-level bumps in one repo do not automatically bump the other. Backward compatibility remains the norm until a `### Breaking:` entry says otherwise.
 
 ## [0.4.3] - 2026-06-18
 
 ### Fixed
-- **Correcte lichtstatus direct na een herstart.** Vóór deze versie toonde Home Assistant alle lampen als "uit" tot de eerste UDP-commando binnenkwam — de gateway had nog geen idee van de echte kanaalstand. Bij het opstarten haalt de gateway nu de live kanaalstatus op van elke relay- en dimmermodule via hun ingebouwde webinterface, zodat de eerste snapshot in Home Assistant direct de juiste aan/uit-stand laat zien. Dimmers die nog geen status hebben gerapporteerd tonen nu "Onbekend" in plaats van "uit", en inactieve kanalen worden correct als uitgeschakeld gemarkeerd.
+- **Correct light state immediately after restart.** Before this version, Home Assistant showed all lights as "off" until the first UDP command arrived — the gateway had no idea of the real channel state. On startup the gateway now fetches live channel status from each relay and dimmer module via their built-in web interface, so the first snapshot in Home Assistant shows the correct on/off state. Dimmers that have not yet reported status show "Unknown" instead of "off", and inactive channels are correctly marked as disabled.
 
 ## [0.4.2] - 2026-06-18
 
 ### Added
-- **Debug toggle for the field-bus polling loop.** New endpoint `POST /api/v1/debug/fieldbus-polling` lets an operator stop the periodic UDP/1001 keep-alive polls at runtime (without restarting the bus). The poll loop keeps running on its normal cadence, so flipping the flag back on resumes polling almost immediately. The status payload now reports a top-level `fieldbus` block with the current `polling_enabled` and `poll_interval_s`, and the `fieldbus` subsystem goes to `degraded` while polling is off — surfaced as a `fieldbus.polling_disabled` warning in `/api/v1/status`. **Requires companion v0.4.2+** to expose the matching "Veldbus polling (debug)" switch in Home Assistant; older companions ignore the new endpoint.
+- **Debug toggle for the field-bus polling loop.** New endpoint `POST /api/v1/debug/fieldbus-polling` lets an operator stop the periodic UDP/1001 keep-alive polls at runtime (without restarting the bus). The poll loop keeps running on its normal cadence, so flipping the flag back on resumes polling almost immediately. The status payload now reports a top-level `fieldbus` block with the current `polling_enabled` and `poll_interval_s`, and the `fieldbus` subsystem goes to `degraded` while polling is off — surfaced as a `fieldbus.polling_disabled` warning in `/api/v1/status`. **Requires companion v0.4.2+** to expose the matching "Fieldbus polling (debug)" switch in Home Assistant; older companions ignore the new endpoint.
 
 ### Changed
 - **Classified button events appear in the add-on log.** `press`, `long_press` and `release` are now logged at INFO level (`gateway.gateway_api BUTTON <id>: <action>`) on the moment they are broadcast over WebSocket. Wire-level edges stay visible via `gateway.device_registry`. No new REST endpoint, no wire change.
@@ -206,18 +207,18 @@ anders meldt.
 ## [0.3.8] - 2026-06-16
 
 ### Fixed
-- **Init-sweep crashte op `AttributeError: 'DiscoveryOrchestrator' object has no attribute '_state'`.** De 0.3.7-fix om runtime-velden uit `devices.json` te houden introduceerde een verwijzing naar `self._state[dm.mac]` in `_run_init_sweep`, maar `_state` is een attribuut van `ArpMonitor`, niet van de orchestrator. De regel is verwijderd; `_run_init_sweep` schrijft alleen naar `devices.json` en houdt geen eigen runtime-state bij. Companion-side niets gewijzigd.
+- **Init-sweep crashed with `AttributeError: 'DiscoveryOrchestrator' object has no attribute '_state'`.** The 0.3.7 fix to keep runtime fields out of `devices.json` introduced a reference to `self._state[dm.mac]` in `_run_init_sweep`, but `_state` is an attribute of `ArpMonitor`, not the orchestrator. The line was removed; `_run_init_sweep` only writes to `devices.json` and no longer maintains its own runtime state. No companion-side changes.
 
 ## [0.3.7] - 2026-06-16
 
 ### Fixed
-- **`devices.json` blijft stabiel tussen discovery-runs.** De runtime-velden `last_seen` en `last_seen_source` werden door `auto_discovery` stiekem toegevoegd aan het weggeschreven bestand, tegen de conventie in (`ModuleConfig.to_dict()` documenteerde al "NOT serialized to devices.json"). Idem voor `ChannelConfig.to_dict()` dat het derived entity-`id` meeschreef. Drie aanroepplekken in `auto_discovery.py` zijn geschoond; `ChannelConfig.to_dict()` schrijft het `id`-veld niet meer terug. Het bestand bevat nu puur installatie-specifieke data (naam, kamer, `active`, model, MAC) en verandert niet meer bij elke `POST /api/v1/discover`.
-- **Lock-bestand (`devices.json.lock`) wordt opgeruimd.** `AtomicWriter` hield een advisory lock op een `.lock`-file. Bij crash of test-onderbreking bleef die als untracked artefact in de working tree staan. `try/finally` ruimt het bestand nu altijd op, ook op exception-paden.
+- **`devices.json` stays stable between discovery runs.** Runtime fields `last_seen` and `last_seen_source` were silently added to the written file by `auto_discovery`, against convention (`ModuleConfig.to_dict()` already documented "NOT serialized to devices.json"). Same for `ChannelConfig.to_dict()` writing back the derived entity `id`. Three call sites in `auto_discovery.py` were cleaned up; `ChannelConfig.to_dict()` no longer writes the `id` field. The file now contains purely installation-specific data (name, room, `active`, model, MAC) and no longer changes on every `POST /api/v1/discover`.
+- **Lock file (`devices.json.lock`) is cleaned up.** `AtomicWriter` held an advisory lock on a `.lock` file. After a crash or interrupted test it remained as an untracked artefact in the working tree. `try/finally` now always removes the file, including on exception paths.
 
 ## [0.3.6] - 2026-06-16
 
 ### Changed
-- **IP1100PoE-knoppen starten uitgeschakeld** in Home Assistant. Na discovery verschijnen ze onder niet-ingeschakelde entiteiten zodat je zelf kiest welke knoppen je activeert.
+- **IP1100PoE buttons start disabled** in Home Assistant. After discovery they appear under disabled entities so you choose which buttons to activate.
 
 ## [0.3.5] - 2026-06-16
 
@@ -231,12 +232,12 @@ anders meldt.
 - **Startup log and API version** now match the add-on version in Supervisor (single source: `config.yaml`).
 
 ### Changed
-- Add-on requests **`addon_config:rw`** so the gateway can write installatieconfig next to your other add-on files.
+- Add-on requests **`addon_config:rw`** so the gateway can write installation config next to your other add-on files.
 
 ## [0.3.3] - 2026-06-16
 
 ### Changed
-- **Module names are now consistent across all three field modules.** The gateway fills in the canonical hardware SKU (`IP0200PoE`, `IP0300PoE`, `IP1100PoE`) when `devices.json` carries an empty `model` or an IP-based `name`, so the companion's onboarding "Apparaat-info" always shows the SKU as title and the role label (Relay / Dimmer / Input) as the device name. The companion also treats module IP addresses as auto-discovery placeholders and never leaks them into the operator-facing name.
+- **Module names are now consistent across all three field modules.** The gateway fills in the canonical hardware SKU (`IP0200PoE`, `IP0300PoE`, `IP1100PoE`) when `devices.json` carries an empty `model` or an IP-based `name`, so the companion's onboarding device info always shows the SKU as title and the role label (Relay / Dimmer / Input) as the device name. The companion also treats module IP addresses as auto-discovery placeholders and never leaks them into the operator-facing name.
 
 ## [0.3.2] - 2026-06-16
 
