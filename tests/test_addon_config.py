@@ -78,8 +78,59 @@ def test_options_and_schema_keys_match() -> None:
 
 def test_fieldbus_hub_role_schema() -> None:
     cfg = _load_config()
-    assert cfg["schema"]["fieldbus"]["hub_role"] == "list(full|actuators_only)"
-    assert cfg["options"]["fieldbus"]["hub_role"] == "full"
+    assert cfg["schema"]["fieldbus"]["hub_role"] == "list(slave|master)"
+    assert cfg["options"]["fieldbus"]["hub_role"] == "slave"
+
+
+def test_fieldbus_group_is_first() -> None:
+    """'Modules' (fieldbus) should be the first group shown in the Configuration UI."""
+    cfg = _load_config()
+    assert next(iter(cfg["options"])) == "fieldbus"
+    assert next(iter(cfg["schema"])) == "fieldbus"
+
+
+def test_hub_ip_removed() -> None:
+    """hub_ip was never used for actual UDP binding — removed as misleading."""
+    cfg = _load_config()
+    assert "hub_ip" not in cfg["options"].get("network", {})
+    assert "hub_ip" not in cfg["schema"].get("network", {})
+
+
+def test_api_port_not_in_gui() -> None:
+    """API port is fixed at 8080; documented via native network: port descriptions instead."""
+    cfg = _load_config()
+    assert "api_port" not in cfg["options"].get("network", {})
+    assert "api_port" not in cfg["schema"].get("network", {})
+
+
+def test_bind_ip_schema() -> None:
+    cfg = _load_config()
+    assert cfg["schema"]["network"]["bind_ip"] == "str"
+    assert cfg["options"]["network"]["bind_ip"] == "0.0.0.0"
+
+
+def test_translations_present_for_bind_ip() -> None:
+    for lang in ("nl", "en"):
+        path = _CONFIG.parent / "translations" / f"{lang}.yaml"
+        trans = yaml.safe_load(path.read_text(encoding="utf-8"))
+        bind = trans["configuration"]["network"]["fields"]["bind_ip"]
+        assert bind.get("name")
+        assert bind.get("description")
+
+
+def test_native_network_port_descriptions() -> None:
+    """Port descriptions live under the top-level `network:` translation key,
+    matching the `ports:` entries in config.yaml — not under our own
+    `configuration.network` options group."""
+    cfg = _load_config()
+    port_keys = set(cfg["ports"].keys())
+    for lang in ("nl", "en"):
+        path = _CONFIG.parent / "translations" / f"{lang}.yaml"
+        trans = yaml.safe_load(path.read_text(encoding="utf-8"))
+        network_translations = trans.get("network", {})
+        assert set(network_translations.keys()) == port_keys
+        for description in network_translations.values():
+            assert description
 
 
 def test_translations_present_for_hub_role() -> None:

@@ -290,8 +290,9 @@ INDEX_HTML = """<!doctype html>
   var SEMANTIC_TYPES = ["light", "fan", "cover", "switch", "plug"];
   var NOT_IMPLEMENTED = "Not yet implemented";
   var HUB_ROLE_TOOLTIP =
-    "Slave: this gateway polls the input module and receives button events for Home Assistant. " +
-    "Master: this gateway does not claim inputs; buttons use EEPROM autonomy (blinking LED). " +
+    "Slave: buttons via Home Assistant (LED steady). " +
+    "Master: buttons local on the input module (LED blinking); relays/dimmers still via HA. " +
+    "If the gateway fails, the module falls back to its own stored pairings. " +
     "Change via Settings → Add-ons → IPBuilding Gateway → Configuration (restart required).";
   var gatewayInputModeLabel = "Slave";
   // Exactly the icons the HA companion assigns per semantic_type (source of

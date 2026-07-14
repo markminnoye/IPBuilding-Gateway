@@ -1,14 +1,39 @@
 configuration:
-  network:
-    name: Netwerk / API
-    description: Hub-adres, northbound API en HTTP-timeouts naar veldbusmodules.
+  fieldbus:
+    name: Modules
+    description: Communicatie met relais-, dimmer- en ingangsmodules.
     fields:
-      hub_ip:
-        name: Hub IP-adres
-        description: IP waarop de gateway als veldbus-centrale op UDP/1001 luistert (standaard 10.10.1.1).
-      api_port:
-        name: API-poort
-        description: Poort voor WebSocket /ws en REST /api/v1/ (companion, Web UI).
+      hub_role:
+        name: Modus ingangsmodule (IP1100)
+        description: >-
+          De IP1100PoE-ingangsmodule heeft twee modi. Je herkent ze aan de groene LED op de module: continu = slave, knipperend = master.
+
+
+          slave — Gateway en Home Assistant sturen aan (standaard)
+          De gateway is de centrale voor drukknoppen op de veldbus. Drukknoppen sturen events naar Home Assistant; automatiseringen, scenes en wie wat schakelt regel je in HA. Op de module: groene LED brandt continu.
+
+
+          master — Ingangsmodule stuurt knoppen zelf aan
+          De gateway claimt de ingang niet: drukknoppen komen niet in Home Assistant. Knoppen bedienen relais en dimmers rechtstreeks volgens de koppelingen die op de ingangsmodule zijn opgeslagen. Relais en dimmers blijven wél via deze gateway en Home Assistant bedienbaar (app, automatiseringen zonder drukknop). Scenes en uitgebreide logica via drukknoppen zijn dan niet beschikbaar. Op de module: groene LED knippert. Kies master als je knoppen nog niet via HA wilt aansturen, of tijdelijk terwijl je de rest al via deze gateway laat lopen.
+
+
+          Fallback: als de gateway uitvalt of geen verbinding heeft, neemt de ingangsmodule het over volgens zijn eigen opgeslagen koppelingen (niet noodzakelijk hetzelfde als in Home Assistant). De LED knippert dan en basisverlichting via knoppen blijft werken. Bij slave blijft die eigen configuratie op de module als noodvoorziening actief.
+
+
+          Na wijziging: add-on herstarten.
+      poll_interval:
+        name: Input-poll interval
+        description: Alleen relevant bij slave. Seconden tussen polls naar de ingangsmodule (standaard ~2 s).
+      actuator_poll_interval:
+        name: Actuator-poll interval
+        description: Seconden tussen relay/dimmer keep-alive polls (standaard ~20 s).
+  network:
+    name: Netwerk
+    description: Veldbus-bindadres, IPBox REST-shim en HTTP-timeouts naar veldbusmodules. De northbound API/web UI-poort ligt vast en staat onder de eigen "Network"-sectie van de add-on (niet hier).
+    fields:
+      bind_ip:
+        name: Veldbus-bindadres
+        description: IP-adres waarop de UDP-veldbus-socket van de gateway luistert. Standaard 0.0.0.0 (alle interfaces). Zet op een specifiek interface-IP, bijv. 10.10.1.1, om expliciet aan de veldbus-NIC te binden.
       rest_shim_enabled:
         name: IPBox REST-shim
         description: Legacy IPBox REST op poort 30200 — alleen tijdens migratie.
@@ -18,29 +43,6 @@ configuration:
       metadata_timeout_s:
         name: HTTP-timeout modules
         description: Timeout (s) voor getSysSet / getButtons op modules (verhoog bij trage VLAN).
-  fieldbus:
-    name: Veld-bus
-    description: UDP/1001 polling en input-centrale modus (master/slave).
-    fields:
-      poll_interval:
-        name: Input-poll interval
-        description: Seconden tussen I0000-polls naar IP1100-ingangsmodules (IPBox ~2 s).
-      actuator_poll_interval:
-        name: Actuator-poll interval
-        description: Seconden tussen relay/dimmer keep-alive polls (P0000 / I9900, IPBox ~20 s).
-      hub_role:
-        name: Input-centrale modus
-        description: >-
-          Bepaalt hoe IP1100PoE-ingangsmodules zich gedragen ten opzichte van deze gateway als centrale op de veldbus.
-
-
-          Slave (full) — standaard: de gateway pollt de ingangsmodule (I0000) en ontvangt drukknop-events (B-…E). De module gedraagt zich als slave: groene LED brandt continu, knoppen sturen events naar de centrale. Scenes en automatisering horen in Home Assistant (niet in de gateway).
-
-
-          Master / autonoom (actuators_only) — migratie: de gateway pollt geen ingangen en claimt de module niet. De IP1100 valt terug op de autonomietabel in EEPROM (zoals wanneer de originele centrale uitvalt): groene LED knippert, drukknoppen bedienen basisverlichting lokaal. Scenes, audio, camera’s en bewegingsmelder-logica via de centrale zijn dan niet beschikbaar.
-
-
-          Gebruik actuators_only tijdens migratie of dual-hub: relay/dimmer via deze gateway, terwijl knoppen lokaal blijven werken zonder dat deze gateway de input claimt. Add-on herstart vereist na wijziging.
   installation:
     name: Installatie
     description: Pad naar devices.json (namen, kamers, active flags).
@@ -79,3 +81,6 @@ configuration:
       log_level:
         name: Log niveau
         description: debug, info, warning of error.
+network:
+  8080/tcp: Northbound API — WebSocket /ws en REST /api/v1/ (companion, Web UI via Ingress).
+  30200/tcp: Legacy IPBox REST-shim (alleen actief als "IPBox REST-shim" bij Netwerk aan staat).

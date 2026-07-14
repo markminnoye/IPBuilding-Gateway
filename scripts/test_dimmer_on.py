@@ -16,7 +16,7 @@ from gateway.config import GatewayConfig
 async def main():
     cfg = GatewayConfig.from_env()
     cfg.bind_ip = "10.10.1.100"
-    print(f"bind={cfg.bind_ip}, dimmer={cfg.field_modules['dimmer']}, hub={cfg.hub_ip}")
+    print(f"bind={cfg.bind_ip}, dimmer={cfg.field_modules['dimmer']}")
 
     bus = UDPBus(cfg)
     await bus.start()

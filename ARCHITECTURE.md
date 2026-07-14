@@ -275,8 +275,6 @@ Firmware via `firm`/`firmware` (indien in getSysSet).
 
 De companion leest `devices.json` nooit rechtstreeks; alle reads gaan via REST/WS. Lock is enkel bedoeld om gateway-interne races te voorkomen (init-sweep + passieve monitor kort na elkaar).
 
-**Edge case — `hub_ip` buiten `discovery_subnet`:** gateway logt één WARNING bij start, geen auto-actie. Gebruiker moet `discovery_subnet` aanpassen of `POST /api/v1/discover` aanroepen.
-
 **Configuratie (HA add-on):**
 
 ```yaml

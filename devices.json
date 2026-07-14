@@ -36,16 +36,16 @@
           "ch": 3,
           "name": "Straatkant OP",
           "room": "Bureau",
-          "semantic_type": "cover",
-          "active": false,
+          "semantic_type": "light",
+          "active": true,
           "max_watt": 60
         },
         {
           "ch": 4,
           "name": "Straatkant NEER",
           "room": "Bureau",
-          "semantic_type": "cover",
-          "active": false,
+          "semantic_type": "light",
+          "active": true,
           "max_watt": 60
         },
         {
@@ -60,16 +60,16 @@
           "ch": 6,
           "name": "Tuinkant OP",
           "room": "Woonkamer",
-          "semantic_type": "cover",
-          "active": false,
+          "semantic_type": "light",
+          "active": true,
           "max_watt": 60
         },
         {
           "ch": 7,
           "name": "Tuinkant NEER",
           "room": "Woonkamer",
-          "semantic_type": "cover",
-          "active": false,
+          "semantic_type": "light",
+          "active": true,
           "max_watt": 60
         },
         {
@@ -84,7 +84,7 @@
           "ch": 9,
           "name": "Badkamer ventilatie",
           "room": "Badkamer",
-          "semantic_type": "fan",
+          "semantic_type": "light",
           "active": true,
           "max_watt": 60
         },
@@ -132,8 +132,8 @@
           "ch": 15,
           "name": "Traphal \u00bfrookmelder?",
           "room": "Traphal",
-          "semantic_type": "switch",
-          "active": false,
+          "semantic_type": "light",
+          "active": true,
           "max_watt": 60
         },
         {
@@ -156,7 +156,7 @@
           "ch": 18,
           "name": "Keuken rookmelder",
           "room": "Keuken",
-          "semantic_type": "switch",
+          "semantic_type": "light",
           "active": true,
           "max_watt": 60
         },
@@ -196,7 +196,7 @@
           "ch": 23,
           "name": "Keuken Ventilatie",
           "room": "Keuken",
-          "semantic_type": "fan",
+          "semantic_type": "light",
           "active": true,
           "max_watt": 60
         }
@@ -213,7 +213,7 @@
         {
           "ch": 0,
           "name": "Living [40.1.1]",
-          "room": "Woonkamer",
+          "room": "Gelijkvloers",
           "semantic_type": "light",
           "active": true,
           "max_watt": 200
@@ -221,7 +221,7 @@
         {
           "ch": 1,
           "name": "Bureau [40.1.2]",
-          "room": "Bureau",
+          "room": "Gelijkvloers",
           "semantic_type": "light",
           "active": true,
           "max_watt": 200
@@ -251,8 +251,264 @@
       "firmware": "",
       "model": "IP1100PoE",
       "mac": "00:24:77:52:ad:aa",
-      "channels": [],
-      "pushbuttons": [],
+      "pushbuttons": [
+        {
+          "id": "e341851900001f",
+          "name": "Badkamer",
+          "room": "Badkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "d68c5219000050",
+          "name": "Slaapkamer vooraan",
+          "room": "Slaapkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "8a948419000049",
+          "name": "Slaapkamer achteraan",
+          "room": "Slaapkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 2
+        },
+        {
+          "id": "7993521900003b",
+          "name": "1e gang",
+          "room": "Traphal",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 3
+        },
+        {
+          "id": "cd5e85190000a9",
+          "name": "Inkom R",
+          "room": "Inkomhal",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 4
+        },
+        {
+          "id": "4fd3521900008d",
+          "name": "Inkom L",
+          "room": "Inkomhal",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 5
+        },
+        {
+          "id": "dc5d851900008b",
+          "name": "Trap R",
+          "room": "Inkomhal",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 6
+        },
+        {
+          "id": "1e6a85190000af",
+          "name": "Trap L",
+          "room": "Inkomhal",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 7
+        },
+        {
+          "id": "69a384190000ec",
+          "name": "Keuken 1",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 8
+        },
+        {
+          "id": "c9bc84190000a3",
+          "name": "Keuken 2",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 9
+        },
+        {
+          "id": "b1bd8419000057",
+          "name": "Keuken 3",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 10
+        },
+        {
+          "id": "83a284190000c7",
+          "name": "Keuken 4",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 11
+        },
+        {
+          "id": "41ae521900001f",
+          "name": "Woonkamer patio M",
+          "room": "Woonkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 12
+        },
+        {
+          "id": "b39652190000b9",
+          "name": "Woonkamer patio R",
+          "room": "Woonkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 13
+        },
+        {
+          "id": "2f8185190000df",
+          "name": "Woonkamer hal L",
+          "room": "Woonkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 14
+        },
+        {
+          "id": "dc93851900000b",
+          "name": "Woonkamer Hal M",
+          "room": "Woonkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 15
+        },
+        {
+          "id": "86885219000061",
+          "name": "Woonkamer Hal R",
+          "room": "Woonkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 16
+        },
+        {
+          "id": "899b841900007f",
+          "name": " Bureau L",
+          "room": "Bureau",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 17
+        },
+        {
+          "id": "38a58419000069",
+          "name": "2e gang L",
+          "room": "Traphal",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 18
+        },
+        {
+          "id": "b8a3841900001f",
+          "name": "2e gang R",
+          "room": "Traphal",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 19
+        },
+        {
+          "id": "59bbed14000050",
+          "name": "Speelkamer L",
+          "room": "Speelkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 20
+        },
+        {
+          "id": "2ebbed1400004d",
+          "name": "Speelkamer R",
+          "room": "Speelkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 21
+        },
+        {
+          "id": "644e851900001f",
+          "name": "Slaapkamer kinderen L",
+          "room": "Slaapkamers 2e",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 22
+        },
+        {
+          "id": "72a3841900004f",
+          "name": "Slaapkamer Kinderen R",
+          "room": "Slaapkamers 2e",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 23
+        },
+        {
+          "id": "5ea052190000c2",
+          "name": "Gordijn NEER",
+          "room": "Woonkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 24
+        },
+        {
+          "id": "b6ae52190000e8",
+          "name": "Gordijn OP",
+          "room": "Woonkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 25
+        },
+        {
+          "id": "5791521900001d",
+          "name": "Woonkamer patio L",
+          "room": "Woonkamer",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 26
+        },
+        {
+          "id": "8154851900001c",
+          "name": " Bureau OP",
+          "room": "Bureau",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 27
+        },
+        {
+          "id": "b95e85190000ed",
+          "name": " Bureau NEER",
+          "room": "Bureau",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 28
+        },
+        {
+          "id": "a84c6f2c0000c7",
+          "name": "Toilet rechts",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 29
+        },
+        {
+          "id": "e5bc6f2c00005e",
+          "name": "Toilet midden",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 30
+        },
+        {
+          "id": "25ca6e2c0000bf",
+          "name": "Toilet links",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 32
+        }
+      ],
       "detectors": []
     }
   ]

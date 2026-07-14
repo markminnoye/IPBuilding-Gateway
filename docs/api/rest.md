@@ -55,7 +55,7 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
       "since": "2026-06-15T11:40:00Z"
     }
   ],
-  "hub_role": "full",
+  "hub_role": "slave",
   "input_mode_label": "Slave",
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },

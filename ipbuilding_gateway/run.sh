@@ -45,12 +45,19 @@ else:
 " 2>/dev/null || printf '%s' "$default"
 }
 
-# ── Network ──────────────────────────────────────────────────────────────────
-export GATEWAY_HUB_IP
-GATEWAY_HUB_IP=$(opt network.hub_ip hub_ip "10.10.1.1")
+# ── Field bus / modules ──────────────────────────────────────────────────────
+export GATEWAY_POLL_INTERVAL
+GATEWAY_POLL_INTERVAL=$(opt fieldbus.poll_interval poll_interval "2.0")
 
-export GATEWAY_API_PORT
-GATEWAY_API_PORT=$(opt network.api_port api_port "8080")
+export GATEWAY_ACTUATOR_POLL_INTERVAL
+GATEWAY_ACTUATOR_POLL_INTERVAL=$(opt fieldbus.actuator_poll_interval actuator_poll_interval "20.0")
+
+export GATEWAY_HUB_ROLE
+GATEWAY_HUB_ROLE=$(opt fieldbus.hub_role hub_role "slave")
+
+# ── Network ──────────────────────────────────────────────────────────────────
+export GATEWAY_BIND_IP
+GATEWAY_BIND_IP=$(opt network.bind_ip bind_ip "0.0.0.0")
 
 export GATEWAY_REST_SHIM_ENABLED
 GATEWAY_REST_SHIM_ENABLED=$(opt network.rest_shim_enabled rest_shim_enabled "0")
@@ -60,16 +67,6 @@ GATEWAY_HTTP_TIMEOUT_S=$(opt network.http_timeout_s http_timeout_s "2.0")
 
 export GATEWAY_METADATA_TIMEOUT_S
 GATEWAY_METADATA_TIMEOUT_S=$(opt network.metadata_timeout_s metadata_timeout_s "5.0")
-
-# ── Field bus ───────────────────────────────────────────────────────────────
-export GATEWAY_POLL_INTERVAL
-GATEWAY_POLL_INTERVAL=$(opt fieldbus.poll_interval poll_interval "2.0")
-
-export GATEWAY_ACTUATOR_POLL_INTERVAL
-GATEWAY_ACTUATOR_POLL_INTERVAL=$(opt fieldbus.actuator_poll_interval actuator_poll_interval "20.0")
-
-export GATEWAY_HUB_ROLE
-GATEWAY_HUB_ROLE=$(opt fieldbus.hub_role hub_role "full")
 
 # ── Installation ─────────────────────────────────────────────────────────────
 export GATEWAY_DEVICES_FILE
@@ -120,11 +117,10 @@ GATEWAY_LOG_LEVEL=$(opt logging.log_level log_level "info")
 export GATEWAY_SIMULATED
 GATEWAY_SIMULATED="${GATEWAY_SIMULATED:-0}"
 
-echo "[run.sh] GATEWAY_HUB_IP=$GATEWAY_HUB_IP"
 echo "[run.sh] GATEWAY_POLL_INTERVAL=$GATEWAY_POLL_INTERVAL"
 echo "[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=$GATEWAY_ACTUATOR_POLL_INTERVAL"
 echo "[run.sh] GATEWAY_HUB_ROLE=$GATEWAY_HUB_ROLE"
-echo "[run.sh] GATEWAY_API_PORT=$GATEWAY_API_PORT"
+echo "[run.sh] GATEWAY_BIND_IP=$GATEWAY_BIND_IP"
 echo "[run.sh] GATEWAY_DEVICES_FILE=$GATEWAY_DEVICES_FILE"
 echo "[run.sh] GATEWAY_REST_SHIM_ENABLED=$GATEWAY_REST_SHIM_ENABLED"
 echo "[run.sh] GATEWAY_LOG_LEVEL=$GATEWAY_LOG_LEVEL"

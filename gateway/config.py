@@ -11,14 +11,14 @@ from gateway.installation import InstallationConfig, InstallationError
 
 log = logging.getLogger(__name__)
 
-HUB_ROLES = frozenset({"full", "actuators_only"})
+HUB_ROLES = frozenset({"slave", "master"})
 
 
 def _normalize_hub_role(value: str | None) -> str:
-    role = (value or "full").lower().strip()
+    role = (value or "slave").lower().strip()
     if role not in HUB_ROLES:
-        log.warning("Unknown GATEWAY_HUB_ROLE=%r — using full", value)
-        return "full"
+        log.warning("Unknown GATEWAY_HUB_ROLE=%r — using slave", value)
+        return "slave"
     return role
 
 
@@ -88,7 +88,6 @@ class DiscoveryConfig:
 
 @dataclass
 class GatewayConfig:
-    hub_ip: str = "10.10.1.1"
     hub_port: int = 1001
     rest_host: str = "0.0.0.0"
     rest_port: int = 30200
@@ -122,18 +121,18 @@ class GatewayConfig:
     # IPBuilding controllers on a quiet VLAN; reduce for tighter SLA,
     # raise for slow / loaded networks.
     metadata_timeout_s: float = 5.0
-    # Input centrale mode: full = slave (poll + events), actuators_only = master.
-    hub_role: str = "full"
+    # Input centrale mode: slave = poll + HA events, master = module-local buttons.
+    hub_role: str = "slave"
 
     @property
     def claims_input_modules(self) -> bool:
         """True when this gateway polls inputs and receives B-…E events."""
-        return self.hub_role == "full"
+        return self.hub_role == "slave"
 
     @property
     def input_mode_label(self) -> str:
         """Operator-facing label matching IP1100 manual terminology."""
-        return "Master" if self.hub_role == "actuators_only" else "Slave"
+        return "Master" if self.hub_role == "master" else "Slave"
 
     def __post_init__(self) -> None:
         if (
@@ -190,18 +189,9 @@ class GatewayConfig:
                 )
 
         discovery = DiscoveryConfig.from_env()
-        hub_ip = os.getenv("GATEWAY_HUB_IP", "10.10.1.1")
         metadata_timeout_s = float(os.getenv("GATEWAY_METADATA_TIMEOUT_S", "5.0"))
-        if not discovery.hub_ip_in_subnet(hub_ip):
-            log.warning(
-                "hub_ip %s is outside discovery_subnet %s — "
-                "passive ARP monitor may not detect this hub on the field bus",
-                hub_ip,
-                discovery.subnet,
-            )
 
         return cls(
-            hub_ip=hub_ip,
             hub_port=int(os.getenv("GATEWAY_HUB_PORT", "1001")),
             rest_host=os.getenv("GATEWAY_REST_HOST", "0.0.0.0"),
             rest_port=int(os.getenv("GATEWAY_REST_PORT", "30200")),

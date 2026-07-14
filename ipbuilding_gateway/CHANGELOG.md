@@ -20,6 +20,20 @@ mean a bump in the other.
 Backward compatibility is the norm — an add-on version keeps working
 with the current companion until a `### Breaking:` entry says otherwise.
 
+## [1.5.1] - 2026-07-14
+
+### Changed
+- **Input module mode: `slave` / `master` in add-on Configuration.** Replaces `full` / `actuators_only` with operator-facing dropdown values. Customer-facing NL/EN descriptions explain who controls buttons (HA vs input module), LED indicators, fallback behaviour, and that relays/dimmers stay available in master mode. Web UI tooltip aligned.
+- **Add-on Configuration reorganised.** The `fieldbus` group (renamed **"Modules"** in the UI) now shows first, ahead of `network`. The northbound API port (`8080`) and IPBox REST-shim port (`30200`) are no longer editable custom fields — they're fixed and now documented via Supervisor's own **Network** info section (`translations/{lang}.yaml` → top-level `network:` port descriptions) instead of our Configuration options.
+- **New option `network.bind_ip`** (default `0.0.0.0`): IP address the UDP field-bus socket binds to. Set to a specific interface IP (e.g. `10.10.1.1`) to explicitly bind to the field-bus NIC. Previously only available via the undocumented `GATEWAY_BIND_IP` env var.
+
+### Removed
+- **`network.hub_ip` option removed.** It only fed a startup log warning and was never used for actual UDP binding (`bind_ip` does that) — kept it around was misleading about what the gateway actually listens on.
+
+### Breaking
+- **`fieldbus.hub_role` values renamed** to `slave` and `master`. Re-save add-on Configuration after upgrade (`slave` = default).
+- **`network.hub_ip` and `network.api_port` removed from Configuration.** Any saved values for these keys are ignored. The API port is fixed at `8080`; if you need a different bind IP for the field bus, use the new `network.bind_ip` option.
+
 ## [1.5.0] - 2026-07-14
 
 ### Added
@@ -32,8 +46,6 @@ with the current companion until a `### Breaking:` entry says otherwise.
 
 ### Fixed
 - **Module search no longer duplicates modules without a MAC.** Installations imported from IPA (or other sources with empty `mac`) are matched by IP during a sweep; the gateway backfills the MAC and firmware on the existing entry instead of adding a second module at the same address.
-
-## [Unreleased]
 
 ## [1.4.1] - 2026-07-14
 
