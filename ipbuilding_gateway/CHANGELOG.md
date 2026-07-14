@@ -23,29 +23,30 @@ with the current companion until a `### Breaking:` entry says otherwise.
 ## [1.5.1] - 2026-07-14
 
 ### Changed
-- **Input module mode: `slave` / `master` in add-on Configuration.** Replaces `full` / `actuators_only` with operator-facing dropdown values. Customer-facing NL/EN descriptions explain who controls buttons (HA vs input module), LED indicators, fallback behaviour, and that relays/dimmers stay available in master mode. Web UI tooltip aligned.
-- **Add-on Configuration reorganised.** The `fieldbus` group (renamed **"Modules"** in the UI) now shows first, ahead of `network`. The northbound API port (`8080`) and IPBox REST-shim port (`30200`) are no longer editable custom fields — they're fixed and now documented via Supervisor's own **Network** info section (`translations/{lang}.yaml` → top-level `network:` port descriptions) instead of our Configuration options.
-- **New option `network.bind_ip`** (default `0.0.0.0`): IP address the UDP field-bus socket binds to. Set to a specific interface IP (e.g. `10.10.1.1`) to explicitly bind to the field-bus NIC. Previously only available via the undocumented `GATEWAY_BIND_IP` env var.
+- Input module mode is now called **slave** or **master** (previously "full" / "actuators_only"), with a clearer explanation in the Configuration screen of who controls the wall buttons and what happens if the gateway loses connection.
+- The Configuration screen now shows the module settings before the network settings.
+- Added an option to choose which network address the gateway uses for the field bus.
 
 ### Removed
-- **`network.hub_ip` option removed.** It only fed a startup log warning and was never used for actual UDP binding (`bind_ip` does that) — kept it around was misleading about what the gateway actually listens on.
+- Removed the hub IP address setting — it wasn't actually used for anything.
+- The API port setting is gone from Configuration; it's fixed and shown on the add-on's own Network info page instead.
 
 ### Breaking
-- **`fieldbus.hub_role` values renamed** to `slave` and `master`. Re-save add-on Configuration after upgrade (`slave` = default).
-- **`network.hub_ip` and `network.api_port` removed from Configuration.** Any saved values for these keys are ignored. The API port is fixed at `8080`; if you need a different bind IP for the field bus, use the new `network.bind_ip` option.
+- If your input module mode was set to "full" or "actuators_only", open the add-on Configuration after upgrading and re-select **slave** or **master** — otherwise it resets to slave.
+- Any saved hub IP address or API port value is now ignored.
 
 ## [1.5.0] - 2026-07-14
 
 ### Added
-- **Input hub role (master/slave) via add-on Configuration.** New nested option `fieldbus.hub_role`: `full` (Slave — input poll + button events) or `actuators_only` (Master — EEPROM autonomy, no input claim). For migration/dual-hub when relay/dimmer run on this gateway but IP1100 inputs must stay autonomous. NL/EN translations in Configuration UI; see DOCS.md § Input-centrale. Web UI shows read-only Slave/Master badge on input modules (green styling for Slave). Status API: `hub_role`, `input_mode_label`. Add-on restart required after change.
+- New Configuration option to choose whether wall buttons on IP1100 input modules work through Home Assistant (default) or locally on the module — handy when relays and dimmers already run through this gateway but the buttons should keep working on their own for now. Restart the add-on after changing it.
 
 ### Changed
-- **Add-on Configuration nested schema.** Options grouped under `network`, `fieldbus`, `installation`, `discovery`, `logging`. Legacy flat keys still work via `run.sh` fallback until re-saved.
-- **Web UI: dimmer channels are always lights.** Dimmer rows no longer show a type dropdown — only relay channels can be set to fan, cover, switch, or plug. Uploading or editing `devices.json` normalises dimmer types to light; the API rejects other values on PATCH.
-- **Web UI: removed placeholder Enable toggle** on module headers; hub role is read-only from add-on config.
+- Configuration options are now grouped into sections for easier navigation.
+- Dimmer channels in the Web UI are always shown as lights (the type dropdown was removed since it never applied to dimmers).
+- Removed an unused toggle from the Web UI.
 
 ### Fixed
-- **Module search no longer duplicates modules without a MAC.** Installations imported from IPA (or other sources with empty `mac`) are matched by IP during a sweep; the gateway backfills the MAC and firmware on the existing entry instead of adding a second module at the same address.
+- Fixed modules without a stored MAC address sometimes showing up twice, or with mixed-up channels, in the Web UI.
 
 ## [1.4.1] - 2026-07-14
 
