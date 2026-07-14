@@ -697,6 +697,7 @@ class TestModuleRefreshOne:
         ])
         api = _make_api(inst)
         api._meta_cache.refresh_one = AsyncMock(return_value=None)  # type: ignore[assignment]
+        api._persist_pushbuttons_from_cache = AsyncMock(return_value=None)  # type: ignore[method-assign]
 
         with patch("asyncio.create_task") as create_task:
             request = MagicMock()
@@ -708,6 +709,9 @@ class TestModuleRefreshOne:
         assert body["id"] == "00:24:77:52:ac:be"
         assert body["schema_version"] == 2
         api._meta_cache.refresh_one.assert_awaited_once()
+        api._persist_pushbuttons_from_cache.assert_awaited_once_with(
+            module_mac="00:24:77:52:ac:be",
+        )
         assert create_task.called
 
     @pytest.mark.asyncio
@@ -739,6 +743,7 @@ class TestModulesRefreshBroadcast:
         ])
         api = _make_api(inst)
         api._meta_cache.refresh = AsyncMock(return_value=None)  # type: ignore[assignment]
+        api._persist_pushbuttons_from_cache = AsyncMock(return_value=None)  # type: ignore[method-assign]
 
         with patch("asyncio.create_task") as create_task:
             response = await api._post_modules_refresh(MagicMock())
@@ -753,3 +758,60 @@ class TestModulesRefreshBroadcast:
         # exact coroutine object isn't easy to introspect, so check that
         # create_task was called at all and the response was a 200.
         assert msg is not None
+        api._persist_pushbuttons_from_cache.assert_awaited_once()
+
+
+class TestModulesRefreshPersist:
+    @pytest.mark.asyncio
+    async def test_modules_refresh_writes_pushbuttons_to_disk(self, tmp_path) -> None:
+        from gateway.device_config import installation_to_raw_dict
+
+        inst = _make_installation([
+            {
+                "name": "IP1100PoE",
+                "ip": "10.10.1.50",
+                "type": "input",
+                "mac": "00:24:77:52:ad:aa",
+                "pushbuttons": [],
+            }
+        ])
+        devices_file = tmp_path / "devices.json"
+        devices_file.write_text(
+            json.dumps(installation_to_raw_dict(inst), indent=2),
+            encoding="utf-8",
+        )
+
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:ad:aa"] = ModuleMetadata(
+            network={},
+            buttons=[
+                {
+                    "index": 0,
+                    "id": "2D2F8185190000DF",
+                    "descr": "Badkamer",
+                    "gr": "Badkamer",
+                }
+            ],
+        )
+
+        bus = MagicMock()
+        reg = _make_registry(inst)
+        cfg = MagicMock()
+        cfg.installation = inst
+        cfg.devices_file = str(devices_file)
+        cfg.metadata_timeout_s = 5
+        cfg.api_host = "127.0.0.1"
+        cfg.api_port = 8080
+
+        api = gateway_api.GatewayAPI(bus, reg, cfg, metadata_cache=cache)
+        api._meta_cache.refresh = AsyncMock(return_value=None)  # type: ignore[assignment]
+
+        with patch("asyncio.create_task"):
+            response = await api._post_modules_refresh(MagicMock())
+
+        assert response.status == 200
+        on_disk = json.loads(devices_file.read_text(encoding="utf-8"))
+        input_module = next(m for m in on_disk["modules"] if m["type"] == "input")
+        assert len(input_module["pushbuttons"]) == 1
+        assert input_module["pushbuttons"][0]["id"] == "2f8185190000df"
+        assert "channels" not in input_module

@@ -101,6 +101,12 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
 
     api = GatewayAPI(bus, registry, cfg, metadata_cache=meta_cache, health=health)
 
+    if cfg.installation:
+        try:
+            await api.persist_pushbuttons_from_cache()
+        except Exception:
+            log.warning("Pushbutton persist (startup) failed; devices.json may lack buttons")
+
     async def _safe_relay_sweep(target_inst: InstallationConfig) -> None:
         try:
             count = await sweep_relay_states(
@@ -121,6 +127,7 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
             await meta_cache.refresh(
                 target_inst, timeout=cfg.metadata_timeout_s,
             )
+            await api.persist_pushbuttons_from_cache()
             # Push refreshed device list to WS clients so newly discovered
             # input buttons (getButtons) appear in the companion immediately.
             await api._broadcast(api._build_snapshot())

@@ -108,6 +108,11 @@ class ModuleMetadataCache:
     def all_macs(self) -> list[str]:
         return list(self._by_mac.keys())
 
+    def clear(self) -> None:
+        """Empty the cache. Used after a wholesale devices.json replacement
+        (import/reset), where cached metadata for the old module set is stale."""
+        self._by_mac.clear()
+
     async def refresh_one(
         self,
         mc: ModuleConfig,

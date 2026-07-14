@@ -494,6 +494,39 @@ def test_discovered_module_to_devices_json_skips_unknown():
     assert discovered_module_to_devices_json(mod) is None
 
 
+def test_discovered_module_to_devices_json_input_has_pushbuttons_not_channels():
+    mod = DiscoveredModule(
+        ip="10.10.1.50",
+        device_type="input",
+        mac="00:24:77:52:ad:aa",
+        model="IP1100PoE",
+        firmware="5.1",
+        channels=[{"ch": 0, "name": "legacy", "active": True}],
+    )
+    entry = discovered_module_to_devices_json(mod)
+    assert entry is not None
+    assert entry["type"] == "input"
+    assert entry["pushbuttons"] == []
+    assert entry["detectors"] == []
+    assert "channels" not in entry
+    assert "active" not in entry
+
+
+def test_discovered_module_to_devices_json_relay_has_channels_not_active():
+    mod = DiscoveredModule(
+        ip="10.10.1.30",
+        device_type="relay",
+        mac="00:24:77:52:ac:be",
+        model="IP0200PoE",
+        channels=[{"ch": 0, "name": "Keuken", "active": True}],
+    )
+    entry = discovered_module_to_devices_json(mod)
+    assert entry is not None
+    assert entry["channels"] == mod.channels
+    assert "pushbuttons" not in entry
+    assert "active" not in entry
+
+
 def test_build_devices_json_draft_skips_unknown_modules():
     modules = [
         DiscoveredModule(ip="10.10.1.30", device_type="relay", mac="00:24:77:52:ac:be"),

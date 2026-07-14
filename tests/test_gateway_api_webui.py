@@ -91,3 +91,32 @@ class TestWebUiRoute:
             assert health_resp.content_type == "application/json"
             body: dict[str, Any] = await health_resp.json()
             assert "status" in body
+
+    @pytest.mark.asyncio
+    async def test_webui_html_has_backup_restore_section(self, tmp_path: Path) -> None:
+        api = _make_api(tmp_path)
+        app = web.Application(middlewares=[api._api_error_middleware])
+        app.router.add_get("/", api._get_webui)
+
+        async with TestClient(TestServer(app)) as client:
+            resp = await client.get("/")
+            body = await resp.text()
+
+        assert "Backup" in body
+        assert "api/v1/devices/export" in body
+        assert "api/v1/devices/import" in body
+        assert "api/v1/devices/reset" in body
+
+    @pytest.mark.asyncio
+    async def test_webui_backup_restore_uses_relative_fetch_paths(self, tmp_path: Path) -> None:
+        api = _make_api(tmp_path)
+        app = web.Application(middlewares=[api._api_error_middleware])
+        app.router.add_get("/", api._get_webui)
+
+        async with TestClient(TestServer(app)) as client:
+            resp = await client.get("/")
+            body = await resp.text()
+
+        assert '"/api/v1/devices/export"' not in body
+        assert '"/api/v1/devices/import"' not in body
+        assert '"/api/v1/devices/reset"' not in body

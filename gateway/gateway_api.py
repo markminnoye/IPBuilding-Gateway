@@ -35,7 +35,9 @@ from gateway.device_config import (
     apply_channel_patch,
     apply_pushbutton_patch,
     installation_to_raw_dict,
+    sync_input_pushbuttons_from_cache,
     validate_channel_fields,
+    validate_devices_document,
     validate_pushbutton_fields,
 )
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
@@ -192,6 +194,18 @@ class GatewayAPI:
         self._app.router.add_get("/health", self._get_health)
         self._app.router.add_get("/api/v1/status", self._get_status)
         self._app.router.add_get("/api/v1/devices", self._get_devices)
+        # Static devices/* sub-routes MUST be registered before the dynamic
+        # {device_id} route below — aiohttp resolves routes in registration
+        # order, and {device_id} matches literal segments like "export" too.
+        self._app.router.add_get(
+            "/api/v1/devices/export", self._get_devices_export
+        )
+        self._app.router.add_post(
+            "/api/v1/devices/import", self._post_devices_import
+        )
+        self._app.router.add_post(
+            "/api/v1/devices/reset", self._post_devices_reset
+        )
         self._app.router.add_get(
             "/api/v1/devices/{device_id}",
             self._get_device,
@@ -415,6 +429,79 @@ class GatewayAPI:
         device_list = self._build_device_list()
         return web.json_response({"devices": device_list, "schema_version": 2})
 
+    async def _get_devices_export(self, request: web.Request) -> web.Response:
+        """GET /api/v1/devices/export — download devices.json as-is from disk.
+
+        Returns the exact on-disk bytes (not re-serialized) so the download is
+        byte-identical to what the running gateway loaded. Uses
+        application/octet-stream (not application/json) so
+        _api_error_middleware's schema_version stamping — which rebuilds the
+        response via web.json_response() and would silently drop the
+        Content-Disposition header — never triggers for this route.
+        """
+        try:
+            with open(self._cfg.devices_file, "rb") as fh:
+                data = fh.read()
+        except FileNotFoundError:
+            raise ApiError(404, "devices_file_missing")
+
+        return web.Response(
+            body=data,
+            content_type="application/octet-stream",
+            headers={"Content-Disposition": 'attachment; filename="devices.json"'},
+        )
+
+    async def _post_devices_import(self, request: web.Request) -> web.Response:
+        """POST /api/v1/devices/import — replace devices.json wholesale.
+
+        Body is the full replacement document (raw JSON, not multipart). Validated
+        via validate_devices_document (the same InstallationConfig._parse used at
+        boot) before anything is written.
+        """
+        try:
+            body = await request.json()
+        except Exception:
+            raise ApiError(400, "invalid_json", "Body must be valid JSON")
+
+        try:
+            validated = validate_devices_document(body)
+        except DeviceConfigError as exc:
+            raise ApiError(400, exc.code, exc.message, exc.details)
+
+        ok = await asyncio.to_thread(self._writer.write, validated)
+        if not ok:
+            raise ApiError(503, "write_locked", "devices.json is locked; retry later")
+
+        self._cfg.installation = InstallationConfig.load(self._cfg.devices_file)
+        self._meta_cache.clear()
+        asyncio.create_task(self._broadcast(self._build_snapshot()))
+
+        installation = self._cfg.installation
+        channel_count = sum(len(mc.channels) for mc in installation.modules)
+        return web.json_response({
+            "ok": True,
+            "modules": len(installation.modules),
+            "channels": channel_count,
+            "pushbuttons": len(installation.pushbuttons),
+            "schema_version": 2,
+        })
+
+    async def _post_devices_reset(self, request: web.Request) -> web.Response:
+        """POST /api/v1/devices/reset — empty devices.json to {"modules": []}.
+
+        Same write/reload/broadcast path as import; the "document" is fixed
+        rather than client-supplied.
+        """
+        ok = await asyncio.to_thread(self._writer.write, {"modules": []})
+        if not ok:
+            raise ApiError(503, "write_locked", "devices.json is locked; retry later")
+
+        self._cfg.installation = InstallationConfig.load(self._cfg.devices_file)
+        self._meta_cache.clear()
+        asyncio.create_task(self._broadcast(self._build_snapshot()))
+
+        return web.json_response({"ok": True, "schema_version": 2})
+
     async def _get_device(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices/{device_id} — return single device."""
         device_id = request.match_info["device_id"]
@@ -543,6 +630,40 @@ class GatewayAPI:
     # Module resource (REST)
     # -------------------------------------------------------------------------
 
+    async def persist_pushbuttons_from_cache(
+        self, module_mac: str | None = None,
+    ) -> None:
+        """Public wrapper: write cached getButtons into devices.json."""
+        await self._persist_pushbuttons_from_cache(module_mac)
+
+    async def _persist_pushbuttons_from_cache(
+        self, module_mac: str | None = None,
+    ) -> None:
+        """Merge ModuleMetadataCache getButtons into devices.json on disk."""
+        if self._cfg.installation is None:
+            return
+
+        def mutate(raw: dict) -> dict:
+            inst = InstallationConfig._parse(raw)
+            sync_input_pushbuttons_from_cache(
+                inst, self._meta_cache, module_mac=module_mac,
+            )
+            return installation_to_raw_dict(inst)
+
+        try:
+            ok, _new_raw = await asyncio.to_thread(
+                self._writer.read_modify_write, mutate,
+            )
+        except Exception:
+            log.warning(
+                "Failed to persist pushbuttons to devices.json", exc_info=True,
+            )
+            return
+        if not ok:
+            log.warning("devices.json locked; pushbuttons not persisted")
+            return
+        self._cfg.installation = InstallationConfig.load(self._cfg.devices_file)
+
     async def _get_modules(self, request: web.Request) -> web.Response:
         """GET /api/v1/modules — return all modules with cached metadata."""
         module_list = self._build_module_list()
@@ -577,6 +698,8 @@ class GatewayAPI:
         except Exception as exc:
             log.warning("module refresh failed for %s: %s", module_id, exc)
 
+        await self._persist_pushbuttons_from_cache(module_mac=module_id)
+
         asyncio.create_task(self._broadcast(self._build_snapshot()))
         module_list = self._build_module_list()
         for m in module_list:
@@ -597,6 +720,7 @@ class GatewayAPI:
             )
         except Exception as exc:
             log.warning("modules refresh failed: %s", exc)
+        await self._persist_pushbuttons_from_cache()
         # Push the new module + device state to connected clients so freshly
         # discovered input buttons appear in the companion without a reload.
         asyncio.create_task(self._broadcast(self._build_snapshot()))
