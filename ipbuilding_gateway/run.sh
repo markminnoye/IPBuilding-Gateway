@@ -3,105 +3,77 @@
 #
 # Reads /data/options.json (written by HA Supervisor) and exports equivalent
 # environment variables before invoking the gateway.
+# Supports nested option groups (network, fieldbus, …) with fallback to legacy
+# flat top-level keys for existing installations.
 
 set -e
 
 OPTIONS_FILE="/data/options.json"
 
-# Helper: read a JSON top-level key, return "" if absent or not a string.
-json_str() {
-    local key="$1"
-    local value
-    value=$(python3 -c "
+# Read nested or flat option from options.json; print default if missing.
+# Usage: opt nested.path flat_key default
+opt() {
+    local nested_path="$1"
+    local flat_key="$2"
+    local default="$3"
+    python3 -c "
 import json, sys
+nested = '''$nested_path'''.split('.')
+flat = '''$flat_key'''
+default = '''$default'''
 try:
     with open('$OPTIONS_FILE') as f:
         opts = json.load(f)
-    v = opts.get('$key', '')
-    if isinstance(v, str):
-        print(v)
-    elif v is None:
-        print('')
+except Exception:
+    print(default)
+    sys.exit(0)
+cur = opts
+for part in nested:
+    if isinstance(cur, dict) and part in cur:
+        cur = cur[part]
     else:
-        print(str(v))
-except Exception:
-    print('')
-" 2>/dev/null || echo "")
-    printf '%s' "$value"
-}
-
-# Helper: read a JSON top-level key, return the provided default if absent.
-json_str_or() {
-    local key="$1"
-    local default="$2"
-    local value
-    value=$(json_str "$key")
-    if [ -z "$value" ]; then
-        printf '%s' "$default"
-    else
-        printf '%s' "$value"
-    fi
-}
-
-json_int_or() {
-    local key="$1"
-    local default="$2"
-    local value
-    value=$(json_str "$key")
-    if [ -z "$value" ]; then
-        printf '%s' "$default"
-    else
-        printf '%s' "$value"
-    fi
-}
-
-json_bool() {
-    local key="$1"
-    local value
-    value=$(python3 -c "
-import json
-try:
-    with open('$OPTIONS_FILE') as f:
-        opts = json.load(f)
-    v = opts.get('$key', False)
-    print('1' if v else '0')
-except Exception:
-    print('0')
-" 2>/dev/null || echo "0")
-    printf '%s' "$value"
+        cur = None
+        break
+if cur is None or cur == '':
+    cur = opts.get(flat, default)
+if isinstance(cur, bool):
+    print('1' if cur else '0')
+elif cur is None:
+    print(default)
+else:
+    print(cur)
+" 2>/dev/null || printf '%s' "$default"
 }
 
 # ── Network ──────────────────────────────────────────────────────────────────
 export GATEWAY_HUB_IP
-GATEWAY_HUB_IP=$(json_str_or "hub_ip" "10.10.1.1")
+GATEWAY_HUB_IP=$(opt network.hub_ip hub_ip "10.10.1.1")
 
-# ── Polling ──────────────────────────────────────────────────────────────────
+export GATEWAY_API_PORT
+GATEWAY_API_PORT=$(opt network.api_port api_port "8080")
+
+export GATEWAY_REST_SHIM_ENABLED
+GATEWAY_REST_SHIM_ENABLED=$(opt network.rest_shim_enabled rest_shim_enabled "0")
+
+export GATEWAY_HTTP_TIMEOUT_S
+GATEWAY_HTTP_TIMEOUT_S=$(opt network.http_timeout_s http_timeout_s "2.0")
+
+export GATEWAY_METADATA_TIMEOUT_S
+GATEWAY_METADATA_TIMEOUT_S=$(opt network.metadata_timeout_s metadata_timeout_s "5.0")
+
+# ── Field bus ───────────────────────────────────────────────────────────────
 export GATEWAY_POLL_INTERVAL
-GATEWAY_POLL_INTERVAL=$(json_str_or "poll_interval" "2.0")
+GATEWAY_POLL_INTERVAL=$(opt fieldbus.poll_interval poll_interval "2.0")
 
 export GATEWAY_ACTUATOR_POLL_INTERVAL
-GATEWAY_ACTUATOR_POLL_INTERVAL=$(json_str_or "actuator_poll_interval" "20.0")
+GATEWAY_ACTUATOR_POLL_INTERVAL=$(opt fieldbus.actuator_poll_interval actuator_poll_interval "20.0")
 
-# ── API ──────────────────────────────────────────────────────────────────────
-export GATEWAY_API_PORT
-GATEWAY_API_PORT=$(json_int_or "api_port" "8080")
+export GATEWAY_HUB_ROLE
+GATEWAY_HUB_ROLE=$(opt fieldbus.hub_role hub_role "full")
 
-# ── REST Shim (optional, for IPBox migration) ───────────────────────────────
-# The shim is always started on 0.0.0.0:30200; we just don't register it
-# on the bus unless explicitly enabled.  For simplicity the gateway always
-# binds both ports; the shim is a no-op when rest_shim_enabled=false.
-export GATEWAY_REST_SHIM_ENABLED
-GATEWAY_REST_SHIM_ENABLED=$(json_bool "rest_shim_enabled")
-
-# ── Logging ──────────────────────────────────────────────────────────────────
-export GATEWAY_LOG_LEVEL
-GATEWAY_LOG_LEVEL=$(json_str_or "log_level" "info")
-
-# ── Persistent devices.json ──────────────────────────────────────────────────
-# Default /config/devices.json — addon_config:rw maps the host folder
-# /addon_configs/<hash>_ipbuilding_gateway/ to /config (Samba-visible).
+# ── Installation ─────────────────────────────────────────────────────────────
 export GATEWAY_DEVICES_FILE
-GATEWAY_DEVICES_FILE=$(json_str_or "devices_file" "/config/devices.json")
+GATEWAY_DEVICES_FILE=$(opt installation.devices_file devices_file "/config/devices.json")
 
 mkdir -p "$(dirname "$GATEWAY_DEVICES_FILE")"
 
@@ -118,46 +90,40 @@ elif [ ! -f "$GATEWAY_DEVICES_FILE" ] && [ -f /data/devices.json ]; then
 fi
 export GATEWAY_DEVICES_FILE
 
-# ── Discovery / auto-discovery ───────────────────────────────────────────────
+# ── Discovery ────────────────────────────────────────────────────────────────
 export GATEWAY_DISCOVERY_SUBNET
-GATEWAY_DISCOVERY_SUBNET=$(json_str_or "discovery_subnet" "10.10.1")
+GATEWAY_DISCOVERY_SUBNET=$(opt discovery.discovery_subnet discovery_subnet "10.10.1")
 
 export GATEWAY_DISCOVERY_RANGE_START
-GATEWAY_DISCOVERY_RANGE_START=$(json_int_or "discovery_range_start" "0")
+GATEWAY_DISCOVERY_RANGE_START=$(opt discovery.discovery_range_start discovery_range_start "0")
 
 export GATEWAY_DISCOVERY_RANGE_END
-GATEWAY_DISCOVERY_RANGE_END=$(json_int_or "discovery_range_end" "254")
+GATEWAY_DISCOVERY_RANGE_END=$(opt discovery.discovery_range_end discovery_range_end "254")
 
 export GATEWAY_AUTO_DISCOVER_ON_START
-GATEWAY_AUTO_DISCOVER_ON_START=$(json_bool "auto_discover_on_start")
+GATEWAY_AUTO_DISCOVER_ON_START=$(opt discovery.auto_discover_on_start auto_discover_on_start "0")
 
 export GATEWAY_PASSIVE_ARP_MONITOR
-GATEWAY_PASSIVE_ARP_MONITOR=$(json_bool "passive_arp_monitor")
+GATEWAY_PASSIVE_ARP_MONITOR=$(opt discovery.passive_arp_monitor passive_arp_monitor "1")
 
 export GATEWAY_ARP_POLL_INTERVAL_S
-GATEWAY_ARP_POLL_INTERVAL_S=$(json_str_or "arp_poll_interval_s" "30.0")
-
-export GATEWAY_HTTP_TIMEOUT_S
-GATEWAY_HTTP_TIMEOUT_S=$(json_str_or "http_timeout_s" "2.0")
+GATEWAY_ARP_POLL_INTERVAL_S=$(opt discovery.arp_poll_interval_s arp_poll_interval_s "30.0")
 
 export GATEWAY_USE_ENV_DEFAULTS
-GATEWAY_USE_ENV_DEFAULTS=$(json_bool "use_env_defaults")
+GATEWAY_USE_ENV_DEFAULTS=$(opt discovery.use_env_defaults use_env_defaults "0")
 
-# ── Module metadata HTTP timeout (getSysSet / getButtons) ────────────────────
-# Distinct from GATEWAY_HTTP_TIMEOUT_S (which is for ARP-discovery HTTP
-# identify). 5 s is comfortable for IPBuilding controllers on a quiet
-# VLAN; raise for loaded networks.
-export GATEWAY_METADATA_TIMEOUT_S
-GATEWAY_METADATA_TIMEOUT_S=$(json_str_or "metadata_timeout_s" "5.0")
+# ── Logging ──────────────────────────────────────────────────────────────────
+export GATEWAY_LOG_LEVEL
+GATEWAY_LOG_LEVEL=$(opt logging.log_level log_level "info")
 
 # ── Simulated mode (default off) ─────────────────────────────────────────────
-# Set GATEWAY_SIMULATED=1 to run without field hardware during development
 export GATEWAY_SIMULATED
 GATEWAY_SIMULATED="${GATEWAY_SIMULATED:-0}"
 
 echo "[run.sh] GATEWAY_HUB_IP=$GATEWAY_HUB_IP"
 echo "[run.sh] GATEWAY_POLL_INTERVAL=$GATEWAY_POLL_INTERVAL"
 echo "[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=$GATEWAY_ACTUATOR_POLL_INTERVAL"
+echo "[run.sh] GATEWAY_HUB_ROLE=$GATEWAY_HUB_ROLE"
 echo "[run.sh] GATEWAY_API_PORT=$GATEWAY_API_PORT"
 echo "[run.sh] GATEWAY_DEVICES_FILE=$GATEWAY_DEVICES_FILE"
 echo "[run.sh] GATEWAY_REST_SHIM_ENABLED=$GATEWAY_REST_SHIM_ENABLED"

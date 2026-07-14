@@ -11,6 +11,16 @@ from gateway.installation import InstallationConfig, InstallationError
 
 log = logging.getLogger(__name__)
 
+HUB_ROLES = frozenset({"full", "actuators_only"})
+
+
+def _normalize_hub_role(value: str | None) -> str:
+    role = (value or "full").lower().strip()
+    if role not in HUB_ROLES:
+        log.warning("Unknown GATEWAY_HUB_ROLE=%r — using full", value)
+        return "full"
+    return role
+
 
 def _env_truthy(name: str, default: str = "0") -> bool:
     return os.getenv(name, default).lower() in ("1", "true", "yes")
@@ -112,6 +122,18 @@ class GatewayConfig:
     # IPBuilding controllers on a quiet VLAN; reduce for tighter SLA,
     # raise for slow / loaded networks.
     metadata_timeout_s: float = 5.0
+    # Input centrale mode: full = slave (poll + events), actuators_only = master.
+    hub_role: str = "full"
+
+    @property
+    def claims_input_modules(self) -> bool:
+        """True when this gateway polls inputs and receives B-…E events."""
+        return self.hub_role == "full"
+
+    @property
+    def input_mode_label(self) -> str:
+        """Operator-facing label matching IP1100 manual terminology."""
+        return "Master" if self.hub_role == "actuators_only" else "Slave"
 
     def __post_init__(self) -> None:
         if (
@@ -205,4 +227,5 @@ class GatewayConfig:
             devices_file=devices_file,
             discovery=discovery,
             metadata_timeout_s=metadata_timeout_s,
+            hub_role=_normalize_hub_role(os.getenv("GATEWAY_HUB_ROLE")),
         )

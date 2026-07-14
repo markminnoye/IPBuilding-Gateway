@@ -134,3 +134,35 @@ class TestWebUiRoute:
         assert '"/api/v1/devices/export"' not in body
         assert '"/api/v1/devices/import"' not in body
         assert '"/api/v1/devices/reset"' not in body
+
+    @pytest.mark.asyncio
+    async def test_webui_type_select_shows_icon_and_label(self, tmp_path: Path) -> None:
+        api = _make_api(tmp_path)
+        app = web.Application(middlewares=[api._api_error_middleware])
+        app.router.add_get("/", api._get_webui)
+
+        async with TestClient(TestServer(app)) as client:
+            resp = await client.get("/")
+            body = await resp.text()
+
+        assert "buildTypeCell" in body or 'el("select"' in body
+        assert "type-select-native" in body
+        assert "type-select-btn" not in body
+        assert 'device.device_type === "dimmer"' in body
+
+    @pytest.mark.asyncio
+    async def test_webui_shows_hub_role_badge_and_status_fetch(self, tmp_path: Path) -> None:
+        api = _make_api(tmp_path)
+        app = web.Application(middlewares=[api._api_error_middleware])
+        app.router.add_get("/", api._get_webui)
+
+        async with TestClient(TestServer(app)) as client:
+            resp = await client.get("/")
+            body = await resp.text()
+
+        assert "hub-role-badge" in body
+        assert "hub-role-badge--slave" in body
+        assert "buildHubRoleBadge" in body
+        assert "api/v1/status" in body
+        assert "HUB_ROLE_TOOLTIP" in body
+        assert "Enable" not in body or "buildEnableAction" not in body

@@ -104,6 +104,17 @@ INDEX_HTML = """<!doctype html>
   .muted { color: #888; }
   .type-cell { display: flex; align-items: center; gap: 0.35rem; }
   .type-icon { flex: none; width: 16px; height: 16px; fill: #888; }
+  /* Icon sits inside the native <select> (padding-left); dropdown stays OS-native. */
+  .type-select-native { position: relative; min-width: 6.5rem; }
+  .type-select-native .type-icon {
+    position: absolute;
+    left: 0.35rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .type-select-native select { padding-left: 1.6rem; }
   .status { font-size: 0.78rem; white-space: nowrap; }
   .status.ok { color: var(--ok); }
   .status.err { color: var(--err); }
@@ -133,11 +144,34 @@ INDEX_HTML = """<!doctype html>
     border-radius: 3px;
     padding: 0.05rem 0.35rem;
   }
+  .hub-role-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #555;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1rem 0.45rem;
+    cursor: help;
+  }
+  .hub-role-badge--slave {
+    color: var(--ok);
+    border-color: var(--ok);
+    background: color-mix(in srgb, var(--ok) 10%, transparent);
+  }
+  @media (prefers-color-scheme: dark) {
+    .hub-role-badge { color: #ccc; }
+    .hub-role-badge--slave {
+      color: #81c784;
+      border-color: #81c784;
+      background: color-mix(in srgb, #81c784 12%, transparent);
+    }
+  }
   .module-sub { font-size: 0.75rem; color: #888; }
   .module-actions {
     display: flex;
     flex-direction: row;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: flex-end;
     gap: 0.5rem;
   }
@@ -156,12 +190,24 @@ INDEX_HTML = """<!doctype html>
     width: 2rem;
     height: 2rem;
     padding: 0;
+    border: none;
+    background: transparent;
     border-radius: 4px;
   }
   .module-action-icon { width: 18px; height: 18px; fill: currentColor; }
   .module-action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-  .module-action-btn--push { border-color: #b26a00; color: #b26a00; }
-  .module-action--enable .switch { flex-direction: column; gap: 0; }
+  .module-action-btn--push { color: #b26a00; }
+  @media (prefers-color-scheme: dark) {
+    .module-action-btn--push { color: #d9922e; }
+  }
+  .module-action--enable .switch {
+    flex-direction: column;
+    gap: 0;
+    width: 2rem;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+  }
   .module-action--enable .switch-label { display: none; }
   .module-action-status { font-size: 0.58rem; min-height: 0.75rem; }
   .module-table { margin: 0; }
@@ -237,11 +283,17 @@ INDEX_HTML = """<!doctype html>
 
   var DEVICES_URL = "api/v1/devices";
   var MODULES_URL = "api/v1/modules";
+  var STATUS_URL = "api/v1/status";
   var EXPORT_URL = "api/v1/devices/export";
   var IMPORT_URL = "api/v1/devices/import";
   var RESET_URL = "api/v1/devices/reset";
   var SEMANTIC_TYPES = ["light", "fan", "cover", "switch", "plug"];
   var NOT_IMPLEMENTED = "Not yet implemented";
+  var HUB_ROLE_TOOLTIP =
+    "Slave: this gateway polls the input module and receives button events for Home Assistant. " +
+    "Master: this gateway does not claim inputs; buttons use EEPROM autonomy (blinking LED). " +
+    "Change via Settings → Add-ons → IPBuilding Gateway → Configuration (restart required).";
+  var gatewayInputModeLabel = "Slave";
   // Exactly the icons the HA companion assigns per semantic_type (source of
   // truth: ha-ipbuilding-gateway/custom_components/ha_ipbuilding_gateway/
   // entity.py _SEMANTIC_ICONS, plus event.py's _attr_icon for buttons), so
@@ -337,6 +389,13 @@ INDEX_HTML = """<!doctype html>
       var label = document.createTextNode(device.device_type || "—");
       return el("td", {}, [el("div", { class: "type-cell muted" }, [icon, label])]);
     }
+    // Dimmer hardware is always a brightness-capable light in HA/Matter.
+    if (device.device_type === "dimmer") {
+      state.semantic_type = null;
+      var dimmerIcon = buildTypeIcon("light", "dimmer");
+      var dimmerLabel = document.createTextNode("light");
+      return el("td", {}, [el("div", { class: "type-cell muted" }, [dimmerIcon, dimmerLabel])]);
+    }
     var select = el("select", {});
     SEMANTIC_TYPES.forEach(function (t) {
       var opt = el("option", { value: t, text: t });
@@ -344,11 +403,17 @@ INDEX_HTML = """<!doctype html>
       select.appendChild(opt);
     });
     state.semantic_type = select;
+    var wrap = el("div", { class: "type-cell type-select-native" });
     var typeIcon = buildTypeIcon(device.semantic_type, device.device_type);
     select.addEventListener("change", function () {
-      typeIcon.querySelector("path").setAttribute("d", iconPathFor(select.value, device.device_type) || "");
+      typeIcon.querySelector("path").setAttribute(
+        "d",
+        iconPathFor(select.value, device.device_type) || ""
+      );
     });
-    return el("td", {}, [el("div", { class: "type-cell" }, [typeIcon, select])]);
+    wrap.appendChild(typeIcon);
+    wrap.appendChild(select);
+    return el("td", {}, [wrap]);
   }
 
   function buildActiveCell(device, state) {
@@ -522,20 +587,15 @@ INDEX_HTML = """<!doctype html>
       });
   }
 
-  function buildDisabledSwitch(title, checked) {
-    var label = el("label", { class: "switch", title: title });
-    var input = el("input", { type: "checkbox", disabled: "disabled" });
-    input.checked = checked;
-    input.style.display = "none";
-    var track = el("span", { class: "switch-track" });
-    var text = el("span", {
-      class: "switch-label",
-      text: checked ? "Enabled" : "Disabled",
+  function buildHubRoleBadge(label) {
+    var text = label || "Slave";
+    var cls = "hub-role-badge";
+    if (text.toLowerCase() === "slave") cls += " hub-role-badge--slave";
+    return el("span", {
+      class: cls,
+      title: HUB_ROLE_TOOLTIP,
+      text: text,
     });
-    label.appendChild(input);
-    label.appendChild(track);
-    label.appendChild(text);
-    return label;
   }
 
   function buildIconAction(label, iconPath, opts) {
@@ -551,13 +611,6 @@ INDEX_HTML = """<!doctype html>
     var statusSpan = el("span", { class: "module-action-status status" });
     wrap.appendChild(statusSpan);
     return { wrap: wrap, button: btn, status: statusSpan };
-  }
-
-  function buildEnableAction() {
-    var wrap = el("div", { class: "module-action module-action--enable", title: NOT_IMPLEMENTED });
-    wrap.appendChild(buildDisabledSwitch(NOT_IMPLEMENTED, true));
-    wrap.appendChild(el("span", { class: "module-action-label", text: "Enable" }));
-    return wrap;
   }
 
   function wireModuleUpdate(module, btn, statusSpan) {
@@ -593,7 +646,7 @@ INDEX_HTML = """<!doctype html>
 
   function buildModuleActions(module) {
     var wrap = el("div", { class: "module-actions" });
-    // DOM order left-to-right: Push, Fetch, Enable, Update (Update rightmost).
+    // DOM order left-to-right: Push, Fetch, Update (Update rightmost).
     var push = buildIconAction("Push", ICONS.upload, {
       disabled: true,
       push: true,
@@ -612,7 +665,6 @@ INDEX_HTML = """<!doctype html>
     wireModuleUpdate(module, update.button, update.status);
     wrap.appendChild(push.wrap);
     wrap.appendChild(fetchAct.wrap);
-    wrap.appendChild(buildEnableAction());
     wrap.appendChild(update.wrap);
     return wrap;
   }
@@ -626,6 +678,9 @@ INDEX_HTML = """<!doctype html>
     }
     if (module.type) {
       nameRow.appendChild(el("span", { class: "module-type-badge", text: module.type }));
+    }
+    if (module.type === "input") {
+      nameRow.appendChild(buildHubRoleBadge(gatewayInputModeLabel));
     }
     var subParts = [];
     if (module.ip) subParts.push(module.ip);
@@ -689,10 +744,13 @@ INDEX_HTML = """<!doctype html>
     Promise.all([
       fetch(DEVICES_URL).then(function (resp) { return resp.json(); }),
       fetch(MODULES_URL).then(function (resp) { return resp.json(); }),
+      fetch(STATUS_URL).then(function (resp) { return resp.json(); }),
     ])
       .then(function (results) {
         var devicesBody = results[0];
         var modulesBody = results[1];
+        var statusBody = results[2];
+        gatewayInputModeLabel = statusBody.input_mode_label || "Slave";
         render(devicesBody.devices || [], modulesBody.modules || []);
         setStatus(toolbarStatus, "", "");
       })

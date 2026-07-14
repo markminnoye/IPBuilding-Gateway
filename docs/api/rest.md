@@ -55,11 +55,8 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
       "since": "2026-06-15T11:40:00Z"
     }
   ],
-  "fieldbus": {
-    "polling_enabled": true,
-    "poll_interval_s": 2.0,
-    "actuator_poll_interval_s": 20.0
-  },
+  "hub_role": "full",
+  "input_mode_label": "Slave",
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
     "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" },
@@ -220,7 +217,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `channel` | integer | Channel index on the module (relay/dimmer), or physical wiring position for buttons. For buttons this is **read-only** (from the module's physical wiring), not PATCH-able |
 | `name` | string | Channel name from `devices.json` (or `descr` from `getButtons` for input) |
 | `room` | string | Room from config (or `gr` from `getButtons` for input) |
-| `semantic_type` | string | `light` / `fan` / `switch` / `button` |
+| `semantic_type` | string | `light` / `fan` / `switch` / `button` (dimmer channels are always `light`) |
 | `device_type` | string | `relay` / `dimmer` / `input` |
 | `active` | boolean | Whether channel is active |
 | `max_watt` | integer | Configured maximum power (relay/dimmer only) |
@@ -270,7 +267,7 @@ and a `"channel inactive"` error.
 |-------|------|-------|
 | `name` | string | Operator-friendly label |
 | `room` | string | Room / area name |
-| `semantic_type` | string | One of: `light`, `fan`, `cover`, `switch`, `plug` |
+| `semantic_type` | string | One of: `light`, `fan`, `cover`, `switch`, `plug`. Dimmer channels only accept `light` (PATCH rejects other values; import/load normalizes to `light`). |
 | `active` | boolean | `false` = do not poll or expose |
 | `max_watt` | integer | Non-negative wattage cap |
 

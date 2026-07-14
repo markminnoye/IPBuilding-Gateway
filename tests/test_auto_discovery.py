@@ -396,6 +396,83 @@ class TestDiscoveryOrchestratorForcedDiscovery:
         assert loaded["modules"][0]["active"] is False
 
     @pytest.mark.asyncio
+    async def test_run_forced_discovery_merges_by_ip_when_mac_empty(self, tmp_path: Path):
+        """IPA imports with mac:\"\" must not duplicate when sweep finds the same IP."""
+        from gateway.discovery import DiscoveredModule
+
+        devices_file = tmp_path / "devices.json"
+        devices_file.write_text(
+            json.dumps({
+                "modules": [{
+                    "name": "IP0200PoE",
+                    "ip": "10.10.1.30",
+                    "type": "relay",
+                    "firmware": "",
+                    "model": "IP0200PoE",
+                    "mac": "",
+                    "channels": [{
+                        "ch": 0,
+                        "name": "Keuken LED",
+                        "room": "Keuken",
+                        "semantic_type": "light",
+                        "active": True,
+                        "max_watt": 60,
+                    }],
+                }],
+            }),
+            encoding="utf-8",
+        )
+
+        discovered = [
+            DiscoveredModule(
+                ip="10.10.1.30",
+                device_type="relay",
+                firmware="5.1",
+                mac="00:24:77:52:ac:be",
+                model="IP0200PoE",
+                channels=[{
+                    "ch": 0,
+                    "name": "From backupConfig",
+                    "room": "Other",
+                    "semantic_type": "light",
+                    "active": False,
+                    "max_watt": 0,
+                }],
+            ),
+            DiscoveredModule(
+                ip="10.10.1.40",
+                device_type="dimmer",
+                firmware="5.4",
+                mac="00:24:77:52:9e:a8",
+                model="IP0300PoE",
+            ),
+        ]
+
+        broadcast = AsyncMock()
+        orch = DiscoveryOrchestrator(
+            config=DiscoveryConfig(),
+            devices_file=str(devices_file),
+            broadcast=broadcast,
+            installation=None,
+        )
+
+        with patch("gateway.auto_discovery.discover_modules", return_value=discovered):
+            result = await orch.run_forced_discovery()
+
+        loaded = json.loads(devices_file.read_text(encoding="utf-8"))
+        assert len(loaded["modules"]) == 2
+        ips = [m["ip"] for m in loaded["modules"]]
+        assert ips.count("10.10.1.30") == 1
+
+        relay = next(m for m in loaded["modules"] if m["ip"] == "10.10.1.30")
+        assert relay["mac"] == "00:24:77:52:ac:be"
+        assert relay["firmware"] == "5.1"
+        assert relay["channels"][0]["name"] == "Keuken LED"
+
+        assert result["added"] == [{"mac": "00:24:77:52:9e:a8", "ip": "10.10.1.40"}]
+        InstallationConfig.load(devices_file)
+
+    @pytest.mark.asyncio
     async def test_run_forced_discovery_skips_unknown_modules(self, tmp_path: Path):
         devices_file = tmp_path / "devices.json"
         devices_file.write_text(

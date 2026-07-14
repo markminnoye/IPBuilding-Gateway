@@ -116,6 +116,24 @@ class TestInstallationLoad:
         cfg = InstallationConfig.load(p)
         assert cfg.ipbox_id_to_channel(0) is None
 
+    def test_dimmer_channel_semantic_type_normalized_to_light(self) -> None:
+        cfg = InstallationConfig._parse({
+            "modules": [{
+                "name": "IP0300PoE",
+                "ip": "10.10.1.40",
+                "type": "dimmer",
+                "mac": "00:24:77:52:9e:a8",
+                "channels": [{
+                    "ch": 0,
+                    "name": "Living",
+                    "semantic_type": "fan",
+                }],
+            }],
+        })
+        dimmer = cfg.module_by_ip("10.10.1.40")
+        assert dimmer is not None
+        assert dimmer.channels[0].semantic_type == "light"
+
     def test_field_modules(self, valid_devices_json: Path) -> None:
         cfg = InstallationConfig.load(valid_devices_json)
         fm = cfg.field_modules()

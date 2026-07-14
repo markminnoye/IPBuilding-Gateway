@@ -29,6 +29,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, TypeVar
 
 from gateway.discovery import (
+    DiscoveredModule,
     discover_modules,
     discovered_module_to_devices_json,
     parse_arp_table,
@@ -45,6 +46,33 @@ _LOCK_SUFFIX = ".lock"
 T = TypeVar("T")
 
 _EMPTY_DEVICES_JSON: dict[str, list] = {"modules": []}
+
+
+def _discovered_lookup(
+    discovered: list[DiscoveredModule],
+) -> tuple[dict[str, DiscoveredModule], dict[str, DiscoveredModule]]:
+    """Index discovered modules by MAC and by IP (last wins per key)."""
+    by_mac: dict[str, DiscoveredModule] = {}
+    by_ip: dict[str, DiscoveredModule] = {}
+    for dm in discovered:
+        if dm.mac:
+            by_mac[dm.mac] = dm
+        if dm.ip:
+            by_ip[dm.ip] = dm
+    return by_mac, by_ip
+
+
+def _match_discovered_for_module(
+    mc: ModuleConfig,
+    disc_by_mac: dict[str, DiscoveredModule],
+    disc_by_ip: dict[str, DiscoveredModule],
+) -> DiscoveredModule | None:
+    """Match an installed module to a discovery hit by MAC, else by IP when MAC is empty."""
+    if mc.mac and mc.mac in disc_by_mac:
+        return disc_by_mac[mc.mac]
+    if not mc.mac and mc.ip in disc_by_ip:
+        return disc_by_ip[mc.ip]
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -456,16 +484,12 @@ class DiscoveryOrchestrator:
             pass
 
         # Build the new modules list
-        current_modules: dict[str, dict] = {}
-        if installation:
-            for mc in installation.modules:
-                current_modules[mc.mac] = mc
-
-        all_macs = set(current_modules.keys()) | {m.mac for m in discovered if m.mac}
-
         modules_to_write: list[dict] = []
+        matched_disc_ips: set[str] = set()
+        matched_disc_macs: set[str] = set()
+        disc_by_mac, disc_by_ip = _discovered_lookup(discovered)
 
-        # First: preserve existing modules; backfill SKU where missing.
+        # First: preserve existing modules; backfill SKU / wire identity where missing.
         if installation:
             for mc in installation.modules:
                 d = mc.to_dict()
@@ -487,63 +511,76 @@ class DiscoveryOrchestrator:
                     d["name"] = resolved_model
                 elif resolved_model and d.get("name") == d.get("ip"):
                     d["name"] = resolved_model
-                modules_to_write.append(d)
 
-                # Check for IP change
-                disc_by_mac = {m.mac: m for m in discovered if m.mac}
-                if mc.mac in disc_by_mac:
-                    dm = disc_by_mac[mc.mac]
+                dm = _match_discovered_for_module(mc, disc_by_mac, disc_by_ip)
+                if dm is not None:
+                    matched_disc_ips.add(dm.ip)
+                    if dm.mac:
+                        matched_disc_macs.add(dm.mac)
+                    # IPA / legacy imports often have ``mac: ""``. Match by IP
+                    # and backfill wire identity without replacing operator
+                    # channel/button config.
+                    if not mc.mac and dm.mac:
+                        d["mac"] = dm.mac
                     if dm.ip != mc.ip:
                         d["ip"] = dm.ip
                         self._emit({
                             "type": "device_ip_changed",
-                            "mac": mc.mac,
+                            "mac": dm.mac or mc.mac,
                             "old_ip": mc.ip,
                             "new_ip": dm.ip,
                         })
-                    # Check for firmware change
                     if dm.firmware and dm.firmware != mc.firmware:
                         old_firmware = mc.firmware
                         d["firmware"] = dm.firmware
                         self._emit({
                             "type": "device_firmware_changed",
-                            "mac": mc.mac,
+                            "mac": dm.mac or mc.mac,
                             "old_firmware": old_firmware,
                             "new_firmware": dm.firmware,
                         })
                         firmware_changed.append({
-                            "mac": mc.mac,
+                            "mac": dm.mac or mc.mac,
                             "old_firmware": old_firmware,
                             "new_firmware": dm.firmware,
                         })
 
-        # Add newly discovered modules (not in current)
-        existing_macs = set(current_modules.keys())
+                modules_to_write.append(d)
+
+        # Add newly discovered modules (not merged into an existing entry)
         for dm in discovered:
-            if dm.mac and dm.mac not in existing_macs:
-                self._emit({
-                    "type": "device_added",
+            if dm.ip in matched_disc_ips:
+                continue
+            if dm.mac and dm.mac in matched_disc_macs:
+                continue
+            if not dm.mac:
+                continue
+            self._emit({
+                "type": "device_added",
+                "mac": dm.mac,
+                "ip": dm.ip,
+                "device_type": dm.device_type,
+                "firmware": dm.firmware,
+            })
+            entry = discovered_module_to_devices_json(dm)
+            if entry is None:
+                log.info(
+                    "DiscoveryOrchestrator: skipping devices.json write for %s "
+                    "(unidentified type %r — HTTP getSysSet/backupConfig required)",
+                    dm.ip,
+                    dm.device_type,
+                )
+                skipped_unidentified.append({
                     "mac": dm.mac,
                     "ip": dm.ip,
                     "device_type": dm.device_type,
-                    "firmware": dm.firmware,
                 })
-                entry = discovered_module_to_devices_json(dm)
-                if entry is None:
-                    log.info(
-                        "DiscoveryOrchestrator: skipping devices.json write for %s "
-                        "(unidentified type %r — HTTP getSysSet/backupConfig required)",
-                        dm.ip,
-                        dm.device_type,
-                    )
-                    skipped_unidentified.append({
-                        "mac": dm.mac,
-                        "ip": dm.ip,
-                        "device_type": dm.device_type,
-                    })
-                    continue
-                modules_to_write.append(entry)
-                added.append({"mac": dm.mac, "ip": dm.ip})
+                continue
+            modules_to_write.append(entry)
+            matched_disc_ips.add(dm.ip)
+            if dm.mac:
+                matched_disc_macs.add(dm.mac)
+            added.append({"mac": dm.mac, "ip": dm.ip})
 
         duration_ms = int((time.monotonic() - start) * 1000)
         result = {

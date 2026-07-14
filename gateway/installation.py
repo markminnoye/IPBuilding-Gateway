@@ -427,7 +427,11 @@ class InstallationConfig:
                         id=device_id,
                         name=ch_entry.get("name") or ch_entry.get("description") or f"Ch {ch}",
                         room=ch_entry.get("room") or ch_entry.get("group") or "",
-                        semantic_type=ch_entry.get("semantic_type", "light"),
+                        semantic_type=(
+                            "light"
+                            if dtype == DeviceType.DIMMER
+                            else ch_entry.get("semantic_type", "light")
+                        ),
                         active=ch_entry.get("active", True),
                         max_watt=ch_entry.get("max_watt", 0),
                     )
