@@ -21,8 +21,14 @@ anders meldt.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-14
+
 ### Added
 - **Backup & restore in de Web UI.** Download het huidige `devices.json`, upload een handmatig bewerkt bestand (gevalideerd vóór het wordt weggeschreven — een ongeldig bestand wijzigt niets), of reset naar een lege installatie. Nieuwe endpoints: `GET /api/v1/devices/export`, `POST /api/v1/devices/import`, `POST /api/v1/devices/reset`.
+- **Knoppen in backup na module-refresh.** Na een metadata-refresh (opstart, discovery of **Update** in de Web UI) worden fysieke knoppen van input-modules opgeslagen in `devices.json`; een gedownloade backup bevat daarna de volledige geneste `pushbuttons`-lijst. Discovery schrijft voor input-modules het juiste schema (`pushbuttons`/`detectors`, geen `channels`).
+
+### Fixed
+- **Canonieke pushbutton-ID bij module-refresh.** Legacy `2D`-prefix of afwijkende casing in `devices.json` wordt bij merge genormaliseerd, zodat knoppen niet dubbel verschijnen en herladen niet faalt.
 
 ## [1.3.1] - 2026-07-13
 
