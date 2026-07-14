@@ -125,8 +125,18 @@ python3 scripts/import_ipbox_to_ha.py --no-ipbox --out ./out
 |------|----------|--------|
 | `python scripts/discover_from_ipbox.py` | IPBox WebConfig + session cookie | Full `devices.json` with `ipbox_id` per channel |
 | `python -m gateway.discover` | IPBuilding VLAN access | Draft `devices.json` — no `ipbox_id`, channels empty |
+| `python scripts/import_ipa_to_devices.py` | `.IPA` autonomy dump (no network) | Draft `devices.json` + sidecar import report; module types from installer IP ranges (§12.1) |
 
 ```bash
+# Legacy / offline: build devices.json from IP1100 .IPA file(s)
+python scripts/import_ipa_to_devices.py \
+  --ipa path/to/10.10.1.55.IPA \
+  --output devices.ipa-draft.json \
+  --profile full
+
+# Reference sample (16 buttons, input .55 → relay .30/.32, dimmer .42):
+# resources_and_docs/reference/devices.ipa-reference.json
+
 # Migrate from IPBox (full channels + ipbox_id for shim)
 IPBOX_WEB_HOST=http://192.168.0.185 \
 IPBOX_SESSION_COOKIE="ASP.NET_SessionId=<cookie>" \
