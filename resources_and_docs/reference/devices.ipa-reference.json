@@ -1,0 +1,245 @@
+{
+  "modules": [
+    {
+      "name": "IP1100PoE",
+      "ip": "10.10.1.55",
+      "type": "input",
+      "firmware": "",
+      "model": "IP1100PoE",
+      "mac": "",
+      "pushbuttons": [
+        {
+          "id": "88196c3142",
+          "channel": 1,
+          "name": "Knop 1-88196c",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "9e8a6ba730",
+          "channel": 0,
+          "name": "Knop 0-9e8a6b",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "d56c6cea42",
+          "channel": 0,
+          "name": "Knop 0-d56c6c",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "62706c3530",
+          "channel": 0,
+          "name": "Knop 0-62706c",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "e4096d7c30",
+          "channel": 1,
+          "name": "Knop 1-e4096d",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "9a437c1430",
+          "channel": 1,
+          "name": "Knop 1-9a437c",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "b6096d3c30",
+          "channel": 0,
+          "name": "Knop 0-b6096d",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "ae316cf342",
+          "channel": 2,
+          "name": "Knop 2-ae316c",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "dac46cc330",
+          "channel": 1,
+          "name": "Knop 1-dac46c",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "a4ad6b2c42",
+          "channel": 0,
+          "name": "Knop 0-a4ad6b",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "0e3c6c4330",
+          "channel": 1,
+          "name": "Knop 1-0e3c6c",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "57d96cf330",
+          "channel": 1,
+          "name": "Knop 1-57d96c",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "07fb6ca630",
+          "channel": 2,
+          "name": "Knop 2-07fb6c",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "afeb6ba130",
+          "channel": 2,
+          "name": "Knop 2-afeb6b",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "fb3d6d9830",
+          "channel": 0,
+          "name": "Knop 0-fb3d6d",
+          "room": "Onbekend",
+          "active": true
+        },
+        {
+          "id": "c3176d9130",
+          "channel": 2,
+          "name": "Knop 2-c3176d",
+          "room": "Onbekend",
+          "active": true
+        }
+      ],
+      "detectors": []
+    },
+    {
+      "name": "IP0200PoE",
+      "ip": "10.10.1.30",
+      "type": "relay",
+      "firmware": "",
+      "model": "IP0200PoE",
+      "mac": "",
+      "channels": [
+        {
+          "ch": 0,
+          "name": "Kanaal 0",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 1,
+          "name": "Kanaal 1",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 2,
+          "name": "Kanaal 2",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 3,
+          "name": "Kanaal 3",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 6,
+          "name": "Kanaal 6",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 7,
+          "name": "Kanaal 7",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 8,
+          "name": "Kanaal 8",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 9,
+          "name": "Kanaal 9",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        }
+      ]
+    },
+    {
+      "name": "IP0200PoE",
+      "ip": "10.10.1.32",
+      "type": "relay",
+      "firmware": "",
+      "model": "IP0200PoE",
+      "mac": "",
+      "channels": [
+        {
+          "ch": 0,
+          "name": "Kanaal 0",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        }
+      ]
+    },
+    {
+      "name": "IP0300PoE",
+      "ip": "10.10.1.42",
+      "type": "dimmer",
+      "firmware": "",
+      "model": "IP0300PoE",
+      "mac": "",
+      "channels": [
+        {
+          "ch": 0,
+          "name": "Kanaal 0",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 200
+        },
+        {
+          "ch": 2,
+          "name": "Kanaal 2",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 200
+        }
+      ]
+    }
+  ]
+}

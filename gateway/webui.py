@@ -302,13 +302,20 @@ INDEX_HTML = """<!doctype html>
     return device.device_type === "relay" || device.device_type === "dimmer";
   }
 
-  function buildChannelCell(device) {
+  function buildChannelCell(device, moduleType) {
     var hasChannel = typeof device.channel === "number";
+    var title = moduleType === "input"
+      ? "Physical input port on IP1100 (0–7)"
+      : "Channel number on this module";
     return el(
       "td",
-      { class: "muted" },
+      { class: "muted", title: title },
       [document.createTextNode(hasChannel ? String(device.channel) : "—")]
     );
+  }
+
+  function channelColumnLabel(moduleType) {
+    return moduleType === "input" ? "Port" : "Ch";
   }
 
   function buildNameCell(device, state) {
@@ -437,11 +444,11 @@ INDEX_HTML = """<!doctype html>
       });
   }
 
-  function buildRow(device) {
+  function buildRow(device, moduleType) {
     var state = {};
     var tr = el("tr", { "data-id": device.id, "data-type": device.device_type });
 
-    tr.appendChild(buildChannelCell(device));
+    tr.appendChild(buildChannelCell(device, moduleType));
     tr.appendChild(buildNameCell(device, state));
     tr.appendChild(buildRoomCell(device, state));
     tr.appendChild(buildTypeCell(device, state));
@@ -464,10 +471,8 @@ INDEX_HTML = """<!doctype html>
     return devices.slice().sort(function (a, b) {
       var aHasCh = typeof a.channel === "number";
       var bHasCh = typeof b.channel === "number";
-      // Channels (relay/dimmer) sort numerically by ch#. Buttons have no
-      // channel field at all, so they fall back to room-then-name — this
-      // only matters within an input-module section, since a module's
-      // devices are never a mix of channels and buttons.
+      // Relay/dimmer channels and input pushbuttons (physical port) sort by
+      // channel number when present; otherwise fall back to room-then-name.
       if (aHasCh && bHasCh) return a.channel - b.channel;
       if (aHasCh !== bHasCh) return aHasCh ? -1 : 1;
       var ar = (a.room || "").toLowerCase();
@@ -634,15 +639,20 @@ INDEX_HTML = """<!doctype html>
   }
 
   function buildModuleSection(group) {
+    var moduleType = group.module.type || "";
     var section = el("section", { class: "module" }, [buildModuleHeader(group.module)]);
     if (group.devices.length === 0) {
       section.appendChild(el("div", { class: "empty", text: "No devices in this module." }));
       return section;
     }
+    var chLabel = channelColumnLabel(moduleType);
+    var chTitle = moduleType === "input"
+      ? "Physical input port on IP1100 (0–7)"
+      : "Output channel on this module";
     var table = el("table", { class: "module-table" }, [
       el("thead", {}, [
         el("tr", {}, [
-          el("th", { text: "Ch" }),
+          el("th", { text: chLabel, title: chTitle }),
           el("th", { text: "Name" }),
           el("th", { text: "Room" }),
           el("th", { text: "Type" }),
@@ -654,7 +664,7 @@ INDEX_HTML = """<!doctype html>
     ]);
     var tbody = el("tbody", {});
     sortDeviceRows(group.devices).forEach(function (device) {
-      tbody.appendChild(buildRow(device));
+      tbody.appendChild(buildRow(device, moduleType));
     });
     table.appendChild(tbody);
     section.appendChild(table);

@@ -21,6 +21,15 @@ anders meldt.
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-07-14
+
+### Added
+- **Web UI: Port-kolom bij input-modules.** Drukknoppen tonen de fysieke ingangspoort op de IP1100 (0–7) onder **Port** i.p.v. **Ch**; relay- en dimmerkanalen blijven **Ch**.
+- **IPA-import voor legacy-installaties.** Nieuw werkstation-script `scripts/import_ipa_to_devices.py` bouwt een upload-klaar `devices.json` uit IP1100-autonomie-EEPROM (`.IPA`), zonder live `getButtons`/`getSysSet`. Referentie-output: `resources_and_docs/reference/devices.ipa-reference.json`.
+
+### Fixed
+- **Web UI: verkeerde module-groepering bij lege MAC.** IPA-import en andere configs zonder MAC-adres kregen `module_id: ""` op alle modules; de Web UI groepeerde alle kanalen onder de laatste module (bijv. drie× Ch 0 op één dimmer). De API gebruikt nu IP als fallback-id tot discovery de MAC invult.
+
 ## [1.4.0] - 2026-07-14
 
 ### Added

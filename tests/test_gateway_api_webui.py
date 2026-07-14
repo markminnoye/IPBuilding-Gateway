@@ -108,6 +108,20 @@ class TestWebUiRoute:
         assert "api/v1/devices/reset" in body
 
     @pytest.mark.asyncio
+    async def test_webui_input_module_uses_port_column_label(self, tmp_path: Path) -> None:
+        api = _make_api(tmp_path)
+        app = web.Application(middlewares=[api._api_error_middleware])
+        app.router.add_get("/", api._get_webui)
+
+        async with TestClient(TestServer(app)) as client:
+            resp = await client.get("/")
+            body = await resp.text()
+
+        assert "channelColumnLabel" in body
+        assert "Physical input port on IP1100" in body
+        assert '"Port"' in body or "'Port'" in body or "Port" in body
+
+    @pytest.mark.asyncio
     async def test_webui_backup_restore_uses_relative_fetch_paths(self, tmp_path: Path) -> None:
         api = _make_api(tmp_path)
         app = web.Application(middlewares=[api._api_error_middleware])

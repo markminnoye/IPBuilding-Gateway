@@ -43,7 +43,11 @@ from gateway.device_config import (
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.discovery import resolve_module_model
 from gateway.health import GatewayHealthMonitor
-from gateway.installation import InstallationConfig
+from gateway.installation import (
+    InstallationConfig,
+    module_by_northbound_id,
+    northbound_module_id,
+)
 from gateway.module_metadata import ModuleMetadataCache, normalize_button_hardware_id
 from gateway.payloads import (
     encode_dim_command,
@@ -684,8 +688,8 @@ class GatewayAPI:
         if installation is None:
             raise ApiError(500, "no_installation", "No installation loaded")
 
-        module_id = request.match_info["module_id"].lower()
-        mc = installation.module_by_mac(module_id)
+        module_id = request.match_info["module_id"]
+        mc = module_by_northbound_id(installation, module_id)
         if mc is None:
             raise ApiError(
                 404, "module_not_found", details={"module_id": module_id},
@@ -698,12 +702,15 @@ class GatewayAPI:
         except Exception as exc:
             log.warning("module refresh failed for %s: %s", module_id, exc)
 
-        await self._persist_pushbuttons_from_cache(module_mac=module_id)
+        await self._persist_pushbuttons_from_cache(
+            module_mac=mc.mac or None,
+        )
 
         asyncio.create_task(self._broadcast(self._build_snapshot()))
+        northbound_id = northbound_module_id(mc.mac, mc.ip)
         module_list = self._build_module_list()
         for m in module_list:
-            if m["id"] == module_id:
+            if m["id"] == northbound_id:
                 return web.json_response({**m, "schema_version": 2})
         raise ApiError(
             404, "module_not_found", details={"module_id": module_id},
@@ -958,8 +965,9 @@ class GatewayAPI:
         modules: list[dict[str, Any]] = []
         for mc in installation.modules:
             meta = self._meta_cache.get(mc.mac)
+            module_id = northbound_module_id(mc.mac, mc.ip)
             entry: dict[str, Any] = {
-                "id": mc.mac,
+                "id": module_id,
                 "ip": mc.ip,
                 "name": mc.name,
                 "model": resolve_module_model(mc.model, mc.type.value),
@@ -1016,10 +1024,11 @@ class GatewayAPI:
         installation = self._cfg.installation
 
         for mc in (installation.modules if installation else []):
+            module_id = northbound_module_id(mc.mac, mc.ip)
             for ch in mc.channels:
                 device: dict[str, Any] = {
                     "id": ch.id,
-                    "module_id": mc.mac,
+                    "module_id": module_id,
                     "module_ip": mc.ip,
                     "channel": ch.ch,
                     "name": ch.name or f"Ch {ch.ch}",
@@ -1093,7 +1102,7 @@ class GatewayAPI:
                         )
                         entry: dict[str, Any] = {
                             "id": device_id,
-                            "module_id": mc.mac,
+                            "module_id": module_id,
                             "module_ip": mc.ip,
                             "name": cfg_btn.name or meta_name if cfg_btn else meta_name,
                             "room": cfg_btn.room if cfg_btn is not None else meta_room,
@@ -1121,10 +1130,20 @@ class GatewayAPI:
         if btn is None:
             return None
 
-        mc = installation.module_by_mac(btn.module_id)
+        mc = (
+            module_by_northbound_id(installation, btn.module_id)
+            if btn.module_id
+            else None
+        )
+        if mc is None:
+            for candidate in installation.modules:
+                if any(pb.id.lower() == btn.id.lower() for pb in candidate.pushbuttons):
+                    mc = candidate
+                    break
+        module_id = northbound_module_id(mc.mac, mc.ip) if mc else btn.module_id
         entry: dict[str, Any] = {
             "id": btn.id.lower(),
-            "module_id": btn.module_id,
+            "module_id": module_id,
             "module_ip": mc.ip if mc is not None else "",
             "name": btn.name or f"Button {btn.id}",
             "room": btn.room,
