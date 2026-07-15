@@ -20,6 +20,14 @@ mean a bump in the other.
 Backward compatibility is the norm — an add-on version keeps working
 with the current companion until a `### Breaking:` entry says otherwise.
 
+## [1.6.0] - 2026-07-15
+
+### Added
+- Opt-in **double and triple press** on wall buttons. Enable per button with
+  `multi_press: true` in `devices.json` (optional `multi_press_window_ms`,
+  default 350 ms). Multi-press events include a `count` field. Buttons
+  without multi-press keep the existing immediate short-press behaviour.
+
 ## [1.5.2] - 2026-07-15
 
 ### Added
