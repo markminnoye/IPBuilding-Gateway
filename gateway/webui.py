@@ -281,7 +281,7 @@ INDEX_HTML = """<!doctype html>
 (function () {
   "use strict";
 
-  var DEVICES_URL = "api/v1/devices";
+  var DEVICES_URL = "api/v1/devices?include_inactive=true";
   var MODULES_URL = "api/v1/modules";
   var STATUS_URL = "api/v1/status";
   var EXPORT_URL = "api/v1/devices/export";

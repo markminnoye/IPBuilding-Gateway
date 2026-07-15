@@ -72,6 +72,9 @@ GATEWAY_METADATA_TIMEOUT_S=$(opt network.metadata_timeout_s metadata_timeout_s "
 export GATEWAY_DEVICES_FILE
 GATEWAY_DEVICES_FILE=$(opt installation.devices_file devices_file "/config/devices.json")
 
+export GATEWAY_EXPOSE_INACTIVE_CHANNELS
+GATEWAY_EXPOSE_INACTIVE_CHANNELS=$(opt installation.expose_inactive_channels expose_inactive_channels "0")
+
 mkdir -p "$(dirname "$GATEWAY_DEVICES_FILE")"
 
 # One-time migration from the pre-0.3.4 internal /data volume.

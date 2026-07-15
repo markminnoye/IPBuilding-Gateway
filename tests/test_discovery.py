@@ -408,8 +408,11 @@ async def test_http_identify_module_live_sysset_plus_backup_config():
     assert result.model == "IP0200PoE"
     assert result.device_type == "relay"
     assert result.mac == "00:24:77:52:ac:be"
-    assert len(result.channels) == 1
+    assert len(result.channels) == 2
     assert result.channels[0]["name"] == "Keuken LED"
+    assert result.channels[0]["active"] is True
+    assert result.channels[1]["ch"] == 1
+    assert result.channels[1]["active"] is False
 
 
 @pytest.mark.asyncio
@@ -553,16 +556,19 @@ def test_parse_backup_config_body_relay():
     assert data["device"]["refNr"] == "IP0200PoE"
 
 
-def test_channels_from_backup_config_skips_empty_slots():
+def test_channels_from_backup_config_includes_empty_slots():
     data = parse_backup_config_body(RELAY_BACKUP_JSON)
     channels = channels_from_backup_config(data)
-    assert len(channels) == 1
+    assert len(channels) == 2
     assert channels[0]["ch"] == 0
     assert channels[0]["name"] == "Keuken LED"
     assert channels[0]["room"] == "Keuken"
     assert channels[0]["active"] is True
     assert channels[0]["semantic_type"] == "light"
     assert channels[0]["max_watt"] == 60  # relay default
+    assert channels[1]["ch"] == 1
+    assert channels[1]["name"] == "Ch 1"
+    assert channels[1]["active"] is False
 
 
 def test_channels_from_backup_config_dimmer_max_watt():
@@ -587,7 +593,8 @@ def test_apply_backup_config_sets_model_and_channels():
     apply_backup_config(mod, parse_backup_config_body(RELAY_BACKUP_JSON))
     assert mod.model == "IP0200PoE"
     assert mod.device_type == "relay"
-    assert len(mod.channels) == 1
+    assert len(mod.channels) == 2
+    assert mod.channels[1]["active"] is False
 
 
 # -----------------------------------------------------------------------

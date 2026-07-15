@@ -135,7 +135,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 
 ## POST /api/v1/modules/refresh
 
-**Description:** Re-fetch getSysSet (and getButtons for input modules) from all field modules. Updates the in-memory cache.
+**Description:** Re-fetch getSysSet (and getButtons for input modules) from all field modules. For relay/dimmer modules also fetches `backupConfig` and merges channel slots into `devices.json`. Updates the in-memory metadata cache.
 
 **Request body:** `{}`
 
@@ -145,7 +145,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 
 ## POST /api/v1/modules/{module_id}/refresh
 
-**Description:** Re-fetch getSysSet (and getButtons for input modules) from a single module identified by MAC. Updates the in-memory cache for that module only and broadcasts a WebSocket snapshot.
+**Description:** Re-fetch getSysSet (and getButtons for input modules) from a single module identified by MAC. For relay/dimmer modules also merges `backupConfig` channel slots into `devices.json`. Updates the in-memory cache for that module only and broadcasts a WebSocket snapshot.
 
 **Request body:** none
 
@@ -157,7 +157,13 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 
 ## GET /api/v1/devices
 
-**Description:** Return the full device list with current state.
+**Description:** Return the device list with current state.
+
+**Query parameters:**
+
+| Param | Default | Description |
+|-------|---------|-------------|
+| `include_inactive` | follows add-on `expose_inactive_channels` | When `true`, include relay/dimmer channels with `active: false`. The Web UI uses `?include_inactive=true`. |
 
 **Response 200:**
 ```json
@@ -234,13 +240,12 @@ entity. Buttons appear in the snapshot only after `getButtons` has been fetched
 (automatic at startup + after `POST /api/v1/modules/refresh` or a discovery
 sweep).
 
-**Inactive channels** (`active: false` in `devices.json`) are still included in the
-response so the companion can show them as disabled+hidden entities. Their
-`state` is always `"inactive"` (channel disabled in `devices.json`) and
-`current_watt` is `0`. A `state` of `"unknown"` means the channel is active in
-config but no recent fieldbus response was received. Commands to inactive
-channels are rejected by `POST /api/v1/devices/{id}/command` with HTTP 422
-and a `"channel inactive"` error.
+**Inactive channels** (`active: false` in `devices.json`) are **omitted** from
+the list unless add-on `expose_inactive_channels` is enabled or the client
+passes `?include_inactive=true`. When included, their `state` is always
+`"inactive"` and `current_watt` is `0`. `GET /api/v1/devices/{device_id}` and
+`PATCH` still work by device id. Commands to inactive channels are rejected
+with HTTP 422 and a `"channel inactive"` error.
 
 ---
 

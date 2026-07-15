@@ -35,6 +35,11 @@ def _make_api(installation: InstallationConfig, cache: ModuleMetadataCache | Non
     cfg.installation = installation
     cfg.api_host = "127.0.0.1"
     cfg.api_port = 8080
+    cfg.expose_inactive_channels = False
+    cfg.claims_input_modules = True
+    cfg.hub_role = "slave"
+    cfg.input_mode_label = "Slave"
+    cfg.metadata_timeout_s = 5.0
 
     return GatewayAPI(bus, reg, cfg, metadata_cache=cache)
 
@@ -138,7 +143,7 @@ class TestBuildDeviceList:
         assert d["module_ip"] == "10.10.1.30"
         assert d["channel"] == 5
 
-    def test_inactive_channel_included_with_active_false(self) -> None:
+    def test_inactive_channel_hidden_by_default(self) -> None:
         inst = _make_installation([
             {
                 "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
@@ -150,6 +155,21 @@ class TestBuildDeviceList:
         ])
         api = _make_api(inst)
         devices = api._build_device_list()
+        assert len(devices) == 1
+        assert devices[0]["channel"] == 0
+
+    def test_inactive_channel_included_with_active_false(self) -> None:
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
+                "channels": [
+                    {"ch": 0, "name": "Active", "active": True, "max_watt": 60},
+                    {"ch": 1, "name": "Inactive", "active": False, "max_watt": 60},
+                ],
+            }
+        ])
+        api = _make_api(inst)
+        devices = api._build_device_list(include_inactive=True)
         assert len(devices) == 2
         by_ch = {d["channel"]: d for d in devices}
         assert by_ch[0]["active"] is True
@@ -174,7 +194,7 @@ class TestBuildDeviceList:
             }
         ])
         api = _make_api(inst)
-        devices = api._build_device_list()
+        devices = api._build_device_list(include_inactive=True)
         by_id = {d["id"]: d for d in devices}
 
         inactive = by_id["10.10.1.30-0"]
@@ -371,7 +391,7 @@ class TestBuildSnapshot:
             by_module.setdefault(d["module_id"], []).append(d["channel"])
         assert by_module == {"10.10.1.30": [0], "10.10.1.42": [0]}
 
-    def test_snapshot_includes_inactive_devices(self) -> None:
+    def test_snapshot_excludes_inactive_devices_by_default(self) -> None:
         inst = _make_installation([
             {
                 "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
@@ -382,6 +402,22 @@ class TestBuildSnapshot:
             }
         ])
         api = _make_api(inst)
+        snapshot = api._build_snapshot()
+        assert len(snapshot["devices"]) == 1
+        assert snapshot["devices"][0]["channel"] == 0
+
+    def test_snapshot_includes_inactive_when_configured(self) -> None:
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
+                "channels": [
+                    {"ch": 0, "name": "Active", "active": True, "max_watt": 60},
+                    {"ch": 1, "name": "Inactive", "active": False, "max_watt": 60},
+                ],
+            }
+        ])
+        api = _make_api(inst)
+        api._cfg.expose_inactive_channels = True
         snapshot = api._build_snapshot()
         assert len(snapshot["devices"]) == 2
         assert {d["channel"] for d in snapshot["devices"]} == {0, 1}
@@ -719,6 +755,7 @@ class TestModuleRefreshOne:
         api = _make_api(inst)
         api._meta_cache.refresh_one = AsyncMock(return_value=None)  # type: ignore[assignment]
         api._persist_pushbuttons_from_cache = AsyncMock(return_value=None)  # type: ignore[method-assign]
+        api._persist_channels_from_backup = AsyncMock(return_value=None)  # type: ignore[method-assign]
 
         with patch("asyncio.create_task") as create_task:
             request = MagicMock()
@@ -731,6 +768,9 @@ class TestModuleRefreshOne:
         assert body["schema_version"] == 2
         api._meta_cache.refresh_one.assert_awaited_once()
         api._persist_pushbuttons_from_cache.assert_awaited_once_with(
+            module_mac="00:24:77:52:ac:be",
+        )
+        api._persist_channels_from_backup.assert_awaited_once_with(
             module_mac="00:24:77:52:ac:be",
         )
         assert create_task.called
@@ -765,6 +805,7 @@ class TestModulesRefreshBroadcast:
         api = _make_api(inst)
         api._meta_cache.refresh = AsyncMock(return_value=None)  # type: ignore[assignment]
         api._persist_pushbuttons_from_cache = AsyncMock(return_value=None)  # type: ignore[method-assign]
+        api._persist_channels_from_backup = AsyncMock(return_value=None)  # type: ignore[method-assign]
 
         with patch("asyncio.create_task") as create_task:
             response = await api._post_modules_refresh(MagicMock())
@@ -780,6 +821,7 @@ class TestModulesRefreshBroadcast:
         # create_task was called at all and the response was a 200.
         assert msg is not None
         api._persist_pushbuttons_from_cache.assert_awaited_once()
+        api._persist_channels_from_backup.assert_awaited_once()
 
 
 class TestModulesRefreshPersist:
@@ -836,3 +878,54 @@ class TestModulesRefreshPersist:
         assert len(input_module["pushbuttons"]) == 1
         assert input_module["pushbuttons"][0]["id"] == "2f8185190000df"
         assert "channels" not in input_module
+
+    @pytest.mark.asyncio
+    async def test_modules_refresh_writes_channels_from_backup(self, tmp_path) -> None:
+        from gateway.device_config import installation_to_raw_dict
+
+        inst = _make_installation([
+            {
+                "name": "IP0200PoE",
+                "ip": "10.10.1.30",
+                "type": "relay",
+                "mac": "00:24:77:52:ac:be",
+                "channels": [
+                    {"ch": 0, "name": "Keuken LED", "room": "Keuken", "active": True, "max_watt": 60},
+                ],
+            }
+        ])
+        devices_file = tmp_path / "devices.json"
+        devices_file.write_text(
+            json.dumps(installation_to_raw_dict(inst), indent=2),
+            encoding="utf-8",
+        )
+
+        bus = MagicMock()
+        reg = _make_registry(inst)
+        cfg = MagicMock()
+        cfg.installation = inst
+        cfg.devices_file = str(devices_file)
+        cfg.metadata_timeout_s = 5
+        cfg.api_host = "127.0.0.1"
+        cfg.api_port = 8080
+
+        api = gateway_api.GatewayAPI(bus, reg, cfg, metadata_cache=ModuleMetadataCache())
+        api._meta_cache.refresh = AsyncMock(return_value=None)  # type: ignore[assignment]
+
+        wire = [
+            {"ch": 0, "name": "Keuken LED", "room": "Keuken", "active": False, "max_watt": 60},
+            {"ch": 1, "name": "Ch 1", "room": "", "active": False, "max_watt": 60},
+        ]
+
+        async def _fake_fetch(*args, **kwargs):
+            return wire
+
+        with patch(
+            "gateway.gateway_api.fetch_module_backup_channels",
+            side_effect=_fake_fetch,
+        ):
+            await api._persist_channels_from_backup()
+        on_disk = json.loads(devices_file.read_text(encoding="utf-8"))
+        relay = next(m for m in on_disk["modules"] if m["type"] == "relay")
+        assert relay["channels"][0]["active"] is False
+        assert len(relay["channels"]) == 2

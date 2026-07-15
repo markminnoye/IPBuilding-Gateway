@@ -1,5 +1,5 @@
 name: IPBuilding Gateway
-version: "1.5.1"
+version: "1.5.2"
 slug: ipbuilding_gateway
 description: Open IPBuilding field-bus gateway (UDP/1001) — replaces proprietary IPBox hub
 url: https://github.com/markminnoye/IPBuilding-Gateway
@@ -34,6 +34,7 @@ options:
     metadata_timeout_s: 5.0
   installation:
     devices_file: /config/devices.json
+    expose_inactive_channels: false
   discovery:
     discovery_subnet: 10.10.1
     discovery_range_start: 0
@@ -57,6 +58,7 @@ schema:
     metadata_timeout_s: float
   installation:
     devices_file: str
+    expose_inactive_channels: bool
   discovery:
     discovery_subnet: str
     discovery_range_start: int
