@@ -423,9 +423,10 @@ def channels_from_backup_config(
 ) -> list[dict[str, Any]]:
     """Build channel draft entries from backup ``channels[]`` (relay/dimmer).
 
-    Adds ``active: True``, ``semantic_type: "light"``, and a default
-    ``max_watt`` (200 for dimmer, 60 otherwise) so discovery output is
-    immediately loadable without manual edits.
+    Emits **every** hardware slot from ``backupConfig`` (24 relay / 8 dimmer).
+    Slots with empty ``descr`` and ``gr`` are marked ``active: False`` so
+    northbound consumers can expose them as disabled placeholders. Configured
+    slots default to ``active: True``.
     """
     default_watt = 200 if module_type == "dimmer" else 60
     out: list[dict[str, Any]] = []
@@ -444,14 +445,13 @@ def channels_from_backup_config(
             continue
         name = str(entry.get("descr", "") or "").strip()
         room = str(entry.get("gr", "") or "").strip()
-        if not name and not room:
-            continue
+        configured = bool(name or room)
         out.append({
             "ch": ch_num,
             "name": name or f"Ch {ch_num}",
             "room": room,
             "semantic_type": "light",
-            "active": True,
+            "active": configured,
             "max_watt": default_watt,
         })
     return out

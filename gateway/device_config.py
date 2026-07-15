@@ -6,7 +6,13 @@ scope) and installation.py (parsing/schema only).
 
 from __future__ import annotations
 
-from gateway.installation import InstallationConfig, InstallationError, PushbuttonConfig
+from gateway.installation import (
+    ChannelConfig,
+    InstallationConfig,
+    InstallationError,
+    ModuleConfig,
+    PushbuttonConfig,
+)
 from gateway.module_metadata import (
     ModuleMetadataCache,
     extract_pushbuttons_from_getbuttons,
@@ -17,6 +23,14 @@ from gateway.types import DeviceType
 NORTHBOUND_CHANNEL_FIELDS = {"name", "room", "semantic_type", "active", "max_watt"}
 NORTHBOUND_PUSHBUTTON_FIELDS = {"name", "room", "active"}
 SEMANTIC_TYPES = {"light", "fan", "cover", "switch", "plug"}
+
+
+def _operator_channel_label(ch: int, value: str) -> str:
+    """Return a non-empty operator label, or '' when only the auto placeholder remains."""
+    stripped = value.strip()
+    if not stripped or stripped == f"Ch {ch}":
+        return ""
+    return stripped
 
 
 class DeviceConfigError(Exception):
@@ -172,6 +186,62 @@ def apply_pushbutton_patch(
         )
     for key, value in fields.items():
         setattr(btn, key, value)
+
+
+def sync_channels_from_wire(
+    module: ModuleConfig,
+    wire_channels: list[dict],
+) -> int:
+    """Merge backupConfig-derived channel slots into a relay/dimmer module.
+
+    Preserves operator-edited ``name``, ``room``, ``active``, ``semantic_type``,
+    and ``max_watt`` on existing channels. Fills missing ``name``/``room`` from
+    wire data when the operator left them blank. Appends newly discovered slot
+    indices without removing entries absent from the wire snapshot.
+
+    Returns the number of channel slots appended.
+    """
+    if module.type not in (DeviceType.RELAY, DeviceType.DIMMER):
+        return 0
+
+    wire_by_ch = {int(c["ch"]): c for c in wire_channels if "ch" in c}
+    merged: list[ChannelConfig] = []
+    seen: set[int] = set()
+    added = 0
+
+    for existing in module.channels:
+        wire = wire_by_ch.get(existing.ch)
+        if wire is not None:
+            merged.append(
+                ChannelConfig(
+                    ch=existing.ch,
+                    ipbox_id=existing.ipbox_id,
+                    name=(
+                        _operator_channel_label(existing.ch, existing.name)
+                        or str(wire.get("name", "") or "")
+                    ),
+                    room=existing.room.strip() or str(wire.get("room", "") or ""),
+                    semantic_type=existing.semantic_type,
+                    active=existing.active,
+                    max_watt=(
+                        existing.max_watt
+                        if existing.max_watt
+                        else int(wire.get("max_watt", 0) or 0)
+                    ),
+                )
+            )
+        else:
+            merged.append(existing)
+        seen.add(existing.ch)
+
+    for ch in sorted(wire_by_ch):
+        if ch in seen:
+            continue
+        merged.append(ChannelConfig.from_dict(wire_by_ch[ch]))
+        added += 1
+
+    module.channels = sorted(merged, key=lambda c: c.ch)
+    return added
 
 
 def sync_input_pushbuttons_from_cache(

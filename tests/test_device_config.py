@@ -12,6 +12,7 @@ from gateway.device_config import (
     apply_channel_patch,
     apply_pushbutton_patch,
     installation_to_raw_dict,
+    sync_channels_from_wire,
     sync_input_pushbuttons_from_cache,
     validate_channel_fields,
     validate_devices_document,
@@ -176,6 +177,41 @@ class TestInstallationToRawDict:
         inst = InstallationConfig._parse({"modules": []})
         raw = installation_to_raw_dict(inst)
         assert raw == {"modules": []}
+
+
+class TestSyncChannelsFromWire:
+    def test_appends_missing_slots_and_preserves_operator_fields(self) -> None:
+        inst = _sample_installation()
+        mc = inst.module_by_ip("10.10.1.30")
+        wire = [
+            {"ch": 0, "name": "Wire Keuken", "room": "Wire room", "active": True, "max_watt": 60},
+            {"ch": 1, "name": "Ch 1", "room": "", "active": False, "max_watt": 60},
+        ]
+        added = sync_channels_from_wire(mc, wire)
+        assert added == 1
+        assert len(mc.channels) == 2
+        assert mc.channels[0].name == "Keuken LED"
+        assert mc.channels[0].room == "Keuken"
+        assert mc.channels[0].active is True
+        assert mc.channels[1].ch == 1
+        assert mc.channels[1].active is False
+
+    def test_fills_blank_name_room_from_wire(self) -> None:
+        inst = InstallationConfig._parse({
+            "modules": [{
+                "name": "IP0200PoE",
+                "ip": "10.10.1.30",
+                "type": "relay",
+                "mac": "00:24:77:52:ac:be",
+                "channels": [{"ch": 0, "name": "", "room": "", "active": True, "max_watt": 60}],
+            }],
+        })
+        mc = inst.module_by_ip("10.10.1.30")
+        sync_channels_from_wire(mc, [
+            {"ch": 0, "name": "From wire", "room": "From room", "active": True, "max_watt": 60},
+        ])
+        assert mc.channels[0].name == "From wire"
+        assert mc.channels[0].room == "From room"
 
 
 class TestSyncInputPushbuttonsFromCache:
