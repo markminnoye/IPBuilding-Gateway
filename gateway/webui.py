@@ -282,6 +282,7 @@ INDEX_HTML = """<!doctype html>
   "use strict";
 
   var DEVICES_URL = "api/v1/devices?include_inactive=true";
+  var DEVICE_BASE_URL = "api/v1/devices";
   var MODULES_URL = "api/v1/modules";
   var STATUS_URL = "api/v1/status";
   var EXPORT_URL = "api/v1/devices/export";
@@ -487,7 +488,7 @@ INDEX_HTML = """<!doctype html>
       return;
     }
     setStatus(statusSpan, "Saving…", "");
-    fetch(DEVICES_URL + "/" + encodeURIComponent(device.id), {
+    fetch(DEVICE_BASE_URL + "/" + encodeURIComponent(device.id), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),

@@ -28,6 +28,10 @@ with the current companion until a `### Breaking:` entry says otherwise.
   default 350 ms). Multi-press events include a `count` field. Buttons
   without multi-press keep the existing immediate short-press behaviour.
 
+### Fixed
+- Web UI Save no longer builds a broken PATCH URL (query string before
+  device id), so channel/button edits persist again.
+
 ## [1.5.2] - 2026-07-15
 
 ### Added
