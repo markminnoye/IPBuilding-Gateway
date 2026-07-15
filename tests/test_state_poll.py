@@ -151,6 +151,40 @@ class TestSweepRelayStates:
             await bus.stop()
 
     @pytest.mark.asyncio
+    async def test_skips_inactive_channels(self) -> None:
+        registry = DeviceRegistry()
+        registry.register_module("10.10.1.30", DeviceType.RELAY)
+
+        bus = UDPBus(GatewayConfig(simulated_mode=True, reply_timeout_ms=500))
+        bus.register_simulated_reply(b"I0000", b"I000000100")
+        bus.register_simulated_reply(b"I0100", b"I000100100")
+        await bus.start()
+        try:
+            inst = _make_installation([
+                {
+                    "ip": "10.10.1.30",
+                    "type": "relay",
+                    "mac": "00:24:77:52:ac:be",
+                    "channels": [
+                        {"ch": 0, "name": "Active", "active": True, "max_watt": 60},
+                        {"ch": 1, "name": "Ch 1", "active": False, "max_watt": 60},
+                    ],
+                },
+            ])
+            result = await sweep_relay_states(
+                bus, registry, inst, inter_query_delay_s=0,
+            )
+            assert result == 1
+            assert registry.get_relay_state(
+                DeviceKey(DeviceType.RELAY, "10.10.1.30", 0),
+            ) is not None
+            assert registry.get_relay_state(
+                DeviceKey(DeviceType.RELAY, "10.10.1.30", 1),
+            ) is None
+        finally:
+            await bus.stop()
+
+    @pytest.mark.asyncio
     async def test_wrong_channel_reply_not_accepted(self) -> None:
         """Reply for a different channel must not seed the queried channel."""
         registry = DeviceRegistry()

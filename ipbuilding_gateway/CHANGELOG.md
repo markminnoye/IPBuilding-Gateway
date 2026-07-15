@@ -20,6 +20,20 @@ mean a bump in the other.
 Backward compatibility is the norm — an add-on version keeps working
 with the current companion until a `### Breaking:` entry says otherwise.
 
+## [1.5.2] - 2026-07-15
+
+### Added
+- **Module refresh syncs channel labels from the module.** `POST /api/v1/modules/refresh` now reads each relay/dimmer's `backupConfig` and updates `devices.json` (names, active flags, missing slots) — no full discover sweep needed.
+- **Add-on option `expose_inactive_channels`.** Unused relay/dimmer slots stay hidden from Home Assistant by default. Enable to show them as disabled entities. The Web UI always lists all slots.
+
+### Changed
+- **Discovery lists every hardware slot** (24 relay / 8 dimmer). Empty EEPROM slots are stored as `active: false`.
+- **Channel `active` follows the module on re-sync.** Clearing a label on the module deactivates the slot in `devices.json` on the next refresh or discover.
+- **Faster startup on large relay modules.** Relay status polling skips inactive channels.
+
+### Fixed
+- Forced discovery no longer leaves `active` stuck when the module EEPROM changes.
+
 ## [1.5.1] - 2026-07-14
 
 ### Changed

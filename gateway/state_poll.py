@@ -51,8 +51,8 @@ async def sweep_relay_states(
 ) -> int:
     """Poll relay channel state over UDP and seed the registry.
 
-    Sends ``I<CH>00`` for each configured relay channel in
-    ``devices.json``.  Failures are logged at WARNING and treated as zero
+    Sends ``I<CH>00`` for each **active** relay channel in
+    ``devices.json``.  Inactive slots are skipped.  Failures are logged at WARNING and treated as zero
     for that channel — a stale empty registry is preferable to a startup
     crash.
 
@@ -67,6 +67,8 @@ async def sweep_relay_states(
 
     for mc in relay_modules:
         for ch in mc.channels:
+            if not ch.active:
+                continue
             channel = ch.ch
             payload = encode_relay_status_poll(channel)
             after_ts = time.monotonic()

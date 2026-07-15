@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, TypeVar
 
+from gateway.device_config import sync_channels_from_wire
 from gateway.discovery import (
     DiscoveredModule,
     discover_modules,
@@ -544,6 +545,10 @@ class DiscoveryOrchestrator:
                             "old_firmware": old_firmware,
                             "new_firmware": dm.firmware,
                         })
+
+                    if dm.channels:
+                        sync_channels_from_wire(mc, dm.channels)
+                        d = mc.to_dict()
 
                 modules_to_write.append(d)
 
