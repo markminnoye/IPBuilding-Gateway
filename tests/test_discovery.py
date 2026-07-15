@@ -408,8 +408,11 @@ async def test_http_identify_module_live_sysset_plus_backup_config():
     assert result.model == "IP0200PoE"
     assert result.device_type == "relay"
     assert result.mac == "00:24:77:52:ac:be"
-    assert len(result.channels) == 1
+    assert len(result.channels) == 2
     assert result.channels[0]["name"] == "Keuken LED"
+    assert result.channels[0]["active"] is True
+    assert result.channels[1]["ch"] == 1
+    assert result.channels[1]["active"] is False
 
 
 @pytest.mark.asyncio

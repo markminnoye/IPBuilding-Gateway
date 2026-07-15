@@ -104,6 +104,7 @@ Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Co
 | `network.http_timeout_s` | `2.0` | Timeout voor HTTP getSysSet calls tijdens discovery |
 | `network.metadata_timeout_s` | `5.0` | Per-request timeout (s) voor HTTP `getSysSet` / `getButtons` op de modules. Verhoog bij trage veldbus (bijv. druk VLAN). |
 | `installation.devices_file` | `/config/devices.json` | Pad naar installatie configuratie (Samba: `addon_configs/.../devices.json`) |
+| `installation.expose_inactive_channels` | `false` | Toon ongebruikte relay/dimmer-slots (`active: false`) in Home Assistant. Web UI toont altijd alle slots. |
 | `discovery.discovery_subnet` | `10.10.1` | Subnet voor ARP-sweep en passieve monitor |
 | `discovery.discovery_range_start` | `0` | Start van IP-range voor init-sweep (0 = volledige /24) |
 | `discovery.discovery_range_end` | `254` | Eind van IP-range voor init-sweep |

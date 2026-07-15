@@ -213,6 +213,33 @@ class TestSyncChannelsFromWire:
         assert mc.channels[0].name == "From wire"
         assert mc.channels[0].room == "From room"
 
+    def test_wire_active_deactivates_existing_channel(self) -> None:
+        inst = _sample_installation()
+        mc = inst.module_by_ip("10.10.1.30")
+        sync_channels_from_wire(mc, [
+            {"ch": 0, "name": "Keuken LED", "room": "Keuken", "active": False, "max_watt": 60},
+        ])
+        assert mc.channels[0].active is False
+
+    def test_wire_active_activates_existing_channel(self) -> None:
+        inst = InstallationConfig._parse({
+            "modules": [{
+                "name": "IP0200PoE",
+                "ip": "10.10.1.30",
+                "type": "relay",
+                "mac": "00:24:77:52:ac:be",
+                "channels": [
+                    {"ch": 0, "name": "Ch 0", "room": "", "active": False, "max_watt": 60},
+                ],
+            }],
+        })
+        mc = inst.module_by_ip("10.10.1.30")
+        sync_channels_from_wire(mc, [
+            {"ch": 0, "name": "Keuken LED", "room": "Keuken", "active": True, "max_watt": 60},
+        ])
+        assert mc.channels[0].active is True
+        assert mc.channels[0].name == "Keuken LED"
+
 
 class TestSyncInputPushbuttonsFromCache:
     def test_merge_preserves_operator_fields_and_seeds_new_button(self) -> None:

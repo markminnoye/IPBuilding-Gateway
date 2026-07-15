@@ -6,6 +6,8 @@ scope) and installation.py (parsing/schema only).
 
 from __future__ import annotations
 
+import logging
+
 from gateway.installation import (
     ChannelConfig,
     InstallationConfig,
@@ -19,6 +21,8 @@ from gateway.module_metadata import (
     normalize_button_hardware_id,
 )
 from gateway.types import DeviceType
+
+log = logging.getLogger(__name__)
 
 NORTHBOUND_CHANNEL_FIELDS = {"name", "room", "semantic_type", "active", "max_watt"}
 NORTHBOUND_PUSHBUTTON_FIELDS = {"name", "room", "active"}
@@ -194,9 +198,10 @@ def sync_channels_from_wire(
 ) -> int:
     """Merge backupConfig-derived channel slots into a relay/dimmer module.
 
-    Preserves operator-edited ``name``, ``room``, ``active``, ``semantic_type``,
-    and ``max_watt`` on existing channels. Fills missing ``name``/``room`` from
-    wire data when the operator left them blank. Appends newly discovered slot
+    Preserves operator-edited ``name``, ``room``, ``semantic_type``, and
+    ``max_watt`` on existing channels. ``active`` follows the wire snapshot
+    (EEPROM configured = active). Fills missing ``name``/``room`` from wire
+    data when the operator left them blank. Appends newly discovered slot
     indices without removing entries absent from the wire snapshot.
 
     Returns the number of channel slots appended.
@@ -222,7 +227,7 @@ def sync_channels_from_wire(
                     ),
                     room=existing.room.strip() or str(wire.get("room", "") or ""),
                     semantic_type=existing.semantic_type,
-                    active=existing.active,
+                    active=bool(wire.get("active", True)),
                     max_watt=(
                         existing.max_watt
                         if existing.max_watt
@@ -241,6 +246,13 @@ def sync_channels_from_wire(
         added += 1
 
     module.channels = sorted(merged, key=lambda c: c.ch)
+    if added:
+        log.info(
+            "Added %d channel slot(s) to module %s (%s)",
+            added,
+            module.ip,
+            module.mac or "no-mac",
+        )
     return added
 
 

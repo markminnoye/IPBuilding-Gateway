@@ -457,6 +457,40 @@ def channels_from_backup_config(
     return out
 
 
+def wire_channels_from_backup_body(
+    text: str,
+    *,
+    module_type: str = "relay",
+) -> list[dict[str, Any]]:
+    """Parse ``backupConfig`` HTTP body into channel draft dicts."""
+    data = parse_backup_config_body(text)
+    if not data:
+        return []
+    return channels_from_backup_config(data, module_type=module_type)
+
+
+async def fetch_module_backup_channels(
+    ip: str,
+    module_type: str,
+    timeout: float,
+    *,
+    sess: aiohttp.ClientSession | None = None,
+) -> list[dict[str, Any]]:
+    """GET ``backupConfig`` from a relay/dimmer module and return channel drafts."""
+    close_sess = False
+    if sess is None:
+        sess = aiohttp.ClientSession()
+        close_sess = True
+    try:
+        text = await _http_get_text(ip, "backupConfig", sess, timeout)
+        if not text:
+            return []
+        return wire_channels_from_backup_body(text, module_type=module_type)
+    finally:
+        if close_sess:
+            await sess.close()
+
+
 def apply_backup_config(module: DiscoveredModule, data: dict[str, Any]) -> None:
     """Enrich module from backupConfig (refNr, type, channel labels)."""
     device = data.get("device")

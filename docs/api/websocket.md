@@ -159,12 +159,11 @@ Pushed when aggregate `status` or the set of open `issues[].id` changes. Same fi
 }
 ```
 
-The `devices` array includes channels with `active: false` from `devices.json`.
-Their `state` is fixed to `"inactive"` (channel disabled in `devices.json`)
-and `current_watt` to `0`. The companion creates disabled+hidden entities for
-them. `state_changed` is **not** emitted for inactive channels. A `state` of
-`"unknown"` in the snapshot means the channel is active in config but no
-recent fieldbus response was received.
+Inactive relay/dimmer channels (`active: false`) are omitted from snapshots
+unless add-on `expose_inactive_channels` is enabled. When included, their
+`state` is `"inactive"` and `current_watt` is `0`. `state_changed` is **not**
+emitted for inactive channels. A `state` of `"unknown"` means the channel is
+active in config but no recent fieldbus response was received.
 
 ### `state_changed` -- relay update
 

@@ -50,6 +50,9 @@ configuration:
       devices_file:
         name: devices.json path
         description: Installation backup; visible via Samba under addon_configs/…/devices.json.
+      expose_inactive_channels:
+        name: Expose inactive channels
+        description: When enabled, unused relay/dimmer slots (active false) appear in Home Assistant. Default off — the Web UI still shows all slots.
   discovery:
     name: Discovery
     description: Runtime auto-discovery on the field-bus subnet.

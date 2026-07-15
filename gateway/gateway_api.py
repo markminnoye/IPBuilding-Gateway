@@ -25,6 +25,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+import aiohttp
 from aiohttp import web
 from aiohttp.web import WebSocketResponse
 
@@ -35,13 +36,14 @@ from gateway.device_config import (
     apply_channel_patch,
     apply_pushbutton_patch,
     installation_to_raw_dict,
+    sync_channels_from_wire,
     sync_input_pushbuttons_from_cache,
     validate_channel_fields,
     validate_devices_document,
     validate_pushbutton_fields,
 )
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
-from gateway.discovery import resolve_module_model
+from gateway.discovery import fetch_module_backup_channels, resolve_module_model
 from gateway.health import GatewayHealthMonitor
 from gateway.installation import (
     InstallationConfig,
@@ -437,7 +439,11 @@ class GatewayAPI:
 
     async def _get_devices(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices — return full device list as JSON."""
-        device_list = self._build_device_list()
+        raw_include = request.query.get("include_inactive")
+        include_inactive: bool | None = None
+        if raw_include is not None:
+            include_inactive = raw_include.lower() in ("1", "true", "yes")
+        device_list = self._build_device_list(include_inactive=include_inactive)
         return web.json_response({"devices": device_list, "schema_version": 2})
 
     async def _get_devices_export(self, request: web.Request) -> web.Response:
@@ -516,7 +522,7 @@ class GatewayAPI:
     async def _get_device(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices/{device_id} — return single device."""
         device_id = request.match_info["device_id"]
-        devices = self._build_device_list()
+        devices = self._build_device_list(include_inactive=True)
         for d in devices:
             if d["id"] == device_id:
                 return web.json_response(d)
@@ -647,6 +653,12 @@ class GatewayAPI:
         """Public wrapper: write cached getButtons into devices.json."""
         await self._persist_pushbuttons_from_cache(module_mac)
 
+    async def persist_channels_from_backup(
+        self, module_mac: str | None = None,
+    ) -> None:
+        """Fetch backupConfig from relay/dimmer modules and merge channels."""
+        await self._persist_channels_from_backup(module_mac)
+
     async def _persist_pushbuttons_from_cache(
         self, module_mac: str | None = None,
     ) -> None:
@@ -672,6 +684,76 @@ class GatewayAPI:
             return
         if not ok:
             log.warning("devices.json locked; pushbuttons not persisted")
+            return
+        self._cfg.installation = InstallationConfig.load(self._cfg.devices_file)
+
+    async def _persist_channels_from_backup(
+        self, module_mac: str | None = None,
+    ) -> None:
+        """Merge backupConfig channel slots into devices.json on disk."""
+        installation = self._cfg.installation
+        if installation is None:
+            return
+
+        target_mac = module_mac.lower() if module_mac else None
+        wire_by_mac: dict[str, list[dict[str, Any]]] = {}
+
+        connector = aiohttp.TCPConnector(limit=8)
+        async with aiohttp.ClientSession(connector=connector) as sess:
+            tasks: list[tuple[str, asyncio.Task[list[dict[str, Any]]]]] = []
+            for mc in installation.modules:
+                if mc.type not in (DeviceType.RELAY, DeviceType.DIMMER):
+                    continue
+                if not mc.mac:
+                    continue
+                if target_mac is not None and mc.mac.lower() != target_mac:
+                    continue
+
+                async def _fetch(module=mc) -> list[dict[str, Any]]:
+                    return await fetch_module_backup_channels(
+                        module.ip,
+                        module.type.value,
+                        self._cfg.metadata_timeout_s,
+                        sess=sess,
+                    )
+
+                tasks.append((mc.mac.lower(), asyncio.create_task(_fetch())))
+
+            for mac, task in tasks:
+                try:
+                    wire_by_mac[mac] = await task
+                except Exception:
+                    log.warning(
+                        "backupConfig fetch failed for module %s",
+                        mac,
+                        exc_info=True,
+                    )
+
+        if not wire_by_mac:
+            return
+
+        def mutate(raw: dict) -> dict:
+            inst = InstallationConfig._parse(raw)
+            for mc in inst.modules:
+                mac_key = mc.mac.lower()
+                if target_mac is not None and mac_key != target_mac:
+                    continue
+                wire = wire_by_mac.get(mac_key)
+                if wire:
+                    sync_channels_from_wire(mc, wire)
+            return installation_to_raw_dict(inst)
+
+        try:
+            ok, _new_raw = await asyncio.to_thread(
+                self._writer.read_modify_write, mutate,
+            )
+        except Exception:
+            log.warning(
+                "Failed to persist channels to devices.json", exc_info=True,
+            )
+            return
+        if not ok:
+            log.warning("devices.json locked; channels not persisted")
             return
         self._cfg.installation = InstallationConfig.load(self._cfg.devices_file)
 
@@ -712,6 +794,9 @@ class GatewayAPI:
         await self._persist_pushbuttons_from_cache(
             module_mac=mc.mac or None,
         )
+        await self._persist_channels_from_backup(
+            module_mac=mc.mac or None,
+        )
 
         asyncio.create_task(self._broadcast(self._build_snapshot()))
         northbound_id = northbound_module_id(mc.mac, mc.ip)
@@ -735,6 +820,7 @@ class GatewayAPI:
         except Exception as exc:
             log.warning("modules refresh failed: %s", exc)
         await self._persist_pushbuttons_from_cache()
+        await self._persist_channels_from_backup()
         # Push the new module + device state to connected clients so freshly
         # discovered input buttons appear in the companion without a reload.
         asyncio.create_task(self._broadcast(self._build_snapshot()))
@@ -1029,18 +1115,31 @@ class GatewayAPI:
             },
         }
 
-    def _build_device_list(self) -> list[dict[str, Any]]:
+    def _resolve_include_inactive(self, include_inactive: bool | None) -> bool:
+        if include_inactive is not None:
+            return include_inactive
+        return self._cfg.expose_inactive_channels
+
+    def _build_device_list(
+        self, *, include_inactive: bool | None = None,
+    ) -> list[dict[str, Any]]:
         """Build the device list from installation config + registry.
 
         Removes firmware (module-level, not per-channel). Adds module_id (MAC),
         module_ip (current), and channel (int).
+
+        Inactive relay/dimmer channels are omitted unless
+        ``expose_inactive_channels`` is enabled or ``include_inactive=True``.
         """
+        show_inactive = self._resolve_include_inactive(include_inactive)
         devices = []
         installation = self._cfg.installation
 
         for mc in (installation.modules if installation else []):
             module_id = northbound_module_id(mc.mac, mc.ip)
             for ch in mc.channels:
+                if not ch.active and not show_inactive:
+                    continue
                 device: dict[str, Any] = {
                     "id": ch.id,
                     "module_id": module_id,
@@ -1054,10 +1153,9 @@ class GatewayAPI:
                     "max_watt": ch.max_watt,
                 }
 
-                # Inactive channels are still exposed so the companion can show
-                # them as disabled+hidden entities. State is fixed to "inactive"
-                # (not "unknown") to distinguish "channel disabled in
-                # devices.json" from "no recent fieldbus response".
+                # Inactive channels included only when requested; state is fixed
+                # to "inactive" (not "unknown") to distinguish "channel disabled
+                # in devices.json" from "no recent fieldbus response".
                 if not ch.active:
                     device["state"] = "inactive"
                     device["current_watt"] = 0
@@ -1133,7 +1231,7 @@ class GatewayAPI:
 
     def _device_dict_for_id(self, device_id: str) -> dict[str, Any] | None:
         """Return a single device dict (GET/PATCH shape) by device id."""
-        for d in self._build_device_list():
+        for d in self._build_device_list(include_inactive=True):
             if d["id"] == device_id:
                 return d
 

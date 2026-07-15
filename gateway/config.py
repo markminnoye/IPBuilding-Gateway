@@ -121,6 +121,9 @@ class GatewayConfig:
     # IPBuilding controllers on a quiet VLAN; reduce for tighter SLA,
     # raise for slow / loaded networks.
     metadata_timeout_s: float = 5.0
+    # When False (default), inactive relay/dimmer channels are omitted from
+    # REST/WS device lists unless include_inactive=true is requested.
+    expose_inactive_channels: bool = False
     # Input centrale mode: slave = poll + HA events, master = module-local buttons.
     hub_role: str = "slave"
 
@@ -190,6 +193,7 @@ class GatewayConfig:
 
         discovery = DiscoveryConfig.from_env()
         metadata_timeout_s = float(os.getenv("GATEWAY_METADATA_TIMEOUT_S", "5.0"))
+        expose_inactive_channels = _env_truthy("GATEWAY_EXPOSE_INACTIVE_CHANNELS")
 
         return cls(
             hub_port=int(os.getenv("GATEWAY_HUB_PORT", "1001")),
@@ -217,5 +221,6 @@ class GatewayConfig:
             devices_file=devices_file,
             discovery=discovery,
             metadata_timeout_s=metadata_timeout_s,
+            expose_inactive_channels=expose_inactive_channels,
             hub_role=_normalize_hub_role(os.getenv("GATEWAY_HUB_ROLE")),
         )
