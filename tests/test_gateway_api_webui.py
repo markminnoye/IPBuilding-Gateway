@@ -61,6 +61,11 @@ class TestWebUiRoute:
         assert "api/v1/modules" in body
         assert 'fetch("/api/v1' not in body
         assert "fetch('/api/v1" not in body
+        # PATCH must use /api/v1/devices/{id}, never append after ?include_inactive=
+        assert "DEVICE_BASE_URL" in body
+        assert "DEVICES_URL + \"/\"" not in body
+        assert "DEVICES_URL + '/'" not in body
+        assert "DEVICE_BASE_URL + \"/\" + encodeURIComponent(device.id)" in body
         assert ">Refresh</button>" in body
         assert "Reload</button>" not in body
         assert "Search for new modules" in body
