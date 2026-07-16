@@ -179,3 +179,22 @@ class TestWebUiRoute:
         assert "api/v1/status" in body
         assert "HUB_ROLE_TOOLTIP" in body
         assert "Enable" not in body or "buildEnableAction" not in body
+
+    @pytest.mark.asyncio
+    async def test_webui_shows_instance_id_and_version_from_status(
+        self, tmp_path: Path,
+    ) -> None:
+        api = _make_api(tmp_path)
+        app = web.Application(middlewares=[api._api_error_middleware])
+        app.router.add_get("/", api._get_webui)
+
+        async with TestClient(TestServer(app)) as client:
+            resp = await client.get("/")
+            body = await resp.text()
+
+        assert 'id="gatewayMeta"' in body
+        assert "renderGatewayMeta" in body
+        assert "statusBody.instance_id" in body
+        assert "statusBody.version" in body
+        assert "Copy instance id" in body
+        assert "gateway-meta" in body

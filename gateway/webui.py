@@ -30,7 +30,24 @@ INDEX_HTML = """<!doctype html>
     margin: 0;
     padding: 1rem;
   }
-  h1 { font-size: 1.25rem; margin: 0 0 0.75rem; }
+  h1 { font-size: 1.25rem; margin: 0 0 0.25rem; }
+  .gateway-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    font-size: 0.78rem;
+    color: #888;
+    margin: 0 0 0.75rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .gateway-meta .meta-sep { color: #bbb; }
+  .gateway-meta .meta-id { word-break: break-all; }
+  .gateway-meta button.copy-id {
+    font-family: inherit;
+    font-size: 0.72rem;
+    padding: 0.1rem 0.4rem;
+  }
   .toolbar { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
   button {
     cursor: pointer;
@@ -240,6 +257,7 @@ INDEX_HTML = """<!doctype html>
 </head>
 <body>
 <h1>IPBuilding Gateway — devices</h1>
+<p id="gatewayMeta" class="gateway-meta" aria-live="polite">Loading status…</p>
 <div class="toolbar">
   <button id="reload" class="btn-icon" title="Reload the list on screen. Read-only — no changes saved.">Refresh</button>
   <span id="toolbarStatus" class="status"></span>
@@ -296,6 +314,80 @@ INDEX_HTML = """<!doctype html>
     "If the gateway fails, the module falls back to its own stored pairings. " +
     "Change via Settings → Add-ons → IPBuilding Gateway → Configuration (restart required).";
   var gatewayInputModeLabel = "Slave";
+
+  function renderGatewayMeta(statusBody) {
+    var meta = document.getElementById("gatewayMeta");
+    if (!meta) return;
+    var version = (statusBody && statusBody.version) || "";
+    var instanceId = (statusBody && statusBody.instance_id) || "";
+    meta.textContent = "";
+    if (!version && !instanceId) {
+      meta.textContent = "Status unavailable";
+      meta.removeAttribute("title");
+      return;
+    }
+    if (version) {
+      meta.appendChild(document.createTextNode("v" + version));
+    }
+    if (version && instanceId) {
+      var sep = el("span", { class: "meta-sep", text: "·" });
+      meta.appendChild(sep);
+    }
+    if (instanceId) {
+      var label = el("span", { text: "instance " });
+      var idSpan = el("span", { class: "meta-id", text: instanceId });
+      meta.appendChild(label);
+      meta.appendChild(idSpan);
+      meta.title =
+        "Gateway instance id — must match the companion config entry unique_id. " +
+        "Also in GET /api/v1/status.";
+      var copyBtn = el("button", {
+        type: "button",
+        class: "copy-id",
+        text: "Copy",
+        title: "Copy instance id",
+      });
+      copyBtn.addEventListener("click", function () {
+        copyText(instanceId, copyBtn);
+      });
+      meta.appendChild(copyBtn);
+    } else {
+      meta.removeAttribute("title");
+    }
+  }
+
+  function copyText(text, button) {
+    var done = function () {
+      var prev = button.textContent;
+      button.textContent = "Copied";
+      setTimeout(function () { button.textContent = prev; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () {
+        fallbackCopy(text, done);
+      });
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+
+  function fallbackCopy(text, done) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      done();
+    } catch (e) {
+      // ignore
+    }
+    document.body.removeChild(ta);
+  }
+
   // Exactly the icons the HA companion assigns per semantic_type (source of
   // truth: ha-ipbuilding-gateway/custom_components/ha_ipbuilding_gateway/
   // entity.py _SEMANTIC_ICONS, plus event.py's _attr_icon for buttons), so
@@ -769,10 +861,13 @@ INDEX_HTML = """<!doctype html>
         var modulesBody = results[1];
         var statusBody = results[2];
         gatewayInputModeLabel = statusBody.input_mode_label || "Slave";
+        renderGatewayMeta(statusBody);
         render(devicesBody.devices || [], modulesBody.modules || []);
         setStatus(toolbarStatus, "", "");
       })
       .catch(function () {
+        var meta = document.getElementById("gatewayMeta");
+        if (meta) meta.textContent = "Status unavailable";
         setStatus(toolbarStatus, "Could not load devices", "err");
       });
   }
