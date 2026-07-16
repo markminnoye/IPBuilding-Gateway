@@ -20,40 +20,20 @@ mean a bump in the other.
 Backward compatibility is the norm — an add-on version keeps working
 with the current companion until a `### Breaking:` entry says otherwise.
 
-## [1.6.2] - 2026-07-16
+## [1.6.0] - 2026-07-16
+
+### Added
+- **Global double/triple press** for all wall buttons (add-on Configuration →
+  Installatie): `multi_press` + `multi_press_window_ms` (default 350 ms).
+  When enabled, the gateway classifies `double_press` / `triple_press` (with
+  `count`) and delays `single_press` by the inter-click window. Default off =
+  immediate `single_press` (same as 1.5.x). Restart the add-on after changing.
+- Status fields `multi_press` / `multi_press_window_ms` on `GET /api/v1/status`
+  and WebSocket `gateway_status` / snapshot.
 
 ### Changed
-- **Multi-press is global** (add-on Configuration → Installatie), next to
-  “Inactieve kanalen tonen”: `multi_press` + `multi_press_window_ms` (default
-  350 ms). Restart the add-on after changing. Exposed on `GET /api/v1/status`
-  and WebSocket `gateway_status` / snapshot.
-- The **Installatie** options group is now first in Configuration.
-
-### Removed
-- Per-button `multi_press` / `multi_press_window_ms` in `devices.json`, PATCH,
-  device list, and Web UI. Legacy keys in existing files are ignored and
-  dropped on the next write.
-
-## [1.6.1] - 2026-07-16
-
-### Added
-- **Web UI: multi-press window (ms)** per wall button, next to the multi-press
-  toggle. Adjust how long the gateway waits for a second/third click (default
-  350 ms). Device list / snapshot now also exposes `multi_press_window_ms`.
-
-## [1.6.0] - 2026-07-15
-
-### Added
-- Opt-in **double and triple press** on wall buttons. Enable per button with
-  `multi_press: true` (optional `multi_press_window_ms`, default 350 ms).
-  Multi-press events include a `count` field. Buttons without multi-press
-  keep the existing immediate short-press behaviour.
-- Device list / snapshot exposes `multi_press` on configured wall buttons.
-- Web UI **Multi-press** checkbox per wall button (Save via PATCH).
-
-### Fixed
-- Web UI Save no longer builds a broken PATCH URL (query string before
-  device id), so channel/button edits persist again.
+- The **Installatie** options group is now first in Configuration (with
+  inactive-channels and multi-press toggles above `devices_file`).
 
 ## [1.5.3] - 2026-07-16
 

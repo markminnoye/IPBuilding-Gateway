@@ -1,5 +1,5 @@
 name: IPBuilding Gateway
-version: "1.6.2"
+version: "1.6.0"
 slug: ipbuilding_gateway
 description: Open IPBuilding field-bus gateway (UDP/1001) — replaces proprietary IPBox hub
 url: https://github.com/markminnoye/IPBuilding-Gateway
