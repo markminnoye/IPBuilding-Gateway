@@ -66,6 +66,9 @@ class TestWebUiRoute:
         assert "DEVICES_URL + \"/\"" not in body
         assert "DEVICES_URL + '/'" not in body
         assert "DEVICE_BASE_URL + \"/\" + encodeURIComponent(device.id)" in body
+        assert "buildMultiPressCell" in body
+        assert '"multi_press"' in body
+        assert "Multi-press" in body
         assert ">Refresh</button>" in body
         assert "Reload</button>" not in body
         assert "Search for new modules" in body

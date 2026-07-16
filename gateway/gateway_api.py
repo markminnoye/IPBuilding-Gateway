@@ -1283,6 +1283,7 @@ class GatewayAPI:
                         }
                         if cfg_btn is not None:
                             entry["active"] = cfg_btn.active
+                            entry["multi_press"] = cfg_btn.multi_press
                         devices.append(entry)
 
         return devices
@@ -1322,6 +1323,7 @@ class GatewayAPI:
             "device_type": "input",
             "active": btn.active,
             "channel": btn.channel,
+            "multi_press": btn.multi_press,
         }
         return entry
 

@@ -207,7 +207,8 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
       "room": "1e verdieping",
       "semantic_type": "button",
       "device_type": "input",
-      "active": true
+      "active": true,
+      "multi_press": false
     }
   ]
 }
@@ -226,6 +227,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `semantic_type` | string | `light` / `fan` / `switch` / `button` (dimmer channels are always `light`) |
 | `device_type` | string | `relay` / `dimmer` / `input` |
 | `active` | boolean | Whether channel is active |
+| `multi_press` | boolean | Buttons only: when `true`, the gateway classifies double/triple press (delays `single_press` by the inter-click window). Default `false`. Present once the button exists in `devices.json` `pushbuttons[]`. |
 | `max_watt` | integer | Configured maximum power (relay/dimmer only) |
 | `state` | string | `on` / `off` / `inactive` / `unknown` (relay/dimmer only) |
 | `current_watt` | integer | Current consumption (0 when off; relay/dimmer only) |
@@ -283,6 +285,8 @@ with HTTP 422 and a `"channel inactive"` error.
 | `name` | string | Operator-friendly label |
 | `room` | string | Room / area name |
 | `active` | boolean | `false` = disable button entity |
+| `multi_press` | boolean | `true` = classify double/triple press (delays short-press) |
+| `multi_press_window_ms` | integer | Inter-click window in ms (default 350); positive integer |
 
 Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`) returns **400** `unknown_field`.
 
@@ -295,7 +299,7 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`) returns **400** `
 
 **Request body example (button):**
 ```json
-{"name": "Badkamer knop", "room": "1e verdieping", "active": true}
+{"name": "Badkamer knop", "room": "1e verdieping", "active": true, "multi_press": true}
 ```
 
 **Response 200:** Same shape as `GET /api/v1/devices/{device_id}` for the updated device, plus `schema_version: 2`.

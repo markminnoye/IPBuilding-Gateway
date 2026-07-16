@@ -307,6 +307,41 @@ class TestBuildDeviceList:
         # 'active' is intentionally omitted for input-buttons so the
         # companion treats them as enabled-by-default.
         assert "active" not in btn
+        # multi_press only appears once the button is in devices.json.
+        assert "multi_press" not in btn
+
+    def test_input_button_includes_multi_press_from_config(self) -> None:
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.50",
+                "type": "input",
+                "mac": "00:24:77:52:ad:aa",
+                "channels": [],
+                "pushbuttons": [
+                    {
+                        "id": "2f8185190000df",
+                        "name": "Badkamer knop",
+                        "multi_press": True,
+                    }
+                ],
+            }
+        ])
+        cache = ModuleMetadataCache()
+        cache._by_mac["00:24:77:52:ad:aa"] = ModuleMetadata(
+            buttons=[
+                {
+                    "index": 0,
+                    "id": "2D2F8185190000DF",
+                    "descr": "Badkamer knop",
+                    "gr": "1e verdieping",
+                }
+            ]
+        )
+        api = _make_api(inst, cache=cache)
+        devices = api._build_device_list()
+        assert len(devices) == 1
+        assert devices[0]["multi_press"] is True
+        assert devices[0]["active"] is True
 
     def test_input_module_without_cached_buttons_no_device_entries(self) -> None:
         inst = _make_installation([

@@ -167,11 +167,38 @@ class TestPatchDeviceHandler:
         assert body["active"] is False
         assert body["semantic_type"] == "button"
         assert body["channel"] == 1
+        assert body["multi_press"] is False
 
         disk = json.loads(devices_file.read_text(encoding="utf-8"))
         input_module = next(m for m in disk["modules"] if m["type"] == "input")
         assert input_module["pushbuttons"][0]["name"] == "Douche knop"
         assert input_module["pushbuttons"][0]["active"] is False
+
+    @pytest.mark.asyncio
+    async def test_patch_pushbutton_multi_press(
+        self, tmp_path: Path, pushbutton_installation: InstallationConfig
+    ) -> None:
+        devices_file = tmp_path / "devices.json"
+        _write_devices_file(devices_file, pushbutton_installation)
+        api = _make_api(pushbutton_installation, devices_file)
+
+        request = MagicMock()
+        request.json = AsyncMock(return_value={"multi_press": True})
+        request.match_info = {"device_id": "2f8185190000df"}
+
+        response = await api._patch_device(request)
+        body = json.loads(response.body)
+
+        assert response.status == 200
+        assert body["multi_press"] is True
+        assert (
+            api._cfg.installation.pushbutton_by_id("2f8185190000df").multi_press
+            is True
+        )
+
+        disk = json.loads(devices_file.read_text(encoding="utf-8"))
+        input_module = next(m for m in disk["modules"] if m["type"] == "input")
+        assert input_module["pushbuttons"][0]["multi_press"] is True
 
     @pytest.mark.asyncio
     async def test_patch_preserves_pushbuttons_when_updating_other_module_channel(

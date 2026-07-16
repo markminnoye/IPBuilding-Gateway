@@ -24,9 +24,11 @@ with the current companion until a `### Breaking:` entry says otherwise.
 
 ### Added
 - Opt-in **double and triple press** on wall buttons. Enable per button with
-  `multi_press: true` in `devices.json` (optional `multi_press_window_ms`,
-  default 350 ms). Multi-press events include a `count` field. Buttons
-  without multi-press keep the existing immediate short-press behaviour.
+  `multi_press: true` (optional `multi_press_window_ms`, default 350 ms).
+  Multi-press events include a `count` field. Buttons without multi-press
+  keep the existing immediate short-press behaviour.
+- Device list / snapshot exposes `multi_press` on configured wall buttons.
+- Web UI **Multi-press** checkbox per wall button (Save via PATCH).
 
 ### Fixed
 - Web UI Save no longer builds a broken PATCH URL (query string before
