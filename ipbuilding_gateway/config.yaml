@@ -1,5 +1,5 @@
 name: IPBuilding Gateway
-version: "1.5.2"
+version: "1.5.3"
 slug: ipbuilding_gateway
 description: Open IPBuilding field-bus gateway (UDP/1001) — replaces proprietary IPBox hub
 url: https://github.com/markminnoye/IPBuilding-Gateway
@@ -24,7 +24,7 @@ discovery:
 privileged: []
 options:
   fieldbus:
-    hub_role: slave
+    buttons_via_ha: true
     poll_interval: 2.0
     actuator_poll_interval: 20.0
   network:
@@ -48,7 +48,7 @@ options:
 
 schema:
   fieldbus:
-    hub_role: list(slave|master)
+    buttons_via_ha: bool
     poll_interval: float
     actuator_poll_interval: float
   network:

@@ -76,10 +76,12 @@ def test_options_and_schema_keys_match() -> None:
     )
 
 
-def test_fieldbus_hub_role_schema() -> None:
+def test_fieldbus_buttons_via_ha_schema() -> None:
     cfg = _load_config()
-    assert cfg["schema"]["fieldbus"]["hub_role"] == "list(slave|master)"
-    assert cfg["options"]["fieldbus"]["hub_role"] == "slave"
+    assert cfg["schema"]["fieldbus"]["buttons_via_ha"] == "bool"
+    assert cfg["options"]["fieldbus"]["buttons_via_ha"] is True
+    assert "hub_role" not in cfg["schema"]["fieldbus"]
+    assert "hub_role" not in cfg["options"]["fieldbus"]
 
 
 def test_fieldbus_group_is_first() -> None:
@@ -133,15 +135,18 @@ def test_native_network_port_descriptions() -> None:
             assert description
 
 
-def test_translations_present_for_hub_role() -> None:
+def test_translations_present_for_buttons_via_ha() -> None:
     for lang in ("nl", "en"):
         path = _CONFIG.parent / "translations" / f"{lang}.yaml"
         assert path.is_file(), f"missing translation file: {path}"
         trans = yaml.safe_load(path.read_text(encoding="utf-8"))
-        hub = trans["configuration"]["fieldbus"]["fields"]["hub_role"]
-        assert hub.get("name")
-        assert hub.get("description")
-        assert "Slave" in hub["description"] or "slave" in hub["description"].lower()
+        field = trans["configuration"]["fieldbus"]["fields"]["buttons_via_ha"]
+        assert field.get("name")
+        assert field.get("description")
+        desc = field["description"].lower()
+        assert "home assistant" in desc
+        assert "slave" in desc or "master" in desc
+        assert "hub_role" not in trans["configuration"]["fieldbus"]["fields"]
 
 
 def test_required_manifest_fields() -> None:

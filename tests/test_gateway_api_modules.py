@@ -36,6 +36,7 @@ def _make_api(installation: InstallationConfig, cache: ModuleMetadataCache | Non
     cfg.api_host = "127.0.0.1"
     cfg.api_port = 8080
     cfg.expose_inactive_channels = False
+    cfg.buttons_via_ha = True
     cfg.claims_input_modules = True
     cfg.hub_role = "slave"
     cfg.input_mode_label = "Slave"
