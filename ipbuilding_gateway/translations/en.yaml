@@ -3,27 +3,27 @@ configuration:
     name: Modules
     description: Communication with relay, dimmer, and input modules.
     fields:
-      hub_role:
-        name: Input module mode (IP1100)
+      buttons_via_ha:
+        name: Wall buttons via Home Assistant
         description: >-
-          The IP1100PoE input module has two modes. Check the green LED on the module: steady = slave, blinking = master.
+          On (default): wall buttons on the IP1100 send events to Home Assistant.
+          You build automations and scenes in HA. Relays and dimmers stay available
+          through this gateway either way.
 
 
-          slave — Gateway and Home Assistant control buttons (default)
-          This gateway is the centrale for wall buttons on the field bus. Buttons send events to Home Assistant; you build automations, scenes, and routing in HA. On the module: green LED steady on.
+          Off: buttons do not appear in Home Assistant. The input module drives
+          lighting locally from its stored pairings (useful during migration).
+          Relays and dimmers remain available via HA.
 
 
-          master — Input module controls buttons locally
-          This gateway does not claim the input module: buttons do not appear in Home Assistant. Buttons drive relays and dimmers directly from pairings stored on the input module. Relays and dimmers remain available via this gateway and Home Assistant (app, automations without buttons). Button-triggered scenes and advanced routing are unavailable. On the module: green LED blinking. Choose master if you are not ready to route buttons through HA yet, or temporarily while the rest already runs on this gateway.
-
-
-          Fallback: if the gateway fails or loses connection, the input module takes over using its own stored pairings (not necessarily the same as in Home Assistant). The LED blinks and basic button lighting keeps working. In slave mode that on-module configuration remains as a safety net.
+          Green LED on the module: steady = buttons via HA (slave), blinking = local (master).
+          If the gateway fails, the module falls back to local pairings.
 
 
           Restart the add-on after changing this.
       poll_interval:
         name: Input poll interval
-        description: Only relevant in slave mode. Seconds between polls to the input module (default ~2 s).
+        description: Only when wall buttons via Home Assistant is on. Seconds between polls to the input module (default ~2 s).
       actuator_poll_interval:
         name: Actuator poll interval
         description: Seconds between relay/dimmer keep-alive polls (default ~20 s).

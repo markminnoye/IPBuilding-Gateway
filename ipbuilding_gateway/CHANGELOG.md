@@ -20,6 +20,22 @@ mean a bump in the other.
 Backward compatibility is the norm — an add-on version keeps working
 with the current companion until a `### Breaking:` entry says otherwise.
 
+## [Unreleased]
+
+### Changed
+- Configuration option for wall buttons is now a simple on/off switch:
+  **Wall buttons via Home Assistant** (default on). Turning it off keeps
+  relays and dimmers in HA while buttons stay local on the input module.
+- Status API includes `buttons_via_ha`. The Web UI badge still shows
+  Slave/Master (from the IP1100 manual) for the green LED meaning.
+
+### Breaking
+- The old `fieldbus.hub_role` setting (`slave` / `master`) is replaced by
+  `fieldbus.buttons_via_ha`. Until you open Configuration and save again,
+  a leftover `hub_role: master` is still honoured (buttons stay local).
+  After saving, use the new toggle. Values `full` / `actuators_only` are
+  no longer recognised.
+
 ## [1.5.2] - 2026-07-15
 
 ### Added

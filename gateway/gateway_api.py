@@ -431,11 +431,17 @@ class GatewayAPI:
         return web.json_response(self._status_payload())
 
     def _status_payload(self) -> dict[str, Any]:
-        """Health snapshot plus deployment-specific hub role fields."""
+        """Health snapshot plus deployment-specific input-mode fields."""
         body = self._health.snapshot()
-        body["hub_role"] = self._cfg.hub_role
-        body["input_mode_label"] = self._cfg.input_mode_label
+        body.update(self._input_mode_status_fields())
         return body
+
+    def _input_mode_status_fields(self) -> dict[str, Any]:
+        return {
+            "buttons_via_ha": self._cfg.buttons_via_ha,
+            "hub_role": self._cfg.hub_role,
+            "input_mode_label": self._cfg.input_mode_label,
+        }
 
     async def _get_devices(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices — return full device list as JSON."""
@@ -1025,8 +1031,7 @@ class GatewayAPI:
 
     def _on_health_changed(self) -> None:
         payload = self._health.snapshot(include_actions=False)
-        payload["hub_role"] = self._cfg.hub_role
-        payload["input_mode_label"] = self._cfg.input_mode_label
+        payload.update(self._input_mode_status_fields())
         asyncio.create_task(
             self._broadcast({"type": "gateway_status", **payload})
         )
@@ -1109,10 +1114,7 @@ class GatewayAPI:
             "modules": self._build_module_list(),
             "devices": self._build_device_list(),
             "gateway_status": self._health.snapshot(include_actions=False)
-            | {
-                "hub_role": self._cfg.hub_role,
-                "input_mode_label": self._cfg.input_mode_label,
-            },
+            | self._input_mode_status_fields(),
         }
 
     def _resolve_include_inactive(self, include_inactive: bool | None) -> bool:
