@@ -181,6 +181,8 @@ class PushbuttonConfig:
 
     @classmethod
     def from_dict(cls, data: dict, module_id: str = "") -> "PushbuttonConfig":
+        # Legacy multi_press / multi_press_window_ms keys in devices.json are
+        # ignored — multi-press is a global GatewayConfig / add-on option.
         return cls(
             id=data["id"],
             module_id=module_id,

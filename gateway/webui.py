@@ -535,18 +535,31 @@ INDEX_HTML = """<!doctype html>
   function currentValue(fieldName, inputEl) {
     if (inputEl === null) return undefined;
     if (fieldName === "active") return inputEl.checked;
-    if (fieldName === "max_watt") return parseInt(inputEl.value, 10);
+    if (fieldName === "max_watt") {
+      return parseInt(inputEl.value, 10);
+    }
     return inputEl.value;
   }
 
   function buildPatch(device, state) {
     var patch = {};
-    var fields = ["name", "room", "semantic_type", "active", "max_watt"];
+    var fields = [
+      "name",
+      "room",
+      "semantic_type",
+      "active",
+      "max_watt",
+    ];
     fields.forEach(function (f) {
       var inputEl = state[f];
       if (inputEl === null || inputEl === undefined) return;
       var value = currentValue(f, inputEl);
-      var original = f === "active" ? device.active !== false : device[f];
+      var original;
+      if (f === "active") {
+        original = device.active !== false;
+      } else {
+        original = device[f];
+      }
       if (value !== original) patch[f] = value;
     });
     return patch;
@@ -806,7 +819,10 @@ INDEX_HTML = """<!doctype html>
           el("th", { text: "Room" }),
           el("th", { text: "Type" }),
           el("th", { text: "Active" }),
-          el("th", { text: "Max Watt" }),
+          el("th", {
+            text: "Max Watt",
+            title: "Configured maximum power for this channel",
+          }),
           el("th", { text: "" }),
         ]),
       ]),

@@ -30,6 +30,10 @@ def _make_api(tmp_path: Path) -> gateway_api.GatewayAPI:
     cfg.api_host = "127.0.0.1"
     cfg.api_port = 8080
     cfg.metadata_timeout_s = 5
+    cfg.hub_role = "slave"
+    cfg.input_mode_label = "Slave"
+    cfg.multi_press = False
+    cfg.multi_press_window_ms = 350
     return gateway_api.GatewayAPI(bus, reg, cfg)
 
 
@@ -66,6 +70,10 @@ class TestWebUiRoute:
         assert "DEVICES_URL + \"/\"" not in body
         assert "DEVICES_URL + '/'" not in body
         assert "DEVICE_BASE_URL + \"/\" + encodeURIComponent(device.id)" in body
+        assert "buildMultiPressCell" not in body
+        assert "DEFAULT_MULTI_PRESS_WINDOW_MS" not in body
+        assert "buildWattCell" in body
+        assert "Max Watt" in body
         assert ">Refresh</button>" in body
         assert "Reload</button>" not in body
         assert "Search for new modules" in body

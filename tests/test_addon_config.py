@@ -84,11 +84,26 @@ def test_fieldbus_buttons_via_ha_schema() -> None:
     assert "hub_role" not in cfg["options"]["fieldbus"]
 
 
-def test_fieldbus_group_is_first() -> None:
-    """'Modules' (fieldbus) should be the first group shown in the Configuration UI."""
+def test_installation_group_is_first() -> None:
+    """'Installatie' should be the first group shown in the Configuration UI."""
     cfg = _load_config()
-    assert next(iter(cfg["options"])) == "fieldbus"
-    assert next(iter(cfg["schema"])) == "fieldbus"
+    assert next(iter(cfg["options"])) == "installation"
+    assert next(iter(cfg["schema"])) == "installation"
+
+
+def test_installation_multi_press_schema() -> None:
+    cfg = _load_config()
+    assert cfg["schema"]["installation"]["multi_press"] == "bool"
+    assert cfg["schema"]["installation"]["multi_press_window_ms"] == "int(1,)"
+    assert cfg["options"]["installation"]["multi_press"] is False
+    assert cfg["options"]["installation"]["multi_press_window_ms"] == 350
+    inst = cfg["options"]["installation"]
+    assert list(inst.keys()) == [
+        "expose_inactive_channels",
+        "multi_press",
+        "multi_press_window_ms",
+        "devices_file",
+    ]
 
 
 def test_hub_ip_removed() -> None:
@@ -147,6 +162,16 @@ def test_translations_present_for_buttons_via_ha() -> None:
         assert "home assistant" in desc
         assert "slave" in desc or "master" in desc
         assert "hub_role" not in trans["configuration"]["fieldbus"]["fields"]
+
+
+def test_translations_present_for_multi_press() -> None:
+    for lang in ("nl", "en"):
+        path = _CONFIG.parent / "translations" / f"{lang}.yaml"
+        trans = yaml.safe_load(path.read_text(encoding="utf-8"))
+        fields = trans["configuration"]["installation"]["fields"]
+        for key in ("multi_press", "multi_press_window_ms", "expose_inactive_channels"):
+            assert fields[key].get("name")
+            assert fields[key].get("description")
 
 
 def test_required_manifest_fields() -> None:

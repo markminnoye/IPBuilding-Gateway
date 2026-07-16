@@ -95,11 +95,17 @@ export GATEWAY_METADATA_TIMEOUT_S
 GATEWAY_METADATA_TIMEOUT_S=$(opt network.metadata_timeout_s metadata_timeout_s "5.0")
 
 # ── Installation ─────────────────────────────────────────────────────────────
-export GATEWAY_DEVICES_FILE
-GATEWAY_DEVICES_FILE=$(opt installation.devices_file devices_file "/config/devices.json")
-
 export GATEWAY_EXPOSE_INACTIVE_CHANNELS
 GATEWAY_EXPOSE_INACTIVE_CHANNELS=$(opt installation.expose_inactive_channels expose_inactive_channels "0")
+
+export GATEWAY_MULTI_PRESS
+GATEWAY_MULTI_PRESS=$(opt installation.multi_press multi_press "0")
+
+export GATEWAY_MULTI_PRESS_WINDOW_MS
+GATEWAY_MULTI_PRESS_WINDOW_MS=$(opt installation.multi_press_window_ms multi_press_window_ms "350")
+
+export GATEWAY_DEVICES_FILE
+GATEWAY_DEVICES_FILE=$(opt installation.devices_file devices_file "/config/devices.json")
 
 mkdir -p "$(dirname "$GATEWAY_DEVICES_FILE")"
 
@@ -150,6 +156,9 @@ echo "[run.sh] GATEWAY_POLL_INTERVAL=$GATEWAY_POLL_INTERVAL"
 echo "[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=$GATEWAY_ACTUATOR_POLL_INTERVAL"
 echo "[run.sh] GATEWAY_BUTTONS_VIA_HA=$GATEWAY_BUTTONS_VIA_HA"
 echo "[run.sh] GATEWAY_BIND_IP=$GATEWAY_BIND_IP"
+echo "[run.sh] GATEWAY_EXPOSE_INACTIVE_CHANNELS=$GATEWAY_EXPOSE_INACTIVE_CHANNELS"
+echo "[run.sh] GATEWAY_MULTI_PRESS=$GATEWAY_MULTI_PRESS"
+echo "[run.sh] GATEWAY_MULTI_PRESS_WINDOW_MS=$GATEWAY_MULTI_PRESS_WINDOW_MS"
 echo "[run.sh] GATEWAY_DEVICES_FILE=$GATEWAY_DEVICES_FILE"
 echo "[run.sh] GATEWAY_REST_SHIM_ENABLED=$GATEWAY_REST_SHIM_ENABLED"
 echo "[run.sh] GATEWAY_LOG_LEVEL=$GATEWAY_LOG_LEVEL"

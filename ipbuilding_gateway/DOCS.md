@@ -85,6 +85,8 @@ Bekijk logs voor de opstartstatus:
 ```
 [run.sh] GATEWAY_BUTTONS_VIA_HA=1
 [run.sh] GATEWAY_BIND_IP=0.0.0.0
+[run.sh] GATEWAY_MULTI_PRESS=0
+[run.sh] GATEWAY_MULTI_PRESS_WINDOW_MS=350
 [run.sh] GATEWAY_DEVICES_FILE=/config/devices.json
 ```
 
@@ -92,10 +94,14 @@ Bekijk logs voor de opstartstatus:
 
 ## Configuration
 
-Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Configuration** (nested schema), met **Modules** als eerste groep.
+Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Configuration** (nested schema), met **Installatie** als eerste groep.
 
 | Option (nested) | Default | Description |
 |-----------------|---------|-------------|
+| `installation.expose_inactive_channels` | `false` | Toon ongebruikte relay/dimmer-slots (`active: false`) in Home Assistant. Web UI toont altijd alle slots. |
+| `installation.multi_press` | `false` | Globale dubbele/driedubbele druk op alle wandknoppen. Bij aan staat wacht de gateway op een tweede/derde klik (korte druk is iets vertraagd). Add-on herstarten na wijziging. |
+| `installation.multi_press_window_ms` | `350` | Inter-click venster in ms. Add-on herstarten na wijziging. |
+| `installation.devices_file` | `/config/devices.json` | Pad naar installatie configuratie (Samba: `addon_configs/.../devices.json`) |
 | `fieldbus.buttons_via_ha` | `true` | Drukknoppen via Home Assistant (aan) of lokaal op de ingangsmodule (uit). Zie hieronder. |
 | `fieldbus.poll_interval` | `2.0` | Input-poll interval in seconden (`I0000`), enkel relevant als `buttons_via_ha` aan staat |
 | `fieldbus.actuator_poll_interval` | `20.0` | Relay/dimmer keep-alive interval in seconden (`P0000` / `I9900`) |
@@ -103,8 +109,6 @@ Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Co
 | `network.rest_shim_enabled` | `false` | IPBox REST-shim op poort `30200` (enkel migratie) |
 | `network.http_timeout_s` | `2.0` | Timeout voor HTTP getSysSet calls tijdens discovery |
 | `network.metadata_timeout_s` | `5.0` | Per-request timeout (s) voor HTTP `getSysSet` / `getButtons` op de modules. Verhoog bij trage veldbus (bijv. druk VLAN). |
-| `installation.devices_file` | `/config/devices.json` | Pad naar installatie configuratie (Samba: `addon_configs/.../devices.json`) |
-| `installation.expose_inactive_channels` | `false` | Toon ongebruikte relay/dimmer-slots (`active: false`) in Home Assistant. Web UI toont altijd alle slots. |
 | `discovery.discovery_subnet` | `10.10.1` | Subnet voor ARP-sweep en passieve monitor |
 | `discovery.discovery_range_start` | `0` | Start van IP-range voor init-sweep (0 = volledige /24) |
 | `discovery.discovery_range_end` | `254` | Eind van IP-range voor init-sweep |

@@ -42,6 +42,10 @@ def _make_api(
     cfg.api_host = "127.0.0.1"
     cfg.api_port = 8080
     cfg.metadata_timeout_s = 5
+    cfg.hub_role = "slave"
+    cfg.input_mode_label = "Slave"
+    cfg.multi_press = False
+    cfg.multi_press_window_ms = 350
     return gateway_api.GatewayAPI(bus, reg, cfg, metadata_cache=metadata_cache)
 
 

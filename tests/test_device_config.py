@@ -124,6 +124,13 @@ class TestValidatePushbuttonFields:
         result = validate_pushbutton_fields({"name": "Knop", "room": "Bad", "active": True})
         assert result == {"name": "Knop", "room": "Bad", "active": True}
 
+    def test_multi_press_fields_rejected(self) -> None:
+        with pytest.raises(DeviceConfigError) as exc:
+            validate_pushbutton_fields(
+                {"multi_press": True, "multi_press_window_ms": 250}
+            )
+        assert exc.value.code == "unknown_field"
+
     def test_unknown_field_raises(self) -> None:
         with pytest.raises(DeviceConfigError) as exc:
             validate_pushbutton_fields({"hold_threshold_s": 2.0})

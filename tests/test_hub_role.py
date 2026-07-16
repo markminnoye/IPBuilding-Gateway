@@ -34,6 +34,20 @@ def test_buttons_via_ha_false_maps_to_master_label() -> None:
     assert cfg.input_mode_label == "Master"
 
 
+def test_from_env_multi_press(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    devices_file = tmp_path / "devices.json"
+    devices_file.write_text(json.dumps({"modules": []}), encoding="utf-8")
+    monkeypatch.setenv("GATEWAY_DEVICES_FILE", str(devices_file))
+    monkeypatch.setenv("GATEWAY_MULTI_PRESS", "1")
+    monkeypatch.setenv("GATEWAY_MULTI_PRESS_WINDOW_MS", "400")
+    monkeypatch.delenv("GATEWAY_SIMULATED", raising=False)
+    monkeypatch.delenv("GATEWAY_USE_ENV_DEFAULTS", raising=False)
+
+    cfg = GatewayConfig.from_env()
+    assert cfg.multi_press is True
+    assert cfg.multi_press_window_ms == 400
+
+
 def test_from_env_buttons_via_ha(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
@@ -166,6 +180,8 @@ def _make_api(tmp_path: Path, *, buttons_via_ha: bool = True) -> GatewayAPI:
     cfg.claims_input_modules = buttons_via_ha
     cfg.hub_role = "slave" if buttons_via_ha else "master"
     cfg.input_mode_label = "Slave" if buttons_via_ha else "Master"
+    cfg.multi_press = False
+    cfg.multi_press_window_ms = 350
     cfg.metadata_timeout_s = 5
     cfg.reply_timeout_ms = 500
     cfg.discovery = MagicMock()
@@ -195,6 +211,8 @@ class TestButtonsViaHaGatewayAPI:
         assert body["buttons_via_ha"] is False
         assert body["hub_role"] == "master"
         assert body["input_mode_label"] == "Master"
+        assert body["multi_press"] is False
+        assert body["multi_press_window_ms"] == 350
 
     @pytest.mark.asyncio
     async def test_devices_omit_pushbuttons_when_off(

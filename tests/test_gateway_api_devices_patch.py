@@ -49,6 +49,10 @@ def _make_api(
     cfg.api_host = "127.0.0.1"
     cfg.api_port = 8080
     cfg.metadata_timeout_s = 5
+    cfg.hub_role = "slave"
+    cfg.input_mode_label = "Slave"
+    cfg.multi_press = False
+    cfg.multi_press_window_ms = 350
     return gateway_api.GatewayAPI(
         bus, reg, cfg, metadata_cache=metadata_cache
     )
@@ -167,11 +171,30 @@ class TestPatchDeviceHandler:
         assert body["active"] is False
         assert body["semantic_type"] == "button"
         assert body["channel"] == 1
+        assert "multi_press" not in body
+        assert "multi_press_window_ms" not in body
 
         disk = json.loads(devices_file.read_text(encoding="utf-8"))
         input_module = next(m for m in disk["modules"] if m["type"] == "input")
         assert input_module["pushbuttons"][0]["name"] == "Douche knop"
         assert input_module["pushbuttons"][0]["active"] is False
+
+    @pytest.mark.asyncio
+    async def test_patch_pushbutton_multi_press_rejected(
+        self, tmp_path: Path, pushbutton_installation: InstallationConfig
+    ) -> None:
+        devices_file = tmp_path / "devices.json"
+        _write_devices_file(devices_file, pushbutton_installation)
+        api = _make_api(pushbutton_installation, devices_file)
+
+        request = MagicMock()
+        request.json = AsyncMock(return_value={"multi_press": True})
+        request.match_info = {"device_id": "2f8185190000df"}
+
+        with pytest.raises(gateway_api.ApiError) as exc:
+            await api._patch_device(request)
+        assert exc.value.status == 400
+        assert exc.value.code == "unknown_field"
 
     @pytest.mark.asyncio
     async def test_patch_preserves_pushbuttons_when_updating_other_module_channel(

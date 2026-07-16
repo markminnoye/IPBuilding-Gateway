@@ -132,6 +132,10 @@ class GatewayConfig:
     # When False (default), inactive relay/dimmer channels are omitted from
     # REST/WS device lists unless include_inactive=true is requested.
     expose_inactive_channels: bool = False
+    # Global multi-click classification for all wall buttons. When False the
+    # gateway emits single_press immediately on short release.
+    multi_press: bool = False
+    multi_press_window_ms: int = 350
     # True: poll inputs + button events to HA. False: module-local buttons.
     buttons_via_ha: bool = True
 
@@ -207,6 +211,10 @@ class GatewayConfig:
         discovery = DiscoveryConfig.from_env()
         metadata_timeout_s = float(os.getenv("GATEWAY_METADATA_TIMEOUT_S", "5.0"))
         expose_inactive_channels = _env_truthy("GATEWAY_EXPOSE_INACTIVE_CHANNELS")
+        multi_press = _env_truthy("GATEWAY_MULTI_PRESS")
+        multi_press_window_ms = max(
+            1, int(os.getenv("GATEWAY_MULTI_PRESS_WINDOW_MS", "350"))
+        )
 
         return cls(
             hub_port=int(os.getenv("GATEWAY_HUB_PORT", "1001")),
@@ -235,5 +243,7 @@ class GatewayConfig:
             discovery=discovery,
             metadata_timeout_s=metadata_timeout_s,
             expose_inactive_channels=expose_inactive_channels,
+            multi_press=multi_press,
+            multi_press_window_ms=multi_press_window_ms,
             buttons_via_ha=_buttons_via_ha_from_env(),
         )

@@ -51,6 +51,8 @@ Environment variables used by python -m gateway:
   GATEWAY_AUTO_DISCOVER_ON_START   1 with --init and prompt y, else 0
   GATEWAY_FORCE_DISCOVER_ON_START  1 with --init and prompt N, else 0
   GATEWAY_DEVICES_FILE             ./devices.json
+  GATEWAY_MULTI_PRESS              0/1 — global double/triple press (default 0)
+  GATEWAY_MULTI_PRESS_WINDOW_MS    inter-click window ms (default 350)
   PYTHONPATH                       repo root
 
 Examples

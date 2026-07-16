@@ -20,6 +20,21 @@ mean a bump in the other.
 Backward compatibility is the norm — an add-on version keeps working
 with the current companion until a `### Breaking:` entry says otherwise.
 
+## [1.6.0] - 2026-07-16
+
+### Added
+- **Global double/triple press** for all wall buttons (add-on Configuration →
+  Installatie): `multi_press` + `multi_press_window_ms` (default 350 ms).
+  When enabled, the gateway classifies `double_press` / `triple_press` (with
+  `count`) and delays `single_press` by the inter-click window. Default off =
+  immediate `single_press` (same as 1.5.x). Restart the add-on after changing.
+- Status fields `multi_press` / `multi_press_window_ms` on `GET /api/v1/status`
+  and WebSocket `gateway_status` / snapshot.
+
+### Changed
+- The **Installatie** options group is now first in Configuration (with
+  inactive-channels and multi-press toggles above `devices_file`).
+
 ## [1.5.3] - 2026-07-16
 
 ### Added

@@ -200,11 +200,22 @@ active in config but no recent fieldbus response was received.
 }
 ```
 
+Multi-press frames (opt-in per button) include a `count` field:
+
+```json
+{
+  "type": "button_event",
+  "id": "2f8185190000df",
+  "action": "double_press",
+  "count": 2
+}
+```
+
 The `id` field carries the normalized hardware hex ID (14 lowercase hex
 characters). `getButtons` returns the same id with a `2D` type prefix
 (e.g. `2D2F8185190000DF`); the gateway strips the prefix on the
-northbound WS so a `button_event.id` always matches a `devices[].id`
-on a `type=input` entry. The `id` is stable per physical button; do
+northbound WS so a `button_event.id` always matches a pushbutton `id`
+on an input module. The `id` is stable per physical button; do
 not key on `module_ip` because DHCP can change the input module's
 address.
 
@@ -217,15 +228,23 @@ Possible `action` values:
 - `long_press` — sent once the per-button hold threshold is crossed while
   still held (gateway-derived; default 1.5 s, per-button override from
   `getButtons.func2.holdSeconds`).
-- `single_press` — sent on the release of a short tap (no `long_press`
-  crossed). Synthesised by the gateway only for a real short press; a
-  duplicate or orphan release forwards just `release`. Sent *before* the
-  `release` frame so consumers keying on the gesture see it first.
+- `single_press` — short-tap gesture. With default config
+  (global `multi_press: false`) this fires on release before the `release`
+  frame. With global `multi_press: true` it fires after the inter-click
+  window expires with no further clicks, and carries `"count": 1`.
+- `double_press` / `triple_press` — multi-click gestures when the global
+  add-on option `multi_press` is enabled (optional `multi_press_window_ms`,
+  default 350; see `GET /api/v1/status` and snapshot `gateway_status`).
+  Emitted when the inter-click window expires; frames include `"count": 2`
+  or `"count": 3` (counts above 3 still use action `triple_press` but
+  report the true `count`).
 
 Typical sequences:
 
-- Short tap: `press` → `single_press` → `release`
-- Long press: `press` → `long_press` → `release` (no `single_press`)
+- Short tap (`multi_press: false`): `press` → `single_press` → `release`
+- Short tap (`multi_press: true`): `press` → `release` → (window) → `single_press` (+ `count`)
+- Double tap (`multi_press: true`): `press` → `release` → `press` → `release` → (window) → `double_press` (+ `count`)
+- Long press: `press` → `long_press` → `release` (no `single_press` / multi-press)
 
 ### `device_added` -- new module detected
 
@@ -373,6 +392,6 @@ The `module_id` field on each device contains the stable MAC of the parent modul
 
 ## Routing button events to HA entities
 
-`button_event.id` is the normalized hardware hex ID from the IP1100PoE (14 lowercase hex characters, e.g. `2f8185190000df`). The companion routes these to Home Assistant `event.<hardware_id>` entities via the `ipbuilding-gateway-ha` integration, then exposes a `single_pressed` / `long_pressed` device trigger in the automation editor for each physical button. The HA / Matter standard event types are also forwarded in `event_data` (`press_start`, `press_end`, `long_press_start`).
+`button_event.id` is the normalized hardware hex ID from the IP1100PoE (14 lowercase hex characters, e.g. `2f8185190000df`). The companion routes these to Home Assistant `event.<hardware_id>` entities via the `ipbuilding-gateway-ha` integration, then exposes `single_pressed` / `double_pressed` / `triple_pressed` / `long_pressed` device triggers in the automation editor for each physical button. The HA / Matter standard event types are also forwarded in `event_data` (`press_start`, `press_end`, `long_press_start`, `multi_press_end`).
 
 See [ARCHITECTURE.md -- section 6](../../ARCHITECTURE.md#6-northbound-protocol-websocket) for the full sequence diagram and [`coordinator.py`](https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ha_ipbuilding_gateway/coordinator.py) in the companion repo for how button events are dispatched in HA.
