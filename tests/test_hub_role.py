@@ -43,6 +43,20 @@ def test_from_env_hub_role(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     assert cfg.hub_role == "master"
 
 
+def test_from_env_multi_press(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    devices_file = tmp_path / "devices.json"
+    devices_file.write_text(json.dumps({"modules": []}), encoding="utf-8")
+    monkeypatch.setenv("GATEWAY_DEVICES_FILE", str(devices_file))
+    monkeypatch.setenv("GATEWAY_MULTI_PRESS", "1")
+    monkeypatch.setenv("GATEWAY_MULTI_PRESS_WINDOW_MS", "400")
+    monkeypatch.delenv("GATEWAY_SIMULATED", raising=False)
+    monkeypatch.delenv("GATEWAY_USE_ENV_DEFAULTS", raising=False)
+
+    cfg = GatewayConfig.from_env()
+    assert cfg.multi_press is True
+    assert cfg.multi_press_window_ms == 400
+
+
 def test_from_env_invalid_hub_role_falls_back_to_slave(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
@@ -125,6 +139,8 @@ def _make_api(tmp_path: Path, hub_role: str = "slave") -> GatewayAPI:
     cfg.hub_role = hub_role
     cfg.claims_input_modules = hub_role == "slave"
     cfg.input_mode_label = "Master" if hub_role == "master" else "Slave"
+    cfg.multi_press = False
+    cfg.multi_press_window_ms = 350
     cfg.metadata_timeout_s = 5
     cfg.reply_timeout_ms = 500
     cfg.discovery = MagicMock()
@@ -153,6 +169,8 @@ class TestHubRoleGatewayAPI:
 
         assert body["hub_role"] == "master"
         assert body["input_mode_label"] == "Master"
+        assert body["multi_press"] is False
+        assert body["multi_press_window_ms"] == 350
 
     @pytest.mark.asyncio
     async def test_devices_omit_pushbuttons_when_master(

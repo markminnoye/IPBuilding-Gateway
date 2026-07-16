@@ -39,6 +39,8 @@ def _make_api(installation: InstallationConfig, cache: ModuleMetadataCache | Non
     cfg.claims_input_modules = True
     cfg.hub_role = "slave"
     cfg.input_mode_label = "Slave"
+    cfg.multi_press = False
+    cfg.multi_press_window_ms = 350
     cfg.metadata_timeout_s = 5.0
 
     return GatewayAPI(bus, reg, cfg, metadata_cache=cache)
@@ -307,10 +309,11 @@ class TestBuildDeviceList:
         # 'active' is intentionally omitted for input-buttons so the
         # companion treats them as enabled-by-default.
         assert "active" not in btn
-        # multi_press only appears once the button is in devices.json.
+        # multi_press is global (status), not per button device.
         assert "multi_press" not in btn
+        assert "multi_press_window_ms" not in btn
 
-    def test_input_button_includes_multi_press_from_config(self) -> None:
+    def test_input_button_from_config_omits_multi_press(self) -> None:
         inst = _make_installation([
             {
                 "ip": "10.10.1.50",
@@ -340,7 +343,8 @@ class TestBuildDeviceList:
         api = _make_api(inst, cache=cache)
         devices = api._build_device_list()
         assert len(devices) == 1
-        assert devices[0]["multi_press"] is True
+        assert "multi_press" not in devices[0]
+        assert "multi_press_window_ms" not in devices[0]
         assert devices[0]["active"] is True
 
     def test_input_module_without_cached_buttons_no_device_entries(self) -> None:

@@ -20,6 +20,27 @@ mean a bump in the other.
 Backward compatibility is the norm — an add-on version keeps working
 with the current companion until a `### Breaking:` entry says otherwise.
 
+## [1.6.2] - 2026-07-16
+
+### Changed
+- **Multi-press is global** (add-on Configuration → Installatie), next to
+  “Inactieve kanalen tonen”: `multi_press` + `multi_press_window_ms` (default
+  350 ms). Restart the add-on after changing. Exposed on `GET /api/v1/status`
+  and WebSocket `gateway_status` / snapshot.
+- The **Installatie** options group is now first in Configuration.
+
+### Removed
+- Per-button `multi_press` / `multi_press_window_ms` in `devices.json`, PATCH,
+  device list, and Web UI. Legacy keys in existing files are ignored and
+  dropped on the next write.
+
+## [1.6.1] - 2026-07-16
+
+### Added
+- **Web UI: multi-press window (ms)** per wall button, next to the multi-press
+  toggle. Adjust how long the gateway waits for a second/third click (default
+  350 ms). Device list / snapshot now also exposes `multi_press_window_ms`.
+
 ## [1.6.0] - 2026-07-15
 
 ### Added

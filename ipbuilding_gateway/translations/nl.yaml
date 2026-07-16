@@ -45,14 +45,25 @@ configuration:
         description: Timeout (s) voor getSysSet / getButtons op modules (verhoog bij trage VLAN).
   installation:
     name: Installatie
-    description: Pad naar devices.json (namen, kamers, active flags).
+    description: Installatiegedrag en pad naar devices.json (namen, kamers, active flags).
     fields:
-      devices_file:
-        name: devices.json pad
-        description: Installatie-backup; zichtbaar via Samba onder addon_configs/…/devices.json.
       expose_inactive_channels:
         name: Inactieve kanalen tonen
         description: Indien aan staan ongebruikte relay/dimmer-slots (active false) ook in Home Assistant. Standaard uit — de Web UI toont wel alle slots.
+      multi_press:
+        name: Dubbele/driedubbele druk
+        description: >-
+          Globale classificatie van dubbele en driedubbele druk op alle wandknoppen.
+          Bij aan staat wacht de gateway op een tweede/derde klik voordat single_press
+          wordt uitgestuurd (korte druk is dus iets vertraagd). Na wijziging: add-on herstarten.
+      multi_press_window_ms:
+        name: Multi-press venster (ms)
+        description: >-
+          Tijd tussen klikken (ms) om dubbel/driedubbel te herkennen. Standaard 350.
+          Na wijziging add-on herstarten.
+      devices_file:
+        name: devices.json pad
+        description: Installatie-backup; zichtbaar via Samba onder addon_configs/…/devices.json.
   discovery:
     name: Discovery
     description: Runtime auto-discovery op het veldbus-subnet.

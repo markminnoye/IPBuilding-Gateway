@@ -165,10 +165,6 @@ class PushbuttonConfig:
     room: str = ""  # from getButtons.gr
     active: bool = True
     hold_threshold_s: float = DEFAULT_BUTTON_HOLD_THRESHOLD_S
-    # Opt-in multi-click classification (double/triple). When False the
-    # gateway emits single_press immediately on short release (Phase 1).
-    multi_press: bool = False
-    multi_press_window_ms: int = 350
 
     def to_dict(self) -> dict:
         """Serialize to dict for devices.json. module_id is implied by nesting, so it is excluded."""
@@ -178,8 +174,6 @@ class PushbuttonConfig:
             "room": self.room,
             "active": self.active,
             "hold_threshold_s": self.hold_threshold_s,
-            "multi_press": self.multi_press,
-            "multi_press_window_ms": self.multi_press_window_ms,
         }
         if self.channel is not None:
             d["channel"] = self.channel
@@ -187,6 +181,8 @@ class PushbuttonConfig:
 
     @classmethod
     def from_dict(cls, data: dict, module_id: str = "") -> "PushbuttonConfig":
+        # Legacy multi_press / multi_press_window_ms keys in devices.json are
+        # ignored — multi-press is a global GatewayConfig / add-on option.
         return cls(
             id=data["id"],
             module_id=module_id,
@@ -197,8 +193,6 @@ class PushbuttonConfig:
             hold_threshold_s=float(
                 data.get("hold_threshold_s", DEFAULT_BUTTON_HOLD_THRESHOLD_S)
             ),
-            multi_press=bool(data.get("multi_press", False)),
-            multi_press_window_ms=int(data.get("multi_press_window_ms", 350)),
         )
 
 

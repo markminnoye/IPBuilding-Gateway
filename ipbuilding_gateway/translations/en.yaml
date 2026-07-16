@@ -45,14 +45,25 @@ configuration:
         description: Timeout (s) for getSysSet / getButtons on modules (raise on slow VLAN).
   installation:
     name: Installation
-    description: Path to devices.json (names, rooms, active flags).
+    description: Installation behaviour and path to devices.json (names, rooms, active flags).
     fields:
-      devices_file:
-        name: devices.json path
-        description: Installation backup; visible via Samba under addon_configs/…/devices.json.
       expose_inactive_channels:
         name: Expose inactive channels
         description: When enabled, unused relay/dimmer slots (active false) appear in Home Assistant. Default off — the Web UI still shows all slots.
+      multi_press:
+        name: Double/triple press
+        description: >-
+          Global classification of double and triple presses on all wall buttons.
+          When enabled, the gateway waits for a second/third click before emitting
+          single_press (short press is slightly delayed). Restart the add-on after changing this.
+      multi_press_window_ms:
+        name: Multi-press window (ms)
+        description: >-
+          Inter-click window in ms for double/triple recognition. Default 350.
+          Restart the add-on after changing this.
+      devices_file:
+        name: devices.json path
+        description: Installation backup; visible via Samba under addon_configs/…/devices.json.
   discovery:
     name: Discovery
     description: Runtime auto-discovery on the field-bus subnet.

@@ -57,6 +57,8 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   ],
   "hub_role": "slave",
   "input_mode_label": "Slave",
+  "multi_press": false,
+  "multi_press_window_ms": 350,
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
     "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" },
@@ -66,6 +68,11 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
 ```
 
 Push updates are sent on WebSocket as `gateway_status` when aggregate `status` or open issues change. See [websocket.md](websocket.md).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `multi_press` | boolean | Global double/triple-press classification for all wall buttons (add-on option). When `false`, short release emits `single_press` immediately. |
+| `multi_press_window_ms` | integer | Inter-click window in ms when `multi_press` is enabled (default 350). |
 
 ---
 
@@ -207,8 +214,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
       "room": "1e verdieping",
       "semantic_type": "button",
       "device_type": "input",
-      "active": true,
-      "multi_press": false
+      "active": true
     }
   ]
 }
@@ -227,7 +233,6 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `semantic_type` | string | `light` / `fan` / `switch` / `button` (dimmer channels are always `light`) |
 | `device_type` | string | `relay` / `dimmer` / `input` |
 | `active` | boolean | Whether channel is active |
-| `multi_press` | boolean | Buttons only: when `true`, the gateway classifies double/triple press (delays `single_press` by the inter-click window). Default `false`. Present once the button exists in `devices.json` `pushbuttons[]`. |
 | `max_watt` | integer | Configured maximum power (relay/dimmer only) |
 | `state` | string | `on` / `off` / `inactive` / `unknown` (relay/dimmer only) |
 | `current_watt` | integer | Current consumption (0 when off; relay/dimmer only) |
@@ -240,7 +245,9 @@ the module's physical wiring, not PATCH-able). The `id` matches the `id` field o
 `button_event` WebSocket frame so the companion can route presses to the right
 entity. Buttons appear in the snapshot only after `getButtons` has been fetched
 (automatic at startup + after `POST /api/v1/modules/refresh` or a discovery
-sweep).
+sweep). When a pushbutton is only known from live metadata (not yet in
+`devices.json`), `active` is omitted. Multi-press is a **global** add-on
+option — see `GET /api/v1/status` (`multi_press` / `multi_press_window_ms`).
 
 **Inactive channels** (`active: false` in `devices.json`) are **omitted** from
 the list unless add-on `expose_inactive_channels` is enabled or the client
@@ -285,10 +292,8 @@ with HTTP 422 and a `"channel inactive"` error.
 | `name` | string | Operator-friendly label |
 | `room` | string | Room / area name |
 | `active` | boolean | `false` = disable button entity |
-| `multi_press` | boolean | `true` = classify double/triple press (delays short-press) |
-| `multi_press_window_ms` | integer | Inter-click window in ms (default 350); positive integer |
 
-Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`) returns **400** `unknown_field`.
+Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) returns **400** `unknown_field`. Multi-press is configured globally via the add-on options (see `GET /api/v1/status`).
 
 **Request headers:** `Content-Type: application/json`
 
@@ -299,7 +304,7 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`) returns **400** `
 
 **Request body example (button):**
 ```json
-{"name": "Badkamer knop", "room": "1e verdieping", "active": true, "multi_press": true}
+{"name": "Badkamer knop", "room": "1e verdieping", "active": true}
 ```
 
 **Response 200:** Same shape as `GET /api/v1/devices/{device_id}` for the updated device, plus `schema_version: 2`.

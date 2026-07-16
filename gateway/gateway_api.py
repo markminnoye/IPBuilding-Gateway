@@ -436,6 +436,8 @@ class GatewayAPI:
         body = self._health.snapshot()
         body["hub_role"] = self._cfg.hub_role
         body["input_mode_label"] = self._cfg.input_mode_label
+        body["multi_press"] = self._cfg.multi_press
+        body["multi_press_window_ms"] = self._cfg.multi_press_window_ms
         return body
 
     async def _get_devices(self, request: web.Request) -> web.Response:
@@ -952,7 +954,7 @@ class GatewayAPI:
         per-button timer on press; if the timer fires before the matching
         release we emit ``long_press`` (the operator's hold threshold from
         ``getButtons.func2.holdSeconds``). On release we cancel the timer;
-        if no long_press fired we emit ``single_press`` (or, when
+        if no long_press fired we emit ``single_press`` (or, when global
         ``multi_press`` is enabled, delay until the inter-click window
         expires so ``double_press`` / ``triple_press`` can accumulate),
         then always emit ``release``.
@@ -1010,9 +1012,8 @@ class GatewayAPI:
                 self._broadcast_button(id_hex, "release")
                 return
 
-            btn = self._button_config(id_hex)
-            if btn is None or not btn.multi_press:
-                # Opt-out path (Phase 1 behaviour): immediate single_press.
+            if not self._cfg.multi_press:
+                # Default path: immediate single_press.
                 self._broadcast_button(id_hex, "single_press")
                 self._broadcast_button(id_hex, "release")
                 return
@@ -1023,7 +1024,7 @@ class GatewayAPI:
                 state.multi_handle.cancel()
             loop = asyncio.get_running_loop()
             state.multi_handle = loop.call_later(
-                btn.multi_press_window_ms / 1000.0,
+                self._cfg.multi_press_window_ms / 1000.0,
                 self._fire_single_or_multi,
                 id_hex,
             )
@@ -1074,17 +1075,12 @@ class GatewayAPI:
             return DEFAULT_BUTTON_HOLD_THRESHOLD_S
         return installation.pushbutton_threshold(id_hex)
 
-    def _button_config(self, id_hex: str):
-        """Return the PushbuttonConfig for a button id, or None."""
-        installation = self._cfg.installation
-        if installation is None:
-            return None
-        return installation.pushbutton_by_id(id_hex)
-
     def _on_health_changed(self) -> None:
         payload = self._health.snapshot(include_actions=False)
         payload["hub_role"] = self._cfg.hub_role
         payload["input_mode_label"] = self._cfg.input_mode_label
+        payload["multi_press"] = self._cfg.multi_press
+        payload["multi_press_window_ms"] = self._cfg.multi_press_window_ms
         asyncio.create_task(
             self._broadcast({"type": "gateway_status", **payload})
         )
@@ -1170,6 +1166,8 @@ class GatewayAPI:
             | {
                 "hub_role": self._cfg.hub_role,
                 "input_mode_label": self._cfg.input_mode_label,
+                "multi_press": self._cfg.multi_press,
+                "multi_press_window_ms": self._cfg.multi_press_window_ms,
             },
         }
 
@@ -1283,7 +1281,6 @@ class GatewayAPI:
                         }
                         if cfg_btn is not None:
                             entry["active"] = cfg_btn.active
-                            entry["multi_press"] = cfg_btn.multi_press
                         devices.append(entry)
 
         return devices
@@ -1323,7 +1320,6 @@ class GatewayAPI:
             "device_type": "input",
             "active": btn.active,
             "channel": btn.channel,
-            "multi_press": btn.multi_press,
         }
         return entry
 

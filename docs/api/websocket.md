@@ -229,17 +229,15 @@ Possible `action` values:
   still held (gateway-derived; default 1.5 s, per-button override from
   `getButtons.func2.holdSeconds`).
 - `single_press` — short-tap gesture. With default config
-  (`multi_press: false`) this fires on release before the `release`
-  frame. With `multi_press: true` it fires after the inter-click window
-  expires with no further clicks, and carries `"count": 1`.
-- `double_press` / `triple_press` — opt-in multi-click gestures. Require
-  `multi_press: true` on the pushbutton (set via Web UI, companion
-  config switch, PATCH, or `devices.json`; optional
-  `multi_press_window_ms`, default 350). Emitted when the inter-click
-  window expires; frames include `"count": 2` or `"count": 3` (counts
-  above 3 still use action `triple_press` but report the true `count`).
-  Button device entries in the snapshot include a `multi_press` boolean
-  when the button is present in `devices.json`.
+  (global `multi_press: false`) this fires on release before the `release`
+  frame. With global `multi_press: true` it fires after the inter-click
+  window expires with no further clicks, and carries `"count": 1`.
+- `double_press` / `triple_press` — multi-click gestures when the global
+  add-on option `multi_press` is enabled (optional `multi_press_window_ms`,
+  default 350; see `GET /api/v1/status` and snapshot `gateway_status`).
+  Emitted when the inter-click window expires; frames include `"count": 2`
+  or `"count": 3` (counts above 3 still use action `triple_press` but
+  report the true `count`).
 
 Typical sequences:
 

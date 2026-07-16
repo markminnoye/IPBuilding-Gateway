@@ -20,7 +20,6 @@ from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, Butto
 from gateway.installation import (
     DEFAULT_BUTTON_HOLD_THRESHOLD_S,
     InstallationConfig,
-    PushbuttonConfig,
 )
 
 
@@ -43,7 +42,12 @@ def _make_installation(buttons: list[dict[str, Any]] | None = None) -> Installat
     return InstallationConfig._parse(raw)
 
 
-def _make_api(installation: InstallationConfig) -> gateway_api.GatewayAPI:
+def _make_api(
+    installation: InstallationConfig,
+    *,
+    multi_press: bool = False,
+    multi_press_window_ms: int = 350,
+) -> gateway_api.GatewayAPI:
     bus = MagicMock()
     reg = DeviceRegistry()
     for mc in installation.modules:
@@ -52,6 +56,9 @@ def _make_api(installation: InstallationConfig) -> gateway_api.GatewayAPI:
     cfg.installation = installation
     cfg.api_host = "127.0.0.1"
     cfg.api_port = 8080
+    cfg.claims_input_modules = True
+    cfg.multi_press = multi_press
+    cfg.multi_press_window_ms = multi_press_window_ms
     return gateway_api.GatewayAPI(bus, reg, cfg)
 
 
@@ -98,34 +105,15 @@ class TestButtonThreshold:
 
 
 class TestMultiPressConfig:
-    def test_multi_press_defaults_off(self) -> None:
-        inst = _make_installation([{"id": "2f8185190000df"}])
-        btn = inst.pushbutton_by_id("2f8185190000df")
-        assert btn is not None
-        assert btn.multi_press is False
-        assert btn.multi_press_window_ms == 350
-
-    def test_multi_press_from_config(self) -> None:
+    def test_legacy_multi_press_keys_ignored_on_load(self) -> None:
         inst = _make_installation([
             {"id": "2f8185190000df", "multi_press": True, "multi_press_window_ms": 250}
         ])
         btn = inst.pushbutton_by_id("2f8185190000df")
         assert btn is not None
-        assert btn.multi_press is True
-        assert btn.multi_press_window_ms == 250
-
-    def test_multi_press_round_trips_to_dict(self) -> None:
-        btn = PushbuttonConfig(
-            id="2f8185190000df",
-            multi_press=True,
-            multi_press_window_ms=400,
-        )
         d = btn.to_dict()
-        assert d["multi_press"] is True
-        assert d["multi_press_window_ms"] == 400
-        restored = PushbuttonConfig.from_dict(d)
-        assert restored.multi_press is True
-        assert restored.multi_press_window_ms == 400
+        assert "multi_press" not in d
+        assert "multi_press_window_ms" not in d
 
 
 class TestButtonStateMachine:
@@ -136,8 +124,18 @@ class TestButtonStateMachine:
     sequence without spinning an event loop.
     """
 
-    def _make_capturing_api(self, installation: InstallationConfig) -> gateway_api.GatewayAPI:
-        api = _make_api(installation)
+    def _make_capturing_api(
+        self,
+        installation: InstallationConfig,
+        *,
+        multi_press: bool = False,
+        multi_press_window_ms: int = 350,
+    ) -> gateway_api.GatewayAPI:
+        api = _make_api(
+            installation,
+            multi_press=multi_press,
+            multi_press_window_ms=multi_press_window_ms,
+        )
         api._captured: list[dict[str, Any]] = []
 
         def _capture(
@@ -320,8 +318,8 @@ class TestButtonStateMachine:
 
     @pytest.mark.asyncio
     async def test_multi_press_disabled_emits_single_immediately(self) -> None:
-        inst = _make_installation([{"id": "2f8185190000df", "multi_press": False}])
-        api = self._make_capturing_api(inst)
+        inst = _make_installation([{"id": "2f8185190000df"}])
+        api = self._make_capturing_api(inst, multi_press=False)
         self._press(api, "2f8185190000df")
         self._release(api, "2f8185190000df")
         actions = [m["action"] for m in api._captured]
@@ -329,8 +327,8 @@ class TestButtonStateMachine:
 
     @pytest.mark.asyncio
     async def test_multi_press_single_after_window(self) -> None:
-        inst = _make_installation([{"id": "2f8185190000df", "multi_press": True}])
-        api = self._make_capturing_api(inst)
+        inst = _make_installation([{"id": "2f8185190000df"}])
+        api = self._make_capturing_api(inst, multi_press=True)
         self._press(api, "2f8185190000df")
         self._release(api, "2f8185190000df")
         # No single_press yet — waiting for a possible second click.
@@ -341,8 +339,8 @@ class TestButtonStateMachine:
 
     @pytest.mark.asyncio
     async def test_multi_press_double(self) -> None:
-        inst = _make_installation([{"id": "2f8185190000df", "multi_press": True}])
-        api = self._make_capturing_api(inst)
+        inst = _make_installation([{"id": "2f8185190000df"}])
+        api = self._make_capturing_api(inst, multi_press=True)
         self._press(api, "2f8185190000df")
         self._release(api, "2f8185190000df")
         self._press(api, "2f8185190000df")  # second click within window
@@ -358,8 +356,8 @@ class TestButtonStateMachine:
 
     @pytest.mark.asyncio
     async def test_multi_press_triple(self) -> None:
-        inst = _make_installation([{"id": "2f8185190000df", "multi_press": True}])
-        api = self._make_capturing_api(inst)
+        inst = _make_installation([{"id": "2f8185190000df"}])
+        api = self._make_capturing_api(inst, multi_press=True)
         for _ in range(3):
             self._press(api, "2f8185190000df")
             self._release(api, "2f8185190000df")
@@ -377,11 +375,10 @@ class TestButtonStateMachine:
         inst = _make_installation([
             {
                 "id": "2f8185190000df",
-                "multi_press": True,
                 "hold_threshold_s": 0.1,
             }
         ])
-        api = self._make_capturing_api(inst)
+        api = self._make_capturing_api(inst, multi_press=True)
         self._press(api, "2f8185190000df")
         self._run_long_press_timer(api, "2f8185190000df")
         self._release(api, "2f8185190000df")

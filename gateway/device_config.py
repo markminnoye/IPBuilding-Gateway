@@ -29,8 +29,6 @@ NORTHBOUND_PUSHBUTTON_FIELDS = {
     "name",
     "room",
     "active",
-    "multi_press",
-    "multi_press_window_ms",
 }
 SEMANTIC_TYPES = {"light", "fan", "cover", "switch", "plug"}
 
@@ -133,24 +131,6 @@ def validate_pushbutton_fields(fields: dict) -> dict:
             if not isinstance(value, bool):
                 raise DeviceConfigError("validation", "active must be a boolean")
             result["active"] = value
-        elif key == "multi_press":
-            if not isinstance(value, bool):
-                raise DeviceConfigError(
-                    "validation", "multi_press must be a boolean"
-                )
-            result["multi_press"] = value
-        elif key == "multi_press_window_ms":
-            if not isinstance(value, int) or isinstance(value, bool):
-                raise DeviceConfigError(
-                    "validation",
-                    "multi_press_window_ms must be a positive integer",
-                )
-            if value <= 0:
-                raise DeviceConfigError(
-                    "validation",
-                    "multi_press_window_ms must be a positive integer",
-                )
-            result["multi_press_window_ms"] = value
     return result
 
 
@@ -287,11 +267,10 @@ def sync_input_pushbuttons_from_cache(
 ) -> int:
     """Merge cached getButtons data into input modules in *installation*.
 
-    Preserves operator-edited ``name``, ``room``, ``active``,
-    ``hold_threshold_s``, ``multi_press``, and ``multi_press_window_ms`` on
-    existing pushbuttons. Fills missing ``channel``, ``name``, and ``room``
-    from wire data. Appends newly discovered button ids without removing
-    entries absent from the wire.
+    Preserves operator-edited ``name``, ``room``, ``active``, and
+    ``hold_threshold_s`` on existing pushbuttons. Fills missing ``channel``,
+    ``name``, and ``room`` from wire data. Appends newly discovered button
+    ids without removing entries absent from the wire.
 
     Rebuilds the flat ``installation.pushbuttons`` index. Returns the
     number of input modules that had cached button data applied.
@@ -332,8 +311,6 @@ def sync_input_pushbuttons_from_cache(
                         room=existing.room or wire.room,
                         active=existing.active,
                         hold_threshold_s=existing.hold_threshold_s,
-                        multi_press=existing.multi_press,
-                        multi_press_window_ms=existing.multi_press_window_ms,
                     )
                 )
             else:
@@ -346,8 +323,6 @@ def sync_input_pushbuttons_from_cache(
                         room=existing.room,
                         active=existing.active,
                         hold_threshold_s=existing.hold_threshold_s,
-                        multi_press=existing.multi_press,
-                        multi_press_window_ms=existing.multi_press_window_ms,
                     )
                 )
             seen_ids.add(canonical_id)

@@ -430,23 +430,6 @@ INDEX_HTML = """<!doctype html>
     return el("td", {}, [input]);
   }
 
-  function buildMultiPressCell(device, state) {
-    // Multi-press classification only applies to wall buttons.
-    if (device.device_type !== "input") {
-      state.multi_press = null;
-      return el("td", { class: "muted" }, [document.createTextNode("—")]);
-    }
-    var input = el("input", {
-      type: "checkbox",
-      class: "active-toggle",
-      title: "Recognize double/triple press (~350 ms delay on short press)",
-    });
-    // Missing key = not yet in devices.json pushbuttons → default off.
-    input.checked = device.multi_press === true;
-    state.multi_press = input;
-    return el("td", {}, [input]);
-  }
-
   function buildWattCell(device, state) {
     if (!isChannel(device) || !("max_watt" in device)) {
       state.max_watt = null;
@@ -459,22 +442,32 @@ INDEX_HTML = """<!doctype html>
 
   function currentValue(fieldName, inputEl) {
     if (inputEl === null) return undefined;
-    if (fieldName === "active" || fieldName === "multi_press") return inputEl.checked;
-    if (fieldName === "max_watt") return parseInt(inputEl.value, 10);
+    if (fieldName === "active") return inputEl.checked;
+    if (fieldName === "max_watt") {
+      return parseInt(inputEl.value, 10);
+    }
     return inputEl.value;
   }
 
   function buildPatch(device, state) {
     var patch = {};
-    var fields = ["name", "room", "semantic_type", "active", "multi_press", "max_watt"];
+    var fields = [
+      "name",
+      "room",
+      "semantic_type",
+      "active",
+      "max_watt",
+    ];
     fields.forEach(function (f) {
       var inputEl = state[f];
       if (inputEl === null || inputEl === undefined) return;
       var value = currentValue(f, inputEl);
       var original;
-      if (f === "active") original = device.active !== false;
-      else if (f === "multi_press") original = device.multi_press === true;
-      else original = device[f];
+      if (f === "active") {
+        original = device.active !== false;
+      } else {
+        original = device[f];
+      }
       if (value !== original) patch[f] = value;
     });
     return patch;
@@ -540,7 +533,6 @@ INDEX_HTML = """<!doctype html>
     tr.appendChild(buildRoomCell(device, state));
     tr.appendChild(buildTypeCell(device, state));
     tr.appendChild(buildActiveCell(device, state));
-    tr.appendChild(buildMultiPressCell(device, state));
     tr.appendChild(buildWattCell(device, state));
 
     var statusSpan = el("span", { class: "status" });
@@ -736,10 +728,9 @@ INDEX_HTML = """<!doctype html>
           el("th", { text: "Type" }),
           el("th", { text: "Active" }),
           el("th", {
-            text: "Multi-press",
-            title: "Recognize double/triple press (~350 ms delay on short press)",
+            text: "Max Watt",
+            title: "Configured maximum power for this channel",
           }),
-          el("th", { text: "Max Watt" }),
           el("th", { text: "" }),
         ]),
       ]),
