@@ -55,6 +55,7 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
       "since": "2026-06-15T11:40:00Z"
     }
   ],
+  "buttons_via_ha": true,
   "hub_role": "slave",
   "input_mode_label": "Slave",
   "multi_press": false,
@@ -71,6 +72,9 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `buttons_via_ha` | boolean | When `true`, wall buttons are polled and sent to HA; when `false`, buttons stay local on the input module. |
+| `hub_role` | string | Derived IP1100 term: `slave` if `buttons_via_ha`, else `master` (LED meaning). |
+| `input_mode_label` | string | Operator label: `Slave` / `Master`. |
 | `multi_press` | boolean | Global double/triple-press classification for all wall buttons (add-on option). When `false`, short release emits `single_press` immediately. |
 | `multi_press_window_ms` | integer | Inter-click window in ms when `multi_press` is enabled (default 350). |
 

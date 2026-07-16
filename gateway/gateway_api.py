@@ -432,13 +432,19 @@ class GatewayAPI:
         return web.json_response(self._status_payload())
 
     def _status_payload(self) -> dict[str, Any]:
-        """Health snapshot plus deployment-specific hub role fields."""
+        """Health snapshot plus deployment-specific input-mode fields."""
         body = self._health.snapshot()
-        body["hub_role"] = self._cfg.hub_role
-        body["input_mode_label"] = self._cfg.input_mode_label
+        body.update(self._input_mode_status_fields())
         body["multi_press"] = self._cfg.multi_press
         body["multi_press_window_ms"] = self._cfg.multi_press_window_ms
         return body
+
+    def _input_mode_status_fields(self) -> dict[str, Any]:
+        return {
+            "buttons_via_ha": self._cfg.buttons_via_ha,
+            "hub_role": self._cfg.hub_role,
+            "input_mode_label": self._cfg.input_mode_label,
+        }
 
     async def _get_devices(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices — return full device list as JSON."""
@@ -1077,8 +1083,7 @@ class GatewayAPI:
 
     def _on_health_changed(self) -> None:
         payload = self._health.snapshot(include_actions=False)
-        payload["hub_role"] = self._cfg.hub_role
-        payload["input_mode_label"] = self._cfg.input_mode_label
+        payload.update(self._input_mode_status_fields())
         payload["multi_press"] = self._cfg.multi_press
         payload["multi_press_window_ms"] = self._cfg.multi_press_window_ms
         asyncio.create_task(
@@ -1163,9 +1168,8 @@ class GatewayAPI:
             "modules": self._build_module_list(),
             "devices": self._build_device_list(),
             "gateway_status": self._health.snapshot(include_actions=False)
+            | self._input_mode_status_fields()
             | {
-                "hub_role": self._cfg.hub_role,
-                "input_mode_label": self._cfg.input_mode_label,
                 "multi_press": self._cfg.multi_press,
                 "multi_press_window_ms": self._cfg.multi_press_window_ms,
             },

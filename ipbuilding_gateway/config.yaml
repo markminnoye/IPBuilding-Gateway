@@ -29,7 +29,7 @@ options:
     multi_press_window_ms: 350
     devices_file: /config/devices.json
   fieldbus:
-    hub_role: slave
+    buttons_via_ha: true
     poll_interval: 2.0
     actuator_poll_interval: 20.0
   network:
@@ -55,7 +55,7 @@ schema:
     multi_press_window_ms: int(1,)
     devices_file: str
   fieldbus:
-    hub_role: list(slave|master)
+    buttons_via_ha: bool
     poll_interval: float
     actuator_poll_interval: float
   network:

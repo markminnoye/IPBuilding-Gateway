@@ -11,15 +11,23 @@ from gateway.installation import InstallationConfig, InstallationError
 
 log = logging.getLogger(__name__)
 
-HUB_ROLES = frozenset({"slave", "master"})
+_LEGACY_HUB_ROLES = frozenset({"slave", "master"})
 
 
-def _normalize_hub_role(value: str | None) -> str:
-    role = (value or "slave").lower().strip()
-    if role not in HUB_ROLES:
-        log.warning("Unknown GATEWAY_HUB_ROLE=%r — using slave", value)
-        return "slave"
-    return role
+def _buttons_via_ha_from_env() -> bool:
+    """Resolve GATEWAY_BUTTONS_VIA_HA, with legacy GATEWAY_HUB_ROLE fallback."""
+    raw = os.getenv("GATEWAY_BUTTONS_VIA_HA")
+    if raw is not None and raw.strip() != "":
+        return raw.lower().strip() in ("1", "true", "yes")
+
+    legacy = os.getenv("GATEWAY_HUB_ROLE")
+    if legacy is None or legacy.strip() == "":
+        return True
+    role = legacy.lower().strip()
+    if role not in _LEGACY_HUB_ROLES:
+        log.warning("Unknown GATEWAY_HUB_ROLE=%r — using buttons_via_ha=true", legacy)
+        return True
+    return role == "slave"
 
 
 def _env_truthy(name: str, default: str = "0") -> bool:
@@ -128,18 +136,23 @@ class GatewayConfig:
     # gateway emits single_press immediately on short release.
     multi_press: bool = False
     multi_press_window_ms: int = 350
-    # Input centrale mode: slave = poll + HA events, master = module-local buttons.
-    hub_role: str = "slave"
+    # True: poll inputs + button events to HA. False: module-local buttons.
+    buttons_via_ha: bool = True
 
     @property
     def claims_input_modules(self) -> bool:
         """True when this gateway polls inputs and receives B-…E events."""
-        return self.hub_role == "slave"
+        return self.buttons_via_ha
+
+    @property
+    def hub_role(self) -> str:
+        """Derived IP1100 manual term: slave when buttons via HA, else master."""
+        return "slave" if self.buttons_via_ha else "master"
 
     @property
     def input_mode_label(self) -> str:
         """Operator-facing label matching IP1100 manual terminology."""
-        return "Master" if self.hub_role == "master" else "Slave"
+        return "Slave" if self.buttons_via_ha else "Master"
 
     def __post_init__(self) -> None:
         if (
@@ -232,5 +245,5 @@ class GatewayConfig:
             expose_inactive_channels=expose_inactive_channels,
             multi_press=multi_press,
             multi_press_window_ms=multi_press_window_ms,
-            hub_role=_normalize_hub_role(os.getenv("GATEWAY_HUB_ROLE")),
+            buttons_via_ha=_buttons_via_ha_from_env(),
         )

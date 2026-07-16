@@ -52,8 +52,34 @@ GATEWAY_POLL_INTERVAL=$(opt fieldbus.poll_interval poll_interval "2.0")
 export GATEWAY_ACTUATOR_POLL_INTERVAL
 GATEWAY_ACTUATOR_POLL_INTERVAL=$(opt fieldbus.actuator_poll_interval actuator_poll_interval "20.0")
 
-export GATEWAY_HUB_ROLE
-GATEWAY_HUB_ROLE=$(opt fieldbus.hub_role hub_role "slave")
+# Buttons via HA (bool). Prefer new key; fall back to legacy hub_role slave|master.
+export GATEWAY_BUTTONS_VIA_HA
+_BVH=$(opt fieldbus.buttons_via_ha buttons_via_ha "")
+if [ -n "$_BVH" ]; then
+    GATEWAY_BUTTONS_VIA_HA="$_BVH"
+else
+    _ROLE=$(opt fieldbus.hub_role hub_role "")
+    if [ -z "$_ROLE" ] && [ -n "${GATEWAY_HUB_ROLE:-}" ]; then
+        _ROLE="$GATEWAY_HUB_ROLE"
+    fi
+    case "$(printf '%s' "$_ROLE" | tr '[:upper:]' '[:lower:]')" in
+        master)
+            GATEWAY_BUTTONS_VIA_HA=0
+            echo "[run.sh] Migrated legacy hub_role=master → GATEWAY_BUTTONS_VIA_HA=0"
+            ;;
+        slave|"")
+            GATEWAY_BUTTONS_VIA_HA=1
+            if [ -n "$_ROLE" ]; then
+                echo "[run.sh] Migrated legacy hub_role=slave → GATEWAY_BUTTONS_VIA_HA=1"
+            fi
+            ;;
+        *)
+            GATEWAY_BUTTONS_VIA_HA=1
+            echo "[run.sh] Unknown legacy hub_role='$_ROLE' — using GATEWAY_BUTTONS_VIA_HA=1"
+            ;;
+    esac
+fi
+unset _BVH _ROLE
 
 # ── Network ──────────────────────────────────────────────────────────────────
 export GATEWAY_BIND_IP
@@ -128,7 +154,7 @@ GATEWAY_SIMULATED="${GATEWAY_SIMULATED:-0}"
 
 echo "[run.sh] GATEWAY_POLL_INTERVAL=$GATEWAY_POLL_INTERVAL"
 echo "[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=$GATEWAY_ACTUATOR_POLL_INTERVAL"
-echo "[run.sh] GATEWAY_HUB_ROLE=$GATEWAY_HUB_ROLE"
+echo "[run.sh] GATEWAY_BUTTONS_VIA_HA=$GATEWAY_BUTTONS_VIA_HA"
 echo "[run.sh] GATEWAY_BIND_IP=$GATEWAY_BIND_IP"
 echo "[run.sh] GATEWAY_EXPOSE_INACTIVE_CHANNELS=$GATEWAY_EXPOSE_INACTIVE_CHANNELS"
 echo "[run.sh] GATEWAY_MULTI_PRESS=$GATEWAY_MULTI_PRESS"
