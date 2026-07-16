@@ -25,7 +25,11 @@ from gateway.types import DeviceType
 log = logging.getLogger(__name__)
 
 NORTHBOUND_CHANNEL_FIELDS = {"name", "room", "semantic_type", "active", "max_watt"}
-NORTHBOUND_PUSHBUTTON_FIELDS = {"name", "room", "active"}
+NORTHBOUND_PUSHBUTTON_FIELDS = {
+    "name",
+    "room",
+    "active",
+}
 SEMANTIC_TYPES = {"light", "fan", "cover", "switch", "plug"}
 
 

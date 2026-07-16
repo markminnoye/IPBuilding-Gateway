@@ -83,8 +83,10 @@ python scripts/discover_from_ipbox.py
 
 Bekijk logs voor de opstartstatus:
 ```
-[run.sh] GATEWAY_HUB_ROLE=slave
+[run.sh] GATEWAY_BUTTONS_VIA_HA=1
 [run.sh] GATEWAY_BIND_IP=0.0.0.0
+[run.sh] GATEWAY_MULTI_PRESS=0
+[run.sh] GATEWAY_MULTI_PRESS_WINDOW_MS=350
 [run.sh] GATEWAY_DEVICES_FILE=/config/devices.json
 ```
 
@@ -92,19 +94,21 @@ Bekijk logs voor de opstartstatus:
 
 ## Configuration
 
-Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Configuration** (nested schema), met **Modules** als eerste groep.
+Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Configuration** (nested schema), met **Installatie** als eerste groep.
 
 | Option (nested) | Default | Description |
 |-----------------|---------|-------------|
-| `fieldbus.hub_role` | `slave` | Modus ingangsmodule (IP1100): `slave` of `master`. Zie hieronder. |
-| `fieldbus.poll_interval` | `2.0` | Input-poll interval in seconden (`I0000`), enkel relevant bij `slave` |
+| `installation.expose_inactive_channels` | `false` | Toon ongebruikte relay/dimmer-slots (`active: false`) in Home Assistant. Web UI toont altijd alle slots. |
+| `installation.multi_press` | `false` | Globale dubbele/driedubbele druk op alle wandknoppen. Bij aan staat wacht de gateway op een tweede/derde klik (korte druk is iets vertraagd). Add-on herstarten na wijziging. |
+| `installation.multi_press_window_ms` | `350` | Inter-click venster in ms. Add-on herstarten na wijziging. |
+| `installation.devices_file` | `/config/devices.json` | Pad naar installatie configuratie (Samba: `addon_configs/.../devices.json`) |
+| `fieldbus.buttons_via_ha` | `true` | Drukknoppen via Home Assistant (aan) of lokaal op de ingangsmodule (uit). Zie hieronder. |
+| `fieldbus.poll_interval` | `2.0` | Input-poll interval in seconden (`I0000`), enkel relevant als `buttons_via_ha` aan staat |
 | `fieldbus.actuator_poll_interval` | `20.0` | Relay/dimmer keep-alive interval in seconden (`P0000` / `I9900`) |
 | `network.bind_ip` | `0.0.0.0` | IP-adres waarop de UDP-veldbussocket bindt. Standaard alle interfaces; zet op bijv. `10.10.1.1` om expliciet aan de veldbus-NIC te binden. |
 | `network.rest_shim_enabled` | `false` | IPBox REST-shim op poort `30200` (enkel migratie) |
 | `network.http_timeout_s` | `2.0` | Timeout voor HTTP getSysSet calls tijdens discovery |
 | `network.metadata_timeout_s` | `5.0` | Per-request timeout (s) voor HTTP `getSysSet` / `getButtons` op de modules. Verhoog bij trage veldbus (bijv. druk VLAN). |
-| `installation.devices_file` | `/config/devices.json` | Pad naar installatie configuratie (Samba: `addon_configs/.../devices.json`) |
-| `installation.expose_inactive_channels` | `false` | Toon ongebruikte relay/dimmer-slots (`active: false`) in Home Assistant. Web UI toont altijd alle slots. |
 | `discovery.discovery_subnet` | `10.10.1` | Subnet voor ARP-sweep en passieve monitor |
 | `discovery.discovery_range_start` | `0` | Start van IP-range voor init-sweep (0 = volledige /24) |
 | `discovery.discovery_range_end` | `254` | Eind van IP-range voor init-sweep |
@@ -118,28 +122,30 @@ De northbound API-poort (`8080`) en de IPBox REST-shim-poort (`30200`) liggen va
 
 Oude flat keys (zonder groepering) blijven werken tot je de configuratie opnieuw opslaat.
 
-### Input-centrale (master/slave)
+### Drukknoppen via Home Assistant
 
-De IP1100PoE kent twee modi ten opzichte van de **centrale** (deze gateway):
+Of de IP1100PoE-drukknoppen events naar **Home Assistant** sturen, stel je in met **`fieldbus.buttons_via_ha`** (standaard aan).
 
-| Modus | Config | LED | Wie stuurt knoppen aan? | Wanneer kiezen |
-|-------|--------|-----|-------------------------|----------------|
-| **Slave** | `fieldbus.hub_role: slave` | Groen **continu** | Gateway → events → **Home Assistant** | Standaard: knoppen in HA-automatisering |
-| **Master** | `fieldbus.hub_role: master` | Groen **knipperend** | **Ingangsmodule** zelf (eigen opgeslagen koppelingen) | Knoppen nog niet via HA, of tijdelijk terwijl de rest al via deze gateway loopt |
+| Optie | Config | LED op module | Wie stuurt knoppen aan? | Wanneer kiezen |
+|-------|--------|---------------|-------------------------|----------------|
+| **Aan** | `fieldbus.buttons_via_ha: true` | Groen **continu** (= slave) | Gateway → events → **Home Assistant** | Standaard: knoppen in HA-automatisering |
+| **Uit** | `fieldbus.buttons_via_ha: false` | Groen **knipperend** (= master) | **Ingangsmodule** zelf (eigen opgeslagen koppelingen) | Knoppen nog niet via HA, of tijdelijk terwijl de rest al via deze gateway loopt |
 
-**Wat verandert er niet bij master:** relais en dimmers blijven via deze gateway en Home Assistant bedienbaar (app, automatiseringen zonder drukknop). Alleen het **knop-pad** wijzigt.
+**Wat verandert er niet als de optie uit staat:** relais en dimmers blijven via deze gateway en Home Assistant bedienbaar (app, automatiseringen zonder drukknop). Alleen het **knop-pad** wijzigt.
 
-**Fallback:** als de gateway uitvalt of geen verbinding heeft, neemt de ingangsmodule het over volgens zijn eigen opgeslagen koppelingen (niet noodzakelijk hetzelfde als in Home Assistant). De gateway schrijft die module-configuratie nog niet weg. Bij slave blijft de configuratie op de module als noodvoorziening actief.
+**Fallback:** als de gateway uitvalt of geen verbinding heeft, neemt de ingangsmodule het over volgens zijn eigen opgeslagen koppelingen (niet noodzakelijk hetzelfde als in Home Assistant). De gateway schrijft die module-configuratie nog niet weg. Bij knoppen via HA blijft de configuratie op de module als noodvoorziening actief.
 
-**Tijdelijk master gebruiken:**
+**Tijdelijk knoppen lokaal houden:**
 
-1. Zet `fieldbus.hub_role` op `master`.
+1. Zet `fieldbus.buttons_via_ha` **uit**.
 2. **Herstart** de add-on.
 3. Controleer op de IP1100: LED knippert groen; knoppen bedienen verlichting volgens de module-configuratie.
 4. Relais en dimmers blijven beschikbaar in de companion.
-5. Na cutover: zet terug op `slave` en herstart — LED brandt continu; knop-events komen in Home Assistant.
+5. Na cutover: zet weer **aan** en herstart — LED brandt continu; knop-events komen in Home Assistant.
 
-**Verschil met kanaal `active`:** `active: false` op een drukknop schakelt alleen de northbound/HA-entity uit; bij `slave` pollt de gateway de input-module nog steeds. `hub_role` bepaalt of **deze gateway** de veldbus-centrale-claim voor ingangen overneemt.
+**LED (IP1100-handleiding):** continu groen = module in **slave** (centrale/HA); knipperend = **master** (lokaal). De Web UI-badge toont nog Slave/Master; de Configuration-optie spreekt over knoppen via HA.
+
+**Verschil met kanaal `active`:** `active: false` op een drukknop schakelt alleen de northbound/HA-entity uit; bij knoppen via HA pollt de gateway de input-module nog steeds. `buttons_via_ha` bepaalt of **deze gateway** de veldbus-claim voor ingangen overneemt.
 
 Uitgebreide uitleg staat ook in de Configuration-UI (translations) en in de add-on docs tab.
 

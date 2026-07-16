@@ -73,18 +73,19 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class _ButtonState:
-    """Per-button timing state for press → long_press classification.
+    """Per-button timing state for press → long_press / multi-press.
 
-    The gateway only classifies the press→release interval. The IP1100PoE
-    wire only carries ``press`` (edge 0x01) and ``release`` (edge 0x00)
-    frames — long_press is derived locally from a per-button
-    ``hold_threshold_s`` (default 1.5s, seeded from
-    ``getButtons.func2.holdSeconds`` when present).
+    The IP1100PoE wire only carries ``press`` (edge 0x01) and ``release``
+    (edge 0x00) frames. ``long_press`` is derived from a per-button
+    ``hold_threshold_s``; opt-in ``double_press`` / ``triple_press`` use an
+    inter-click window (``multi_press_window_ms``) when enabled.
     """
 
     press_started_at: float | None = None
     long_press_fired: bool = False
     long_press_handle: asyncio.TimerHandle | None = None
+    click_count: int = 0
+    multi_handle: asyncio.TimerHandle | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -431,11 +432,19 @@ class GatewayAPI:
         return web.json_response(self._status_payload())
 
     def _status_payload(self) -> dict[str, Any]:
-        """Health snapshot plus deployment-specific hub role fields."""
+        """Health snapshot plus deployment-specific input-mode fields."""
         body = self._health.snapshot()
-        body["hub_role"] = self._cfg.hub_role
-        body["input_mode_label"] = self._cfg.input_mode_label
+        body.update(self._input_mode_status_fields())
+        body["multi_press"] = self._cfg.multi_press
+        body["multi_press_window_ms"] = self._cfg.multi_press_window_ms
         return body
+
+    def _input_mode_status_fields(self) -> dict[str, Any]:
+        return {
+            "buttons_via_ha": self._cfg.buttons_via_ha,
+            "hub_role": self._cfg.hub_role,
+            "input_mode_label": self._cfg.input_mode_label,
+        }
 
     async def _get_devices(self, request: web.Request) -> web.Response:
         """GET /api/v1/devices — return full device list as JSON."""
@@ -942,15 +951,19 @@ class GatewayAPI:
         if msg:
             asyncio.create_task(self._broadcast(msg))
 
+    _MULTI_ACTION = {1: "single_press", 2: "double_press", 3: "triple_press"}
+
     def _on_button_event(self, key: DeviceKey, evt: Any) -> None:
-        """Classify a raw button event and broadcast press/long_press/release.
+        """Classify a raw button event and broadcast press/gestures/release.
 
         The wire only delivers ``press`` and ``release`` edges. We arm a
         per-button timer on press; if the timer fires before the matching
         release we emit ``long_press`` (the operator's hold threshold from
         ``getButtons.func2.holdSeconds``). On release we cancel the timer;
-        if no long_press fired we emit single_press (the short click), then
-        always emit release.
+        if no long_press fired we emit ``single_press`` (or, when global
+        ``multi_press`` is enabled, delay until the inter-click window
+        expires so ``double_press`` / ``triple_press`` can accumulate),
+        then always emit ``release``.
         """
         if not self._cfg.claims_input_modules:
             return
@@ -963,7 +976,9 @@ class GatewayAPI:
         state = self._button_state.setdefault(id_hex, _ButtonState())
 
         if action == "press":
-            # Idempotent: a second press without a release resets the timer.
+            # Idempotent: a second press without a release resets the
+            # long-press timer. Do NOT reset click_count / multi_handle —
+            # a press inside an open multi-press window is the next click.
             if state.long_press_handle is not None:
                 state.long_press_handle.cancel()
                 state.long_press_handle = None
@@ -988,12 +1003,37 @@ class GatewayAPI:
             was_long = state.long_press_fired
             state.press_started_at = None
             state.long_press_fired = False
-            # A real short press (active press, no long_press) is a short
-            # click. Emit single_press *before* the raw release edge so
-            # consumers that key on the gesture see it first; release stays
-            # as the always-present raw edge for dim/cover blueprints.
-            if had_active_press and not was_long:
+
+            if not had_active_press:
+                self._broadcast_button(id_hex, "release")
+                return
+
+            if was_long:
+                # A hold never participates in multi-press; reset and emit
+                # only the raw release edge (long_press already fired).
+                state.click_count = 0
+                if state.multi_handle is not None:
+                    state.multi_handle.cancel()
+                    state.multi_handle = None
+                self._broadcast_button(id_hex, "release")
+                return
+
+            if not self._cfg.multi_press:
+                # Default path: immediate single_press.
                 self._broadcast_button(id_hex, "single_press")
+                self._broadcast_button(id_hex, "release")
+                return
+
+            # Multi-press path: count this click and (re)arm the window.
+            state.click_count += 1
+            if state.multi_handle is not None:
+                state.multi_handle.cancel()
+            loop = asyncio.get_running_loop()
+            state.multi_handle = loop.call_later(
+                self._cfg.multi_press_window_ms / 1000.0,
+                self._fire_single_or_multi,
+                id_hex,
+            )
             self._broadcast_button(id_hex, "release")
 
     def _fire_long_press(self, id_hex: str) -> None:
@@ -1005,14 +1045,32 @@ class GatewayAPI:
         state.long_press_handle = None
         self._broadcast_button(id_hex, "long_press")
 
-    def _broadcast_button(self, id_hex: str, action: str) -> None:
+    def _fire_single_or_multi(self, id_hex: str) -> None:
+        """Inter-click window expired: emit single/double/triple_press."""
+        state = self._button_state.get(id_hex)
+        if state is None or state.click_count == 0:
+            return
+        count = state.click_count
+        state.click_count = 0
+        state.multi_handle = None
+        # Counts above 3 cap at triple_press but report the true count.
+        action = self._MULTI_ACTION.get(count, "triple_press")
+        self._broadcast_button(id_hex, action, count=count)
+
+    def _broadcast_button(
+        self, id_hex: str, action: str, count: int | None = None
+    ) -> None:
         """Send a button_event to all WS clients. Coroutine, scheduled."""
-        log.info("BUTTON %s: %s", id_hex, action)
-        msg = {
+        log.info(
+            "BUTTON %s: %s%s", id_hex, action, f" x{count}" if count else ""
+        )
+        msg: dict[str, Any] = {
             "type": "button_event",
             "id": id_hex,
             "action": action,
         }
+        if count is not None:
+            msg["count"] = count
         asyncio.create_task(self._broadcast(msg))
 
     def _button_threshold(self, id_hex: str) -> float:
@@ -1025,8 +1083,9 @@ class GatewayAPI:
 
     def _on_health_changed(self) -> None:
         payload = self._health.snapshot(include_actions=False)
-        payload["hub_role"] = self._cfg.hub_role
-        payload["input_mode_label"] = self._cfg.input_mode_label
+        payload.update(self._input_mode_status_fields())
+        payload["multi_press"] = self._cfg.multi_press
+        payload["multi_press_window_ms"] = self._cfg.multi_press_window_ms
         asyncio.create_task(
             self._broadcast({"type": "gateway_status", **payload})
         )
@@ -1109,9 +1168,10 @@ class GatewayAPI:
             "modules": self._build_module_list(),
             "devices": self._build_device_list(),
             "gateway_status": self._health.snapshot(include_actions=False)
+            | self._input_mode_status_fields()
             | {
-                "hub_role": self._cfg.hub_role,
-                "input_mode_label": self._cfg.input_mode_label,
+                "multi_press": self._cfg.multi_press,
+                "multi_press_window_ms": self._cfg.multi_press_window_ms,
             },
         }
 

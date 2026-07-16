@@ -20,6 +20,45 @@ mean a bump in the other.
 Backward compatibility is the norm — an add-on version keeps working
 with the current companion until a `### Breaking:` entry says otherwise.
 
+## [1.6.0] - 2026-07-16
+
+### Added
+- **Global double/triple press** for all wall buttons (add-on Configuration →
+  Installatie): `multi_press` + `multi_press_window_ms` (default 350 ms).
+  When enabled, the gateway classifies `double_press` / `triple_press` (with
+  `count`) and delays `single_press` by the inter-click window. Default off =
+  immediate `single_press` (same as 1.5.x). Restart the add-on after changing.
+- Status fields `multi_press` / `multi_press_window_ms` on `GET /api/v1/status`
+  and WebSocket `gateway_status` / snapshot.
+
+### Changed
+- The **Installatie** options group is now first in Configuration (with
+  inactive-channels and multi-press toggles above `devices_file`).
+
+## [1.5.3] - 2026-07-16
+
+### Added
+- **Web UI shows the gateway version and instance id** (with Copy), so you can
+  match the add-on to the companion integration without using the API.
+
+### Changed
+- Configuration option for wall buttons is now a simple on/off switch:
+  **Wall buttons via Home Assistant** (default on). Turning it off keeps
+  relays and dimmers in HA while buttons stay local on the input module.
+- Status API includes `buttons_via_ha`. The Web UI badge still shows
+  Slave/Master (from the IP1100 manual) for the green LED meaning.
+
+### Fixed
+- **Web UI Save works again.** Changing Active (or other fields) and clicking
+  Save was failing silently / with an error; settings now persist correctly.
+
+### Breaking
+- The old `fieldbus.hub_role` setting (`slave` / `master`) is replaced by
+  `fieldbus.buttons_via_ha`. Until you open Configuration and save again,
+  a leftover `hub_role: master` is still honoured (buttons stay local).
+  After saving, use the new toggle. Values `full` / `actuators_only` are
+  no longer recognised.
+
 ## [1.5.2] - 2026-07-15
 
 ### Added

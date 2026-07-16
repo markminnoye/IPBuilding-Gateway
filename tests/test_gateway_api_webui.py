@@ -30,6 +30,10 @@ def _make_api(tmp_path: Path) -> gateway_api.GatewayAPI:
     cfg.api_host = "127.0.0.1"
     cfg.api_port = 8080
     cfg.metadata_timeout_s = 5
+    cfg.hub_role = "slave"
+    cfg.input_mode_label = "Slave"
+    cfg.multi_press = False
+    cfg.multi_press_window_ms = 350
     return gateway_api.GatewayAPI(bus, reg, cfg)
 
 
@@ -66,6 +70,10 @@ class TestWebUiRoute:
         assert "DEVICES_URL + \"/\"" not in body
         assert "DEVICES_URL + '/'" not in body
         assert "DEVICE_BASE_URL + \"/\" + encodeURIComponent(device.id)" in body
+        assert "buildMultiPressCell" not in body
+        assert "DEFAULT_MULTI_PRESS_WINDOW_MS" not in body
+        assert "buildWattCell" in body
+        assert "Max Watt" in body
         assert ">Refresh</button>" in body
         assert "Reload</button>" not in body
         assert "Search for new modules" in body
@@ -171,3 +179,22 @@ class TestWebUiRoute:
         assert "api/v1/status" in body
         assert "HUB_ROLE_TOOLTIP" in body
         assert "Enable" not in body or "buildEnableAction" not in body
+
+    @pytest.mark.asyncio
+    async def test_webui_shows_instance_id_and_version_from_status(
+        self, tmp_path: Path,
+    ) -> None:
+        api = _make_api(tmp_path)
+        app = web.Application(middlewares=[api._api_error_middleware])
+        app.router.add_get("/", api._get_webui)
+
+        async with TestClient(TestServer(app)) as client:
+            resp = await client.get("/")
+            body = await resp.text()
+
+        assert 'id="gatewayMeta"' in body
+        assert "renderGatewayMeta" in body
+        assert "statusBody.instance_id" in body
+        assert "statusBody.version" in body
+        assert "Copy instance id" in body
+        assert "gateway-meta" in body

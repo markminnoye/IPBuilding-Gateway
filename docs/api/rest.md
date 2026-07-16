@@ -55,8 +55,11 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
       "since": "2026-06-15T11:40:00Z"
     }
   ],
+  "buttons_via_ha": true,
   "hub_role": "slave",
   "input_mode_label": "Slave",
+  "multi_press": false,
+  "multi_press_window_ms": 350,
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
     "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" },
@@ -66,6 +69,14 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
 ```
 
 Push updates are sent on WebSocket as `gateway_status` when aggregate `status` or open issues change. See [websocket.md](websocket.md).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `buttons_via_ha` | boolean | When `true`, wall buttons are polled and sent to HA; when `false`, buttons stay local on the input module. |
+| `hub_role` | string | Derived IP1100 term: `slave` if `buttons_via_ha`, else `master` (LED meaning). |
+| `input_mode_label` | string | Operator label: `Slave` / `Master`. |
+| `multi_press` | boolean | Global double/triple-press classification for all wall buttons (add-on option). When `false`, short release emits `single_press` immediately. |
+| `multi_press_window_ms` | integer | Inter-click window in ms when `multi_press` is enabled (default 350). |
 
 ---
 
@@ -238,7 +249,9 @@ the module's physical wiring, not PATCH-able). The `id` matches the `id` field o
 `button_event` WebSocket frame so the companion can route presses to the right
 entity. Buttons appear in the snapshot only after `getButtons` has been fetched
 (automatic at startup + after `POST /api/v1/modules/refresh` or a discovery
-sweep).
+sweep). When a pushbutton is only known from live metadata (not yet in
+`devices.json`), `active` is omitted. Multi-press is a **global** add-on
+option — see `GET /api/v1/status` (`multi_press` / `multi_press_window_ms`).
 
 **Inactive channels** (`active: false` in `devices.json`) are **omitted** from
 the list unless add-on `expose_inactive_channels` is enabled or the client
@@ -284,7 +297,7 @@ with HTTP 422 and a `"channel inactive"` error.
 | `room` | string | Room / area name |
 | `active` | boolean | `false` = disable button entity |
 
-Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`) returns **400** `unknown_field`.
+Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) returns **400** `unknown_field`. Multi-press is configured globally via the add-on options (see `GET /api/v1/status`).
 
 **Request headers:** `Content-Type: application/json`
 
