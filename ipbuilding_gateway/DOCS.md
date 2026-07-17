@@ -98,27 +98,27 @@ Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Co
 
 | Option (nested) | Default | Description |
 |-----------------|---------|-------------|
-| `installation.expose_inactive_channels` | `false` | Toon ongebruikte relay/dimmer-slots (`active: false`) in Home Assistant. Web UI toont altijd alle slots. |
-| `installation.multi_press` | `false` | Globale dubbele/driedubbele druk op alle wandknoppen. Bij aan staat wacht de gateway op een tweede/derde klik (korte druk is iets vertraagd). Add-on herstarten na wijziging. |
-| `installation.multi_press_window_ms` | `350` | Inter-click venster in ms. Add-on herstarten na wijziging. |
-| `installation.devices_file` | `/config/devices.json` | Pad naar installatie configuratie (Samba: `addon_configs/.../devices.json`) |
+| `installation.expose_inactive_channels` | `false` | Toon ongebruikte relay-/dimmer-kanalen (`active: false`). Standaard uit — de Web UI toont altijd alle kanalen. |
+| `installation.multi_press` | `false` | Herken dubbele en driedubbele druk op alle wandknoppen. Het Multi-press venster bepaalt hoe lang klikken bij elkaar horen. Add-on herstarten na wijziging. |
+| `installation.multi_press_window_ms` | `350` | Tijd (ms) waarbinnen een tweede of derde klik bij de vorige hoort. Standaard 350. Add-on herstarten na wijziging. |
+| `installation.devices_file` | `/config/devices.json` | Pad naar het installatieconfigbestand (Samba: `addon_configs/.../devices.json`) |
 | `fieldbus.buttons_via_ha` | `true` | Drukknoppen via Home Assistant (aan) of lokaal op de ingangsmodule (uit). Zie hieronder. |
-| `fieldbus.poll_interval` | `2.0` | Input-poll interval in seconden (`I0000`), enkel relevant als `buttons_via_ha` aan staat |
-| `fieldbus.actuator_poll_interval` | `20.0` | Relay/dimmer keep-alive interval in seconden (`P0000` / `I9900`) |
-| `network.bind_ip` | `0.0.0.0` | IP-adres waarop de UDP-veldbussocket bindt. Standaard alle interfaces; zet op bijv. `10.10.1.1` om expliciet aan de veldbus-NIC te binden. |
-| `network.rest_shim_enabled` | `false` | IPBox REST-shim op poort `30200` (enkel migratie) |
-| `network.http_timeout_s` | `2.0` | Timeout voor HTTP getSysSet calls tijdens discovery |
-| `network.metadata_timeout_s` | `5.0` | Per-request timeout (s) voor HTTP `getSysSet` / `getButtons` op de modules. Verhoog bij trage veldbus (bijv. druk VLAN). |
-| `discovery.discovery_subnet` | `10.10.1` | Subnet voor ARP-sweep en passieve monitor |
-| `discovery.discovery_range_start` | `0` | Start van IP-range voor init-sweep (0 = volledige /24) |
-| `discovery.discovery_range_end` | `254` | Eind van IP-range voor init-sweep |
-| `discovery.auto_discover_on_start` | `false` | Re-sweep van een leeg `devices.json` forceren. Ontbrekend of ongeldig `devices.json` triggert altijd een init-sweep, ook als deze optie uit staat. |
-| `discovery.passive_arp_monitor` | `true` | Passieve ARP-monitor inschakelen (30 s poll interval) |
-| `discovery.arp_poll_interval_s` | `30.0` | Interval voor passieve ARP-polling in seconden |
-| `discovery.use_env_defaults` | `false` | Lab/RE: poll vaste `.30/.40/.50` IPs wanneer `devices.json` ontbreekt of ongeldig is. Productie: uit laten; discovery vult `devices.json`. |
-| `logging.log_level` | `info` | Log niveau: `debug`, `info`, `warning`, `error` |
+| `fieldbus.poll_interval` | `2.0` | Hoe vaak (s) de gateway de ingangsmodule bevraagt — alleen relevant als `buttons_via_ha` aan staat |
+| `fieldbus.actuator_poll_interval` | `20.0` | Hoe vaak (s) de gateway relais- en dimmermodules bevraagt om ze online te houden |
+| `network.bind_ip` | `0.0.0.0` | Op welk IP de gateway naar veldbusmodules luistert. Standaard alle interfaces; bijv. `10.10.1.1` voor alleen de veldbus-interface |
+| `network.rest_shim_enabled` | `false` | IPBox REST-compatibiliteit op poort `30200` (tijdelijk tijdens migratie; standaard uit) |
+| `network.http_timeout_s` | `2.0` | Maximale wachttijd (s) bij het herkennen van modules tijdens discovery |
+| `network.metadata_timeout_s` | `5.0` | Maximale wachttijd (s) bij het ophalen van modulegegevens. Verhoog bij trage VLAN |
+| `discovery.discovery_subnet` | `10.10.1` | Subnet (/24) waarop modules worden gezocht |
+| `discovery.discovery_range_start` | `0` | Eerste hostnummer in het scanbereik (0 = hele /24) |
+| `discovery.discovery_range_end` | `254` | Laatste hostnummer in het scanbereik |
+| `discovery.auto_discover_on_start` | `false` | Zoek modules bij add-on start. Ontbrekend of ongeldig `devices.json` triggert altijd een scan |
+| `discovery.passive_arp_monitor` | `true` | Detecteer nieuwe/verdwenen modules via netwerkverkeer (zonder broadcast-scan) |
+| `discovery.arp_poll_interval_s` | `30.0` | Hoe vaak (s) de passieve monitor het netwerk bekijkt |
+| `discovery.use_env_defaults` | `false` | Lab/test: vaste `.30/.40/.50` IPs als `devices.json` ontbreekt. Productie: uit laten |
+| `logging.log_level` | `info` | Logniveau: `debug`, `info`, `warning`, `error` |
 
-De northbound API-poort (`8080`) en de IPBox REST-shim-poort (`30200`) liggen vast en staan **niet** in deze tabel — ze zijn gedocumenteerd onder Supervisor's eigen **Network**-sectie op de add-on info-pagina (zie [Ports](#ports)).
+De API/web-UI-poort (`8080`) en de IPBox REST-compatibiliteitspoort (`30200`) liggen vast en staan **niet** in deze tabel — ze staan onder Supervisor’s eigen **Network**-sectie op de add-on info-pagina (zie [Ports](#ports)).
 
 Oude flat keys (zonder groepering) blijven werken tot je de configuratie opnieuw opslaat.
 
@@ -128,10 +128,8 @@ Of de IP1100PoE-drukknoppen events naar **Home Assistant** sturen, stel je in me
 
 | Optie | Config | LED op module | Wie stuurt knoppen aan? | Wanneer kiezen |
 |-------|--------|---------------|-------------------------|----------------|
-| **Aan** | `fieldbus.buttons_via_ha: true` | Groen **continu** (= slave) | Gateway → events → **Home Assistant** | Standaard: knoppen in HA-automatisering |
-| **Uit** | `fieldbus.buttons_via_ha: false` | Groen **knipperend** (= master) | **Ingangsmodule** zelf (eigen opgeslagen koppelingen) | Knoppen nog niet via HA, of tijdelijk terwijl de rest al via deze gateway loopt |
-
-**Wat verandert er niet als de optie uit staat:** relais en dimmers blijven via deze gateway en Home Assistant bedienbaar (app, automatiseringen zonder drukknop). Alleen het **knop-pad** wijzigt.
+| **Aan** | `fieldbus.buttons_via_ha: true` | Groen **continu** (= slave) | Gateway → events → **Home Assistant** | Standaard: knop-events naar HA (aan/uit, scene, automation, …) |
+| **Uit** | `fieldbus.buttons_via_ha: false` | Groen **knipperend** (= master) | **Ingangsmodule** zelf (eigen opgeslagen koppelingen) | Knoppen lokaal houden (bijv. tijdens migratie); geen knop-events naar HA |
 
 **Fallback:** als de gateway uitvalt of geen verbinding heeft, neemt de ingangsmodule het over volgens zijn eigen opgeslagen koppelingen (niet noodzakelijk hetzelfde als in Home Assistant). De gateway schrijft die module-configuratie nog niet weg. Bij knoppen via HA blijft de configuratie op de module als noodvoorziening actief.
 

@@ -6,95 +6,93 @@ configuration:
       buttons_via_ha:
         name: Drukknoppen via Home Assistant
         description: >-
-          Aan (standaard): drukknoppen op de IP1100 sturen events naar Home Assistant.
-          Automatiseringen en scenes regel je in HA. Relais en dimmers blijven sowieso
-          via deze gateway bedienbaar.
+          Aan (standaard): knopdrukken op de IP1100 gaan als events naar Home Assistant.
+          Wat er gebeurt bij een druk (lamp aan/uit, scene, automation, …) regel je in HA.
 
 
-          Uit: drukknoppen komen niet in Home Assistant. De ingangsmodule bedient
-          verlichting lokaal via zijn opgeslagen koppelingen (handig tijdens migratie).
-          Relais en dimmers blijven wél via HA.
+          Uit: knopdrukken blijven lokaal op de IP1100 via de opgeslagen koppelingen.
+          Er gaan geen knop-events naar Home Assistant (handig tijdens migratie).
 
 
           Groene LED op de module: continu = knoppen via HA (slave), knipperend = lokaal (master).
-          Als de gateway uitvalt, valt de module terug op lokale koppelingen.
+          Valt de gateway uit, dan valt de module terug op lokale koppelingen.
 
 
           Na wijziging: add-on herstarten.
       poll_interval:
         name: Input-poll interval
-        description: Alleen relevant als drukknoppen via Home Assistant aan staan. Seconden tussen polls naar de ingangsmodule (standaard ~2 s).
+        description: Alleen als drukknoppen via Home Assistant aan staat. Hoe vaak (seconden) de gateway de ingangsmodule bevraagt (standaard ~2 s).
       actuator_poll_interval:
         name: Actuator-poll interval
-        description: Seconden tussen relay/dimmer keep-alive polls (standaard ~20 s).
+        description: Hoe vaak (seconden) de gateway relais- en dimmermodules bevraagt om ze online te houden (standaard ~20 s).
   network:
     name: Netwerk
-    description: Veldbus-bindadres, IPBox REST-shim en HTTP-timeouts naar veldbusmodules. De northbound API/web UI-poort ligt vast en staat onder de eigen "Network"-sectie van de add-on (niet hier).
+    description: Instellingen voor de verbinding met de veldbusmodules. De poort van de API en web-UI stel je in onder Network bij de add-on (niet in deze sectie).
     fields:
       bind_ip:
         name: Veldbus-bindadres
-        description: IP-adres waarop de UDP-veldbus-socket van de gateway luistert. Standaard 0.0.0.0 (alle interfaces). Zet op een specifiek interface-IP, bijv. 10.10.1.1, om expliciet aan de veldbus-NIC te binden.
+        description: Op welk IP-adres de gateway naar de veldbusmodules luistert. Standaard 0.0.0.0 (alle netwerkinterfaces). Zet bijvoorbeeld 10.10.1.1 om alleen op de veldbus-interface te luisteren.
       rest_shim_enabled:
-        name: IPBox REST-shim
-        description: Legacy IPBox REST op poort 30200 — alleen tijdens migratie.
+        name: IPBox REST-compatibiliteit
+        description: Zet de oude IPBox REST-API op poort 30200 aan, zodat bestaande clients (bijv. de oude HA-integratie) tijdelijk blijven werken tijdens migratie. Standaard uit.
       http_timeout_s:
         name: HTTP-timeout discovery
-        description: Timeout (s) voor HTTP-calls tijdens ARP/identify discovery.
+        description: Maximale wachttijd (seconden) bij het herkennen van modules tijdens discovery.
       metadata_timeout_s:
         name: HTTP-timeout modules
-        description: Timeout (s) voor getSysSet / getButtons op modules (verhoog bij trage VLAN).
+        description: Maximale wachttijd (seconden) bij het ophalen van modulegegevens. Verhoog bij een trage VLAN-verbinding.
   installation:
     name: Installatie
-    description: Installatiegedrag en pad naar devices.json (namen, kamers, active flags).
+    description: Installatie-instellingen en pad naar devices.json (namen, kamers, actief/inactief).
     fields:
       expose_inactive_channels:
         name: Inactieve kanalen tonen
-        description: Indien aan staan ongebruikte relay/dimmer-slots (active false) ook in Home Assistant. Standaard uit — de Web UI toont wel alle slots.
+        description: Toon ongebruikte relay-/dimmer-kanalen (active: false). Standaard uit — de Web UI toont altijd alle kanalen.
       multi_press:
-        name: Dubbele/driedubbele druk
+        name: Dubbel- en driedubbelklik
         description: >-
-          Globale classificatie van dubbele en driedubbele druk op alle wandknoppen.
-          Bij aan staat wacht de gateway op een tweede/derde klik voordat single_press
-          wordt uitgestuurd (korte druk is dus iets vertraagd). Na wijziging: add-on herstarten.
+          Herken dubbele en driedubbele druk op alle wandknoppen. Het Multi-press
+          venster bepaalt hoe lang klikken bij elkaar horen. Add-on herstarten na wijziging.
       multi_press_window_ms:
         name: Multi-press venster (ms)
         description: >-
-          Tijd tussen klikken (ms) om dubbel/driedubbel te herkennen. Standaard 350.
-          Na wijziging add-on herstarten.
+          Tijd (ms) waarbinnen een tweede of derde klik bij de vorige hoort.
+          Standaard 350. Add-on herstarten na wijziging.
       devices_file:
         name: devices.json pad
-        description: Installatie-backup; zichtbaar via Samba onder addon_configs/…/devices.json.
+        description: Pad naar het installatieconfigbestand; via Samba zichtbaar onder addon_configs/…/devices.json.
   discovery:
     name: Discovery
-    description: Runtime auto-discovery op het veldbus-subnet.
+    description: Modules automatisch vinden op het veldbus-subnet.
     fields:
       discovery_subnet:
         name: Discovery-subnet
-        description: /24 subnet voor ARP-sweep en passieve monitor (bijv. 10.10.1).
+        description: Subnet (/24) waarop modules worden gezocht (bijv. 10.10.1).
       discovery_range_start:
         name: Scan-range start
-        description: Eerste host in ARP/HTTP scan-range (0 = volledige /24).
+        description: Eerste hostnummer in het scanbereik (0 = hele /24).
       discovery_range_end:
         name: Scan-range eind
-        description: Laatste host in ARP/HTTP scan-range.
+        description: Laatste hostnummer in het scanbereik.
       auto_discover_on_start:
         name: Discover bij start
-        description: Actieve ARP-sweep + HTTP-identify bij add-on start (leeg devices.json triggert altijd sweep).
+        description: Zoek modules bij het starten van de add-on. Een leeg devices.json triggert altijd een scan.
       passive_arp_monitor:
         name: Passieve ARP-monitor
-        description: Meekijken op ARP zonder broadcast (detecteert nieuwe/verwijderde modules).
+        description: Volg netwerkverkeer om nieuwe of verdwenen modules te detecteren, zonder zelf een broadcast-scan te sturen.
       arp_poll_interval_s:
         name: ARP-poll interval
-        description: Frequentie (s) van de passieve ARP-poll.
+        description: Hoe vaak (seconden) de passieve monitor het netwerk bekijkt.
       use_env_defaults:
-        name: Lab/RE vaste IPs
-        description: Poll .30/.40/.50 wanneer devices.json ontbreekt — productie uit laten.
+        name: Lab vaste IPs
+        description: Gebruik vaste module-IP’s (.30/.40/.50) als devices.json ontbreekt. Alleen voor lab/test — in productie uit laten.
   logging:
     name: Logging
+    description: Hoe uitgebreid de add-on logt.
     fields:
       log_level:
-        name: Log niveau
+        name: Logniveau
         description: debug, info, warning of error.
 network:
-  8080/tcp: Northbound API — WebSocket /ws en REST /api/v1/ (companion, Web UI via Ingress).
-  30200/tcp: Legacy IPBox REST-shim (alleen actief als "IPBox REST-shim" bij Netwerk aan staat).
+  8080/tcp: API en web-UI — WebSocket /ws en REST /api/v1/ (companion-integratie; web-UI via Ingress).
+  30200/tcp: IPBox REST-compatibiliteit (alleen actief als "IPBox REST-compatibiliteit" bij Netwerk aan staat).

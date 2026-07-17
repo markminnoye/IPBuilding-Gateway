@@ -6,14 +6,12 @@ configuration:
       buttons_via_ha:
         name: Wall buttons via Home Assistant
         description: >-
-          On (default): wall buttons on the IP1100 send events to Home Assistant.
-          You build automations and scenes in HA. Relays and dimmers stay available
-          through this gateway either way.
+          On (default): presses on the IP1100 are sent to Home Assistant as events.
+          What a press does (light on/off, scene, automation, …) you set in HA.
 
 
-          Off: buttons do not appear in Home Assistant. The input module drives
-          lighting locally from its stored pairings (useful during migration).
-          Relays and dimmers remain available via HA.
+          Off: presses stay local on the IP1100 using its stored pairings.
+          No button events go to Home Assistant (useful during migration).
 
 
           Green LED on the module: steady = buttons via HA (slave), blinking = local (master).
@@ -23,78 +21,78 @@ configuration:
           Restart the add-on after changing this.
       poll_interval:
         name: Input poll interval
-        description: Only when wall buttons via Home Assistant is on. Seconds between polls to the input module (default ~2 s).
+        description: Only when wall buttons via Home Assistant is on. How often (seconds) the gateway polls the input module (default ~2 s).
       actuator_poll_interval:
         name: Actuator poll interval
-        description: Seconds between relay/dimmer keep-alive polls (default ~20 s).
+        description: How often (seconds) the gateway polls relay and dimmer modules to keep them online (default ~20 s).
   network:
     name: Network
-    description: Field-bus bind address, IPBox REST shim, and HTTP timeouts to field modules. The northbound API/web UI port is fixed and shown under the add-on's Network section (not here).
+    description: Settings for talking to the field-bus modules. The API and web UI port are set under the add-on's Network section (not here).
     fields:
       bind_ip:
         name: Field-bus bind address
-        description: IP address the gateway's UDP field-bus socket binds to. Default 0.0.0.0 (all interfaces). Set to a specific interface IP, e.g. 10.10.1.1, to explicitly bind to the field-bus NIC.
+        description: Which IP address the gateway listens on for field-bus modules. Default 0.0.0.0 (all network interfaces). Set e.g. 10.10.1.1 to listen only on the field-bus interface.
       rest_shim_enabled:
-        name: IPBox REST shim
-        description: Legacy IPBox REST on port 30200 — migration only.
+        name: IPBox REST compatibility
+        description: Enable the old IPBox REST API on port 30200 so existing clients (e.g. the legacy HA integration) keep working during migration. Off by default.
       http_timeout_s:
         name: HTTP timeout (discovery)
-        description: Timeout (s) for HTTP calls during ARP/identify discovery.
+        description: Maximum wait time (seconds) when identifying modules during discovery.
       metadata_timeout_s:
         name: HTTP timeout (modules)
-        description: Timeout (s) for getSysSet / getButtons on modules (raise on slow VLAN).
+        description: Maximum wait time (seconds) when fetching module details. Increase on a slow VLAN.
   installation:
     name: Installation
-    description: Installation behaviour and path to devices.json (names, rooms, active flags).
+    description: Installation settings and path to devices.json (names, rooms, active/inactive).
     fields:
       expose_inactive_channels:
-        name: Expose inactive channels
-        description: When enabled, unused relay/dimmer slots (active false) appear in Home Assistant. Default off — the Web UI still shows all slots.
+        name: Show inactive channels
+        description: Show unused relay/dimmer channels (active: false). Off by default — the Web UI always lists all channels.
       multi_press:
-        name: Double/triple press
+        name: Detect double/triple press
         description: >-
-          Global classification of double and triple presses on all wall buttons.
-          When enabled, the gateway waits for a second/third click before emitting
-          single_press (short press is slightly delayed). Restart the add-on after changing this.
+          Recognize double and triple presses on all wall buttons. The Multi-press
+          window sets how long clicks count as one gesture. Restart the add-on after changing this.
       multi_press_window_ms:
         name: Multi-press window (ms)
         description: >-
-          Inter-click window in ms for double/triple recognition. Default 350.
-          Restart the add-on after changing this.
+          Time window (ms) in which a second or third click counts with the previous one.
+          Default 350. Restart the add-on after changing this.
       devices_file:
         name: devices.json path
-        description: Installation backup; visible via Samba under addon_configs/…/devices.json.
+        description: Path to the installation config file; visible via Samba under addon_configs/…/devices.json.
   discovery:
     name: Discovery
-    description: Runtime auto-discovery on the field-bus subnet.
+    description: Automatically find modules on the field-bus subnet.
     fields:
       discovery_subnet:
         name: Discovery subnet
-        description: /24 subnet for ARP sweep and passive monitor (e.g. 10.10.1).
+        description: Subnet (/24) to search for modules (e.g. 10.10.1).
       discovery_range_start:
         name: Scan range start
-        description: First host in ARP/HTTP scan range (0 = full /24).
+        description: First host number in the scan range (0 = full /24).
       discovery_range_end:
         name: Scan range end
-        description: Last host in ARP/HTTP scan range.
+        description: Last host number in the scan range.
       auto_discover_on_start:
         name: Discover on start
-        description: Active ARP sweep + HTTP identify on add-on start (empty devices.json always triggers sweep).
+        description: Search for modules when the add-on starts. An empty devices.json always triggers a scan.
       passive_arp_monitor:
         name: Passive ARP monitor
-        description: Watch ARP traffic without broadcast (detect new/removed modules).
+        description: Watch network traffic to detect new or removed modules, without sending a broadcast scan.
       arp_poll_interval_s:
         name: ARP poll interval
-        description: Interval (s) for passive ARP polling.
+        description: How often (seconds) the passive monitor checks the network.
       use_env_defaults:
-        name: Lab/RE fixed IPs
-        description: Poll .30/.40/.50 when devices.json is missing — leave off in production.
+        name: Lab fixed IPs
+        description: Use fixed module IPs (.30/.40/.50) when devices.json is missing. Lab/test only — leave off in production.
   logging:
     name: Logging
+    description: How verbose the add-on logs are.
     fields:
       log_level:
         name: Log level
         description: debug, info, warning, or error.
 network:
-  8080/tcp: Northbound API — WebSocket /ws and REST /api/v1/ (companion, Web UI via Ingress).
-  30200/tcp: Legacy IPBox REST shim (only used when enabled under Network → IPBox REST shim).
+  8080/tcp: API and web UI — WebSocket /ws and REST /api/v1/ (companion integration; web UI via Ingress).
+  30200/tcp: IPBox REST compatibility (only used when enabled under Network → IPBox REST compatibility).
