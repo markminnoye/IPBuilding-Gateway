@@ -3,24 +3,9 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Version policy
-
-The IPBuilding Gateway add-on and the `ipbuilding-gateway-ha` companion
-follow **independent semver**. A bump in one repo does not automatically
-mean a bump in the other.
-
-- **Patch (0.3.x)**: cosmetic, no impact on the REST/WS wire.
-  Works with all companion versions that support the current wire.
-- **Minor (0.x.0)**: new REST endpoints or optional fields in
-  existing responses. The older companion keeps working but does not
-  see the new fields.
-- **Major (x.0.0)**: breaking change. The gateway or companion CHANGELOG
-  then includes a `### Breaking:` entry listing incompatible combinations.
-
-Backward compatibility is the norm — an add-on version keeps working
-with the current companion until a `### Breaking:` entry says otherwise.
-
 ## [Unreleased]
+
+## [1.6.2] - 2026-08-06
 
 ### Added
 - **Learn unknown wall buttons on first press.** When you press a physical
@@ -489,3 +474,20 @@ straight to **0.3.0** together with companion **v0.3.0**.
 - WebSocket API on port 8080 for the Home Assistant companion integration.
 - Optional legacy REST shim on port 30200 (off by default) for the existing IPBuilding integration.
 - Configurable hub IP, poll interval, and devices file location.
+
+## Version policy
+
+The IPBuilding Gateway add-on and the `ipbuilding-gateway-ha` companion
+follow **independent semver**. A bump in one repo does not automatically
+mean a bump in the other.
+
+- **Patch (0.3.x)**: cosmetic, no impact on the REST/WS wire.
+  Works with all companion versions that support the current wire.
+- **Minor (0.x.0)**: new REST endpoints or optional fields in
+  existing responses. The older companion keeps working but does not
+  see the new fields.
+- **Major (x.0.0)**: breaking change. The gateway or companion CHANGELOG
+  then includes a `### Breaking:` entry listing incompatible combinations.
+
+Backward compatibility is the norm — an add-on version keeps working
+with the current companion until a `### Breaking:` entry says otherwise.
