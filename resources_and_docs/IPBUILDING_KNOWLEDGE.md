@@ -1020,7 +1020,18 @@ Autonomietabel bevat per koppeling: drukknop-ID, type (Relais/Dimmer), doelmodul
 
 **Kritieke beperking:** IP-diagnostic en service software kunnen NIET gelijktijdig draaien. Dit suggereert een single-process architectuur in de firmware; de gateway mag dezelfde beperking niet hebben.
 
-Remote toegang: **Radmin Server** op centrale, poort **4899**.
+#### Remote support (IPBuilding installateur / helpdesk)
+
+Op de IPBox (thuis-LAN, archief-IP `192.168.0.185`) luisteren o.a. deze TCP-poorten voor **remote support**:
+
+| Poort | Dienst | Rol |
+|---|---|---|
+| **4899** | **Radmin Server** (Famatech; default-poort) | Remote desktop / beheer van de Windows-centrale |
+| **12831** | Onbekend (geen IANA-standaarddienst) | Extra poort die support samen met 4899 open wil; vermoedelijk support-/IPC-gerelateerd op dezelfde box — **niet** REST `:30200` en **niet** veldbus UDP/1001 |
+
+**Operator-notitie (2026-08-06):** IPBuilding support vroeg expliciet om **4899** en **12831** open te zetten (firewall / port-forward) zodat zij remote op de IPBox kunnen. Past bij het bestaande remote-access-beeld: Radmin op de centrale + No-IP dynamic DNS (`dynupdate.noip.com`) gezien in boot-evidence — zie [2026-06-12_ipbox_boot_relay_sweep.md](evidence/2026-06-12_ipbox_boot_relay_sweep.md).
+
+**Implicatie:** dit is **vendor remote-admin**, geen product-API voor onze gateway. Bij migratie weg van de IPBox verdwijnen deze poorten mee; niet overnemen in de open hub.
 
 ### 12.7 Drukknop-actiemodel: indrukken / ingedrukt houden (long press) / loslaten
 
@@ -1091,4 +1102,4 @@ In de IPBox WebConfig/service-software is per drukknop het volgende actiemodel i
 
 ---
 
-*Document gegenereerd: 2026-05-01 | Bijgewerkt: 2026-05-22 (Fase 1 wire af, gateway=transport, sferen uitgesteld) | Canonieke RE-status: [RE_STATE.md](RE_STATE.md)*
+*Document gegenereerd: 2026-05-01 | Bijgewerkt: 2026-08-06 (remote-support poorten 4899/12831 — IPBuilding support) | Canonieke RE-status: [RE_STATE.md](RE_STATE.md)*
