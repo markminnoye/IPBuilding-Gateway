@@ -1,4 +1,4 @@
-"""Tests for gateway.state_poll — UDP relay status sweep at startup."""
+"""Tests for gateway.state_poll — UDP actuator status sweeps at startup."""
 
 from __future__ import annotations
 
@@ -10,8 +10,9 @@ import pytest
 from gateway.config import GatewayConfig
 from gateway.device_registry import DeviceKey, DeviceRegistry
 from gateway.installation import InstallationConfig
+from gateway.payloads.dimmer import encode_dimmer_status_poll
 from gateway.payloads.relay import encode_relay_status_poll
-from gateway.state_poll import sweep_relay_states
+from gateway.state_poll import sweep_dimmer_states, sweep_relay_states
 from gateway.types import DeviceType
 from gateway.udp_bus import UDPBus
 
@@ -211,6 +212,199 @@ class TestSweepRelayStates:
             assert result == 0
             assert registry.get_relay_state(
                 DeviceKey(DeviceType.RELAY, "10.10.1.30", 18),
+            ) is None
+        finally:
+            await bus.stop()
+
+
+class TestEncodeDimmerStatusPoll:
+    def test_channel_zero(self) -> None:
+        assert encode_dimmer_status_poll(0) == b"I0000000"
+
+    def test_channel_two(self) -> None:
+        assert encode_dimmer_status_poll(2) == b"I2000000"
+
+
+class TestSweepDimmerStates:
+    @pytest.mark.asyncio
+    async def test_no_dimmer_modules_returns_zero(self) -> None:
+        registry = DeviceRegistry()
+        bus = UDPBus(GatewayConfig(simulated_mode=True))
+        await bus.start()
+        try:
+            inst = _make_installation([
+                {
+                    "ip": "10.10.1.30",
+                    "type": "relay",
+                    "mac": "00:24:77:52:ac:be",
+                    "channels": [],
+                },
+            ])
+            result = await sweep_dimmer_states(
+                bus, registry, inst, inter_query_delay_s=0,
+            )
+            assert result == 0
+        finally:
+            await bus.stop()
+
+    @pytest.mark.asyncio
+    async def test_seeds_single_channel_without_callbacks(self) -> None:
+        registry = DeviceRegistry()
+        cb = MagicMock()
+        registry.on_state_changed(cb)
+        registry.register_module("10.10.1.40", DeviceType.DIMMER)
+
+        bus = UDPBus(GatewayConfig(simulated_mode=True, reply_timeout_ms=500))
+        bus.register_simulated_reply(b"I2000000", b"I0154299")
+        await bus.start()
+        try:
+            inst = _make_installation([
+                {
+                    "ip": "10.10.1.40",
+                    "type": "dimmer",
+                    "mac": "00:24:77:52:ad:01",
+                    "channels": [
+                        {"ch": 2, "name": "Test", "active": True, "max_watt": 100},
+                    ],
+                },
+            ])
+            result = await sweep_dimmer_states(
+                bus, registry, inst, inter_query_delay_s=0,
+            )
+            assert result == 1
+            key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 2)
+            ds = registry.get_dimmer_state(key)
+            assert ds is not None
+            assert ds.level_percent == 100
+            assert ds.internal_value_code == "299"
+            cb.assert_not_called()
+        finally:
+            await bus.stop()
+
+    @pytest.mark.asyncio
+    async def test_timeout_leaves_channel_unknown(self) -> None:
+        registry = DeviceRegistry()
+        registry.register_module("10.10.1.40", DeviceType.DIMMER)
+
+        bus = UDPBus(GatewayConfig(simulated_mode=True, reply_timeout_ms=50))
+        await bus.start()
+        try:
+            inst = _make_installation([
+                {
+                    "ip": "10.10.1.40",
+                    "type": "dimmer",
+                    "mac": "00:24:77:52:ad:01",
+                    "channels": [
+                        {"ch": 1, "name": "Timeout", "active": True, "max_watt": 100},
+                    ],
+                },
+            ])
+            result = await sweep_dimmer_states(
+                bus, registry, inst, inter_query_delay_s=0, reply_timeout_ms=50,
+            )
+            assert result == 0
+            key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 1)
+            assert registry.get_dimmer_state(key) is None
+        finally:
+            await bus.stop()
+
+    @pytest.mark.asyncio
+    async def test_multi_channel_sweep(self) -> None:
+        registry = DeviceRegistry()
+        registry.register_module("10.10.1.40", DeviceType.DIMMER)
+
+        bus = UDPBus(GatewayConfig(simulated_mode=True, reply_timeout_ms=500))
+        bus.register_simulated_reply(b"I0000000", b"I0154000")
+        bus.register_simulated_reply(b"I2000000", b"I0154299")
+        await bus.start()
+        try:
+            inst = _make_installation([
+                {
+                    "ip": "10.10.1.40",
+                    "type": "dimmer",
+                    "mac": "00:24:77:52:ad:01",
+                    "channels": [
+                        {"ch": 0, "name": "A", "active": True, "max_watt": 100},
+                        {"ch": 2, "name": "B", "active": True, "max_watt": 100},
+                    ],
+                },
+            ])
+            result = await sweep_dimmer_states(
+                bus, registry, inst, inter_query_delay_s=0,
+            )
+            assert result == 2
+            ds0 = registry.get_dimmer_state(
+                DeviceKey(DeviceType.DIMMER, "10.10.1.40", 0),
+            )
+            ds2 = registry.get_dimmer_state(
+                DeviceKey(DeviceType.DIMMER, "10.10.1.40", 2),
+            )
+            assert ds0 is not None and ds0.level_percent == 0
+            assert ds2 is not None and ds2.level_percent == 100
+        finally:
+            await bus.stop()
+
+    @pytest.mark.asyncio
+    async def test_skips_inactive_channels(self) -> None:
+        registry = DeviceRegistry()
+        registry.register_module("10.10.1.40", DeviceType.DIMMER)
+
+        bus = UDPBus(GatewayConfig(simulated_mode=True, reply_timeout_ms=500))
+        bus.register_simulated_reply(b"I0000000", b"I0154000")
+        bus.register_simulated_reply(b"I1000000", b"I0154150")
+        await bus.start()
+        try:
+            inst = _make_installation([
+                {
+                    "ip": "10.10.1.40",
+                    "type": "dimmer",
+                    "mac": "00:24:77:52:ad:01",
+                    "channels": [
+                        {"ch": 0, "name": "Active", "active": True, "max_watt": 100},
+                        {"ch": 1, "name": "Ch 1", "active": False, "max_watt": 100},
+                    ],
+                },
+            ])
+            result = await sweep_dimmer_states(
+                bus, registry, inst, inter_query_delay_s=0,
+            )
+            assert result == 1
+            assert registry.get_dimmer_state(
+                DeviceKey(DeviceType.DIMMER, "10.10.1.40", 0),
+            ) is not None
+            assert registry.get_dimmer_state(
+                DeviceKey(DeviceType.DIMMER, "10.10.1.40", 1),
+            ) is None
+        finally:
+            await bus.stop()
+
+    @pytest.mark.asyncio
+    async def test_wrong_channel_reply_not_accepted(self) -> None:
+        """Reply for a different channel must not seed the queried channel."""
+        registry = DeviceRegistry()
+        registry.register_module("10.10.1.40", DeviceType.DIMMER)
+
+        bus = UDPBus(GatewayConfig(simulated_mode=True, reply_timeout_ms=50))
+        # Query I1000000 but simulated reply is for channel 0 only.
+        bus.register_simulated_reply(b"I1000000", b"I0154000")
+        await bus.start()
+        try:
+            inst = _make_installation([
+                {
+                    "ip": "10.10.1.40",
+                    "type": "dimmer",
+                    "mac": "00:24:77:52:ad:01",
+                    "channels": [
+                        {"ch": 1, "name": "Mismatch", "active": True, "max_watt": 100},
+                    ],
+                },
+            ])
+            result = await sweep_dimmer_states(
+                bus, registry, inst, inter_query_delay_s=0, reply_timeout_ms=50,
+            )
+            assert result == 0
+            assert registry.get_dimmer_state(
+                DeviceKey(DeviceType.DIMMER, "10.10.1.40", 1),
             ) is None
         finally:
             await bus.stop()

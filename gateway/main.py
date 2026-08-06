@@ -16,7 +16,7 @@ from gateway.device_registry import DeviceRegistry
 from gateway.ha_discovery import HaDiscoveryAdvertiser, HaDiscoveryConfig
 from gateway.installation import InstallationConfig
 from gateway.module_metadata import ModuleMetadataCache
-from gateway.state_poll import sweep_relay_states
+from gateway.state_poll import sweep_dimmer_states, sweep_relay_states
 from gateway.types import DeviceType
 from gateway.rest_shim import RESTShim
 from gateway.udp_bus import UDPBus
@@ -83,10 +83,9 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
             )
         except Exception:
             log.warning("Module metadata prefetch failed; cache is empty at startup")
-        # Seed relay channel state via UDP I<CH>00 status sweep so the first
-        # REST/WS snapshot reflects physical relay outputs. Dimmers stay
-        # unknown until the first command or spontaneous UDP reply (no on-demand
-        # dimmer status poll per RE 2026-06-12).
+        # Seed actuator channel state via UDP status sweeps so the first
+        # REST/WS snapshot reflects physical outputs (relay I<CH>00, dimmer
+        # I{ch}000000).
         try:
             await sweep_relay_states(
                 bus,
@@ -98,6 +97,17 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
             log.warning(
                 "Relay status poll failed; relay channel state may be stale at startup"
             )
+        try:
+            await sweep_dimmer_states(
+                bus,
+                registry,
+                cfg.installation,
+                reply_timeout_ms=cfg.reply_timeout_ms,
+            )
+        except Exception:
+            log.warning(
+                "Dimmer status poll failed; dimmer channel state may be stale at startup"
+            )
 
     api = GatewayAPI(bus, registry, cfg, metadata_cache=meta_cache, health=health)
 
@@ -107,20 +117,32 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         except Exception:
             log.warning("Pushbutton persist (startup) failed; devices.json may lack buttons")
 
-    async def _safe_relay_sweep(target_inst: InstallationConfig) -> None:
+    async def _safe_actuator_sweep(target_inst: InstallationConfig) -> None:
+        count = 0
         try:
-            count = await sweep_relay_states(
+            count += await sweep_relay_states(
                 bus,
                 registry,
                 target_inst,
                 reply_timeout_ms=cfg.reply_timeout_ms,
             )
-            if count:
-                await api._broadcast(api._build_snapshot())
         except Exception:
             log.warning(
                 "Relay status poll (post-discovery) failed; relay state may be stale"
             )
+        try:
+            count += await sweep_dimmer_states(
+                bus,
+                registry,
+                target_inst,
+                reply_timeout_ms=cfg.reply_timeout_ms,
+            )
+        except Exception:
+            log.warning(
+                "Dimmer status poll (post-discovery) failed; dimmer state may be stale"
+            )
+        if count:
+            await api._broadcast(api._build_snapshot())
 
     async def _safe_meta_refresh(target_inst: InstallationConfig) -> None:
         try:
@@ -143,7 +165,7 @@ async def run_gateway(config: GatewayConfig | None = None) -> None:
         cfg.installation = new_inst
         for mc in new_inst.modules:
             registry.register_module(mc.ip, mc.type)
-        asyncio.create_task(_safe_relay_sweep(new_inst))
+        asyncio.create_task(_safe_actuator_sweep(new_inst))
         if meta_cache is not None:
             asyncio.create_task(_safe_meta_refresh(new_inst))
         health.set_installation_loaded(True)

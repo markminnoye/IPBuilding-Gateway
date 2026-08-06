@@ -20,6 +20,13 @@ mean a bump in the other.
 Backward compatibility is the norm — an add-on version keeps working
 with the current companion until a `### Breaking:` entry says otherwise.
 
+## [1.6.1] - 2026-08-06
+
+### Added
+- At startup (and after discovery), the gateway reads current **dimmer
+  levels** from each active channel so Home Assistant sees the real
+  brightness immediately — not only after the first change.
+
 ## [1.6.0] - 2026-07-16
 
 ### Added

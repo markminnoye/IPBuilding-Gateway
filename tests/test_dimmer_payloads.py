@@ -1,5 +1,7 @@
 """Tests for gateway.payloads.dimmer."""
 
+import pytest
+
 from gateway.models import DimmerCommand
 from gateway.payloads.dimmer import (
     decode_dimmer_payload,
@@ -9,6 +11,7 @@ from gateway.payloads.dimmer import (
     encode_dim_start,
     encode_dim_stop,
     encode_dim_toggle,
+    encode_dimmer_status_poll,
 )
 
 
@@ -74,6 +77,29 @@ def test_encode_dim_command():
 
 def test_encode_dim_off():
     assert encode_dim_off(1) == b"C1991030"
+
+
+def test_encode_dimmer_status_poll_channel_zero():
+    assert encode_dimmer_status_poll(0) == b"I0000000"
+
+
+def test_encode_dimmer_status_poll_channel_two():
+    assert encode_dimmer_status_poll(2) == b"I2000000"
+
+
+def test_encode_dimmer_status_poll_invalid_channel():
+    with pytest.raises(ValueError, match="0–7"):
+        encode_dimmer_status_poll(8)
+    with pytest.raises(ValueError, match="0–7"):
+        encode_dimmer_status_poll(-1)
+
+
+def test_decode_dimmer_status_poll_query():
+    parsed = decode_dimmer_payload(b"I1000000")
+    assert parsed is not None
+    assert parsed["family"] == "dimmer_status_poll"
+    assert parsed["channel"] == 1
+    assert parsed["action"] == "status_query"
 
 
 # --- Button / ramp dialect (downstream control) -----------------------------

@@ -7,6 +7,7 @@ from gateway.payloads.dimmer import (
     encode_dim_start,
     encode_dim_stop,
     encode_dim_toggle,
+    encode_dimmer_status_poll,
 )
 from gateway.payloads.input import decode_input_payload, encode_input_poll
 from gateway.payloads.relay import (
@@ -22,6 +23,7 @@ __all__ = [
     "encode_dim_start",
     "encode_dim_stop",
     "encode_dim_toggle",
+    "encode_dimmer_status_poll",
     "decode_input_payload",
     "encode_input_poll",
     "decode_relay_payload",
