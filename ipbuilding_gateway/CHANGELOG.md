@@ -8,22 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.6.2] - 2026-08-06
 
 ### Added
-- **Learn unknown wall buttons on first press.** When you press a physical
-  button that is not yet in `devices.json`, the gateway adds it, notifies
-  clients (`device_added`), and then forwards the normal `button_event` so
-  Home Assistant can create the entity immediately.
+- **Unknown wall buttons appear after the first press.** If you press a
+  physical button that is not yet in your installation, the gateway adds it
+  and notifies Home Assistant so the entity can show up immediately
+  (companion **1.8.1+**).
 
 ### Changed
-- Device snapshots list wall buttons from `devices.json` (with soft
-  retention). Live module data only enriches names; buttons are no longer
-  dropped when they are missing from a module refresh.
+- **Wall buttons follow your saved installation.** The gateway lists buttons
+  from `devices.json` first. Module data only fills in missing names when
+  available. Buttons you configured (manual edit, restore, or IPA import)
+  stay visible even when the input module has no live button list — typical
+  for older installations without a modern module web API.
 
 ## [1.6.1] - 2026-08-06
 
 ### Added
-- At startup (and after discovery), the gateway reads current **dimmer
-  levels** from each active channel so Home Assistant sees the real
-  brightness immediately — not only after the first change.
+- **Dimmer brightness right after startup.** When the gateway starts (and
+  after discovery), it reads the current level of each active dimmer so
+  Home Assistant shows the real brightness immediately — not only after the
+  next change.
 
 ## [1.6.0] - 2026-07-16
 
