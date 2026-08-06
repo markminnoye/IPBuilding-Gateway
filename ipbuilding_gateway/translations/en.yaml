@@ -47,7 +47,9 @@ configuration:
     fields:
       expose_inactive_channels:
         name: Show inactive channels
-        description: Show unused relay/dimmer channels (active: false). Off by default — the Web UI always lists all channels.
+        description: >-
+          Show unused relay/dimmer channels (active: false). Off by default —
+          the Web UI always lists all channels.
       multi_press:
         name: Detect double/triple press
         description: >-

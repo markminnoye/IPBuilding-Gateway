@@ -47,7 +47,9 @@ configuration:
     fields:
       expose_inactive_channels:
         name: Inactieve kanalen tonen
-        description: Toon ongebruikte relay-/dimmer-kanalen (active: false). Standaard uit — de Web UI toont altijd alle kanalen.
+        description: >-
+          Toon ongebruikte relay-/dimmer-kanalen (active: false). Standaard uit —
+          de Web UI toont altijd alle kanalen.
       multi_press:
         name: Dubbel- en driedubbelklik
         description: >-
