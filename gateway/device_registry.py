@@ -99,9 +99,10 @@ class DeviceRegistry:
     ) -> None:
         """Set dimmer state without firing state-changed callbacks.
 
-        Reserved for future bootstrap paths. Dimmers currently have no
-        on-demand status poll; level is unknown until the first UDP event.
-        Unlike ``handle_packet`` this never broadcasts.
+        Used by the UDP dimmer status poll at startup
+        (``I{ch}000000`` → ``I0154{ch}{vv}``, RE 2026-08-05). Unlike
+        ``handle_packet`` this never broadcasts; subscribers are wired in
+        later when the gateway API is created.
         """
         if level_percent is None:
             raise ValueError("level_percent must not be None")

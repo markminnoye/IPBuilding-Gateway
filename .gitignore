@@ -1,5 +1,8 @@
 .DS_Store
 
+# Per-install / customer support notes (local only)
+.local-support/
+
 # skills CLI: multi-agent symlink wrappers (we houden alleen .agents/skills)
 .adal/
 .augment/

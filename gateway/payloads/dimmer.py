@@ -21,6 +21,12 @@ Reply frames are 8 ASCII bytes ``I0154<C><VV>`` where:
 The all-nines code ``999`` is an idle/poll heartbeat — it carries no channel
 and no setpoint, so it must not be interpreted as a level.
 
+On-demand per-channel status query (IPBox / IPBuilding 03.07 controle):
+``I{ch}000000`` (8 ASCII bytes, channel digit 0–7) → reply ``I0154{ch}{vv}``.
+Distinct from the 5-byte idle keepalive ``I9900`` (always ``I0154999``) and
+from relay-style ``I<CH>00`` (no channel select on dimmer). Evidence:
+``resources_and_docs/evidence/2026-08-05_dimmer_I_ch_000000_status_poll.md``.
+
 Confirmed against the REST↔UDP correlation for the Bureau dimmer (ch1, comp
 572): ``OFF→I0154100``, ``DIM 30→I0154130``, ``DIM 70→I0154170``,
 ``DIM 100→I0154199``, idle ``→I0154999``.  See
@@ -56,6 +62,7 @@ from gateway.models import DimmerCommand, DimmerStatus
 
 _DIMMER_CMD_RE = re.compile(r"^(?P<prefix>[SC])(?P<channel>\d)(?P<value>\d{2})1030$")
 _DIMMER_IDLE_RE = re.compile(r"^I9900$")
+_DIMMER_STATUS_POLL_RE = re.compile(r"^I(?P<channel>[0-7])000000$")
 _DIMMER_REPLY_RE = re.compile(r"^I01(?P<family>54)(?P<value_code>\d{3})$")
 
 # All-nines reply code = idle/poll heartbeat, not a per-channel setpoint.
@@ -137,6 +144,16 @@ def decode_dimmer_payload(data: bytes) -> dict[str, Any] | None:
     if _DIMMER_IDLE_RE.match(text):
         return {"family": "dimmer_poll", "action": "idle", "raw": text}
 
+    m = _DIMMER_STATUS_POLL_RE.match(text)
+    if m:
+        return {
+            "family": "dimmer_status_poll",
+            "action": "status_query",
+            "channel": int(m.group("channel")),
+            "direction": "hub_to_dimmer",
+            "raw": text,
+        }
+
     # Input-module peer-to-peer dialect — decoded for observability only.
     m = _INPUT_TOGGLE_RE.match(text)
     if m:
@@ -179,6 +196,17 @@ def decode_dimmer_status(data: bytes) -> DimmerStatus | None:
         device_type=parsed.get("device_type", "01"),
         family_constant=parsed.get("family_constant", "54"),
     )
+
+
+def encode_dimmer_status_poll(channel: int) -> bytes:
+    """Encode hub→dimmer on-demand status read: ``I{ch}000000``.
+
+    Reply is ``I0154{ch}{vv}`` with the live level for that channel.
+    Channel must be 0–7. See RE evidence 2026-08-05.
+    """
+    if not 0 <= channel <= 7:
+        raise ValueError(f"dimmer channel must be 0–7, got {channel}")
+    return f"I{channel}000000".encode("ascii")
 
 
 def encode_dim_command(cmd: DimmerCommand) -> bytes:
