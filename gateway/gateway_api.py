@@ -47,6 +47,7 @@ from gateway.discovery import fetch_module_backup_channels, resolve_module_model
 from gateway.health import GatewayHealthMonitor
 from gateway.installation import (
     InstallationConfig,
+    PushbuttonConfig,
     module_by_northbound_id,
     northbound_module_id,
 )
@@ -184,6 +185,8 @@ class GatewayAPI:
         # hold_threshold_s elapses. Only classification lives here — direction
         # and dim-loop logic belong in HA (see plan §6).
         self._button_state: dict[str, _ButtonState] = {}
+        # Hardware ids currently being persisted by learn-on-press (dedupe).
+        self._learning_button_ids: set[str] = set()
         lock_timeout_s = (
             config.discovery.lock_timeout_s if config.discovery else 15.0
         )
@@ -953,6 +956,102 @@ class GatewayAPI:
 
     _MULTI_ACTION = {1: "single_press", 2: "double_press", 3: "triple_press"}
 
+    def _maybe_learn_button(self, key: DeviceKey, id_hex: str) -> None:
+        """Persist an unknown button stub and notify clients (learn-on-press).
+
+        Canonical inventory lives in ``devices.json`` pushbuttons. A first
+        press for an unknown hardware id appends an ``active: true`` stub
+        with empty name/room under the parent input module, broadcasts
+        ``device_added`` (button shape), then the caller continues with the
+        normal ``button_event`` path.
+        """
+        installation = self._cfg.installation
+        if installation is None:
+            return
+        if installation.pushbutton_by_id(id_hex) is not None:
+            return
+        if id_hex in self._learning_button_ids:
+            return
+
+        parent = installation.module_by_ip(key.module_ip)
+        if parent is None or parent.type != DeviceType.INPUT:
+            log.info(
+                "Unknown button %s from %s: parent input module not in "
+                "devices.json; not learning",
+                id_hex,
+                key.module_ip,
+            )
+            return
+
+        mac = (parent.mac or "").lower()
+        self._learning_button_ids.add(id_hex)
+
+        def mutate(raw: dict) -> dict:
+            inst = InstallationConfig._parse(raw)
+            if inst.pushbutton_by_id(id_hex) is not None:
+                return installation_to_raw_dict(inst)
+            target = inst.module_by_mac(mac) if mac else None
+            if target is None:
+                target = inst.module_by_ip(key.module_ip)
+            if target is None or target.type != DeviceType.INPUT:
+                return installation_to_raw_dict(inst)
+            target.pushbuttons.append(
+                PushbuttonConfig(
+                    id=id_hex,
+                    module_id=(target.mac or mac).lower(),
+                    name="",
+                    room="",
+                    active=True,
+                )
+            )
+            return installation_to_raw_dict(inst)
+
+        try:
+            ok, _new_raw = self._writer.read_modify_write(mutate)
+        except Exception:
+            self._learning_button_ids.discard(id_hex)
+            log.warning(
+                "Failed to learn button %s into devices.json", id_hex, exc_info=True,
+            )
+            return
+
+        if not ok:
+            self._learning_button_ids.discard(id_hex)
+            log.warning("devices.json locked; button %s not learned", id_hex)
+            return
+
+        try:
+            self._cfg.installation = InstallationConfig.load(self._cfg.devices_file)
+        except Exception:
+            log.warning(
+                "Learned button %s on disk but failed to reload installation",
+                id_hex,
+                exc_info=True,
+            )
+        finally:
+            # Drop the in-flight guard once the write finished so a later
+            # operator remove + press can re-learn in the same process.
+            self._learning_button_ids.discard(id_hex)
+
+        module_id = northbound_module_id(parent.mac, parent.ip)
+        asyncio.create_task(
+            self._broadcast(
+                {
+                    "type": "device_added",
+                    "semantic_type": "button",
+                    "id": id_hex,
+                    "module_id": module_id,
+                    "module_ip": parent.ip,
+                    "device_type": "input",
+                    "name": "",
+                    "room": "",
+                    "active": True,
+                    "channel": None,
+                }
+            )
+        )
+        log.info("Learned button %s on module %s (%s)", id_hex, module_id, parent.ip)
+
     def _on_button_event(self, key: DeviceKey, evt: Any) -> None:
         """Classify a raw button event and broadcast press/gestures/release.
 
@@ -967,11 +1066,14 @@ class GatewayAPI:
         """
         if not self._cfg.claims_input_modules:
             return
-        id_hex = (evt.id_hex or "").lower()
+        id_hex = normalize_button_hardware_id(evt.id_hex or "")
         action = (evt.action or "").lower()
         if not id_hex or action not in ("press", "release"):
             log.debug("Button event ignored: id=%s action=%s", id_hex, action)
             return
+
+        if action == "press":
+            self._maybe_learn_button(key, id_hex)
 
         state = self._button_state.setdefault(id_hex, _ButtonState())
 
@@ -1256,36 +1358,44 @@ class GatewayAPI:
 
             if mc.type == DeviceType.INPUT and self._cfg.claims_input_modules:
                 meta = self._meta_cache.get(mc.mac)
+                meta_by_id: dict[str, dict[str, Any]] = {}
                 if meta is not None and meta.buttons:
                     for btn in meta.buttons:
                         raw_id = btn.get("id")
                         if not raw_id:
                             continue
-                        device_id = normalize_button_hardware_id(str(raw_id))
+                        meta_by_id[normalize_button_hardware_id(str(raw_id))] = btn
+
+                for cfg_btn in mc.pushbuttons:
+                    if not cfg_btn.active and not show_inactive:
+                        continue
+                    device_id = normalize_button_hardware_id(cfg_btn.id)
+                    wire = meta_by_id.get(device_id)
+                    meta_name = ""
+                    meta_room = ""
+                    meta_channel = None
+                    if wire is not None:
                         meta_name = (
-                            btn.get("descr")
-                            or btn.get("name")
-                            or f"Button {device_id}"
+                            wire.get("descr") or wire.get("name") or ""
                         )
-                        meta_room = btn.get("gr") or btn.get("room") or ""
-                        cfg_btn = (
-                            installation.pushbutton_by_id(device_id)
-                            if installation
-                            else None
-                        )
-                        entry: dict[str, Any] = {
-                            "id": device_id,
-                            "module_id": module_id,
-                            "module_ip": mc.ip,
-                            "name": cfg_btn.name or meta_name if cfg_btn else meta_name,
-                            "room": cfg_btn.room if cfg_btn is not None else meta_room,
-                            "semantic_type": "button",
-                            "device_type": "input",
-                            "channel": cfg_btn.channel if cfg_btn is not None else btn.get("index"),
-                        }
-                        if cfg_btn is not None:
-                            entry["active"] = cfg_btn.active
-                        devices.append(entry)
+                        meta_room = wire.get("gr") or wire.get("room") or ""
+                        meta_channel = wire.get("index")
+                    entry = {
+                        "id": device_id,
+                        "module_id": module_id,
+                        "module_ip": mc.ip,
+                        "name": cfg_btn.name or meta_name or f"Button {device_id}",
+                        "room": cfg_btn.room or meta_room,
+                        "semantic_type": "button",
+                        "device_type": "input",
+                        "channel": (
+                            cfg_btn.channel
+                            if cfg_btn.channel is not None
+                            else meta_channel
+                        ),
+                        "active": cfg_btn.active,
+                    }
+                    devices.append(entry)
 
         return devices
 

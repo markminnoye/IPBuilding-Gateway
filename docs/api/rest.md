@@ -243,15 +243,18 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `level` | integer | Dimmer percentage 0-100 (dimmer only) |
 
 **Input modules (`device_type: "input"`)** carry one entry per physical button
-fetched via HTTP `getButtons` on the IP1100PoE. There is no `state`/`max_watt`
-— buttons are event-only. `channel` is present but **read-only** (derived from
-the module's physical wiring, not PATCH-able). The `id` matches the `id` field of the
-`button_event` WebSocket frame so the companion can route presses to the right
-entity. Buttons appear in the snapshot only after `getButtons` has been fetched
-(automatic at startup + after `POST /api/v1/modules/refresh` or a discovery
-sweep). When a pushbutton is only known from live metadata (not yet in
-`devices.json`), `active` is omitted. Multi-press is a **global** add-on
-option — see `GET /api/v1/status` (`multi_press` / `multi_press_window_ms`).
+from `devices.json` `modules[].pushbuttons[]` (canonical inventory). Cached
+HTTP `getButtons` on the IP1100PoE only **enriches** empty `name` / `room` /
+`channel` when the same normalized hardware id is present. Live presses arrive
+as `button_event` on the WebSocket; a first press for an unknown id is
+**learned** into `devices.json` and announced via `device_added`
+(`semantic_type: "button"`) before the `button_event`. There is no
+`state`/`max_watt` — buttons are event-only. `channel` is present but
+**read-only**. The `id` matches `button_event.id`. When `name` is empty on
+disk, the snapshot may show a display fallback `Button {id}` (not written
+back). Soft retention: pushbuttons are never auto-removed when absent from
+`getButtons`. Multi-press is a **global** add-on option — see
+`GET /api/v1/status` (`multi_press` / `multi_press_window_ms`).
 
 **Inactive channels** (`active: false` in `devices.json`) are **omitted** from
 the list unless add-on `expose_inactive_channels` is enabled or the client
