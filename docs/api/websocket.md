@@ -246,9 +246,10 @@ Typical sequences:
 - Double tap (`multi_press: true`): `press` → `release` → `press` → `release` → (window) → `double_press` (+ `count`)
 - Long press: `press` → `long_press` → `release` (no `single_press` / multi-press)
 
-### `device_added` -- new module detected
+### `device_added` -- new module or pushbutton detected
 
-Emitted by the passive ARP monitor or after a forced/init discovery sweep. The module has been written to `devices.json` with `active: false` and `room: "Unconfigured"`.
+**Module** (passive ARP / discovery sweep). The module has been written to
+`devices.json` with `active: false` and `room: "Unconfigured"`.
 
 ```json
 {
@@ -264,6 +265,30 @@ Emitted by the passive ARP monitor or after a forced/init discovery sweep. The m
   "source": "arp"
 }
 ```
+
+**Pushbutton** (learn-on-press). Emitted when a physical press carries a
+hardware id not yet in `devices.json`. The gateway appends an
+`active: true` stub (empty `name`/`room`) under the parent input module,
+then emits this frame **before** the matching `button_event`. Clients
+should create the button entity immediately so the first press is not
+lost. Distinguish from module discovery via `semantic_type: "button"`.
+
+```json
+{
+  "type": "device_added",
+  "semantic_type": "button",
+  "id": "2f8185190000df",
+  "module_id": "00:24:77:52:ad:aa",
+  "module_ip": "10.10.1.50",
+  "device_type": "input",
+  "name": "",
+  "room": "",
+  "active": true,
+  "channel": null
+}
+```
+
+`id` is the normalized 14-hex hardware id (same form as `button_event.id`).
 
 ### `device_removed` -- module not seen for N polls
 

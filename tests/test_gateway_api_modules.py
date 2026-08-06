@@ -283,6 +283,9 @@ class TestBuildDeviceList:
             {
                 "ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa",
                 "channels": [],
+                "pushbuttons": [
+                    {"id": "2f8185190000df", "name": "", "room": "", "active": True},
+                ],
             }
         ])
         cache = ModuleMetadataCache()
@@ -307,9 +310,8 @@ class TestBuildDeviceList:
         assert btn["module_ip"] == "10.10.1.50"
         assert btn["name"] == "Badkamer knop"
         assert btn["room"] == "1e verdieping"
-        # 'active' is intentionally omitted for input-buttons so the
-        # companion treats them as enabled-by-default.
-        assert "active" not in btn
+        assert btn["channel"] == 0
+        assert btn["active"] is True
         # multi_press is global (status), not per button device.
         assert "multi_press" not in btn
         assert "multi_press_window_ms" not in btn
@@ -355,14 +357,11 @@ class TestBuildDeviceList:
                 "channels": [],
             }
         ])
-        api = _make_api(inst)  # no cache
+        api = _make_api(inst)  # no cache, no pushbuttons
         assert api._build_device_list() == []
 
-    def test_input_button_omits_active_field(self) -> None:
-        """Regression: input-buttons must NOT carry an 'active' key in
-        _build_device_list so the companion treats them as
-        enabled-by-default.
-        """
+    def test_input_button_from_meta_only_not_in_device_list(self) -> None:
+        """Buttons appear only from devices.json pushbuttons, not meta alone."""
         inst = _make_installation([
             {
                 "ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa",
@@ -376,9 +375,31 @@ class TestBuildDeviceList:
             ]
         )
         api = _make_api(inst, cache=cache)
+        assert api._build_device_list() == []
+
+    def test_disk_only_button_without_meta(self) -> None:
+        """Soft retention: pushbutton on disk appears even without getButtons."""
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa",
+                "channels": [],
+                "pushbuttons": [
+                    {
+                        "id": "2f8185190000df",
+                        "name": "",
+                        "room": "",
+                        "active": True,
+                    },
+                ],
+            }
+        ])
+        api = _make_api(inst)  # no meta cache
         devices = api._build_device_list()
         assert len(devices) == 1
-        assert "active" not in devices[0]
+        assert devices[0]["id"] == "2f8185190000df"
+        assert devices[0]["name"] == "Button 2f8185190000df"
+        assert devices[0]["active"] is True
+        assert devices[0]["room"] == ""
 
 
 class TestBuildSnapshot:

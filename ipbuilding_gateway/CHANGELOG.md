@@ -20,6 +20,19 @@ mean a bump in the other.
 Backward compatibility is the norm — an add-on version keeps working
 with the current companion until a `### Breaking:` entry says otherwise.
 
+## [Unreleased]
+
+### Added
+- **Learn unknown wall buttons on first press.** When you press a physical
+  button that is not yet in `devices.json`, the gateway adds it, notifies
+  clients (`device_added`), and then forwards the normal `button_event` so
+  Home Assistant can create the entity immediately.
+
+### Changed
+- Device snapshots list wall buttons from `devices.json` (with soft
+  retention). Live module data only enriches names; buttons are no longer
+  dropped when they are missing from a module refresh.
+
 ## [1.6.1] - 2026-08-06
 
 ### Added
