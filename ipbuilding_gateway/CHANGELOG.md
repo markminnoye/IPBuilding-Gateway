@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-08-23
+
 ### Added
 - **Field-bus debug logging.** Set **Logging → Log level** to `debug` to
   record keepalive TX/RX, unmatched replies during status polls, and
