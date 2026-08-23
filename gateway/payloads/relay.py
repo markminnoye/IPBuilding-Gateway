@@ -133,6 +133,8 @@ def encode_relay_status_poll(channel: int) -> bytes:
     """Encode hub→relay on-demand status read (IPBox cold-boot sweep format).
 
     Query ``I<CH>00`` (5 bytes ASCII) returns ``I000<CH><state>`` where
-    ``0100`` = on and ``0000`` = off.  See RE evidence 2026-06-12.
+    ``0100`` = on, ``0000`` = off.  Other quartets (e.g. ``0015``, ``0115``
+    seen on older Nolf hardware) decode as ``unknown``.  See RE evidence
+    2026-06-12 and 2026-08-08.
     """
     return f"I{channel:02d}00".encode("ascii")

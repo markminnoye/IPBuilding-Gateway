@@ -10,7 +10,9 @@ from gateway.payloads.dimmer import decode_dimmer_payload
 from gateway.payloads.input import decode_input_payload
 from gateway.payloads.relay import decode_relay_payload
 from gateway.types import DeviceKey, DeviceType
-from gateway.udp_bus import UDPPacket
+from gateway.udp_bus import UDPPacket, format_payload
+
+_RECOGNIZED_RELAY_STATE_CODES = frozenset({"0000", "0100"})
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +54,9 @@ class DeviceRegistry:
     _state_callbacks: list[StateChangeCallback] = field(default_factory=list)
     _event_callbacks: list[EventCallback] = field(default_factory=list)
     _module_ip_type: dict[str, DeviceType] = field(default_factory=dict)
+    _seen_unrecognized_state_codes: set[tuple[str, int, str]] = field(
+        default_factory=set
+    )
 
     def register_module(self, module_ip: str, device_type: DeviceType) -> None:
         """Associate a module IP with a device type for packet routing."""
@@ -90,6 +95,7 @@ class DeviceRegistry:
         later when the gateway API is created.
         """
         self._relay_states[key] = RelayState(state=state, state_code=state_code)
+        self._warn_unrecognized_state_code(key.module_ip, key.channel, state_code)
 
     def seed_dimmer_state(
         self,
@@ -164,9 +170,30 @@ class DeviceRegistry:
         elif dtype == DeviceType.INPUT:
             self._handle_input(src, pkt.data)
 
+    def _warn_unrecognized_state_code(
+        self, module_ip: str, channel: int, state_code: str
+    ) -> None:
+        if not state_code or state_code in _RECOGNIZED_RELAY_STATE_CODES:
+            return
+        key = (module_ip, channel, state_code)
+        if key in self._seen_unrecognized_state_codes:
+            return
+        self._seen_unrecognized_state_codes.add(key)
+        log.warning(
+            "Relay %s ch%d: unrecognized state_code=%s",
+            module_ip,
+            channel,
+            state_code,
+        )
+
+    def _log_undecoded(self, module_ip: str, data: bytes) -> None:
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug("undecoded RX from %s: %s", module_ip, format_payload(data))
+
     def _handle_relay(self, module_ip: str, data: bytes) -> None:
         parsed = decode_relay_payload(data)
         if not parsed:
+            self._log_undecoded(module_ip, data)
             return
         family = parsed.get("family")
         if family == "relay_status":
@@ -177,13 +204,20 @@ class DeviceRegistry:
             old = self._relay_states.get(key)
             new_rs = RelayState(state=new_state, state_code=new_code)
             self._relay_states[key] = new_rs
-            if old is None or old.state != new_state:
+            self._warn_unrecognized_state_code(module_ip, ch, new_code)
+            if (
+                old is None
+                or old.state != new_state
+                or old.state_code != new_code
+            ):
                 log.info(
-                    "Relay %s ch%d: %s -> %s",
+                    "Relay %s ch%d: %s (%s) -> %s (%s)",
                     module_ip,
                     ch,
                     old.state if old else "unknown",
+                    old.state_code if old else "",
                     new_state,
+                    new_code,
                 )
                 self._fire_state_changed(key, old, new_rs)
         elif family == "relay_reply_candidate":
@@ -192,6 +226,7 @@ class DeviceRegistry:
     def _handle_dimmer(self, module_ip: str, data: bytes) -> None:
         parsed = decode_dimmer_payload(data)
         if not parsed:
+            self._log_undecoded(module_ip, data)
             return
         family = parsed.get("family")
         if family == "dimmer_status_reply":
@@ -222,6 +257,7 @@ class DeviceRegistry:
     def _handle_input(self, module_ip: str, data: bytes) -> None:
         parsed = decode_input_payload(data)
         if not parsed:
+            self._log_undecoded(module_ip, data)
             return
         family = parsed.get("family")
         if family == "input_button_event":

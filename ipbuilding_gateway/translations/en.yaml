@@ -94,7 +94,7 @@ configuration:
     fields:
       log_level:
         name: Log level
-        description: debug, info, warning, or error.
+        description: debug, info, warning, or error. debug also logs field-bus TX/RX (keepalives, commands, unmatched replies).
 network:
   8080/tcp: API and web UI — WebSocket /ws and REST /api/v1/ (companion integration; web UI via Ingress).
   30200/tcp: IPBox REST compatibility (only used when enabled under Network → IPBox REST compatibility).

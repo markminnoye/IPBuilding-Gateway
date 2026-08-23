@@ -16,6 +16,27 @@ log = logging.getLogger(__name__)
 
 ReplyCallback = Callable[["UDPPacket"], None]
 
+_PAYLOAD_LOG_MAX = 64
+
+
+def format_payload(data: bytes) -> str:
+    """Compact ASCII (or hex) payload for debug logs."""
+    try:
+        text = data.decode("ascii")
+    except UnicodeDecodeError:
+        hexed = data.hex()
+        if len(data) > _PAYLOAD_LOG_MAX:
+            return f"hex:{hexed[: _PAYLOAD_LOG_MAX * 2]}…(+{len(data) - _PAYLOAD_LOG_MAX})"
+        return f"hex:{hexed}"
+    if text.isprintable():
+        if len(text) > _PAYLOAD_LOG_MAX:
+            return f"{text[:_PAYLOAD_LOG_MAX]}…(+{len(text) - _PAYLOAD_LOG_MAX})"
+        return text
+    hexed = data.hex()
+    if len(data) > _PAYLOAD_LOG_MAX:
+        return f"hex:{hexed[: _PAYLOAD_LOG_MAX * 2]}…(+{len(data) - _PAYLOAD_LOG_MAX})"
+    return f"hex:{hexed}"
+
 # Steady-state poll payloads per module type (RE Sprint 1-5).
 # Relay: P0000 keepalive (pulse echo only). Per-channel status at startup uses
 # I<CH>00 sweep via gateway.state_poll (not the poll loop).
@@ -177,7 +198,7 @@ class UDPBus:
                 if not poll_payload:
                     continue
                 try:
-                    await self.send_command(mc.ip, poll_payload)
+                    await self._send_keepalive(mc.ip, poll_payload)
                 except Exception:
                     log.warning("Poll failed for %s (%s)", module_type, mc.ip, exc_info=True)
         else:
@@ -190,9 +211,24 @@ class UDPBus:
                 if not poll_payload:
                     continue
                 try:
-                    await self.send_command(module_ip, poll_payload)
+                    await self._send_keepalive(module_ip, poll_payload)
                 except Exception:
                     log.warning("Poll failed for %s (%s)", module_type, module_ip, exc_info=True)
+
+    async def _send_keepalive(self, module_ip: str, poll_payload: bytes) -> None:
+        """Send a steady-state poll tick; at DEBUG wait briefly for an echo."""
+        debug = log.isEnabledFor(logging.DEBUG)
+        if debug:
+            log.debug("TX %s keepalive %s", module_ip, format_payload(poll_payload))
+        after_ts = time.monotonic()
+        await self.send_command(module_ip, poll_payload)
+        if not debug:
+            return
+        pkt = await self.correlate_reply(module_ip=module_ip, after_ts=after_ts)
+        if pkt is None:
+            log.debug("RX %s keepalive no echo", module_ip)
+        else:
+            log.debug("RX %s keepalive %s", module_ip, format_payload(pkt.data))
 
     def register_simulated_reply(self, command: bytes, reply: bytes) -> None:
         self._simulated_replies[command] = reply
@@ -200,6 +236,7 @@ class UDPBus:
     async def send_command(self, module_ip: str, payload: bytes, port: int | None = None) -> None:
         dst_port = port or self.config.hub_port
         if self.config.simulated_mode:
+            self.last_send_ts = time.monotonic()
             reply = self._simulated_replies.get(payload)
             if reply:
                 pkt = UDPPacket(
@@ -210,7 +247,6 @@ class UDPBus:
                     dst_port=0,
                     monotonic_ts=time.monotonic(),
                 )
-                self.last_send_ts = time.monotonic()
                 self._notify_listeners(pkt)
             return
         if not self._transport:
@@ -257,6 +293,7 @@ class UDPBus:
                 with contextlib.suppress(asyncio.QueueFull):
                     wait_queue.put_nowait(pkt)
 
+        logged_unmatched: set[tuple[float, str, bytes]] = set()
         self.add_listener(collect)
         try:
             matched = self._find_recent_reply(
@@ -266,6 +303,12 @@ class UDPBus:
             )
             if matched is not None:
                 return matched
+            self._log_unmatched_recent(
+                module_ip=module_ip,
+                after_ts=after_ts,
+                predicate=predicate,
+                logged=logged_unmatched,
+            )
 
             deadline = time.monotonic() + (timeout_ms or self.config.reply_timeout_ms) / 1000.0
 
@@ -284,9 +327,60 @@ class UDPBus:
                     predicate=predicate,
                 ):
                     return pkt
+                self._log_unmatched_packet(
+                    pkt,
+                    module_ip=module_ip,
+                    after_ts=after_ts,
+                    predicate=predicate,
+                    logged=logged_unmatched,
+                )
             return None
         finally:
             self.remove_listener(collect)
+
+    def _log_unmatched_recent(
+        self,
+        *,
+        module_ip: str,
+        after_ts: float,
+        predicate: Callable[[bytes], bool] | None,
+        logged: set[tuple[float, str, bytes]],
+    ) -> None:
+        if predicate is None or not log.isEnabledFor(logging.DEBUG):
+            return
+        for pkt in self._recent_packets:
+            self._log_unmatched_packet(
+                pkt,
+                module_ip=module_ip,
+                after_ts=after_ts,
+                predicate=predicate,
+                logged=logged,
+            )
+
+    def _log_unmatched_packet(
+        self,
+        pkt: UDPPacket,
+        *,
+        module_ip: str,
+        after_ts: float,
+        predicate: Callable[[bytes], bool] | None,
+        logged: set[tuple[float, str, bytes]],
+    ) -> None:
+        if predicate is None or not log.isEnabledFor(logging.DEBUG):
+            return
+        if pkt.src_ip != module_ip or pkt.monotonic_ts < after_ts:
+            return
+        if predicate(pkt.data):
+            return
+        key = (pkt.monotonic_ts, pkt.src_ip, pkt.data)
+        if key in logged:
+            return
+        logged.add(key)
+        log.debug(
+            "unmatched reply from %s during wait: %s",
+            pkt.src_ip,
+            format_payload(pkt.data),
+        )
 
 
 class _UDPProtocol(asyncio.DatagramProtocol):

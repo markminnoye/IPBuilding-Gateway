@@ -408,3 +408,68 @@ class TestSweepDimmerStates:
             ) is None
         finally:
             await bus.stop()
+
+    @pytest.mark.asyncio
+    async def test_unknown_state_code_included_in_seed_log(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        registry = DeviceRegistry()
+        registry.register_module("10.10.1.30", DeviceType.RELAY)
+
+        bus = UDPBus(GatewayConfig(simulated_mode=True, reply_timeout_ms=500))
+        bus.register_simulated_reply(b"I0000", b"I00000015")
+        await bus.start()
+        try:
+            caplog.set_level("INFO")
+            inst = _make_installation([
+                {
+                    "ip": "10.10.1.30",
+                    "type": "relay",
+                    "mac": "00:24:77:52:ac:be",
+                    "channels": [
+                        {"ch": 0, "name": "Toilet", "active": True, "max_watt": 60},
+                    ],
+                },
+            ])
+            result = await sweep_relay_states(
+                bus, registry, inst, inter_query_delay_s=0,
+            )
+            assert result == 1
+            messages = " ".join(r.message for r in caplog.records)
+            assert "state_code=0015" in messages
+            assert "unrecognized state_code=0015" in messages
+        finally:
+            await bus.stop()
+
+    @pytest.mark.asyncio
+    async def test_unmatched_dimmer_reply_then_timeout(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        registry = DeviceRegistry()
+        registry.register_module("10.10.1.40", DeviceType.DIMMER)
+
+        bus = UDPBus(GatewayConfig(simulated_mode=True, reply_timeout_ms=50))
+        bus.register_simulated_reply(b"I1000000", b"I0154999")
+        await bus.start()
+        try:
+            caplog.set_level("DEBUG")
+            inst = _make_installation([
+                {
+                    "ip": "10.10.1.40",
+                    "type": "dimmer",
+                    "mac": "00:24:77:52:ad:01",
+                    "channels": [
+                        {"ch": 1, "name": "Mismatch", "active": True, "max_watt": 100},
+                    ],
+                },
+            ])
+            result = await sweep_dimmer_states(
+                bus, registry, inst, inter_query_delay_s=0, reply_timeout_ms=50,
+            )
+            assert result == 0
+            messages = [r.message for r in caplog.records]
+            assert any("unmatched reply from 10.10.1.40" in m for m in messages)
+            assert any("I0154999" in m for m in messages)
+            assert any("no reply within timeout" in m for m in messages)
+        finally:
+            await bus.stop()

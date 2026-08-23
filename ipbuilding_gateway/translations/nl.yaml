@@ -94,7 +94,7 @@ configuration:
     fields:
       log_level:
         name: Logniveau
-        description: debug, info, warning of error.
+        description: debug, info, warning of error. debug logt ook veldbus TX/RX (keepalives, commando’s, unmatched replies).
 network:
   8080/tcp: API en web-UI — WebSocket /ws en REST /api/v1/ (companion-integratie; web-UI via Ingress).
   30200/tcp: IPBox REST-compatibiliteit (alleen actief als "IPBox REST-compatibiliteit" bij Netwerk aan staat).

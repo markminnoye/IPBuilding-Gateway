@@ -61,7 +61,7 @@ from gateway.payloads import (
     encode_relay_command,
 )
 from gateway.models import RelayAction, RelayCommand, DimmerCommand
-from gateway.udp_bus import UDPBus
+from gateway.udp_bus import UDPBus, format_payload
 from gateway.webui import INDEX_HTML
 
 log = logging.getLogger(__name__)
@@ -925,6 +925,12 @@ class GatewayAPI:
 
         # Send and wait for reply
         try:
+            log.debug(
+                "TX %s command %s %s",
+                module_ip,
+                action,
+                format_payload(payload),
+            )
             await self._bus.send_command(module_ip, payload)
             if not awaits_reply:
                 # DIM_START — fire-and-forget; no reply to correlate.
@@ -938,6 +944,15 @@ class GatewayAPI:
                 log.warning(
                     "command %s on %s timed out (no reply)", action, entity_id
                 )
+            else:
+                data = getattr(reply, "data", None)
+                if isinstance(data, bytes):
+                    log.debug(
+                        "RX %s command %s %s",
+                        module_ip,
+                        action,
+                        format_payload(data),
+                    )
             return True, None
         except Exception as exc:
             log.exception("command %s on %s failed: %s", action, entity_id, exc)

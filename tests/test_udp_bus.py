@@ -6,7 +6,7 @@ import time
 import pytest
 
 from gateway.config import GatewayConfig
-from gateway.udp_bus import UDPBus, UDPPacket, _RECENT_PACKETS_MAX
+from gateway.udp_bus import UDPBus, UDPPacket, _RECENT_PACKETS_MAX, format_payload
 
 
 @pytest.mark.asyncio
@@ -232,3 +232,64 @@ async def test_listener_exception_does_not_crash_bus():
 
     assert len(received) == 1
     await bus.stop()
+
+
+def test_format_payload_ascii_and_hex() -> None:
+    assert format_payload(b"P0000") == "P0000"
+    assert format_payload(b"\xff\x00") == "hex:ff00"
+    long_ascii = b"A" * 80
+    formatted = format_payload(long_ascii)
+    assert formatted.startswith("A" * 64)
+    assert "+16" in formatted
+
+
+@pytest.mark.asyncio
+async def test_unmatched_reply_logged_at_debug(caplog: pytest.LogCaptureFixture) -> None:
+    cfg = GatewayConfig(simulated_mode=True, reply_timeout_ms=50)
+    bus = UDPBus(cfg)
+    bus.register_simulated_reply(b"I1000000", b"I0154999")
+    await bus.start()
+    try:
+        caplog.set_level("DEBUG", logger="gateway.udp_bus")
+        after_ts = time.monotonic()
+        await bus.send_command("10.10.1.40", b"I1000000")
+        pkt = await bus.correlate_reply(
+            module_ip="10.10.1.40",
+            after_ts=after_ts,
+            timeout_ms=50,
+            predicate=lambda data: data.startswith(b"I01541"),
+        )
+        assert pkt is None
+        assert any("unmatched reply from 10.10.1.40" in r.message for r in caplog.records)
+        assert any("I0154999" in r.message for r in caplog.records)
+    finally:
+        await bus.stop()
+
+
+@pytest.mark.asyncio
+async def test_keepalive_logged_at_debug_not_info(caplog: pytest.LogCaptureFixture) -> None:
+    cfg = GatewayConfig(
+        simulated_mode=True,
+        poll_interval_s=10.0,
+        actuator_poll_interval_s=0.05,
+        reply_timeout_ms=50,
+        field_modules={"relay": "10.10.1.30"},
+        use_env_defaults=False,
+    )
+    bus = UDPBus(cfg)
+    bus.register_simulated_reply(b"P0000", b"P000000000")
+
+    caplog.set_level("INFO", logger="gateway.udp_bus")
+    await bus.start()
+    await asyncio.sleep(0.12)
+    await bus.stop()
+    assert not any("keepalive" in r.message for r in caplog.records)
+
+    caplog.clear()
+    caplog.set_level("DEBUG", logger="gateway.udp_bus")
+    await bus.start()
+    await asyncio.sleep(0.12)
+    await bus.stop()
+    messages = [r.message for r in caplog.records]
+    assert any("TX 10.10.1.30 keepalive P0000" in m for m in messages)
+    assert any("RX 10.10.1.30 keepalive P000000000" in m for m in messages)

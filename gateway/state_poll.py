@@ -23,7 +23,7 @@ from gateway.installation import InstallationConfig
 from gateway.payloads.dimmer import decode_dimmer_payload, encode_dimmer_status_poll
 from gateway.payloads.relay import decode_relay_payload, encode_relay_status_poll
 from gateway.types import DeviceKey, DeviceType
-from gateway.udp_bus import UDPBus
+from gateway.udp_bus import UDPBus, format_payload
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +87,7 @@ async def sweep_relay_states(
             channel = ch.ch
             payload = encode_relay_status_poll(channel)
             after_ts = time.monotonic()
+            log.debug("TX %s status-poll %s", mc.ip, format_payload(payload))
             try:
                 await bus.send_command(mc.ip, payload)
                 pkt = await bus.correlate_reply(
@@ -129,17 +130,16 @@ async def sweep_relay_states(
                 continue
 
             key = DeviceKey(DeviceType.RELAY, mc.ip, channel)
-            registry.seed_relay_state(
-                key,
-                parsed["state"],
-                parsed.get("state_code", ""),
-            )
+            state_code = parsed.get("state_code", "")
+            registry.seed_relay_state(key, parsed["state"], state_code)
             updated += 1
+            log.debug("RX %s status-poll %s", mc.ip, format_payload(pkt.data))
             log.info(
-                "Relay status poll %s ch%d: seeded %s",
+                "Relay status poll %s ch%d: seeded %s (state_code=%s)",
                 mc.ip,
                 channel,
                 parsed["state"],
+                state_code,
             )
 
             if inter_query_delay_s > 0:
@@ -188,6 +188,7 @@ async def sweep_dimmer_states(
                 )
                 continue
             after_ts = time.monotonic()
+            log.debug("TX %s status-poll %s", mc.ip, format_payload(payload))
             try:
                 await bus.send_command(mc.ip, payload)
                 pkt = await bus.correlate_reply(
@@ -240,6 +241,7 @@ async def sweep_dimmer_states(
                 parsed.get("internal_value_code", ""),
             )
             updated += 1
+            log.debug("RX %s status-poll %s", mc.ip, format_payload(pkt.data))
             log.info(
                 "Dimmer status poll %s ch%d: seeded %s%%",
                 mc.ip,

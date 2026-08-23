@@ -116,7 +116,7 @@ Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Co
 | `discovery.passive_arp_monitor` | `true` | Detecteer nieuwe/verdwenen modules via netwerkverkeer (zonder broadcast-scan) |
 | `discovery.arp_poll_interval_s` | `30.0` | Hoe vaak (s) de passieve monitor het netwerk bekijkt |
 | `discovery.use_env_defaults` | `false` | Lab/test: vaste `.30/.40/.50` IPs als `devices.json` ontbreekt. Productie: uit laten |
-| `logging.log_level` | `info` | Logniveau: `debug`, `info`, `warning`, `error` |
+| `logging.log_level` | `info` | Logniveau: `debug`, `info`, `warning`, `error`. `debug` logt ook veldbus TX/RX (keepalives, commando’s, unmatched replies) |
 
 De API/web-UI-poort (`8080`) en de IPBox REST-compatibiliteitspoort (`30200`) liggen vast en staan **niet** in deze tabel — ze staan onder Supervisor’s eigen **Network**-sectie op de add-on info-pagina (zie [Ports](#ports)).
 

@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Field-bus debug logging.** Set **Logging → Log level** to `debug` to
+  record keepalive TX/RX, unmatched replies during status polls, and
+  command TX/RX. Unrecognized relay `state_code` values (e.g. `0015`)
+  already show a one-time warning at `info`. Switch back to `info`
+  after capturing a log, or the add-on log keeps growing.
+
 ## [1.6.2] - 2026-08-06
 
 ### Added
