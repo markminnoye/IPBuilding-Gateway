@@ -624,9 +624,22 @@ Open gateway: zelfde payloads in `gateway/udp_bus.py` (`_MODULE_POLL`). Veldtest
 
 **`I<ch>` als status-poll:** **niet ondersteund**. Lab-test 2026-06-02: `I0000`/`I0010`/… → altijd `I000000000` (echo), nooit `I<CH><state>`. Evidence: [2026-06-02_relay_poll_i_ch_test.md](evidence/2026-06-02_relay_poll_i_ch_test.md), `scripts/test_relay_poll.py`.
 
-**Kanaalstatus op veldbus:** `I<channel><state>` (10-byte ASCII), bv. `I00000100` = kanaal 0 **aan**, `I00000000` = **uit**. Komt **na commando** `S`/`C`/`T` (niet via periodieke poll). Sprint 1 + golden capture: relay→hub `I<CH><state>` zichtbaar bij goede mirror-POV.
+**Kanaalstatus op veldbus:** reply `I000<CH,2><state,4>` (10-byte ASCII), o.a. na `S`/`C`/`T` en na on-demand status-poll `I<CH>00` (startup-sweep; zie [2026-06-12_ipbox_boot_relay_sweep.md](evidence/2026-06-12_ipbox_boot_relay_sweep.md)).
 
-**Alternatief read-pad:** HTTP `GET /api.html?method=statuses` op de relaymodule (§2A) — JSON per kanaal `status: 0|1`, onafhankelijk van UDP-poll.
+| `state` (4 cijfers) | Gateway / HA | Confidence |
+|---------------------|--------------|------------|
+| `0100` | on | Confirmed (lab); also Nolf **command replies** |
+| `0000` | off | Confirmed (lab + Nolf) |
+| `0015` | off (`00xx` prefix) | Hypothesized (prefix). Observed Nolf 2026-08-08 startup-poll. Field confirmation pending. |
+| `0115` | on (`01xx` prefix) | Hypothesized (prefix). Observed Nolf 1× toilet. `0115` ≈ `0100 \| 0015`. Field confirmation pending. |
+| `00xx` / `01xx` | off / on | Hypothesized (prefix). Decoder rule since gateway 1.6.4. |
+| overig | unknown | Decoder fallback |
+
+**Dual encoding (Nolf IP0200 Diagnostic 03.03):** startup status-poll returns generation quartets (`0015`/`0115`/`0000`); after an `S`/`C` command the same module replies with lab quartets (`0100`/`0000`). Both go through `relay_state_from_code`.
+
+Detail + per-kanaal Nolf-tabel: [2026-05-04_relay_payload_correlation.md](evidence/2026-05-04_relay_payload_correlation.md) §State_code, [2026-08-08_jan_nolf_restore_test.md](evidence/2026-08-08_jan_nolf_restore_test.md) §5.
+
+**Alternatief read-pad:** HTTP `GET /api.html?method=statuses` op moderne relaymodules (§2A) — JSON per kanaal `status: 0|1`. Ontbreekt op oudere generatie (Nolf).
 
 ### 6.4 Input — poll (`I0000`) en idle reply
 
@@ -653,7 +666,7 @@ De relay module op `10.10.1.30` verwacht **raw ASCII commando's** op UDP/1001 �
 | `T`   | TOGGLE| `T1800` → kanaal 18 omzetten |
 | `P`   | PULSE | `P1800` → kanaal 18 puls |
 
-**Respons:** statusregel `I000{channel:02d}{state}` bijv. `I000180100` (aan) of `I000180000` (uit).
+**Respons:** statusregel `I000{channel:02d}{state}` bijv. `I000180100` (aan) of `I000180000` (uit). Andere `state`-quartets: `00xx`→off, `01xx`→on, rest `unknown` — zie §6.3.
 
 **Opmerking:** eerdere documentatie hypothetiseerde een `[pfx]J` envelope — die blijkt **niet** te werken op UDP/1001. De module accepteert enkel raw ASCII.
 

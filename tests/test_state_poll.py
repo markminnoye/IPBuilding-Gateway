@@ -435,9 +435,15 @@ class TestSweepDimmerStates:
                 bus, registry, inst, inter_query_delay_s=0,
             )
             assert result == 1
+            key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 0)
+            rs = registry.get_relay_state(key)
+            assert rs is not None
+            assert rs.state == "off"
+            assert rs.state_code == "0015"
             messages = " ".join(r.message for r in caplog.records)
             assert "state_code=0015" in messages
-            assert "unrecognized state_code=0015" in messages
+            assert "seeded off" in messages
+            assert "unrecognized state_code=0015" not in messages
         finally:
             await bus.stop()
 

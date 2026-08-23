@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.6.4] - 2026-08-23
+
+### Fixed
+- **Relay status on older modules.** After a restart, channels on older
+  relay hardware no longer stay **Unknown** in Home Assistant. They now
+  show on or off like the rest, so the toggle works immediately.
+
 ## [1.6.3] - 2026-08-23
 
 ### Added

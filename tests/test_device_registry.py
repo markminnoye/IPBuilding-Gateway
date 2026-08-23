@@ -299,7 +299,7 @@ class TestSeedState:
 
 
 class TestUnrecognizedRelayStateCode:
-    def test_first_seen_0015_warns_once(self, caplog):
+    def test_first_seen_0015_is_off_no_warn(self, caplog):
         import logging
 
         reg = _registry_with_modules()
@@ -309,14 +309,33 @@ class TestUnrecognizedRelayStateCode:
         reg.handle_packet(pkt)
 
         warnings = [
-            r for r in caplog.records if "unrecognized state_code=0015" in r.message
+            r for r in caplog.records if "unrecognized state_code=" in r.message
+        ]
+        assert warnings == []
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 0)
+        rs = reg.get_relay_state(key)
+        assert rs is not None
+        assert rs.state == "off"
+        assert rs.state_code == "0015"
+
+    def test_first_seen_0200_warns_once(self, caplog):
+        import logging
+
+        reg = _registry_with_modules()
+        caplog.set_level(logging.WARNING, logger="gateway.device_registry")
+        pkt = _make_pkt("10.10.1.30", b"I00000200")
+        reg.handle_packet(pkt)
+        reg.handle_packet(pkt)
+
+        warnings = [
+            r for r in caplog.records if "unrecognized state_code=0200" in r.message
         ]
         assert len(warnings) == 1
         key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 0)
         rs = reg.get_relay_state(key)
         assert rs is not None
         assert rs.state == "unknown"
-        assert rs.state_code == "0015"
+        assert rs.state_code == "0200"
 
     def test_0015_to_0115_fires_callback(self, caplog):
         import logging
@@ -330,9 +349,9 @@ class TestUnrecognizedRelayStateCode:
         reg.handle_packet(_make_pkt("10.10.1.30", b"I00000115"))
 
         assert len(changes) == 2
-        assert changes[0][2].state == "unknown"
+        assert changes[0][2].state == "off"
         assert changes[0][2].state_code == "0015"
         assert changes[1][1].state_code == "0015"
         assert changes[1][2].state_code == "0115"
-        assert changes[1][2].state == "unknown"
+        assert changes[1][2].state == "on"
         assert any("0015" in r.message and "0115" in r.message for r in caplog.records)

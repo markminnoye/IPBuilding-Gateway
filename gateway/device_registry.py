@@ -12,8 +12,6 @@ from gateway.payloads.relay import decode_relay_payload
 from gateway.types import DeviceKey, DeviceType
 from gateway.udp_bus import UDPPacket, format_payload
 
-_RECOGNIZED_RELAY_STATE_CODES = frozenset({"0000", "0100"})
-
 log = logging.getLogger(__name__)
 
 
@@ -95,7 +93,9 @@ class DeviceRegistry:
         later when the gateway API is created.
         """
         self._relay_states[key] = RelayState(state=state, state_code=state_code)
-        self._warn_unrecognized_state_code(key.module_ip, key.channel, state_code)
+        self._warn_if_unknown_relay_state(
+            key.module_ip, key.channel, state, state_code
+        )
 
     def seed_dimmer_state(
         self,
@@ -170,10 +170,10 @@ class DeviceRegistry:
         elif dtype == DeviceType.INPUT:
             self._handle_input(src, pkt.data)
 
-    def _warn_unrecognized_state_code(
-        self, module_ip: str, channel: int, state_code: str
+    def _warn_if_unknown_relay_state(
+        self, module_ip: str, channel: int, state: str, state_code: str
     ) -> None:
-        if not state_code or state_code in _RECOGNIZED_RELAY_STATE_CODES:
+        if state != "unknown" or not state_code:
             return
         key = (module_ip, channel, state_code)
         if key in self._seen_unrecognized_state_codes:
@@ -204,7 +204,7 @@ class DeviceRegistry:
             old = self._relay_states.get(key)
             new_rs = RelayState(state=new_state, state_code=new_code)
             self._relay_states[key] = new_rs
-            self._warn_unrecognized_state_code(module_ip, ch, new_code)
+            self._warn_if_unknown_relay_state(module_ip, ch, new_state, new_code)
             if (
                 old is None
                 or old.state != new_state

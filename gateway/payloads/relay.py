@@ -23,6 +23,23 @@ _CMD_LETTER: dict[RelayAction, str] = {
 }
 
 
+def relay_state_from_code(state_code: str) -> str:
+    """Map a 4-digit ASCII state quartet to on/off/unknown.
+
+    Prefix rule (hypothesized from Nolf IP0200 Diagnostic 03.03):
+    ``01xx`` → on, ``00xx`` → off. Lab firmware uses ``0100``/``0000``;
+    older modules also report ``0115``/``0015`` on status-poll. Command
+    replies on those modules still use ``0100``/``0000``. The raw
+    ``state_code`` is kept on the northbound object.
+    """
+    if len(state_code) == 4 and state_code.isdigit():
+        if state_code.startswith("01"):
+            return "on"
+        if state_code.startswith("00"):
+            return "off"
+    return "unknown"
+
+
 def strip_j_envelope(data: bytes) -> bytes:
     """Strip optional [1-byte prefix] + 'J' wrapper from hub→relay wire form."""
     try:
@@ -59,7 +76,7 @@ def decode_relay_payload(data: bytes) -> dict[str, Any] | None:
     m = _RELAY_STATUS_RE.match(text)
     if m:
         state_code = m.group("state")
-        state = "on" if state_code == "0100" else "off" if state_code == "0000" else "unknown"
+        state = relay_state_from_code(state_code)
         return {
             "family": "relay_status",
             "channel": int(m.group("channel")),
@@ -72,7 +89,7 @@ def decode_relay_payload(data: bytes) -> dict[str, Any] | None:
     m = _RELAY_STATUS_SHORT_RE.match(text)
     if m:
         state_code = m.group("state")
-        state = "on" if state_code == "0100" else "off" if state_code == "0000" else "unknown"
+        state = relay_state_from_code(state_code)
         return {
             "family": "relay_status",
             "channel": int(m.group("channel")),
@@ -133,8 +150,9 @@ def encode_relay_status_poll(channel: int) -> bytes:
     """Encode hub→relay on-demand status read (IPBox cold-boot sweep format).
 
     Query ``I<CH>00`` (5 bytes ASCII) returns ``I000<CH><state>`` where
-    ``0100`` = on, ``0000`` = off.  Other quartets (e.g. ``0015``, ``0115``
-    seen on older Nolf hardware) decode as ``unknown``.  See RE evidence
-    2026-06-12 and 2026-08-08.
+    the first two digits of the state quartet are on/off (``01xx`` = on,
+    ``00xx`` = off). Lab firmware uses ``0100``/``0000``; older Nolf
+    IP0200 modules also report ``0115``/``0015`` on this poll. See RE
+    evidence 2026-06-12 and 2026-08-08.
     """
     return f"I{channel:02d}00".encode("ascii")

@@ -1,0 +1,887 @@
+{
+  "modules": [
+    {
+      "name": "IP0200",
+      "ip": "10.10.1.30",
+      "type": "relay",
+      "firmware": "",
+      "model": "IP0200",
+      "mac": "",
+      "channels": [
+        {
+          "ch": 0,
+          "name": "Bediening poort",
+          "room": "Poort",
+          "semantic_type": "switch",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 1,
+          "name": "Verlichting trap",
+          "room": "Trap",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 2,
+          "name": "Verlichting kamer j&s",
+          "room": "Kamer",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 3,
+          "name": "Verlichting kamer 1",
+          "room": "Kamer",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 4,
+          "name": "Verlichting zolder",
+          "room": "Zolder",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 5,
+          "name": "Verlichting voordeur kant wc",
+          "room": "Voordeur",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 6,
+          "name": "Ledverlichting keuken",
+          "room": "Keuken",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 7,
+          "name": "Verlichting keuken",
+          "room": "Keuken",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 8,
+          "name": "Verlichting eetplaats",
+          "room": "Eetplaats",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 9,
+          "name": "Verlichting bureau Jan",
+          "room": "Bureau",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 10,
+          "name": "Verlichting berging",
+          "room": "Berging",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 11,
+          "name": "Verlichting kamer 2",
+          "room": "Kamer",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 12,
+          "name": "Spots terras",
+          "room": "Terras",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 13,
+          "name": "Verlichting bureau Sara",
+          "room": "Bureau",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 14,
+          "name": "Verlichting toilet",
+          "room": "WC",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 15,
+          "name": "Verlichting voordeur kant links",
+          "room": "Voordeur",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 16,
+          "name": "Ongebruikt",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 17,
+          "name": "Verlichting keukenpilaar",
+          "room": "Keuken",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 18,
+          "name": "Wandverlichting boven",
+          "room": "Boven",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 19,
+          "name": "Verlichting voordeur buiten",
+          "room": "Voordeur",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 20,
+          "name": "Ventilatie toilet beneden",
+          "room": "WC",
+          "semantic_type": "fan",
+          "active": true,
+          "max_watt": 40
+        },
+        {
+          "ch": 21,
+          "name": "Inbouwspot achterdeur",
+          "room": "Achterdeur",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 22,
+          "name": "Verstraler oversteek",
+          "room": "Buiten",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 100
+        },
+        {
+          "ch": 23,
+          "name": "Verlichting garage",
+          "room": "Garage",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        }
+      ]
+    },
+    {
+      "name": "IP0200",
+      "ip": "10.10.1.31",
+      "type": "relay",
+      "firmware": "",
+      "model": "IP0200",
+      "mac": "",
+      "channels": [
+        {
+          "ch": 0,
+          "name": "Ongebruikt 0",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 1,
+          "name": "Ongebruikt 1",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 2,
+          "name": "Ongebruikt 2",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 3,
+          "name": "Ongebruikt 3",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 4,
+          "name": "Ongebruikt 4",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 5,
+          "name": "Ongebruikt 5",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 6,
+          "name": "Ongebruikt 6",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 7,
+          "name": "Ongebruikt 7",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        }
+      ]
+    },
+    {
+      "name": "IP0200",
+      "ip": "10.10.1.32",
+      "type": "relay",
+      "firmware": "",
+      "model": "IP0200",
+      "mac": "",
+      "channels": [
+        {
+          "ch": 0,
+          "name": "TL tuinhuis",
+          "room": "Tuinhuis",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 60
+        },
+        {
+          "ch": 1,
+          "name": "Ongebruikt 1",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 2,
+          "name": "Ongebruikt 2",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 3,
+          "name": "Ongebruikt 3",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 4,
+          "name": "Ongebruikt 4",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 5,
+          "name": "Ongebruikt 5",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 6,
+          "name": "Ongebruikt 6",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        },
+        {
+          "ch": 7,
+          "name": "Ongebruikt 7",
+          "room": "Onbekend",
+          "semantic_type": "light",
+          "active": false,
+          "max_watt": 0
+        }
+      ]
+    },
+    {
+      "name": "IP0300",
+      "ip": "10.10.1.42",
+      "type": "dimmer",
+      "firmware": "",
+      "model": "IP0300",
+      "mac": "",
+      "channels": [
+        {
+          "ch": 0,
+          "name": "Zithoek",
+          "room": "Living",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 200
+        },
+        {
+          "ch": 1,
+          "name": "Lichtstraat",
+          "room": "Living",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 200
+        },
+        {
+          "ch": 2,
+          "name": "Badkamer",
+          "room": "Badkamer",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 200
+        },
+        {
+          "ch": 3,
+          "name": "Slaapkamer",
+          "room": "Slaapkamer",
+          "semantic_type": "light",
+          "active": true,
+          "max_watt": 200
+        }
+      ]
+    },
+    {
+      "name": "IP1100",
+      "ip": "10.10.1.55",
+      "type": "input",
+      "firmware": "",
+      "model": "IP1100",
+      "mac": "",
+      "pushbuttons": [
+        {
+          "id": "c3176d9130",
+          "name": "Verlichting buiten oversteek",
+          "room": "Achterdeur",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "07fb6ca630",
+          "name": "Verlichting garage aan achterdeur",
+          "room": "Achterdeur",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "a6d26cc630",
+          "name": "Rechtsonder aan achterdeur",
+          "room": "Achterdeur",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "47507ca830",
+          "name": "Verlichting garage aan deur berging",
+          "room": "Berging",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "9a437c1430",
+          "name": "Verlichting berging aan deur berging",
+          "room": "Berging",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "31637a4130",
+          "name": "Rechtsonder aan deur berging",
+          "room": "Berging",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "a8337af330",
+          "name": "Poort deur berging",
+          "room": "Berging",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "a0336c6330",
+          "name": "Verlichting berging aan deur keuken",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "e4096d7c30",
+          "name": "Verlichting garage aan deur keuken",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "58e26ba530",
+          "name": "Verlichting keuken aan deur keuken",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "57d96cf330",
+          "name": "Linksonder aan deur keuken",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "8ebe6ce130",
+          "name": "Verlichting keuken in keuken",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "e14f6c6d30",
+          "name": "Verlichting eetbar in keuken",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "6a9d6b2430",
+          "name": "Verlichting eetplaats in keuken",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "62706c3530",
+          "name": "Verlichting living in keuken",
+          "room": "Keuken",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "4ff86c3c30",
+          "name": "Verlichting keuken aan pilaar",
+          "room": "Pilaar",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "dac46cc330",
+          "name": "Verlichting eetbar aan pilaar",
+          "room": "Pilaar",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "d56c6cea42",
+          "name": "Verlichting eetplaats aan pilaar",
+          "room": "Pilaar",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "9e8a6ba730",
+          "name": "Verlichting living aan pilaar",
+          "room": "Pilaar",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "afeb6ba130",
+          "name": "Verlichting buiten oversteek schuif",
+          "room": "Living",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "9e0e6d7a30",
+          "name": "Verlichting eetplaats aan schuifvenster",
+          "room": "Living",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "4ad36c5f30",
+          "name": "Verlichting living aan schuifvenster",
+          "room": "Living",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "41b76ca930",
+          "name": "Verlichting keuken aan schuifvenster",
+          "room": "Living",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "88196c3142",
+          "name": "Verlichting living aan deur living",
+          "room": "Living",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "284f6c6430",
+          "name": "Verlichting gang aan deur living",
+          "room": "Living",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "34356d1d30",
+          "name": "Verlichting eetplaats aan deur living",
+          "room": "Living",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "418d6b1630",
+          "name": "Verlichting trap aan deur living",
+          "room": "Living",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "b6a96b0630",
+          "name": "Verlichting gang beneden",
+          "room": "Inkomhal",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "62106c2430",
+          "name": "Verlichting gang boven vanuit beneden",
+          "room": "Inkomhal",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "a4ad6b2c42",
+          "name": "Verlichting living in gang beneden",
+          "room": "Inkomhal",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "54f86b1930",
+          "name": "Trapverlichting in gang beneden",
+          "room": "Inkomhal",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "f9499d1130",
+          "name": "Verlichting gang in WC",
+          "room": "WC",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "b8569d4030",
+          "name": "Verlichting WC",
+          "room": "WC",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "b6096d3c30",
+          "name": "Verlichting gang in bureau",
+          "room": "Bureau",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "0e3c6c4330",
+          "name": "Verlichting bureau Sara",
+          "room": "Bureau",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "e0276c7530",
+          "name": "Verlichting bureau Jan",
+          "room": "Bureau",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "5eba6bbc30",
+          "name": "Linksonder in bureau",
+          "room": "Bureau",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "6e3f6d4130",
+          "name": "Verlichting gang beneden vanuit boven",
+          "room": "Gang boven",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "ae316cf342",
+          "name": "Verlichting gang boven",
+          "room": "Gang boven",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "36d56ba030",
+          "name": "Verlichting badkamer in gang boven",
+          "room": "Gang boven",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "51886b9f30",
+          "name": "Trapverlichting in gang boven",
+          "room": "Gang boven",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "2d9a6b8530",
+          "name": "Verlichting SLK Jan en Sara",
+          "room": "Slaapkamer Jens",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "7a596cc430",
+          "name": "Verlichting gang boven aan deur Jens",
+          "room": "Slaapkamer Jens",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "21266c1030",
+          "name": "Rechtsonder aan deur Jens",
+          "room": "Slaapkamer Jens",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "51e36bfe30",
+          "name": "Linksonder aan deur Jens",
+          "room": "Slaapkamer Jens",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "42796bf630",
+          "name": "Verlichting SLK aan velux Jens",
+          "room": "Slaapkamer Jens",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "1df96cb130",
+          "name": "Verlichting gang boven aan velux Jens",
+          "room": "Slaapkamer Jens",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "a09d6b7430",
+          "name": "Rechtsonder aan velux Jens",
+          "room": "Slaapkamer Jens",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "cc006c1730",
+          "name": "Linksonder aan velux Jens",
+          "room": "Slaapkamer Jens",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "b7906cc030",
+          "name": "Verlichting gang boven in SLK2",
+          "room": "Slaapkamer 2",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "f7f66bbe30",
+          "name": "Verlichting SLK2",
+          "room": "Slaapkamer 2",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "14676c3230",
+          "name": "Rechtsonder in SLK2",
+          "room": "Slaapkamer 2",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "0d826b7130",
+          "name": "Linksonder in SLK2",
+          "room": "Slaapkamer 2",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "fb3d6d9830",
+          "name": "Verlichting gang boven in SLK1",
+          "room": "Slaapkamer 1",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "e46f6c7e30",
+          "name": "Verlichting SLK1",
+          "room": "Slaapkamer 1",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "61256da430",
+          "name": "Rechtsonder in SLK1",
+          "room": "Slaapkamer 1",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "08286d1d30",
+          "name": "Linksonder in SLK1",
+          "room": "Slaapkamer 1",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 1
+        },
+        {
+          "id": "d3ec6b1530",
+          "name": "Poort achterdeur",
+          "room": "Achterdeur",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 0
+        },
+        {
+          "id": "b1f06c6330",
+          "name": "Tuinhuis links",
+          "room": "Tuinhuis",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 2
+        },
+        {
+          "id": "f4f96ce030",
+          "name": "Tuinhuis rechts",
+          "room": "Tuinhuis",
+          "active": true,
+          "hold_threshold_s": 1.5,
+          "channel": 2
+        }
+      ],
+      "detectors": []
+    }
+  ]
+}
