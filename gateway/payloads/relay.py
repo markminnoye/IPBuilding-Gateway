@@ -11,6 +11,15 @@ _RELAY_CMD_RE = re.compile(r"^(?P<prefix>[SCTP])(?P<channel>\d{2})00$")
 _RELAY_STATUS_RE = re.compile(r"^I(?P<module>\d{3})(?P<channel>\d{2})(?P<state>\d{4})$")
 _RELAY_STATUS_SHORT_RE = re.compile(r"^I(?P<channel>\d{4})(?P<state>\d{4})$")
 _RELAY_REPLY_PULSE_RE = re.compile(r"^P\d{9}$")
+# Nolf IP0200 command echo (9–10 ASCII). Prefix [SCT] only — P000000000 must
+# stay relay_reply_candidate (otherwise ch0 would be forced off every poll).
+# Routing-only safety: T11001000 (input→dimmer p2p toggle, 9 chars) also
+# matches this regex as toggle ch11. Harmless today because
+# decode_relay_payload is only called for relay-module IPs; do not run this
+# decoder generically on dimmer/input traffic.
+_RELAY_NOLF_CMD_REPLY_RE = re.compile(
+    r"^(?P<prefix>[SCT])(?P<channel>\d{2})(?P<tail>\d{6,7})$"
+)
 _J_ENVELOPE_RE = re.compile(r"^.(?P<core>[SCPT]\d{4,5})$")
 
 # Prefix-byte → first command letter mapping (Sprint 2 confirmed)
@@ -105,6 +114,22 @@ def decode_relay_payload(data: bytes) -> dict[str, Any] | None:
             "action": "pulse_reply",
             "raw": text,
             "suffix_nine": text[1:],
+        }
+
+    m = _RELAY_NOLF_CMD_REPLY_RE.match(text)
+    if m:
+        prefix = m.group("prefix")
+        action_map = {"S": "on", "C": "off", "T": "toggle"}
+        state_map = {"S": "on", "C": "off", "T": "unknown"}
+        return {
+            "dialect_id": "relay.nolf.command_reply",
+            "family": "relay_command_reply",
+            "action": action_map[prefix],
+            "channel": int(m.group("channel")),
+            "state": state_map[prefix],
+            "state_code": "",
+            "tail": text[1:],
+            "raw": text,
         }
 
     return None

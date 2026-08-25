@@ -1,6 +1,6 @@
 # Documentation index (`resources_and_docs/`)
 
-Last updated: 2026-05-22 (reorganized)
+Last updated: 2026-08-25
 
 **Navigatie:** agents starten bij [RE_STATE.md](RE_STATE.md) (canonieke status). Dit bestand is de **volledige index** na mappen-reorganisatie (zie [REORGANIZE_BRIEF.md](REORGANIZE_BRIEF.md)).
 
@@ -18,6 +18,7 @@ Last updated: 2026-05-22 (reorganized)
 | Bestand | Rol |
 |---------|-----|
 | [../docs/superpowers/specs/2026-05-18-gateway-architecture-design.md](../docs/superpowers/specs/2026-05-18-gateway-architecture-design.md) | Goedgekeurd northbound (HA add-on + companion) |
+| [../docs/superpowers/specs/2026-08-25-nolf-dialect-decode-design.md](../docs/superpowers/specs/2026-08-25-nolf-dialect-decode-design.md) | Nolf dialect-decode (gateway 1.6.5; D0-beslissingen) |
 | [../README_gateway.md](../README_gateway.md) | `gateway/` package — Fase 1 done, Fase 2 open |
 | [../AGENTS.md](../AGENTS.md) | Agent brief |
 
@@ -37,7 +38,7 @@ Last updated: 2026-05-22 (reorganized)
 |-----------|-----------|
 | Relay | [2026-05-04_relay_payload_correlation.md](evidence/2026-05-04_relay_payload_correlation.md) (state_code: `0000`/`0100` + Nolf `0015`/`0115`), [2026-05-14_relay_quiet_evening_session_notes.md](evidence/2026-05-14_relay_quiet_evening_session_notes.md), [2026-05-14_udp_payload_semantics_matrix.md](evidence/2026-05-14_udp_payload_semantics_matrix.md) |
 | Dimmer | [2026-05-17_dimmer_I0154xxx_full_decode.md](evidence/2026-05-17_dimmer_I0154xxx_full_decode.md), [2026-05-03_dimmer_udp_payload_correlation.md](evidence/2026-05-03_dimmer_udp_payload_correlation.md), [2026-05-04_dimmer_channel_value_sweep.md](evidence/2026-05-04_dimmer_channel_value_sweep.md), [2026-06-22_dimmer_p2p_hold_dim_capture.md](evidence/2026-06-22_dimmer_p2p_hold_dim_capture.md), [2026-08-05_jan_nolf_ipbuilding_03.07_debug_actions.md](evidence/2026-08-05_jan_nolf_ipbuilding_03.07_debug_actions.md) (IPBox UI Action-log; open: `I{ch}000000`) — **operator-keuze:** [fieldbus matrix §Dimmer](2026-05-17_ipbuilding_fieldbus_capability_matrix.md#dimmer-welk-commando-wanneer) |
-| Beta / Nolf | [2026-08-05_jan_nolf_ipbuilding_03.07_debug_actions.md](evidence/2026-08-05_jan_nolf_ipbuilding_03.07_debug_actions.md), [2026-08-06_jan_nolf_moduleschets_feedback.md](evidence/2026-08-06_jan_nolf_moduleschets_feedback.md) (kastfoto `IMG_2763`, Relais/Dim/Input UI, gateway WebUI-gaten, Diagnostic 03.03), [2026-08-08_jan_nolf_restore_test.md](evidence/2026-08-08_jan_nolf_restore_test.md) (restore PASS; relays OK; knoppen na 1.6.2; dimmer status-poll timeout) · config: [reference/devices.nolf.json](reference/devices.nolf.json) (60 knoppen + volle relays/dims) |
+| Beta / Nolf | [2026-08-05_jan_nolf_ipbuilding_03.07_debug_actions.md](evidence/2026-08-05_jan_nolf_ipbuilding_03.07_debug_actions.md), [2026-08-06_jan_nolf_moduleschets_feedback.md](evidence/2026-08-06_jan_nolf_moduleschets_feedback.md) (kastfoto `IMG_2763`, Relais/Dim/Input UI, gateway WebUI-gaten, Diagnostic 03.03), [2026-08-08_jan_nolf_restore_test.md](evidence/2026-08-08_jan_nolf_restore_test.md) (restore PASS; relays OK; knoppen na 1.6.2; dimmer status-poll timeout), [2026-08-24_jan_nolf_field_test.md](evidence/2026-08-24_jan_nolf_field_test.md) (1.6.4 veldtest; **§8 checklist 1.6.5 OPEN**) · **dialect-registry:** [reference/veldbus_dialect_registry.md](reference/veldbus_dialect_registry.md) · spec: [../docs/superpowers/specs/2026-08-25-nolf-dialect-decode-design.md](../docs/superpowers/specs/2026-08-25-nolf-dialect-decode-design.md) · sprint: [../docs/superpowers/plans/2026-08-24-nolf-dialect-sprint-plan.md](../docs/superpowers/plans/2026-08-24-nolf-dialect-sprint-plan.md) · config: [reference/devices.nolf.json](reference/devices.nolf.json) |
 | Input | [2026-05-17_ip1100_input_payload_decode.md](evidence/2026-05-17_ip1100_input_payload_decode.md), [2026-05-22_sprint5_input_physical_completion.md](evidence/2026-05-22_sprint5_input_physical_completion.md), [2026-05-22_sprint5_input_10-25_session_notes.md](evidence/2026-05-22_sprint5_input_10-25_session_notes.md) |
 | POV / bidirectioneel | [2026-05-15_capture_bidirectional_explainer.md](evidence/2026-05-15_capture_bidirectional_explainer.md), [2026-05-05_push_pull_experiment_contract.md](evidence/2026-05-05_push_pull_experiment_contract.md), push-pull sessienotities `2026-05-14*`, `2026-05-15*` in `evidence/` |
 | Golden / correlatie | [2026-05-04_golden_session_udp_correlation.md](evidence/2026-05-04_golden_session_udp_correlation.md), [2026-05-14_dimmer_rest_udp_timeline_writeup.md](evidence/2026-05-14_dimmer_rest_udp_timeline_writeup.md), [2026-05-15_long_capture_reference.md](evidence/2026-05-15_long_capture_reference.md) |

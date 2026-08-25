@@ -43,6 +43,48 @@ def test_encode_relay_on_wire():
 def test_pulse_reply_candidate():
     parsed = decode_relay_payload(b"P000000000")
     assert parsed["family"] == "relay_reply_candidate"
+    assert parsed.get("dialect_id") != "relay.nolf.command_reply"
+
+
+def test_nolf_command_reply_off_ch6():
+    """Golden vector from Nolf log 2026-08-24: C060000000 echo after OFF ch6."""
+    parsed = decode_relay_payload(b"C060000000")
+    assert parsed is not None
+    assert parsed["dialect_id"] == "relay.nolf.command_reply"
+    assert parsed["family"] == "relay_command_reply"
+    assert parsed["action"] == "off"
+    assert parsed["channel"] == 6
+    assert parsed["state"] == "off"
+    assert parsed["state_code"] == ""
+    assert parsed["tail"] == "060000000"
+    assert parsed["raw"] == "C060000000"
+
+
+def test_nolf_command_reply_on_from_prefix():
+    """State comes from the prefix (S→on), not a guessed quartet."""
+    parsed = decode_relay_payload(b"S060000000")
+    assert parsed is not None
+    assert parsed["family"] == "relay_command_reply"
+    assert parsed["action"] == "on"
+    assert parsed["channel"] == 6
+    assert parsed["state"] == "on"
+    assert parsed["state_code"] == ""
+
+
+def test_nolf_command_reply_p2p_toggle_collision():
+    """T11001000 is input→dimmer p2p toggle; the Nolf regex also matches it.
+
+    decode_relay_payload is only invoked for relay-module IPs, so this is a
+    routing-only safety — not a property of the regex. Do not decode
+    dimmer/input traffic with this function.
+    """
+    parsed = decode_relay_payload(b"T11001000")
+    assert parsed is not None
+    assert parsed["family"] == "relay_command_reply"
+    assert parsed["action"] == "toggle"
+    assert parsed["channel"] == 11
+    assert parsed["state"] == "unknown"
+    assert parsed["state_code"] == ""
 
 
 def test_relay_state_from_code_prefix_rule():
@@ -69,6 +111,26 @@ def test_decode_relay_status_nolf_0115_on():
     assert result.channel == 0
     assert result.state == "on"
     assert result.state_code == "0115"
+
+
+def test_decode_relay_status_poll_ch6_on():
+    """Lab/Nolf status-poll I000060115 — ch6 on, not a command echo."""
+    parsed = decode_relay_payload(b"I000060115")
+    assert parsed is not None
+    assert parsed["family"] == "relay_status"
+    assert parsed["channel"] == 6
+    assert parsed["state"] == "on"
+    assert parsed["state_code"] == "0115"
+
+
+def test_decode_relay_status_poll_ch5_off():
+    """Lab/Nolf status-poll I000050015 — ch5 off, not a command echo."""
+    parsed = decode_relay_payload(b"I000050015")
+    assert parsed is not None
+    assert parsed["family"] == "relay_status"
+    assert parsed["channel"] == 5
+    assert parsed["state"] == "off"
+    assert parsed["state_code"] == "0015"
 
 
 def test_decode_relay_status_true_unknown():

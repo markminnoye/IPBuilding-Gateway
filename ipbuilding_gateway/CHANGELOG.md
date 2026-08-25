@@ -5,6 +5,40 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.6.5] - 2026-08-25
+
+### Fixed
+- **Relay status after switching on older modules.** After you turn a
+  channel on or off, Home Assistant now follows immediately instead of
+  keeping the old value until the next poll.
+- **Dimmer status and brightness on older dimmer hardware.** Dimmer
+  channels no longer stay Unknown after startup or a change; the current
+  level comes through.
+
+### Changed
+- **REST shim dimmer OFF reply.** When the optional IPBox-compatible
+  REST shim returns a parsed OFF command, `level_percent` is now **0**
+  (it was 100, because the wire placeholder uses `99`). The raw wire
+  code is unchanged.
+
+### Field test (Jan)
+
+Relaisstatus volgt nu direct na schakelen. Dimmerstatus en helderheid
+komen door. Zolang de IPBox nog op de veldbus staat, kunnen antwoorden
+deels naar de IPBox gaan — test eerst mét IPBox, daarna met ethernet
+eruit.
+
+Checklist (volledig: [evidence §8](../resources_and_docs/evidence/2026-08-24_jan_nolf_field_test.md)):
+
+1. Update naar **1.6.5**, companion ≥1.8.3, **HA herstarten**.
+2. Relais **ch9** (bureau Jan): in HA **AAN** en daarna **UIT**.
+3. Dimmer **ch1 Lichtstraat** op **50 %** — percentage in HA, niet Onbekend.
+4. **Zithoek (ch0)** tijdens keepalive: brandt die lamp? (sentinel-vraag)
+5. Vlak na schakelen: gateway (`/api/v1/devices` of Web UI) naast de
+   HA-entity. Gateway goed / HA fout → companion; gateway ook fout →
+   decode.
+6. IPBox-ethernet eruit, herhaal 2–4.
+
 ## [1.6.4] - 2026-08-23
 
 ### Fixed

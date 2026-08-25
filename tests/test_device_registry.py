@@ -89,6 +89,83 @@ class TestRelayState:
         assert len(reg.all_relay_states()) == 0
 
 
+class TestNolfRelayCommandReply:
+    def test_echo_updates_state_and_preserves_state_code(self):
+        reg = _registry_with_modules()
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 6)
+        reg.seed_relay_state(key, "on", "0115")
+
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda k, old, new: changes.append((k, old, new)))
+        reg.handle_packet(_make_pkt("10.10.1.30", b"C060000000"))
+
+        state = reg.get_relay_state(key)
+        assert state is not None
+        assert state.state == "off"
+        assert state.state_code == "0115"
+        assert len(changes) == 1
+        assert changes[0][2].state == "off"
+        assert changes[0][2].state_code == "0115"
+
+    def test_echo_logs_nolf_command_reply(self, caplog):
+        import logging
+
+        reg = _registry_with_modules()
+        caplog.set_level(logging.INFO, logger="gateway.device_registry")
+        reg.handle_packet(_make_pkt("10.10.1.30", b"C060000000"))
+        assert any(
+            "decoded relay.nolf.command_reply from 10.10.1.30: C060000000 (ch6 → off)"
+            in r.message
+            for r in caplog.records
+        )
+
+    def test_echo_first_packet_empty_state_code_no_warning(self, caplog):
+        import logging
+
+        reg = _registry_with_modules()
+        caplog.set_level(logging.WARNING, logger="gateway.device_registry")
+        reg.handle_packet(_make_pkt("10.10.1.30", b"C060000000"))
+
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 6)
+        state = reg.get_relay_state(key)
+        assert state is not None
+        assert state.state == "off"
+        assert state.state_code == ""
+        warnings = [
+            r for r in caplog.records if "unrecognized state_code=" in r.message
+        ]
+        assert warnings == []
+
+    def test_toggle_echo_does_not_change_state(self):
+        reg = _registry_with_modules()
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 11)
+        reg.seed_relay_state(key, "on", "0100")
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda k, old, new: changes.append((k, old, new)))
+
+        reg.handle_packet(_make_pkt("10.10.1.30", b"T11001000"))
+
+        state = reg.get_relay_state(key)
+        assert state is not None
+        assert state.state == "on"
+        assert state.state_code == "0100"
+        assert changes == []
+
+    def test_p2p_toggle_from_dimmer_ip_does_not_update_relay(self):
+        """Routing safety: T11001000 from a dimmer IP never hits the relay decoder."""
+        reg = _registry_with_modules()
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda k, old, new: changes.append((k, old, new)))
+        reg.handle_packet(_make_pkt("10.10.1.40", b"T11001000"))
+        assert reg.get_relay_state(
+            DeviceKey(DeviceType.RELAY, "10.10.1.30", 11)
+        ) is None
+        assert reg.get_relay_state(
+            DeviceKey(DeviceType.RELAY, "10.10.1.40", 11)
+        ) is None
+        assert changes == []
+
+
 class TestDimmerState:
     def test_dimmer_status_reply(self):
         reg = _registry_with_modules()
@@ -154,6 +231,43 @@ class TestDimmerState:
         assert len(changes) == 2
         assert changes[1][1].level_percent == 30
         assert changes[1][2].level_percent == 100
+
+
+class TestNolfDimmerCommandEcho:
+    def test_set_echo_updates_level(self):
+        reg = _registry_with_modules()
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda k, old, new: changes.append((k, old, new)))
+        reg.handle_packet(_make_pkt("10.10.1.40", b"S1231030"))
+
+        key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 1)
+        state = reg.get_dimmer_state(key)
+        assert state is not None
+        assert state.level_percent == 23
+        assert len(changes) == 1
+        assert changes[0][2].level_percent == 23
+
+    def test_off_echo_is_zero_percent(self):
+        reg = _registry_with_modules()
+        reg.handle_packet(_make_pkt("10.10.1.40", b"C1991030"))
+
+        key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 1)
+        state = reg.get_dimmer_state(key)
+        assert state is not None
+        assert state.level_percent == 0
+
+    def test_nolf_idle_keepalive_does_not_overwrite_level(self):
+        reg = _registry_with_modules()
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda k, old, new: changes.append((k, old, new)))
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115099"))  # ch0 → 100%
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115000"))
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115000"))
+
+        ch0 = reg.get_dimmer_state(DeviceKey(DeviceType.DIMMER, "10.10.1.40", 0))
+        assert ch0 is not None
+        assert ch0.level_percent == 100
+        assert len(changes) == 1
 
 
 class TestInputEvents:

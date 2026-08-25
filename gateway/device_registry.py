@@ -220,6 +220,29 @@ class DeviceRegistry:
                     new_code,
                 )
                 self._fire_state_changed(key, old, new_rs)
+        elif family == "relay_command_reply":
+            ch = parsed["channel"]
+            new_state = parsed["state"]
+            raw = parsed.get("raw", "")
+            log.info(
+                "decoded relay.nolf.command_reply from %s: %s (ch%d → %s)",
+                module_ip,
+                raw,
+                ch,
+                new_state,
+            )
+            if new_state == "unknown":
+                return
+            key = DeviceKey(DeviceType.RELAY, module_ip, ch)
+            old = self._relay_states.get(key)
+            # Echo carries no reliable quartet; keep the last polled code.
+            # First-ever echo keeps "" — _warn_if_unknown_relay_state already
+            # skips that case via `not state_code`.
+            preserved_code = old.state_code if old else ""
+            new_rs = RelayState(state=new_state, state_code=preserved_code)
+            self._relay_states[key] = new_rs
+            if old is None or old.state != new_state:
+                self._fire_state_changed(key, old, new_rs)
         elif family == "relay_reply_candidate":
             pass  # pulse echo, no state change
 
@@ -252,6 +275,32 @@ class DeviceRegistry:
                     old.level_percent if old else None,
                     new_level,
                 )
+                self._fire_state_changed(key, old, new_ds)
+        elif family == "dimmer_command":
+            # Nolf dimmers echo the command instead of I0115…; the echo is
+            # the state source (lab dimmers reply I0154… and never hit this).
+            ch = parsed.get("channel")
+            new_level = parsed.get("level_percent")
+            if ch is None or new_level is None:
+                return
+            raw = parsed.get("raw", "")
+            log.info(
+                "decoded dimmer.nolf.command_echo from %s: %s (ch%d → %s%%)",
+                module_ip,
+                raw,
+                ch,
+                new_level,
+            )
+            key = DeviceKey(DeviceType.DIMMER, module_ip, ch)
+            new_code = parsed.get("internal_value_code") or parsed.get(
+                "value_code", ""
+            )
+            old = self._dimmer_states.get(key)
+            new_ds = DimmerState(
+                level_percent=new_level, internal_value_code=new_code
+            )
+            self._dimmer_states[key] = new_ds
+            if old is None or old.level_percent != new_level:
                 self._fire_state_changed(key, old, new_ds)
 
     def _handle_input(self, module_ip: str, data: bytes) -> None:

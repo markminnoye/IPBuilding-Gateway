@@ -479,3 +479,38 @@ class TestSweepDimmerStates:
             assert any("no reply within timeout" in m for m in messages)
         finally:
             await bus.stop()
+
+    @pytest.mark.asyncio
+    async def test_nolf_family_15_reply_seeds_channel_zero(self) -> None:
+        """Golden vector: I0000000 → I0115099 seeds ch0 without timeout."""
+        registry = DeviceRegistry()
+        cb = MagicMock()
+        registry.on_state_changed(cb)
+        registry.register_module("10.10.1.42", DeviceType.DIMMER)
+
+        bus = UDPBus(GatewayConfig(simulated_mode=True, reply_timeout_ms=500))
+        bus.register_simulated_reply(b"I0000000", b"I0115099")
+        await bus.start()
+        try:
+            inst = _make_installation([
+                {
+                    "ip": "10.10.1.42",
+                    "type": "dimmer",
+                    "mac": "00:24:77:52:ad:42",
+                    "channels": [
+                        {"ch": 0, "name": "Zithoek", "active": True, "max_watt": 100},
+                    ],
+                },
+            ])
+            result = await sweep_dimmer_states(
+                bus, registry, inst, inter_query_delay_s=0,
+            )
+            assert result == 1
+            key = DeviceKey(DeviceType.DIMMER, "10.10.1.42", 0)
+            ds = registry.get_dimmer_state(key)
+            assert ds is not None
+            assert ds.level_percent == 100
+            assert ds.internal_value_code == "099"
+            cb.assert_not_called()
+        finally:
+            await bus.stop()

@@ -47,6 +47,8 @@ def test_decode_dimmer_status_channel_in_code():
     assert r30.channel == 1
     assert r30.level_percent == 30
     assert r30.internal_value_code == "130"
+    assert r30.family_constant == "54"
+    assert decode_dimmer_payload(b"I0154130")["dialect_id"] == "dimmer.lab.status_reply"
 
     r70 = decode_dimmer_status(b"I0154170")
     assert r70.channel == 1
@@ -77,6 +79,63 @@ def test_encode_dim_command():
 
 def test_encode_dim_off():
     assert encode_dim_off(1) == b"C1991030"
+
+
+def test_decode_dimmer_command_off_placeholder_is_zero():
+    """C{ch}991030 is OFF; 99 is a placeholder, not 100%."""
+    parsed = decode_dimmer_payload(b"C1991030")
+    assert parsed is not None
+    assert parsed["family"] == "dimmer_command"
+    assert parsed["action"] == "off"
+    assert parsed["channel"] == 1
+    assert parsed["value_code"] == "99"
+    assert parsed["level_percent"] == 0
+
+
+def test_decode_nolf_dimmer_status_ch1_84():
+    parsed = decode_dimmer_payload(b"I0115184")
+    assert parsed is not None
+    assert parsed["dialect_id"] == "dimmer.nolf.status_reply"
+    assert parsed["family"] == "dimmer_status_reply"
+    assert parsed["family_constant"] == "15"
+    assert parsed["channel"] == 1
+    assert parsed["level_percent"] == 84
+
+
+def test_decode_nolf_dimmer_status_ch0_100():
+    result = decode_dimmer_status(b"I0115099")
+    assert result is not None
+    assert result.family_constant == "15"
+    assert result.channel == 0
+    assert result.level_percent == 100
+
+
+def test_decode_nolf_dimmer_status_ch3_off():
+    result = decode_dimmer_status(b"I0115300")
+    assert result is not None
+    assert result.channel == 3
+    assert result.level_percent == 0
+
+
+def test_decode_nolf_dimmer_idle_keepalive():
+    """I0115000 is family-15 idle sentinel, not ch0 off."""
+    parsed = decode_dimmer_payload(b"I0115000")
+    assert parsed is not None
+    assert parsed["family"] == "dimmer_poll"
+    assert parsed["action"] == "idle"
+    assert parsed["dialect_id"] == "dimmer.nolf.idle_keepalive"
+    assert "channel" not in parsed
+    assert "level_percent" not in parsed
+    assert decode_dimmer_status(b"I0115000") is None
+
+
+def test_lab_dimmer_ch0_off_is_not_idle_sentinel():
+    """I0154000 remains a valid lab ch0-off; 000 is not a global sentinel."""
+    result = decode_dimmer_status(b"I0154000")
+    assert result is not None
+    assert result.channel == 0
+    assert result.level_percent == 0
+    assert result.family_constant == "54"
 
 
 def test_encode_dimmer_status_poll_channel_zero():

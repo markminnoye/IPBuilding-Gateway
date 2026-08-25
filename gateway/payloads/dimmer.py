@@ -63,10 +63,20 @@ from gateway.models import DimmerCommand, DimmerStatus
 _DIMMER_CMD_RE = re.compile(r"^(?P<prefix>[SC])(?P<channel>\d)(?P<value>\d{2})1030$")
 _DIMMER_IDLE_RE = re.compile(r"^I9900$")
 _DIMMER_STATUS_POLL_RE = re.compile(r"^I(?P<channel>[0-7])000000$")
-_DIMMER_REPLY_RE = re.compile(r"^I01(?P<family>54)(?P<value_code>\d{3})$")
+_DIMMER_REPLY_RE = re.compile(r"^I01(?P<family>54|15)(?P<value_code>\d{3})$")
 
-# All-nines reply code = idle/poll heartbeat, not a per-channel setpoint.
-_DIMMER_IDLE_CODE = "999"
+# Idle/poll heartbeat is family-scoped: 999 only for lab family 54, 000 only
+# for Nolf family 15. Do not treat 000 as a global sentinel — I0154000 is a
+# valid lab ch0-off after C0….
+_DIMMER_IDLE_CODE_BY_FAMILY = {"54": "999", "15": "000"}
+_DIMMER_STATUS_DIALECT_BY_FAMILY = {
+    "54": "dimmer.lab.status_reply",
+    "15": "dimmer.nolf.status_reply",
+}
+_DIMMER_IDLE_DIALECT_BY_FAMILY = {
+    "54": "dimmer.lab.idle_keepalive",
+    "15": "dimmer.nolf.idle_keepalive",
+}
 
 # Input-module peer-to-peer dialect (IP1100PoE → IP0300PoE, observed only).
 _INPUT_TOGGLE_RE = re.compile(r"^T(?P<channel>\d)(?P<dimmax>\d{2})1000$")
@@ -107,20 +117,26 @@ def decode_dimmer_payload(data: bytes) -> dict[str, Any] | None:
 
     m = _DIMMER_REPLY_RE.match(text)
     if m:
+        family = m.group("family")
         code = m.group("value_code")  # 3 digits: <channel><value_code>
-        if code == _DIMMER_IDLE_CODE:
-            return {
+        if code == _DIMMER_IDLE_CODE_BY_FAMILY.get(family):
+            result = {
                 "family": "dimmer_poll",
                 "action": "idle",
                 "internal_value_code": code,
                 "raw": text,
             }
+            dialect_id = _DIMMER_IDLE_DIALECT_BY_FAMILY.get(family)
+            if dialect_id:
+                result["dialect_id"] = dialect_id
+            return result
         channel = int(code[0])
         value_code = code[1:]
         return {
+            "dialect_id": _DIMMER_STATUS_DIALECT_BY_FAMILY[family],
             "family": "dimmer_status_reply",
             "device_type": "01",
-            "family_constant": m.group("family"),
+            "family_constant": family,
             "channel": channel,
             "internal_value_code": code,
             "value_code": value_code,
@@ -132,12 +148,17 @@ def decode_dimmer_payload(data: bytes) -> dict[str, Any] | None:
     if m:
         prefix = m.group("prefix")
         value_code = m.group("value")
+        # encode_dim_off sends placeholder 99 in C{ch}991030; the C prefix
+        # means off, so level_percent is 0. value_code stays "99" on the wire.
+        level_percent = (
+            0 if prefix == "C" else _value_code_to_percent(value_code)
+        )
         return {
             "family": "dimmer_command",
             "action": "set" if prefix == "S" else "off",
             "channel": int(m.group("channel")),
             "value_code": value_code,
-            "level_percent": _value_code_to_percent(value_code),
+            "level_percent": level_percent,
             "raw": text,
         }
 
