@@ -1,0 +1,9 @@
+Dag Mark
+Onderstaand de printscreens uit de WEbUI.
+
+Een snelle test leert mij dat de relaisuitgangen aanstuurbaar zijn vanuit HA.
+De dimmers zijn zichtbaar, maar de dimfunctie werkt niet. Je kan het licht aanzetten, maar krijgt het vervolgens niet meer uit of gedimd.
+
+Het logboek zit in bijlage
+
+De drukknoppen werden zichtbaar na de update naar 1.6.2

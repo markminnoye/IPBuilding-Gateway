@@ -1,0 +1,70 @@
+IPBuilding Gateway — devices
+
+v1.6.0 - instance 1258f4ac408845bc90F66d336842Fcf3 | Copy
+
+Q Refresh
+
+1PO200 1P0200 | RELay
+
+10.10.1.30
+
+ch Name Room Type
+
+0 | Bediening poort | | Poort | [switch vy
+1 | Verlichting trap | [Trap | [@ light vy
+2 | Verlichting kamer j&s | [Kamer | [@ light y|
+3 | Verlichting kamer 1 | [Kamer | [@ light y|
+4 | Verlichting zolder | [Zolder | [@ ight vy
+5 | Verlichting voordeur kant we | [Yoordeur | [@ ight vy
+6 | Ledverlichting keuken | [Keuken | [@ ight vy
+7 | Verlichting keuken | [Keuken | [@ ight vy
+8 | Verlichting eetplaats | [Eetplaats | [@ ight vy
+9 | Verlichting bureau Jan | [Bureau | [@ ight vy
+10 | Verlichting berging | [Berging | [@ ight y|
+11 | Verlichting kamer 2 | [Kamer | [@ light y|
+12 | Spots terras | [Terra | [@ light vy
+
+z
+3
+
+[O)
+[O)
+[O)
+[O)
+[O)
+[O)
+[O)
+[O)
+[O)
+[O)
+[O)
+[O)
+[O)
+
+Max Watt
+
+Push
+
+Fetch
+
+Save
+
+Save
+
+Save
+
+Save
+
+Save
+
+Save
+
+Save
+
+Save
+
+Save
+
+e)
+
+Update

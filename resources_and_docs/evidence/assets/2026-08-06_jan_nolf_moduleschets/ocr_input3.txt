@@ -1,0 +1,23 @@
+aI
+‘Ingangsmodule
+ma: eo # sa a7f%
+Relais faces ~ NO contact NC contact Temperatuur Indicatie Indicatie2
+(|
+2 |s007Fe6co0000A601 _|verlchting garage aan ...jaanachterdeur_ | |10.10.1.55 {OL
+3 |Boiasd2sc100000C601_|rechtsonder aan achterd...|aanachterdeur |W |10.10.1.55 { Oi!
+Ingangsmodule #4 Js0147507c1000008801 _|verlichting garage aan d... jaandeurbersing |W |10.10.1.55 {1}
+Os 5_|B019a437c1000001401 _|verlichting bersing aan d..|aandeurberging |W |10.10.1.55 | 01!
+2. 6 Je0131637A1000008101 _|rechtsonder aan deur be...laandeurberging | I |10.10.1.55 | OL!
+Hardware 7 |eo1A8337a100000301__|poort deur bersing __—_aandeurberging | 17 |10.10.1.55 | 01!
+8 Je01A0336C1000006301 _|verichting berging aan d...lsandeurkeuken | I |10.10.1.55 | OL |
+ini 9 ]e01e409601000007C01 _|verichting garage aan d...laandeurkeuken | I |10.10.4.55 | 01!
+30 [20158e266100000a501 _|verlichting keuken aan d..laandeurkeuken | IW |10.10.1.55 {01 !
+11 [0157D96c100000F301__inksonder aan deur kev... jaandeurkeuken | IW |10.10.1.55 | 01!
+fe 15 [0162706c1000003501 __|verlichting living in keuk... [nkeukenaandeurb... | [7 |10.10.1.55 {01 !
+Ua) 36 [e014Fresci000003C01_|verlichting Keuken aan p...laanpilaar | IW |10.10.1.55 | OL |
+37 [Bo1Dace6c100000C301_|verlichting eetbar aan pil..laanpilsar | IW |10.0.1.55 | 01!
+38 [B010s6CsC100000EA01 _|verlichting eetplaats aan...|sanpilsar | IW |10.10.1.55 | OL |
+39 [019E8as6100000A701 _|verlichting ving aan pilaar|sanpilsar | IW |10.10.1.55 | 01!
+20 JeoiareB661000008101 _|verichting buiten overst... jsanschuifvenster__| 7 |10.10.1.55 {01
+21 Jb019E0ESD1000007A01 _|verlichting eetplaats aan... |sanschuifvenster |W [10.10.55 {Oi
+22 Jeo1sa035C1000005F01_|verichting living aan sch... sanschuifvenster_ | FF [10.10.1.55 {01 is

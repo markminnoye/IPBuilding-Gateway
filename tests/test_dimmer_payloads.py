@@ -4,8 +4,6 @@ import pytest
 
 from gateway.models import DimmerCommand
 from gateway.payloads.dimmer import (
-    DIM_OFF_CUT,
-    DIM_OFF_ZERO,
     decode_dimmer_payload,
     decode_dimmer_status,
     encode_dim_command,
@@ -14,7 +12,6 @@ from gateway.payloads.dimmer import (
     encode_dim_stop,
     encode_dim_toggle,
     encode_dimmer_status_poll,
-    resolve_dim_off_style,
 )
 
 
@@ -81,33 +78,8 @@ def test_encode_dim_command():
 
 
 def test_encode_dim_off():
-    assert encode_dim_off(1) == b"C1991030"
-
-
-def test_encode_dim_off_zero_style():
-    """Prefer C<ch>00 over C<ch>99 for modules that execute the value field."""
-    assert encode_dim_off(1, style=DIM_OFF_ZERO) == b"C1001030"
-    assert encode_dim_off(0, style=DIM_OFF_ZERO) == b"C0001030"
-
-
-def test_encode_dim_off_rejects_unknown_style():
-    with pytest.raises(ValueError, match="unknown dimmer off style"):
-        encode_dim_off(1, style="nope")
-
-
-def test_resolve_dim_off_style_follows_reply_family():
-    assert resolve_dim_off_style("auto", "54") == DIM_OFF_CUT
-    assert resolve_dim_off_style("auto", "15") == DIM_OFF_ZERO
-
-
-def test_resolve_dim_off_style_defaults_to_cut_without_family():
-    """A module that has not answered yet keeps the lab encoding."""
-    assert resolve_dim_off_style("auto", None) == DIM_OFF_CUT
-
-
-def test_resolve_dim_off_style_explicit_setting_wins():
-    assert resolve_dim_off_style(DIM_OFF_CUT, "15") == DIM_OFF_CUT
-    assert resolve_dim_off_style(DIM_OFF_ZERO, "54") == DIM_OFF_ZERO
+    assert encode_dim_off(1) == b"C1001030"
+    assert encode_dim_off(0) == b"C0001030"
 
 
 def test_nolf_dim_off_echo_decodes_as_zero_percent():

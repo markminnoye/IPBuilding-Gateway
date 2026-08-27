@@ -1027,37 +1027,3 @@ class TestModulesRefreshPersist:
         relay = next(m for m in on_disk["modules"] if m["type"] == "relay")
         assert relay["channels"][0]["active"] is False
         assert len(relay["channels"]) == 2
-
-
-class TestDimmerOffStyle:
-    """OFF encoding must follow the generation the dimmer module belongs to."""
-
-    def _api(self, configured: str):
-        inst = _make_installation([
-            {
-                "name": "IP0300PoE", "ip": "10.10.1.42", "type": "dimmer",
-                "channels": [{"ch": 0}, {"ch": 1}],
-            }
-        ])
-        api = _make_api(inst)
-        api._cfg.dimmer_off_style = configured
-        return api
-
-    def test_auto_uses_cut_for_lab_dimmer(self) -> None:
-        api = self._api("auto")
-        api._registry.handle_packet(_dimmer_pkt("10.10.1.42", b"I0154130"))
-        assert api._dimmer_off_style("10.10.1.42") == "cut"
-
-    def test_auto_uses_zero_for_nolf_dimmer(self) -> None:
-        api = self._api("auto")
-        api._registry.handle_packet(_dimmer_pkt("10.10.1.42", b"I0115184"))
-        assert api._dimmer_off_style("10.10.1.42") == "zero"
-
-    def test_auto_falls_back_to_cut_before_the_module_answers(self) -> None:
-        api = self._api("auto")
-        assert api._dimmer_off_style("10.10.1.42") == "cut"
-
-    def test_explicit_setting_overrides_the_observed_family(self) -> None:
-        api = self._api("zero")
-        api._registry.handle_packet(_dimmer_pkt("10.10.1.42", b"I0154130"))
-        assert api._dimmer_off_style("10.10.1.42") == "zero"

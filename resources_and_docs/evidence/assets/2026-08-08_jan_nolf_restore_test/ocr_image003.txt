@@ -1,0 +1,53 @@
+3 | Ongebruikt 3 | [Onbekend | [© tight y|
+4 [Ongebruit 4 | [Onbekend | [© tight y|
+5 | Ongebruikt 5 | [Onbekend | [© tight y|
+6 | Ongebruikt 6 | [Onbekend | [© tight y|
+7 | Ongebruikt 7 | [Onbekend | [© tight y|
+1PO200 1P0200 | RELay
+
+10.10.1.32
+
+ch Name Room Type
+
+0 [TL tuinhuis | [Tuinhuis | [@ light vy
+1 [ Ongebruikt 1 | [Onbekend | [@ ight vy
+2 | Ongebruikt 2 | [Onbekend | [@ ight vy
+3 | Ongebruikt 3 | [Onbekend | [@ ight vy
+4 [ Ongebruikt 4 | | Onbekend | [@ light vy
+5 | Ongebruikt 5 | [Onbekend | [@ ight vy
+6 | Ongebruikt 6 | [Onbekend | [@ ight vy
+7 | Ongebruikt 7 | [Onbekend | [@ ight vy
+
+1P0300 1P0300 | bimmer
+10.10.1.42
+
+Active
+
+Save
+
+Save
+
+Save
+
+Save
+
+Save
+
+Push Fetch
+
+Save
+
+Save
+
+Save
+
+Save
+
+Save
+
+Save
+
+Save
+
+Update
+

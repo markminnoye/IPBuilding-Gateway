@@ -1,0 +1,18 @@
+1P0300 1P0300 | oimmen . °
+
+10.10.1.42 Push Fetch Update
+ch Name Room Type Active Max Watt
+
+0 | Zithoek | [Living | ® light © Save
+
+1 [Lichtstraat | [Living ] | @ light © Save
+
+2 [ Badkamer | [Badkamer } light © Save
+
+3 | Slaapkamer | | Slaapkamer | ® light © Save
+
+Backup & restore
+
+Save or restore your full installation — channel names, rooms, wattages, and which devices are active. Upload and Reset replace what the gateway is using now.
+
+Download backup

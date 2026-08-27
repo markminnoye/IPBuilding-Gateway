@@ -1,0 +1,14 @@
+t
+IPO200POE P0200P0F satay °
+cane Push Fetch Update
+Ch ~—s Name Room Type Active Max Watt
+t
+IPO300POE 1P0300P0F | Dimes °
+sosoa2 Push Fetch Update
+ch Name Room Type Active Max Watt
+Backup & restore
+Save or restore your full installation — channel names, rooms, wattages, and which devices are active. Upload and Reset replace what the gateway is using now.
+Download backup
+Save your current setup to your computer. Do this before updates, network scans, or other major changes.
+Restore from backup
+Replace the running setup with a file you saved earlier. The gateway checks the file first — if anything is invalid, nothing changes.

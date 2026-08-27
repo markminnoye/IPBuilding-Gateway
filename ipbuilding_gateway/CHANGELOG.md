@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.6.7] - 2026-08-27
+
+### Changed
+- **Dimmer off:** one off command for all IP0300PoE dimmers (recent and older). Replaces the per-generation choice introduced in 1.6.6.
+
+### Removed
+- **Modules → How to switch a dimmer off.** No user setting; behaviour is fixed.
+
 ## [1.6.6] - 2026-08-26
 
 ### Fixed

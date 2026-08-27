@@ -1,0 +1,18 @@
+Dag Mark
+
+Na het verwijderen en installeren staan we op 1.6.4 😊
+
+Dimmers zijn nu zichtbaar en werken.
+De status blijft echter op onbekend staan.
+
+Nieuwe logs in bijlage.
+
+Groeten
+
+---
+
+Mark
+
+Ook nog eens de uitgebreide logs gedaan.
+
+Om één of andere reden stond de status plots op uit van een relais, maar na het wijzigen bleef de status wel dezelfde… (lamp ging branden, maar status bleef uit)

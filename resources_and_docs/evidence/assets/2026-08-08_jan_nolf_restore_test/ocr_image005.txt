@@ -1,0 +1,24 @@
+IP1100 1P1100 our [Stave ] c ies
+
+10.10.1.55 Push Fetch Update
+Port Name Room Type Active Max Watt
+
+0 | Verlichting buiten oversteek | | Achterdeur | ® input © _ Save
+0 | Verlichting garage aan achterdeur | [Achterdeur ] | @ input © — Save
+0 | Rechtsonder aan achterdeur | | Achterdeur | ® input © _ Save
+0 | Verlichting garage aan deur berging | [Berging ] | @ input © — Save
+0 | Verlichting berging aan deur berging | [Berging ] | @ input © — Save
+0 | Rechtsonder aan deur berging | | Berging | ® input © _ Save
+0 | Poort deur berging | | Berging | ® input © _ Save
+0 | Verlichting berging aan deur keuken | [Keuken ] | @ input © — Save
+0 | Verlichting garage aan deur keuken | [Keuken ] | @ input © — Save
+0 | Verlichting keuken aan deur keuken | [Keuken ] | @ input © — Save
+0 | Linksonder aan deur keuken | | Keuken | ® input © _ Save
+0 | Verlichting keuken in keuken | | Keuken | ® input ©
+
+0 | Verlichting eetbar in keuken | | Keuken | ® input ©
+
+0 | Verlichting eetplaats in keuken | | Keuken | ® input ©
+
+5 l Verlichting living in keuken | {Keuken | @inng ®)
+

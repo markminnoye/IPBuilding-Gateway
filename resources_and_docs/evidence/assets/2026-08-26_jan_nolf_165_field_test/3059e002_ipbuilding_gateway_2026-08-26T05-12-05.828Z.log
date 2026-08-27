@@ -1,0 +1,111 @@
+07:11:16 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:18 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:18 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:18 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:20 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:20 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:20 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:21 INFO  aiohttp.access  10.10.1.218 [26/Aug/2026:07:11:21 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:11:22 DEBUG gateway.udp_bus  TX 10.10.1.30 keepalive P0000
+07:11:22 DEBUG gateway.udp_bus  RX 10.10.1.30 keepalive P000000000
+07:11:22 DEBUG gateway.udp_bus  TX 10.10.1.31 keepalive P0000
+07:11:22 DEBUG gateway.udp_bus  RX 10.10.1.31 keepalive P000000000
+07:11:22 DEBUG gateway.udp_bus  TX 10.10.1.32 keepalive P0000
+07:11:22 DEBUG gateway.udp_bus  RX 10.10.1.32 keepalive P000000000
+07:11:22 DEBUG gateway.udp_bus  TX 10.10.1.42 keepalive I9900
+07:11:22 DEBUG gateway.udp_bus  RX 10.10.1.42 keepalive I0115000
+07:11:22 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:22 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:22 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:22 INFO  aiohttp.access  10.10.1.211 [26/Aug/2026:07:11:22 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:11:23 INFO  aiohttp.access  10.10.1.131 [26/Aug/2026:07:11:23 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:11:24 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:24 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:24 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:26 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:26 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:26 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:28 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:28 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:28 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:30 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:30 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:30 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:31 INFO  aiohttp.access  10.10.1.207 [26/Aug/2026:07:11:31 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:11:32 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:32 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:32 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:34 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:34 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:34 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:36 INFO  aiohttp.access  10.10.1.218 [26/Aug/2026:07:11:36 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:11:36 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:36 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:36 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:38 INFO  aiohttp.access  10.10.1.211 [26/Aug/2026:07:11:38 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:11:38 INFO  aiohttp.access  10.10.1.131 [26/Aug/2026:07:11:38 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:11:38 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:38 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:38 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:38 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:462878d7af0200005406a30145
+07:11:40 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:40 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:40 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:42 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=b261ddab013b47779533e50876bb08cf
+07:11:42 DEBUG gateway.udp_bus  TX 10.10.1.30 keepalive P0000
+07:11:42 DEBUG gateway.udp_bus  RX 10.10.1.30 keepalive P000000000
+07:11:42 DEBUG gateway.udp_bus  TX 10.10.1.31 keepalive P0000
+07:11:42 DEBUG gateway.udp_bus  RX 10.10.1.31 keepalive P000000000
+07:11:42 DEBUG gateway.udp_bus  TX 10.10.1.32 keepalive P0000
+07:11:42 DEBUG gateway.udp_bus  RX 10.10.1.32 keepalive P000000000
+07:11:42 DEBUG gateway.udp_bus  TX 10.10.1.42 keepalive I9900
+07:11:42 DEBUG gateway.udp_bus  RX 10.10.1.42 keepalive I0115000
+07:11:42 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:42 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:42 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:44 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:44 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:44 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:46 INFO  aiohttp.access  10.10.1.207 [26/Aug/2026:07:11:46 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:11:46 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:46 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:46 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:48 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:48 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:48 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:50 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:50 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:50 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:51 INFO  aiohttp.access  10.10.1.218 [26/Aug/2026:07:11:51 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:11:52 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:52 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:52 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:53 INFO  aiohttp.access  10.10.1.211 [26/Aug/2026:07:11:53 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:11:53 INFO  aiohttp.access  10.10.1.131 [26/Aug/2026:07:11:53 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:11:54 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:54 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:54 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:56 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:56 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:56 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:11:58 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:11:58 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:11:58 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:12:00 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:12:00 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:12:00 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:12:01 INFO  aiohttp.access  10.10.1.207 [26/Aug/2026:07:12:01 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+07:12:02 DEBUG gateway.udp_bus  TX 10.10.1.30 keepalive P0000
+07:12:02 DEBUG gateway.udp_bus  RX 10.10.1.30 keepalive P000000000
+07:12:02 DEBUG gateway.udp_bus  TX 10.10.1.31 keepalive P0000
+07:12:02 DEBUG gateway.udp_bus  RX 10.10.1.31 keepalive P000000000
+07:12:02 DEBUG gateway.udp_bus  TX 10.10.1.32 keepalive P0000
+07:12:02 DEBUG gateway.udp_bus  RX 10.10.1.32 keepalive P000000000
+07:12:02 DEBUG gateway.udp_bus  TX 10.10.1.42 keepalive I9900
+07:12:02 DEBUG gateway.udp_bus  RX 10.10.1.42 keepalive I0115000
+07:12:02 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:12:02 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:12:02 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+07:12:04 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+07:12:04 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+07:12:04 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045

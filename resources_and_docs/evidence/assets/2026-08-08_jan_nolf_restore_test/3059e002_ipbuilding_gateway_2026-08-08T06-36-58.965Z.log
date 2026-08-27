@@ -1,0 +1,1000 @@
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.166: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.167: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.169: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.170: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.171: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.172: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.173: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.174: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.175: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.176: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.177: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.178: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.179: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.181: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.183: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.184: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.185: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.186: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.187: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.188: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.189: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.190: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.191: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.192: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.193: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.194: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.195: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.196: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.197: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.198: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.199: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.200: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.201: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.202: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.203: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.204: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.205: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.206: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.208: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.209: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.210: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.212: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.213: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.214: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.215: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.216: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.217: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.219: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.220: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.221: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.222: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.223: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.224: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.226: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.227: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.228: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.229: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.230: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.231: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.232: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.233: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.234: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.235: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.236: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.237: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.238: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.239: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.240: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.241: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.242: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.243: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.244: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.245: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.246: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.247: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.249: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.250: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.251: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.252: getSysSet failed: 
+19:11:26 WARNING gateway.discovery  HTTP identify 10.10.1.253: getSysSet failed: 
+19:11:26 INFO  gateway.auto_discovery  DiscoveryOrchestrator: forced discovery returned 2 candidate(s)
+19:11:26 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (0 modules)
+19:11:26 INFO  gateway.main  run_gateway: applied new installation from discovery (0 modules)
+19:11:26 INFO  gateway.auto_discovery  DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)
+19:11:26 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:11:23 +0200] "POST /api/v1/discover HTTP/1.1" 200 309 "-" "Python/3.14 aiohttp/3.13.5"
+19:11:26 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+19:11:26 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (0 modules, 0 pushbuttons)
+19:11:26 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:11:26 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:11:26 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:11:26 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:11:26 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:11:26 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:11:26 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:11:26 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:11:26 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:11:26 +0200] "GET /api/v1/devices HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:11:27 INFO  gateway.auto_discovery  ARP: new module 00:24:77:06:70:ba at 10.10.1.55
+19:13:04 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:13:04 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:13:04 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:13:04 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:13:04 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:13:04 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:13:04 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:13:04 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:13:07 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:13:07 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:13:07 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:13:07 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:13:07 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:13:07 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:13:10 INFO  gateway.discovery  ARP sweep 10.10.1.0-255: 1 field-module candidate(s)
+19:13:12 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet failed: 
+19:13:12 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet unreachable; ARP candidate kept as type=unknown mac=00:24:77:06:70:ba
+19:13:12 INFO  gateway.auto_discovery  DiscoveryOrchestrator: forced discovery returned 1 candidate(s)
+19:13:12 INFO  gateway.auto_discovery  DiscoveryOrchestrator: skipping devices.json write for 10.10.1.55 (unidentified type 'unknown' — HTTP getSysSet/backupConfig required)
+19:13:12 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (0 modules)
+19:13:12 INFO  gateway.main  run_gateway: applied new installation from discovery (0 modules)
+19:13:12 INFO  gateway.auto_discovery  DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)
+19:13:12 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:13:10 +0200] "POST /api/v1/discover HTTP/1.1" 200 383 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:13:12 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+19:13:12 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (0 modules, 0 pushbuttons)
+19:13:12 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:13:12 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:13:12 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:13:12 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:13:12 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:13:12 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:15:11 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:15:11 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:15:58 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+19:17:51 INFO  gateway.gateway_api  WS client disconnected (total 0)
+19:17:51 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:11:21 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.13.5"
+19:18:05 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:18:05 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:18:05 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:18:05 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:18:05 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:18:05 +0200] "GET /api/v1/devices HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:18:05 INFO  gateway.gateway_api  WS client connected (total 1)
+19:18:07 INFO  gateway.discovery  ARP sweep 10.10.1.0-255: 1 field-module candidate(s)
+19:18:09 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet failed: 
+19:18:09 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet unreachable; ARP candidate kept as type=unknown mac=00:24:77:06:70:ba
+19:18:09 INFO  gateway.auto_discovery  DiscoveryOrchestrator: forced discovery returned 1 candidate(s)
+19:18:09 INFO  gateway.auto_discovery  DiscoveryOrchestrator: skipping devices.json write for 10.10.1.55 (unidentified type 'unknown' — HTTP getSysSet/backupConfig required)
+19:18:09 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (0 modules)
+19:18:09 INFO  gateway.main  run_gateway: applied new installation from discovery (0 modules)
+19:18:09 INFO  gateway.auto_discovery  DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)
+19:18:09 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:18:06 +0200] "POST /api/v1/discover HTTP/1.1" 200 383 "-" "Python/3.14 aiohttp/3.13.5"
+19:18:09 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+19:18:09 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (0 modules, 0 pushbuttons)
+19:18:09 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:18:09 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:18:09 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:18:09 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:18:09 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:18:09 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:18:09 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:18:09 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:18:09 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:18:09 +0200] "GET /api/v1/devices HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:19:22 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:22 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:22 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:22 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:22 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:22 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:22 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:22 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:25 INFO  gateway.discovery  ARP sweep 10.10.1.0-255: 1 field-module candidate(s)
+19:19:27 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet failed: 
+19:19:27 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet unreachable; ARP candidate kept as type=unknown mac=00:24:77:06:70:ba
+19:19:27 INFO  gateway.auto_discovery  DiscoveryOrchestrator: forced discovery returned 1 candidate(s)
+19:19:27 INFO  gateway.auto_discovery  DiscoveryOrchestrator: skipping devices.json write for 10.10.1.55 (unidentified type 'unknown' — HTTP getSysSet/backupConfig required)
+19:19:27 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (0 modules)
+19:19:27 INFO  gateway.main  run_gateway: applied new installation from discovery (0 modules)
+19:19:27 INFO  gateway.auto_discovery  DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)
+19:19:27 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:24 +0200] "POST /api/v1/discover HTTP/1.1" 200 383 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:27 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+19:19:27 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (0 modules, 0 pushbuttons)
+19:19:27 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:27 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:27 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:27 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:27 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:27 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:28 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:28 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:28 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:28 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:28 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:28 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:33 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (0 modules)
+19:19:33 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:33 +0200] "POST /api/v1/devices/reset HTTP/1.1" 200 192 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:33 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:33 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:33 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:33 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:33 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:19:33 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:19:48 INFO  gateway.gateway_api  WS client disconnected (total 0)
+19:19:48 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:18:05 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.13.5"
+19:19:52 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:19:52 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:19:52 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:19:52 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:19:52 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:19:52 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:19:52 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:19:52 +0200] "GET /api/v1/devices HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:19:52 INFO  gateway.gateway_api  WS client connected (total 1)
+19:19:52 INFO  gateway.discovery  ARP sweep 10.10.1.0-255: 1 field-module candidate(s)
+19:19:54 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet failed: 
+19:19:54 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet unreachable; ARP candidate kept as type=unknown mac=00:24:77:06:70:ba
+19:19:54 INFO  gateway.auto_discovery  DiscoveryOrchestrator: forced discovery returned 1 candidate(s)
+19:19:54 INFO  gateway.auto_discovery  DiscoveryOrchestrator: skipping devices.json write for 10.10.1.55 (unidentified type 'unknown' — HTTP getSysSet/backupConfig required)
+19:19:54 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (0 modules)
+19:19:54 INFO  gateway.main  run_gateway: applied new installation from discovery (0 modules)
+19:19:54 INFO  gateway.auto_discovery  DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)
+19:19:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:19:52 +0200] "POST /api/v1/discover HTTP/1.1" 200 383 "-" "Python/3.14 aiohttp/3.13.5"
+19:19:54 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+19:19:54 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (0 modules, 0 pushbuttons)
+19:19:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:19:54 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:19:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:19:54 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:19:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:19:54 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:19:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:19:54 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:19:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:19:54 +0200] "GET /api/v1/devices HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:37 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:20:37 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:37 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:20:37 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:37 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:20:37 +0200] "GET /api/v1/devices HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:41 INFO  gateway.discovery  ARP sweep 10.10.1.0-255: 1 field-module candidate(s)
+19:20:43 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet failed: 
+19:20:43 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet unreachable; ARP candidate kept as type=unknown mac=00:24:77:06:70:ba
+19:20:43 INFO  gateway.auto_discovery  DiscoveryOrchestrator: forced discovery returned 1 candidate(s)
+19:20:43 INFO  gateway.auto_discovery  DiscoveryOrchestrator: skipping devices.json write for 10.10.1.55 (unidentified type 'unknown' — HTTP getSysSet/backupConfig required)
+19:20:43 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (0 modules)
+19:20:43 INFO  gateway.main  run_gateway: applied new installation from discovery (0 modules)
+19:20:43 INFO  gateway.auto_discovery  DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)
+19:20:43 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:20:40 +0200] "POST /api/v1/discover HTTP/1.1" 200 383 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:43 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+19:20:43 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (0 modules, 0 pushbuttons)
+19:20:43 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:20:43 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:43 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:20:43 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:45 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+19:20:45 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (0 modules, 0 pushbuttons)
+19:20:45 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:20:45 +0200] "POST /api/v1/modules/refresh HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:45 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:20:45 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:47 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:20:47 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:47 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:20:47 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:47 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:20:47 +0200] "GET /api/v1/devices HTTP/1.1" 200 195 "-" "Python/3.14 aiohttp/3.13.5"
+19:20:50 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:20:50 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:20:50 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:20:50 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:20:50 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:20:50 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:20:50 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:20:50 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:20:59 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+19:21:10 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (4 modules)
+19:21:10 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:21:10 +0200] "POST /api/v1/devices/import HTTP/1.1" 200 241 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:21:10 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:21:10 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 3012 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:21:10 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:21:10 +0200] "GET /api/v1/modules HTTP/1.1" 200 879 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:21:10 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:21:10 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:21:54 INFO  gateway.gateway_api  WS client disconnected (total 0)
+19:21:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:19:52 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.13.5"
+19:21:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:21:54 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:21:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:21:54 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:21:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:21:54 +0200] "GET /api/v1/modules HTTP/1.1" 200 879 "-" "Python/3.14 aiohttp/3.13.5"
+19:21:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:21:54 +0200] "GET /api/v1/devices HTTP/1.1" 200 3012 "-" "Python/3.14 aiohttp/3.13.5"
+19:21:54 INFO  gateway.gateway_api  WS client connected (total 1)
+19:21:54 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (4 modules, 16 pushbuttons)
+19:21:54 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:21:54 +0200] "POST /api/v1/modules/10.10.1.30/refresh HTTP/1.1" 200 350 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:21:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:21:54 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Python/3.14 aiohttp/3.13.5"
+19:21:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:21:54 +0200] "GET /api/v1/modules HTTP/1.1" 200 879 "-" "Python/3.14 aiohttp/3.13.5"
+19:21:54 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:21:54 +0200] "GET /api/v1/devices HTTP/1.1" 200 3012 "-" "Python/3.14 aiohttp/3.13.5"
+19:21:54 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:21:54 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 3012 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:21:54 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:21:54 +0200] "GET /api/v1/modules HTTP/1.1" 200 879 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:21:54 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:21:54 +0200] "GET /api/v1/status HTTP/1.1" 200 698 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:22:43 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:22:43 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 3012 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:22:43 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:22:43 +0200] "GET /api/v1/modules HTTP/1.1" 200 879 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:22:43 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:22:43 +0200] "GET /api/v1/status HTTP/1.1" 200 699 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:22:44 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:22:44 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 3012 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:22:44 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:22:44 +0200] "GET /api/v1/modules HTTP/1.1" 200 879 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:22:44 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:22:44 +0200] "GET /api/v1/status HTTP/1.1" 200 699 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:17 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (4 modules, 16 pushbuttons)
+19:24:17 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:17 +0200] "PATCH /api/v1/devices/10.10.1.30-6 HTTP/1.1" 200 426 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:20 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:20 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 3006 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:20 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:20 +0200] "GET /api/v1/modules HTTP/1.1" 200 879 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:20 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:20 +0200] "GET /api/v1/status HTTP/1.1" 200 699 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:28 INFO  gateway.discovery  ARP sweep 10.10.1.0-255: 1 field-module candidate(s)
+19:24:30 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet failed: 
+19:24:30 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet unreachable; ARP candidate kept as type=unknown mac=00:24:77:06:70:ba
+19:24:30 INFO  gateway.auto_discovery  DiscoveryOrchestrator: forced discovery returned 1 candidate(s)
+19:24:30 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (4 modules)
+19:24:30 INFO  gateway.main  run_gateway: applied new installation from discovery (4 modules)
+19:24:30 INFO  gateway.auto_discovery  DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)
+19:24:30 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:28 +0200] "POST /api/v1/discover HTTP/1.1" 200 309 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:30 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:30 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 3006 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:30 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:30 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:30 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:30 +0200] "GET /api/v1/status HTTP/1.1" 200 699 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:30 INFO  gateway.device_registry  Relay 10.10.1.30 ch0: unknown -> off
+19:24:30 INFO  gateway.main  STATE  10.10.1.30 ch0: None → RelayState(state='off', state_code='0000')
+19:24:30 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch0: seeded off
+19:24:30 INFO  gateway.device_registry  Relay 10.10.1.30 ch1: unknown -> unknown
+19:24:30 INFO  gateway.main  STATE  10.10.1.30 ch1: None → RelayState(state='unknown', state_code='0015')
+19:24:30 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded unknown
+19:24:31 INFO  gateway.device_registry  Relay 10.10.1.30 ch2: unknown -> unknown
+19:24:31 INFO  gateway.main  STATE  10.10.1.30 ch2: None → RelayState(state='unknown', state_code='0015')
+19:24:31 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded unknown
+19:24:31 INFO  gateway.device_registry  Relay 10.10.1.30 ch3: unknown -> unknown
+19:24:31 INFO  gateway.main  STATE  10.10.1.30 ch3: None → RelayState(state='unknown', state_code='0015')
+19:24:31 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded unknown
+19:24:31 INFO  gateway.device_registry  Relay 10.10.1.30 ch6: unknown -> unknown
+19:24:31 INFO  gateway.main  STATE  10.10.1.30 ch6: None → RelayState(state='unknown', state_code='0015')
+19:24:31 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded unknown
+19:24:31 INFO  gateway.device_registry  Relay 10.10.1.30 ch7: unknown -> unknown
+19:24:31 INFO  gateway.main  STATE  10.10.1.30 ch7: None → RelayState(state='unknown', state_code='0015')
+19:24:31 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded unknown
+19:24:31 INFO  gateway.device_registry  Relay 10.10.1.30 ch8: unknown -> off
+19:24:31 INFO  gateway.main  STATE  10.10.1.30 ch8: None → RelayState(state='off', state_code='0000')
+19:24:31 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded off
+19:24:31 INFO  gateway.device_registry  Relay 10.10.1.30 ch9: unknown -> off
+19:24:31 INFO  gateway.main  STATE  10.10.1.30 ch9: None → RelayState(state='off', state_code='0000')
+19:24:31 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch9: seeded off
+19:24:31 INFO  gateway.device_registry  Relay 10.10.1.32 ch0: unknown -> off
+19:24:31 INFO  gateway.main  STATE  10.10.1.32 ch0: None → RelayState(state='off', state_code='0000')
+19:24:31 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off
+19:24:31 INFO  gateway.state_poll  Registry seeded from relay status poll (9 channel updates)
+19:24:36 WARNING gateway.module_metadata  HTTP getSysSet 10.10.1.55 failed: TimeoutError: TimeoutError()
+19:24:36 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+19:24:36 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (4 modules, 16 pushbuttons)
+19:24:57 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:57 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/app/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:57 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:57 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:57 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:57 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:24:57 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:24:57 +0200] "GET /api/v1/status HTTP/1.1" 200 1040 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:25:59 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+19:26:36 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:26:36 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:26:36 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:26:36 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:26:36 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:26:36 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:26:36 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:26:36 +0200] "GET /api/v1/status HTTP/1.1" 200 1040 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:26:46 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:26:46 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:26:46 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:26:46 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:26:46 INFO  aiohttp.access  172.30.32.2 [27/Jul/2026:19:26:46 +0200] "GET /api/v1/status HTTP/1.1" 200 1040 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+19:28:24 INFO  gateway.main  Shutting down…
+19:28:24 INFO  gateway.auto_discovery  DiscoveryOrchestrator: stopped
+19:28:24 INFO  gateway.gateway_api  WS client disconnected (total 0)
+19:28:24 INFO  aiohttp.access  127.0.0.1 [27/Jul/2026:19:21:54 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.13.5"
+19:28:24 INFO  gateway.gateway_api  GatewayAPI stopped
+19:28:24 INFO  gateway.ha_discovery  Stopping HA discovery
+19:28:24 INFO  gateway.udp_bus  Poll loop cancelled
+19:28:24 INFO  gateway.udp_bus  UDPBus stopped
+19:28:24 INFO  gateway.main  Gateway stopped
+[run.sh] GATEWAY_POLL_INTERVAL=2.0
+[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=20.0
+[run.sh] GATEWAY_BUTTONS_VIA_HA=1
+[run.sh] GATEWAY_BIND_IP=0.0.0.0
+[run.sh] GATEWAY_EXPOSE_INACTIVE_CHANNELS=0
+[run.sh] GATEWAY_MULTI_PRESS=0
+[run.sh] GATEWAY_MULTI_PRESS_WINDOW_MS=350
+[run.sh] GATEWAY_DEVICES_FILE=/config/devices.json
+[run.sh] GATEWAY_REST_SHIM_ENABLED=0
+[run.sh] GATEWAY_LOG_LEVEL=info
+[run.sh] GATEWAY_DISCOVERY_SUBNET=10.10.1
+[run.sh] GATEWAY_DISCOVERY_RANGE_START=0
+[run.sh] GATEWAY_DISCOVERY_RANGE_END=254
+[run.sh] GATEWAY_AUTO_DISCOVER_ON_START=0
+[run.sh] GATEWAY_PASSIVE_ARP_MONITOR=1
+[run.sh] GATEWAY_ARP_POLL_INTERVAL_S=30.0
+[run.sh] GATEWAY_HTTP_TIMEOUT_S=2.0
+[run.sh] GATEWAY_USE_ENV_DEFAULTS=0
+20:39:24 INFO  gateway.udp_bus  UDPBus started  input_poll=2.0s  actuator_poll=20.0s  modules=['input:10.10.1.55', 'relay:10.10.1.30', 'relay:10.10.1.32', 'dimmer:10.10.1.42']  simulated=False
+20:39:29 WARNING gateway.module_metadata  HTTP getSysSet 10.10.1.55 failed: TimeoutError: TimeoutError()
+20:39:29 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+20:39:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch0: unknown -> off
+20:39:29 INFO  gateway.main  STATE  10.10.1.30 ch0: None → RelayState(state='off', state_code='0000')
+20:39:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch0: seeded off
+20:39:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch1: unknown -> unknown
+20:39:29 INFO  gateway.main  STATE  10.10.1.30 ch1: None → RelayState(state='unknown', state_code='0015')
+20:39:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded unknown
+20:39:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch2: unknown -> unknown
+20:39:29 INFO  gateway.main  STATE  10.10.1.30 ch2: None → RelayState(state='unknown', state_code='0015')
+20:39:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded unknown
+20:39:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch3: unknown -> unknown
+20:39:29 INFO  gateway.main  STATE  10.10.1.30 ch3: None → RelayState(state='unknown', state_code='0015')
+20:39:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded unknown
+20:39:30 INFO  gateway.device_registry  Relay 10.10.1.30 ch6: unknown -> unknown
+20:39:30 INFO  gateway.main  STATE  10.10.1.30 ch6: None → RelayState(state='unknown', state_code='0015')
+20:39:30 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded unknown
+20:39:30 INFO  gateway.device_registry  Relay 10.10.1.30 ch7: unknown -> unknown
+20:39:30 INFO  gateway.main  STATE  10.10.1.30 ch7: None → RelayState(state='unknown', state_code='0015')
+20:39:30 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded unknown
+20:39:30 INFO  gateway.device_registry  Relay 10.10.1.30 ch8: unknown -> off
+20:39:30 INFO  gateway.main  STATE  10.10.1.30 ch8: None → RelayState(state='off', state_code='0000')
+20:39:30 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded off
+20:39:30 INFO  gateway.device_registry  Relay 10.10.1.30 ch9: unknown -> off
+20:39:30 INFO  gateway.main  STATE  10.10.1.30 ch9: None → RelayState(state='off', state_code='0000')
+20:39:30 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch9: seeded off
+20:39:30 INFO  gateway.device_registry  Relay 10.10.1.32 ch0: unknown -> off
+20:39:30 INFO  gateway.main  STATE  10.10.1.32 ch0: None → RelayState(state='off', state_code='0000')
+20:39:30 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off
+20:39:30 INFO  gateway.state_poll  Registry seeded from relay status poll (9 channel updates)
+20:39:30 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (4 modules, 16 pushbuttons)
+20:39:30 INFO  gateway.auto_discovery  DiscoveryOrchestrator: started (passive ARP every 30 s)
+20:39:30 INFO  gateway.gateway_api  GatewayAPI started  api=0.0.0.0:8080
+20:39:30 INFO  gateway.ha_discovery  Starting HA discovery  instance_id=1258f4ac408845bc90f66d336842fcf3  base_url=http://127.0.0.1:8080  addon=True
+20:39:31 INFO  gateway.ha_discovery  Zeroconf registered: service_name=ipbgw-1258f4ac._ipbgw._tcp.local. server=ipbgw.local. port=8080 publish_ip=127.0.0.1 has_host_in_properties=True has_port_in_properties=True
+20:39:31 INFO  gateway.main  IPBuilding Gateway v1.6.0  rest=0.0.0.0:30200  shim_enabled=False  api=0.0.0.0:8080  buttons_via_ha=True  hub_role=slave  input_poll=2.0s  actuator_poll=20.0s  simulated=False  install=input@10.10.1.55, relay@10.10.1.30, relay@10.10.1.32, dimmer@10.10.1.42
+20:39:31 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+20:39:31 INFO  gateway.gateway_api  WS client connected (total 1)
+20:39:39 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:39:39 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:39:39 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:39:39 +0200] "GET /api/v1/status HTTP/1.1" 200 1038 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:39:39 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:39:39 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:39:39 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:39:39 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:40:00 INFO  gateway.auto_discovery  ARP: new module 00:24:77:06:70:ba at 10.10.1.55
+20:41:43 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:41:43 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Python/3.14 aiohttp/3.13.5"
+20:43:27 INFO  gateway.device_registry  Relay 10.10.1.32 ch0: off -> on
+20:43:27 INFO  gateway.main  STATE  10.10.1.32 ch0: RelayState(state='off', state_code='0000') → RelayState(state='on', state_code='0100')
+20:43:32 INFO  gateway.device_registry  Relay 10.10.1.32 ch0: on -> off
+20:43:32 INFO  gateway.main  STATE  10.10.1.32 ch0: RelayState(state='on', state_code='0100') → RelayState(state='off', state_code='0000')
+20:44:31 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+20:45:32 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:32 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:32 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:32 +0200] "GET /api/v1/modules HTTP/1.1" 200 979 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:32 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:32 +0200] "GET /api/v1/devices HTTP/1.1" 200 2990 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:40 INFO  gateway.discovery  ARP sweep 10.10.1.0-255: 1 field-module candidate(s)
+20:45:42 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet failed: 
+20:45:42 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet unreachable; ARP candidate kept as type=unknown mac=00:24:77:06:70:ba
+20:45:42 INFO  gateway.auto_discovery  DiscoveryOrchestrator: forced discovery returned 1 candidate(s)
+20:45:42 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (4 modules)
+20:45:42 INFO  gateway.main  run_gateway: applied new installation from discovery (4 modules)
+20:45:42 INFO  gateway.auto_discovery  DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)
+20:45:42 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:39 +0200] "POST /api/v1/discover HTTP/1.1" 200 309 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:42 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:42 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:42 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:42 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:42 INFO  gateway.device_registry  Relay 10.10.1.30 ch0: off -> on
+20:45:42 INFO  gateway.main  STATE  10.10.1.30 ch0: RelayState(state='off', state_code='0000') → RelayState(state='on', state_code='0100')
+20:45:42 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch0: seeded on
+20:45:42 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded unknown
+20:45:42 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded unknown
+20:45:42 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded unknown
+20:45:42 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:42 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:42 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:42 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:42 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:42 +0200] "GET /api/v1/devices HTTP/1.1" 200 2990 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:42 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded unknown
+20:45:43 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded unknown
+20:45:43 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded off
+20:45:43 INFO  gateway.device_registry  Relay 10.10.1.30 ch9: off -> on
+20:45:43 INFO  gateway.main  STATE  10.10.1.30 ch9: RelayState(state='off', state_code='0000') → RelayState(state='on', state_code='0100')
+20:45:43 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch9: seeded on
+20:45:43 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off
+20:45:43 INFO  gateway.state_poll  Registry seeded from relay status poll (9 channel updates)
+20:45:47 WARNING gateway.module_metadata  HTTP getSysSet 10.10.1.55 failed: TimeoutError: TimeoutError()
+20:45:47 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+20:45:47 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (4 modules, 16 pushbuttons)
+20:45:52 WARNING gateway.module_metadata  HTTP getSysSet 10.10.1.55 failed: TimeoutError: TimeoutError()
+20:45:52 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+20:45:52 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (4 modules, 16 pushbuttons)
+20:45:52 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:47 +0200] "POST /api/v1/modules/refresh HTTP/1.1" 200 903 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:52 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:52 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:52 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:52 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:52 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:52 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:52 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:52 +0200] "GET /api/v1/devices HTTP/1.1" 200 2990 "-" "Python/3.14 aiohttp/3.13.5"
+20:45:58 INFO  gateway.discovery  ARP sweep 10.10.1.0-255: 1 field-module candidate(s)
+20:46:00 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet failed: 
+20:46:00 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet unreachable; ARP candidate kept as type=unknown mac=00:24:77:06:70:ba
+20:46:00 INFO  gateway.auto_discovery  DiscoveryOrchestrator: forced discovery returned 1 candidate(s)
+20:46:00 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (4 modules)
+20:46:00 INFO  gateway.main  run_gateway: applied new installation from discovery (4 modules)
+20:46:00 INFO  gateway.auto_discovery  DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)
+20:46:00 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:45:58 +0200] "POST /api/v1/discover HTTP/1.1" 200 309 "-" "Python/3.14 aiohttp/3.13.5"
+20:46:00 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:46:00 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Python/3.14 aiohttp/3.13.5"
+20:46:00 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:46:00 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Python/3.14 aiohttp/3.13.5"
+20:46:00 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch0: seeded on
+20:46:00 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded unknown
+20:46:00 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded unknown
+20:46:01 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded unknown
+20:46:01 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded unknown
+20:46:01 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded unknown
+20:46:01 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded off
+20:46:01 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch9: seeded on
+20:46:01 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off
+20:46:01 INFO  gateway.state_poll  Registry seeded from relay status poll (9 channel updates)
+20:46:02 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:46:02 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Python/3.14 aiohttp/3.13.5"
+20:46:02 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:46:02 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Python/3.14 aiohttp/3.13.5"
+20:46:02 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:46:02 +0200] "GET /api/v1/devices HTTP/1.1" 200 2990 "-" "Python/3.14 aiohttp/3.13.5"
+20:46:06 WARNING gateway.module_metadata  HTTP getSysSet 10.10.1.55 failed: TimeoutError: TimeoutError()
+20:46:06 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+20:46:06 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (4 modules, 16 pushbuttons)
+20:49:16 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:16 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:16 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:16 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:16 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:16 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:16 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:16 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:22 INFO  gateway.discovery  ARP sweep 10.10.1.0-255: 1 field-module candidate(s)
+20:49:24 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet failed: 
+20:49:24 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet unreachable; ARP candidate kept as type=unknown mac=00:24:77:06:70:ba
+20:49:24 INFO  gateway.auto_discovery  DiscoveryOrchestrator: forced discovery returned 1 candidate(s)
+20:49:24 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (4 modules)
+20:49:24 INFO  gateway.main  run_gateway: applied new installation from discovery (4 modules)
+20:49:24 INFO  gateway.auto_discovery  DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)
+20:49:24 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:22 +0200] "POST /api/v1/discover HTTP/1.1" 200 309 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:24 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:24 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:24 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:24 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:24 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:24 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch0: seeded on
+20:49:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded unknown
+20:49:25 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded unknown
+20:49:25 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded unknown
+20:49:25 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded unknown
+20:49:25 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded unknown
+20:49:25 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded off
+20:49:25 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch9: seeded on
+20:49:25 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off
+20:49:25 INFO  gateway.state_poll  Registry seeded from relay status poll (9 channel updates)
+20:49:30 WARNING gateway.module_metadata  HTTP getSysSet 10.10.1.55 failed: TimeoutError: TimeoutError()
+20:49:30 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+20:49:30 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (4 modules, 16 pushbuttons)
+20:49:31 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+20:49:32 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:32 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:32 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:32 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:32 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:32 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:44 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:44 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/app/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:44 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:44 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:44 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:44 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:49:44 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:49:44 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:54:31 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+20:56:15 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:56:15 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:56:15 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:56:15 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:56:15 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:56:15 +0200] "GET /api/v1/modules HTTP/1.1" 200 903 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:56:15 INFO  aiohttp.access  172.30.32.2 [03/Aug/2026:20:56:15 +0200] "GET /api/v1/status HTTP/1.1" 200 1040 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+20:57:34 INFO  gateway.main  Shutting down…
+20:57:34 INFO  gateway.auto_discovery  DiscoveryOrchestrator: stopped
+20:57:34 INFO  gateway.gateway_api  WS client disconnected (total 0)
+20:57:34 INFO  aiohttp.access  127.0.0.1 [03/Aug/2026:20:39:31 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.13.5"
+20:57:34 INFO  gateway.gateway_api  GatewayAPI stopped
+20:57:34 INFO  gateway.ha_discovery  Stopping HA discovery
+20:57:34 INFO  gateway.udp_bus  Poll loop cancelled
+20:57:34 INFO  gateway.udp_bus  UDPBus stopped
+20:57:34 INFO  gateway.main  Gateway stopped
+[run.sh] GATEWAY_POLL_INTERVAL=2.0
+[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=20.0
+[run.sh] GATEWAY_BUTTONS_VIA_HA=1
+[run.sh] GATEWAY_BIND_IP=0.0.0.0
+[run.sh] GATEWAY_EXPOSE_INACTIVE_CHANNELS=0
+[run.sh] GATEWAY_MULTI_PRESS=0
+[run.sh] GATEWAY_MULTI_PRESS_WINDOW_MS=350
+[run.sh] GATEWAY_DEVICES_FILE=/config/devices.json
+[run.sh] GATEWAY_REST_SHIM_ENABLED=0
+[run.sh] GATEWAY_LOG_LEVEL=info
+[run.sh] GATEWAY_DISCOVERY_SUBNET=10.10.1
+[run.sh] GATEWAY_DISCOVERY_RANGE_START=0
+[run.sh] GATEWAY_DISCOVERY_RANGE_END=254
+[run.sh] GATEWAY_AUTO_DISCOVER_ON_START=0
+[run.sh] GATEWAY_PASSIVE_ARP_MONITOR=1
+[run.sh] GATEWAY_ARP_POLL_INTERVAL_S=30.0
+[run.sh] GATEWAY_HTTP_TIMEOUT_S=2.0
+[run.sh] GATEWAY_USE_ENV_DEFAULTS=0
+16:32:08 INFO  gateway.udp_bus  UDPBus started  input_poll=2.0s  actuator_poll=20.0s  modules=['input:10.10.1.55', 'relay:10.10.1.30', 'relay:10.10.1.32', 'dimmer:10.10.1.42']  simulated=False
+16:32:14 WARNING gateway.module_metadata  HTTP getSysSet 10.10.1.55 failed: TimeoutError: TimeoutError()
+16:32:14 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+16:32:14 INFO  gateway.device_registry  Relay 10.10.1.30 ch0: unknown -> off
+16:32:14 INFO  gateway.main  STATE  10.10.1.30 ch0: None → RelayState(state='off', state_code='0000')
+16:32:14 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch0: seeded off
+16:32:14 INFO  gateway.device_registry  Relay 10.10.1.30 ch1: unknown -> unknown
+16:32:14 INFO  gateway.main  STATE  10.10.1.30 ch1: None → RelayState(state='unknown', state_code='0015')
+16:32:14 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded unknown
+16:32:14 INFO  gateway.device_registry  Relay 10.10.1.30 ch2: unknown -> unknown
+16:32:14 INFO  gateway.main  STATE  10.10.1.30 ch2: None → RelayState(state='unknown', state_code='0015')
+16:32:14 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded unknown
+16:32:14 INFO  gateway.device_registry  Relay 10.10.1.30 ch3: unknown -> unknown
+16:32:14 INFO  gateway.main  STATE  10.10.1.30 ch3: None → RelayState(state='unknown', state_code='0015')
+16:32:14 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded unknown
+16:32:15 INFO  gateway.device_registry  Relay 10.10.1.30 ch6: unknown -> unknown
+16:32:15 INFO  gateway.main  STATE  10.10.1.30 ch6: None → RelayState(state='unknown', state_code='0015')
+16:32:15 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded unknown
+16:32:15 INFO  gateway.device_registry  Relay 10.10.1.30 ch7: unknown -> unknown
+16:32:15 INFO  gateway.main  STATE  10.10.1.30 ch7: None → RelayState(state='unknown', state_code='0015')
+16:32:15 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded unknown
+16:32:15 INFO  gateway.device_registry  Relay 10.10.1.30 ch8: unknown -> off
+16:32:15 INFO  gateway.main  STATE  10.10.1.30 ch8: None → RelayState(state='off', state_code='0000')
+16:32:15 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded off
+16:32:15 INFO  gateway.device_registry  Relay 10.10.1.30 ch9: unknown -> off
+16:32:15 INFO  gateway.main  STATE  10.10.1.30 ch9: None → RelayState(state='off', state_code='0000')
+16:32:15 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch9: seeded off
+16:32:15 INFO  gateway.device_registry  Relay 10.10.1.32 ch0: unknown -> off
+16:32:15 INFO  gateway.main  STATE  10.10.1.32 ch0: None → RelayState(state='off', state_code='0000')
+16:32:15 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off
+16:32:15 INFO  gateway.state_poll  Registry seeded from relay status poll (9 channel updates)
+16:32:15 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (4 modules, 16 pushbuttons)
+16:32:15 INFO  gateway.auto_discovery  DiscoveryOrchestrator: started (passive ARP every 30 s)
+16:32:15 INFO  gateway.gateway_api  GatewayAPI started  api=0.0.0.0:8080
+16:32:15 INFO  gateway.ha_discovery  Starting HA discovery  instance_id=1258f4ac408845bc90f66d336842fcf3  base_url=http://127.0.0.1:8080  addon=True
+16:32:16 INFO  gateway.gateway_api  WS client connected (total 1)
+16:32:16 INFO  gateway.ha_discovery  Zeroconf registered: service_name=ipbgw-1258f4ac._ipbgw._tcp.local. server=ipbgw.local. port=8080 publish_ip=127.0.0.1 has_host_in_properties=True has_port_in_properties=True
+16:32:16 INFO  gateway.main  IPBuilding Gateway v1.6.0  rest=0.0.0.0:30200  shim_enabled=False  api=0.0.0.0:8080  buttons_via_ha=True  hub_role=slave  input_poll=2.0s  actuator_poll=20.0s  simulated=False  install=input@10.10.1.55, relay@10.10.1.30, relay@10.10.1.32, dimmer@10.10.1.42
+16:32:16 INFO  aiohttp.access  127.0.0.1 [06/Aug/2026:16:32:16 +0200] "GET /api/v1/status HTTP/1.1" 200 1037 "-" "Python/3.14 aiohttp/3.13.5"
+16:32:16 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+16:32:45 INFO  gateway.auto_discovery  ARP: new module 00:24:77:06:70:ba at 10.10.1.55
+16:37:16 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+16:42:16 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+16:47:16 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+16:52:16 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+16:55:13 INFO  aiohttp.access  172.30.32.2 [06/Aug/2026:16:55:13 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+16:55:13 INFO  aiohttp.access  172.30.32.2 [06/Aug/2026:16:55:13 +0200] "GET /api/v1/modules HTTP/1.1" 200 979 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+16:55:13 INFO  aiohttp.access  172.30.32.2 [06/Aug/2026:16:55:13 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+16:55:13 INFO  aiohttp.access  172.30.32.2 [06/Aug/2026:16:55:13 +0200] "GET /api/v1/status HTTP/1.1" 200 1040 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+16:56:00 INFO  aiohttp.access  172.30.32.2 [06/Aug/2026:16:56:00 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/app/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+16:56:00 INFO  aiohttp.access  172.30.32.2 [06/Aug/2026:16:56:00 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+16:56:00 INFO  aiohttp.access  172.30.32.2 [06/Aug/2026:16:56:00 +0200] "GET /api/v1/modules HTTP/1.1" 200 979 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+16:56:00 INFO  aiohttp.access  172.30.32.2 [06/Aug/2026:16:56:00 +0200] "GET /api/v1/status HTTP/1.1" 200 1040 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+16:57:17 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+17:01:09 INFO  gateway.main  Shutting down…
+17:01:09 INFO  gateway.auto_discovery  DiscoveryOrchestrator: stopped
+17:01:09 INFO  gateway.gateway_api  WS client disconnected (total 0)
+17:01:09 INFO  aiohttp.access  127.0.0.1 [06/Aug/2026:16:32:16 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.13.5"
+17:01:09 INFO  gateway.gateway_api  GatewayAPI stopped
+17:01:09 INFO  gateway.ha_discovery  Stopping HA discovery
+17:01:09 INFO  gateway.udp_bus  Poll loop cancelled
+17:01:09 INFO  gateway.udp_bus  UDPBus stopped
+17:01:09 INFO  gateway.main  Gateway stopped
+[run.sh] GATEWAY_POLL_INTERVAL=2.0
+[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=20.0
+[run.sh] GATEWAY_BUTTONS_VIA_HA=1
+[run.sh] GATEWAY_BIND_IP=0.0.0.0
+[run.sh] GATEWAY_EXPOSE_INACTIVE_CHANNELS=0
+[run.sh] GATEWAY_MULTI_PRESS=0
+[run.sh] GATEWAY_MULTI_PRESS_WINDOW_MS=350
+[run.sh] GATEWAY_DEVICES_FILE=/config/devices.json
+[run.sh] GATEWAY_REST_SHIM_ENABLED=0
+[run.sh] GATEWAY_LOG_LEVEL=info
+[run.sh] GATEWAY_DISCOVERY_SUBNET=10.10.1
+[run.sh] GATEWAY_DISCOVERY_RANGE_START=0
+[run.sh] GATEWAY_DISCOVERY_RANGE_END=254
+[run.sh] GATEWAY_AUTO_DISCOVER_ON_START=0
+[run.sh] GATEWAY_PASSIVE_ARP_MONITOR=1
+[run.sh] GATEWAY_ARP_POLL_INTERVAL_S=30.0
+[run.sh] GATEWAY_HTTP_TIMEOUT_S=2.0
+[run.sh] GATEWAY_USE_ENV_DEFAULTS=0
+07:41:26 INFO  gateway.udp_bus  UDPBus started  input_poll=2.0s  actuator_poll=20.0s  modules=['input:10.10.1.55', 'relay:10.10.1.30', 'relay:10.10.1.32', 'dimmer:10.10.1.42']  simulated=False
+07:41:32 WARNING gateway.module_metadata  HTTP getSysSet 10.10.1.55 failed: TimeoutError: TimeoutError()
+07:41:32 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+07:41:32 INFO  gateway.device_registry  Relay 10.10.1.30 ch0: unknown -> off
+07:41:32 INFO  gateway.main  STATE  10.10.1.30 ch0: None → RelayState(state='off', state_code='0000')
+07:41:32 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch0: seeded off
+07:41:32 INFO  gateway.device_registry  Relay 10.10.1.30 ch1: unknown -> unknown
+07:41:32 INFO  gateway.main  STATE  10.10.1.30 ch1: None → RelayState(state='unknown', state_code='0015')
+07:41:32 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded unknown
+07:41:32 INFO  gateway.device_registry  Relay 10.10.1.30 ch2: unknown -> unknown
+07:41:32 INFO  gateway.main  STATE  10.10.1.30 ch2: None → RelayState(state='unknown', state_code='0015')
+07:41:32 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded unknown
+07:41:32 INFO  gateway.device_registry  Relay 10.10.1.30 ch3: unknown -> unknown
+07:41:32 INFO  gateway.main  STATE  10.10.1.30 ch3: None → RelayState(state='unknown', state_code='0015')
+07:41:32 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded unknown
+07:41:32 INFO  gateway.device_registry  Relay 10.10.1.30 ch6: unknown -> unknown
+07:41:32 INFO  gateway.main  STATE  10.10.1.30 ch6: None → RelayState(state='unknown', state_code='0015')
+07:41:32 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded unknown
+07:41:32 INFO  gateway.device_registry  Relay 10.10.1.30 ch7: unknown -> unknown
+07:41:32 INFO  gateway.main  STATE  10.10.1.30 ch7: None → RelayState(state='unknown', state_code='0015')
+07:41:32 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded unknown
+07:41:32 INFO  gateway.device_registry  Relay 10.10.1.30 ch8: unknown -> off
+07:41:32 INFO  gateway.main  STATE  10.10.1.30 ch8: None → RelayState(state='off', state_code='0000')
+07:41:32 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded off
+07:41:33 INFO  gateway.device_registry  Relay 10.10.1.30 ch9: unknown -> off
+07:41:33 INFO  gateway.main  STATE  10.10.1.30 ch9: None → RelayState(state='off', state_code='0000')
+07:41:33 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch9: seeded off
+07:41:33 INFO  gateway.device_registry  Relay 10.10.1.32 ch0: unknown -> off
+07:41:33 INFO  gateway.main  STATE  10.10.1.32 ch0: None → RelayState(state='off', state_code='0000')
+07:41:33 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off
+07:41:33 INFO  gateway.state_poll  Registry seeded from relay status poll (9 channel updates)
+07:41:33 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (4 modules, 16 pushbuttons)
+07:41:33 INFO  gateway.auto_discovery  DiscoveryOrchestrator: started (passive ARP every 30 s)
+07:41:33 INFO  gateway.gateway_api  GatewayAPI started  api=0.0.0.0:8080
+07:41:33 INFO  gateway.ha_discovery  Starting HA discovery  instance_id=1258f4ac408845bc90f66d336842fcf3  base_url=http://127.0.0.1:8080  addon=True
+07:41:34 INFO  gateway.ha_discovery  Zeroconf registered: service_name=ipbgw-1258f4ac._ipbgw._tcp.local. server=ipbgw.local. port=8080 publish_ip=127.0.0.1 has_host_in_properties=True has_port_in_properties=True
+07:41:34 INFO  gateway.main  IPBuilding Gateway v1.6.0  rest=0.0.0.0:30200  shim_enabled=False  api=0.0.0.0:8080  buttons_via_ha=True  hub_role=slave  input_poll=2.0s  actuator_poll=20.0s  simulated=False  install=input@10.10.1.55, relay@10.10.1.30, relay@10.10.1.32, dimmer@10.10.1.42
+07:41:34 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:07:41:34 +0200] "GET /api/v1/status HTTP/1.1" 200 1037 "-" "Python/3.14 aiohttp/3.13.5"
+07:41:34 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+07:41:37 INFO  gateway.gateway_api  WS client connected (total 1)
+07:42:03 INFO  gateway.auto_discovery  ARP: new module 00:24:77:06:70:ba at 10.10.1.55
+07:44:12 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:12 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:44:12 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:12 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 2990 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:44:12 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:12 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:44:12 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:12 +0200] "GET /api/v1/modules HTTP/1.1" 200 979 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:44:17 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (0 modules)
+07:44:17 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:17 +0200] "POST /api/v1/devices/reset HTTP/1.1" 200 192 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:44:17 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:17 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:44:17 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:17 +0200] "GET /api/v1/modules HTTP/1.1" 200 195 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:44:17 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:17 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:44:29 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (5 modules)
+07:44:29 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:29 +0200] "POST /api/v1/devices/import HTTP/1.1" 200 241 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:44:29 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:29 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 11737 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:44:29 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:29 +0200] "GET /api/v1/modules HTTP/1.1" 200 1020 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:44:29 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:44:29 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:45:33 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (5 modules, 60 pushbuttons)
+07:45:33 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:45:33 +0200] "POST /api/v1/modules/10.10.1.30/refresh HTTP/1.1" 200 344 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:45:33 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:45:33 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 11737 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:45:33 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:45:33 +0200] "GET /api/v1/modules HTTP/1.1" 200 1020 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:45:33 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:45:33 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:46:18 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:46:18 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:46:18 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:46:18 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 11737 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:46:18 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:46:18 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:46:18 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:46:18 +0200] "GET /api/v1/modules HTTP/1.1" 200 1020 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:46:34 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+07:48:27 INFO  gateway.device_registry  Relay 10.10.1.32 ch5: unknown -> unknown
+07:48:27 INFO  gateway.main  STATE  10.10.1.32 ch5: None → RelayState(state='unknown', state_code='0015')
+07:51:34 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+07:55:41 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:55:41 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:55:41 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:55:41 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 11737 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:55:41 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:55:41 +0200] "GET /api/v1/modules HTTP/1.1" 200 1020 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:55:41 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:07:55:41 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+07:56:34 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+08:00:57 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:00:57 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:00:57 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:00:57 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 11737 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:00:57 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:00:57 +0200] "GET /api/v1/status HTTP/1.1" 200 1040 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:00:57 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:00:57 +0200] "GET /api/v1/modules HTTP/1.1" 200 1020 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:01:34 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+08:03:17 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:03:17 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:03:17 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:03:17 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 11737 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:03:17 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:03:17 +0200] "GET /api/v1/modules HTTP/1.1" 200 1020 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:03:17 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:03:17 +0200] "GET /api/v1/status HTTP/1.1" 200 1040 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:06:34 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=73e97d343154441a995b004799730907
+08:06:38 INFO  gateway.gateway_api  WS client disconnected (total 0)
+08:06:38 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:07:41:37 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.13.5"
+08:06:51 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:06:51 +0200] "GET /api/v1/status HTTP/1.1" 200 1040 "-" "Python/3.14 aiohttp/3.13.5"
+08:06:51 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:06:51 +0200] "GET /api/v1/modules HTTP/1.1" 200 1020 "-" "Python/3.14 aiohttp/3.13.5"
+08:06:51 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:06:51 +0200] "GET /api/v1/devices HTTP/1.1" 200 7608 "-" "Python/3.14 aiohttp/3.13.5"
+08:06:51 INFO  gateway.gateway_api  WS client connected (total 1)
+08:10:23 INFO  gateway.main  Shutting down…
+08:10:23 INFO  gateway.auto_discovery  DiscoveryOrchestrator: stopped
+08:10:23 INFO  gateway.gateway_api  WS client disconnected (total 0)
+08:10:23 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:06:51 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.13.5"
+08:10:23 INFO  gateway.gateway_api  GatewayAPI stopped
+08:10:23 INFO  gateway.ha_discovery  Stopping HA discovery
+08:10:23 INFO  gateway.udp_bus  Poll loop cancelled
+08:10:23 INFO  gateway.udp_bus  UDPBus stopped
+08:10:23 INFO  gateway.main  Gateway stopped
+[run.sh] GATEWAY_POLL_INTERVAL=2.0
+[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=20.0
+[run.sh] GATEWAY_BUTTONS_VIA_HA=1
+[run.sh] GATEWAY_BIND_IP=0.0.0.0
+[run.sh] GATEWAY_EXPOSE_INACTIVE_CHANNELS=0
+[run.sh] GATEWAY_MULTI_PRESS=0
+[run.sh] GATEWAY_MULTI_PRESS_WINDOW_MS=350
+[run.sh] GATEWAY_DEVICES_FILE=/config/devices.json
+[run.sh] GATEWAY_REST_SHIM_ENABLED=0
+[run.sh] GATEWAY_LOG_LEVEL=info
+[run.sh] GATEWAY_DISCOVERY_SUBNET=10.10.1
+[run.sh] GATEWAY_DISCOVERY_RANGE_START=0
+[run.sh] GATEWAY_DISCOVERY_RANGE_END=254
+[run.sh] GATEWAY_AUTO_DISCOVER_ON_START=0
+[run.sh] GATEWAY_PASSIVE_ARP_MONITOR=1
+[run.sh] GATEWAY_ARP_POLL_INTERVAL_S=30.0
+[run.sh] GATEWAY_HTTP_TIMEOUT_S=2.0
+[run.sh] GATEWAY_USE_ENV_DEFAULTS=0
+08:10:25 INFO  gateway.udp_bus  UDPBus started  input_poll=2.0s  actuator_poll=20.0s  modules=['relay:10.10.1.30', 'relay:10.10.1.31', 'relay:10.10.1.32', 'dimmer:10.10.1.42', 'input:10.10.1.55']  simulated=False
+08:10:25 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+08:10:26 WARNING gateway.state_poll  Relay status poll 10.10.1.30 ch0: no reply within timeout
+08:10:26 INFO  gateway.device_registry  Relay 10.10.1.30 ch1: unknown -> unknown
+08:10:26 INFO  gateway.main  STATE  10.10.1.30 ch1: None → RelayState(state='unknown', state_code='0015')
+08:10:26 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded unknown
+08:10:26 INFO  gateway.device_registry  Relay 10.10.1.30 ch2: unknown -> unknown
+08:10:26 INFO  gateway.main  STATE  10.10.1.30 ch2: None → RelayState(state='unknown', state_code='0015')
+08:10:26 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded unknown
+08:10:26 INFO  gateway.device_registry  Relay 10.10.1.30 ch3: unknown -> unknown
+08:10:26 INFO  gateway.main  STATE  10.10.1.30 ch3: None → RelayState(state='unknown', state_code='0015')
+08:10:26 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded unknown
+08:10:26 INFO  gateway.device_registry  Relay 10.10.1.30 ch4: unknown -> unknown
+08:10:26 INFO  gateway.main  STATE  10.10.1.30 ch4: None → RelayState(state='unknown', state_code='0015')
+08:10:26 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch4: seeded unknown
+08:10:26 INFO  gateway.device_registry  Relay 10.10.1.30 ch5: unknown -> unknown
+08:10:26 INFO  gateway.main  STATE  10.10.1.30 ch5: None → RelayState(state='unknown', state_code='0015')
+08:10:26 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch5: seeded unknown
+08:10:27 INFO  gateway.device_registry  Relay 10.10.1.30 ch6: unknown -> unknown
+08:10:27 INFO  gateway.main  STATE  10.10.1.30 ch6: None → RelayState(state='unknown', state_code='0015')
+08:10:27 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded unknown
+08:10:27 INFO  gateway.device_registry  Relay 10.10.1.30 ch7: unknown -> unknown
+08:10:27 INFO  gateway.main  STATE  10.10.1.30 ch7: None → RelayState(state='unknown', state_code='0015')
+08:10:27 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded unknown
+08:10:27 INFO  gateway.device_registry  Relay 10.10.1.30 ch8: unknown -> off
+08:10:27 INFO  gateway.main  STATE  10.10.1.30 ch8: None → RelayState(state='off', state_code='0000')
+08:10:27 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded off
+08:10:27 WARNING gateway.state_poll  Relay status poll 10.10.1.30 ch9: no reply within timeout
+08:10:28 WARNING gateway.state_poll  Relay status poll 10.10.1.30 ch10: no reply within timeout
+08:10:28 INFO  gateway.device_registry  Relay 10.10.1.30 ch11: unknown -> off
+08:10:28 INFO  gateway.main  STATE  10.10.1.30 ch11: None → RelayState(state='off', state_code='0000')
+08:10:28 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch11: seeded off
+08:10:28 INFO  gateway.device_registry  Relay 10.10.1.30 ch12: unknown -> unknown
+08:10:28 INFO  gateway.main  STATE  10.10.1.30 ch12: None → RelayState(state='unknown', state_code='0015')
+08:10:28 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch12: seeded unknown
+08:10:28 INFO  gateway.device_registry  Relay 10.10.1.30 ch13: unknown -> unknown
+08:10:28 INFO  gateway.main  STATE  10.10.1.30 ch13: None → RelayState(state='unknown', state_code='0015')
+08:10:28 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch13: seeded unknown
+08:10:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch14: unknown -> unknown
+08:10:29 INFO  gateway.main  STATE  10.10.1.30 ch14: None → RelayState(state='unknown', state_code='0115')
+08:10:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch14: seeded unknown
+08:10:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch15: unknown -> unknown
+08:10:29 INFO  gateway.main  STATE  10.10.1.30 ch15: None → RelayState(state='unknown', state_code='0015')
+08:10:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch15: seeded unknown
+08:10:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch17: unknown -> unknown
+08:10:29 INFO  gateway.main  STATE  10.10.1.30 ch17: None → RelayState(state='unknown', state_code='0015')
+08:10:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch17: seeded unknown
+08:10:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch18: unknown -> unknown
+08:10:29 INFO  gateway.main  STATE  10.10.1.30 ch18: None → RelayState(state='unknown', state_code='0015')
+08:10:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch18: seeded unknown
+08:10:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch19: unknown -> off
+08:10:29 INFO  gateway.main  STATE  10.10.1.30 ch19: None → RelayState(state='off', state_code='0000')
+08:10:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch19: seeded off
+08:10:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch20: unknown -> unknown
+08:10:29 INFO  gateway.main  STATE  10.10.1.30 ch20: None → RelayState(state='unknown', state_code='0015')
+08:10:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch20: seeded unknown
+08:10:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch21: unknown -> unknown
+08:10:29 INFO  gateway.main  STATE  10.10.1.30 ch21: None → RelayState(state='unknown', state_code='0015')
+08:10:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch21: seeded unknown
+08:10:29 INFO  gateway.device_registry  Relay 10.10.1.30 ch22: unknown -> unknown
+08:10:29 INFO  gateway.main  STATE  10.10.1.30 ch22: None → RelayState(state='unknown', state_code='0015')
+08:10:29 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch22: seeded unknown
+08:10:30 INFO  gateway.device_registry  Relay 10.10.1.30 ch23: unknown -> unknown
+08:10:30 INFO  gateway.main  STATE  10.10.1.30 ch23: None → RelayState(state='unknown', state_code='0015')
+08:10:30 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch23: seeded unknown
+08:10:30 INFO  gateway.device_registry  Relay 10.10.1.32 ch0: unknown -> off
+08:10:30 INFO  gateway.main  STATE  10.10.1.32 ch0: None → RelayState(state='off', state_code='0000')
+08:10:30 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off
+08:10:30 INFO  gateway.state_poll  Registry seeded from relay status poll (21 channel updates)
+08:10:30 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (5 modules, 60 pushbuttons)
+08:10:30 INFO  gateway.auto_discovery  DiscoveryOrchestrator: started (passive ARP every 30 s)
+08:10:30 INFO  gateway.gateway_api  GatewayAPI started  api=0.0.0.0:8080
+08:10:30 INFO  gateway.ha_discovery  Starting HA discovery  instance_id=1258f4ac408845bc90f66d336842fcf3  base_url=http://127.0.0.1:8080  addon=True
+08:10:30 INFO  gateway.gateway_api  WS client connected (total 1)
+08:10:31 INFO  gateway.ha_discovery  Zeroconf registered: service_name=ipbgw-1258f4ac._ipbgw._tcp.local. server=ipbgw.local. port=8080 publish_ip=127.0.0.1 has_host_in_properties=True has_port_in_properties=True
+08:10:31 INFO  gateway.main  IPBuilding Gateway v1.6.0  rest=0.0.0.0:30200  shim_enabled=False  api=0.0.0.0:8080  buttons_via_ha=True  hub_role=slave  input_poll=2.0s  actuator_poll=20.0s  simulated=False  install=relay@10.10.1.30, relay@10.10.1.31, relay@10.10.1.32, dimmer@10.10.1.42, input@10.10.1.55
+08:10:31 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=1b924567a93249f386440066ae28bfe5
+08:10:33 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:10:33 +0200] "GET /api/v1/status HTTP/1.1" 200 696 "-" "Python/3.14 aiohttp/3.13.5"
+08:10:45 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:45 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/app/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:45 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:45 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 11737 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:45 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:45 +0200] "GET /api/v1/modules HTTP/1.1" 200 1020 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:45 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:45 +0200] "GET /api/v1/status HTTP/1.1" 200 697 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:51 INFO  gateway.discovery  ARP sweep 10.10.1.0-255: 1 field-module candidate(s)
+08:10:53 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet failed: 
+08:10:53 WARNING gateway.discovery  HTTP identify 10.10.1.55: getSysSet unreachable; ARP candidate kept as type=unknown mac=00:24:77:06:70:ba
+08:10:53 INFO  gateway.auto_discovery  DiscoveryOrchestrator: forced discovery returned 1 candidate(s)
+08:10:53 INFO  gateway.auto_discovery  AtomicWriter: wrote /config/devices.json (5 modules)
+08:10:53 INFO  gateway.main  run_gateway: applied new installation from discovery (5 modules)
+08:10:53 INFO  gateway.auto_discovery  DiscoveryOrchestrator: on_installation_changed callback invoked (forced discovery)
+08:10:53 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:51 +0200] "POST /api/v1/discover HTTP/1.1" 200 309 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:53 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:53 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 11737 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:53 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:53 +0200] "GET /api/v1/modules HTTP/1.1" 200 1044 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:53 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:53 +0200] "GET /api/v1/status HTTP/1.1" 200 697 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:53 INFO  gateway.device_registry  Relay 10.10.1.30 ch0: unknown -> off
+08:10:53 INFO  gateway.main  STATE  10.10.1.30 ch0: None → RelayState(state='off', state_code='0000')
+08:10:53 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch0: seeded off
+08:10:54 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded unknown
+08:10:54 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded unknown
+08:10:54 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded unknown
+08:10:54 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch4: seeded unknown
+08:10:54 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch5: seeded unknown
+08:10:54 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded unknown
+08:10:54 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded unknown
+08:10:54 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded off
+08:10:55 INFO  gateway.device_registry  Relay 10.10.1.30 ch9: unknown -> off
+08:10:55 INFO  gateway.main  STATE  10.10.1.30 ch9: None → RelayState(state='off', state_code='0000')
+08:10:55 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch9: seeded off
+08:10:55 INFO  gateway.device_registry  Relay 10.10.1.30 ch10: unknown -> off
+08:10:55 INFO  gateway.main  STATE  10.10.1.30 ch10: None → RelayState(state='off', state_code='0000')
+08:10:55 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch10: seeded off
+08:10:55 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch11: seeded off
+08:10:55 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch12: seeded unknown
+08:10:55 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch13: seeded unknown
+08:10:55 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch14: seeded unknown
+08:10:55 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch15: seeded unknown
+08:10:55 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch17: seeded unknown
+08:10:56 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch18: seeded unknown
+08:10:56 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch19: seeded off
+08:10:56 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch20: seeded unknown
+08:10:56 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch21: seeded unknown
+08:10:56 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch22: seeded unknown
+08:10:56 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch23: seeded unknown
+08:10:56 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off
+08:10:56 INFO  gateway.state_poll  Registry seeded from relay status poll (24 channel updates)
+08:10:57 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:57 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:57 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:57 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 11725 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:57 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:57 +0200] "GET /api/v1/modules HTTP/1.1" 200 1044 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:57 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:10:57 +0200] "GET /api/v1/status HTTP/1.1" 200 697 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:10:59 WARNING gateway.module_metadata  HTTP getSysSet 10.10.1.55 failed: TimeoutError: TimeoutError()
+08:10:59 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+08:10:59 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (5 modules, 60 pushbuttons)
+08:11:00 INFO  gateway.auto_discovery  ARP: new module 00:24:77:06:70:ba at 10.10.1.55
+08:12:05 INFO  gateway.device_registry  Relay 10.10.1.31 ch2: unknown -> unknown
+08:12:05 INFO  gateway.main  STATE  10.10.1.31 ch2: None → RelayState(state='unknown', state_code='0015')
+08:15:31 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=1b924567a93249f386440066ae28bfe5
+08:17:59 INFO  gateway.main  Shutting down…
+08:17:59 INFO  gateway.auto_discovery  DiscoveryOrchestrator: stopped
+08:17:59 INFO  gateway.gateway_api  WS client disconnected (total 0)
+08:17:59 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:10:30 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.13.5"
+08:17:59 INFO  gateway.gateway_api  GatewayAPI stopped
+08:17:59 INFO  gateway.ha_discovery  Stopping HA discovery
+08:17:59 INFO  gateway.udp_bus  Poll loop cancelled
+08:17:59 INFO  gateway.udp_bus  UDPBus stopped
+08:17:59 INFO  gateway.main  Gateway stopped
+[run.sh] GATEWAY_POLL_INTERVAL=2.0
+[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=20.0
+[run.sh] GATEWAY_BUTTONS_VIA_HA=1
+[run.sh] GATEWAY_BIND_IP=0.0.0.0
+[run.sh] GATEWAY_EXPOSE_INACTIVE_CHANNELS=0
+[run.sh] GATEWAY_MULTI_PRESS=0
+[run.sh] GATEWAY_MULTI_PRESS_WINDOW_MS=350
+[run.sh] GATEWAY_DEVICES_FILE=/config/devices.json
+[run.sh] GATEWAY_REST_SHIM_ENABLED=0
+[run.sh] GATEWAY_LOG_LEVEL=info
+[run.sh] GATEWAY_DISCOVERY_SUBNET=10.10.1
+[run.sh] GATEWAY_DISCOVERY_RANGE_START=0
+[run.sh] GATEWAY_DISCOVERY_RANGE_END=254
+[run.sh] GATEWAY_AUTO_DISCOVER_ON_START=0
+[run.sh] GATEWAY_PASSIVE_ARP_MONITOR=1
+[run.sh] GATEWAY_ARP_POLL_INTERVAL_S=30.0
+[run.sh] GATEWAY_HTTP_TIMEOUT_S=2.0
+[run.sh] GATEWAY_USE_ENV_DEFAULTS=0
+08:18:04 INFO  gateway.udp_bus  UDPBus started  input_poll=2.0s  actuator_poll=20.0s  modules=['relay:10.10.1.30', 'relay:10.10.1.31', 'relay:10.10.1.32', 'dimmer:10.10.1.42', 'input:10.10.1.55']  simulated=False
+08:18:10 WARNING gateway.module_metadata  HTTP getSysSet 10.10.1.55 failed: TimeoutError: TimeoutError()
+08:18:10 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+08:18:10 INFO  gateway.device_registry  Relay 10.10.1.30 ch0: unknown -> off
+08:18:10 INFO  gateway.main  STATE  10.10.1.30 ch0: None → RelayState(state='off', state_code='0000')
+08:18:10 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch0: seeded off
+08:18:10 INFO  gateway.device_registry  Relay 10.10.1.30 ch1: unknown -> unknown
+08:18:10 INFO  gateway.main  STATE  10.10.1.30 ch1: None → RelayState(state='unknown', state_code='0015')
+08:18:10 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded unknown
+08:18:10 INFO  gateway.device_registry  Relay 10.10.1.30 ch2: unknown -> unknown
+08:18:10 INFO  gateway.main  STATE  10.10.1.30 ch2: None → RelayState(state='unknown', state_code='0015')
+08:18:10 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded unknown
+08:18:10 INFO  gateway.device_registry  Relay 10.10.1.30 ch3: unknown -> unknown
+08:18:10 INFO  gateway.main  STATE  10.10.1.30 ch3: None → RelayState(state='unknown', state_code='0015')
+08:18:10 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded unknown
+08:18:10 INFO  gateway.device_registry  Relay 10.10.1.30 ch4: unknown -> unknown
+08:18:10 INFO  gateway.main  STATE  10.10.1.30 ch4: None → RelayState(state='unknown', state_code='0015')
+08:18:10 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch4: seeded unknown
+08:18:10 INFO  gateway.device_registry  Relay 10.10.1.30 ch5: unknown -> unknown
+08:18:10 INFO  gateway.main  STATE  10.10.1.30 ch5: None → RelayState(state='unknown', state_code='0015')
+08:18:10 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch5: seeded unknown
+08:18:10 INFO  gateway.device_registry  Relay 10.10.1.30 ch6: unknown -> unknown
+08:18:10 INFO  gateway.main  STATE  10.10.1.30 ch6: None → RelayState(state='unknown', state_code='0015')
+08:18:10 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded unknown
+08:18:11 INFO  gateway.device_registry  Relay 10.10.1.30 ch7: unknown -> unknown
+08:18:11 INFO  gateway.main  STATE  10.10.1.30 ch7: None → RelayState(state='unknown', state_code='0015')
+08:18:11 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded unknown
+08:18:11 INFO  gateway.device_registry  Relay 10.10.1.30 ch8: unknown -> off
+08:18:11 INFO  gateway.main  STATE  10.10.1.30 ch8: None → RelayState(state='off', state_code='0000')
+08:18:11 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded off
+08:18:11 INFO  gateway.device_registry  Relay 10.10.1.30 ch9: unknown -> off
+08:18:11 INFO  gateway.main  STATE  10.10.1.30 ch9: None → RelayState(state='off', state_code='0000')
+08:18:11 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch9: seeded off
+08:18:11 INFO  gateway.device_registry  Relay 10.10.1.30 ch10: unknown -> off
+08:18:11 INFO  gateway.main  STATE  10.10.1.30 ch10: None → RelayState(state='off', state_code='0000')
+08:18:11 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch10: seeded off
+08:18:11 INFO  gateway.device_registry  Relay 10.10.1.30 ch11: unknown -> off
+08:18:11 INFO  gateway.main  STATE  10.10.1.30 ch11: None → RelayState(state='off', state_code='0000')
+08:18:11 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch11: seeded off
+08:18:11 INFO  gateway.device_registry  Relay 10.10.1.30 ch12: unknown -> unknown
+08:18:11 INFO  gateway.main  STATE  10.10.1.30 ch12: None → RelayState(state='unknown', state_code='0015')
+08:18:11 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch12: seeded unknown
+08:18:11 INFO  gateway.device_registry  Relay 10.10.1.30 ch13: unknown -> unknown
+08:18:11 INFO  gateway.main  STATE  10.10.1.30 ch13: None → RelayState(state='unknown', state_code='0015')
+08:18:11 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch13: seeded unknown
+08:18:11 INFO  gateway.device_registry  Relay 10.10.1.30 ch14: unknown -> unknown
+08:18:11 INFO  gateway.main  STATE  10.10.1.30 ch14: None → RelayState(state='unknown', state_code='0115')
+08:18:11 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch14: seeded unknown
+08:18:12 INFO  gateway.device_registry  Relay 10.10.1.30 ch15: unknown -> unknown
+08:18:12 INFO  gateway.main  STATE  10.10.1.30 ch15: None → RelayState(state='unknown', state_code='0015')
+08:18:12 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch15: seeded unknown
+08:18:12 INFO  gateway.device_registry  Relay 10.10.1.30 ch17: unknown -> unknown
+08:18:12 INFO  gateway.main  STATE  10.10.1.30 ch17: None → RelayState(state='unknown', state_code='0015')
+08:18:12 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch17: seeded unknown
+08:18:12 INFO  gateway.device_registry  Relay 10.10.1.30 ch18: unknown -> unknown
+08:18:12 INFO  gateway.main  STATE  10.10.1.30 ch18: None → RelayState(state='unknown', state_code='0015')
+08:18:12 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch18: seeded unknown
+08:18:12 INFO  gateway.device_registry  Relay 10.10.1.30 ch19: unknown -> off
+08:18:12 INFO  gateway.main  STATE  10.10.1.30 ch19: None → RelayState(state='off', state_code='0000')
+08:18:12 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch19: seeded off
+08:18:12 INFO  gateway.device_registry  Relay 10.10.1.30 ch20: unknown -> unknown
+08:18:12 INFO  gateway.main  STATE  10.10.1.30 ch20: None → RelayState(state='unknown', state_code='0015')
+08:18:12 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch20: seeded unknown
+08:18:12 INFO  gateway.device_registry  Relay 10.10.1.30 ch21: unknown -> unknown
+08:18:12 INFO  gateway.main  STATE  10.10.1.30 ch21: None → RelayState(state='unknown', state_code='0015')
+08:18:12 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch21: seeded unknown
+08:18:12 INFO  gateway.device_registry  Relay 10.10.1.30 ch22: unknown -> unknown
+08:18:12 INFO  gateway.main  STATE  10.10.1.30 ch22: None → RelayState(state='unknown', state_code='0015')
+08:18:12 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch22: seeded unknown
+08:18:12 INFO  gateway.device_registry  Relay 10.10.1.30 ch23: unknown -> unknown
+08:18:12 INFO  gateway.main  STATE  10.10.1.30 ch23: None → RelayState(state='unknown', state_code='0015')
+08:18:12 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch23: seeded unknown
+08:18:13 INFO  gateway.device_registry  Relay 10.10.1.32 ch0: unknown -> off
+08:18:13 INFO  gateway.main  STATE  10.10.1.32 ch0: None → RelayState(state='off', state_code='0000')
+08:18:13 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off
+08:18:13 INFO  gateway.state_poll  Registry seeded from relay status poll (24 channel updates)
+08:18:13 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch0: no reply within timeout
+08:18:14 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch1: no reply within timeout
+08:18:14 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch2: no reply within timeout
+08:18:15 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch3: no reply within timeout
+08:18:15 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (5 modules, 60 pushbuttons)
+08:18:15 INFO  gateway.auto_discovery  DiscoveryOrchestrator: started (passive ARP every 30 s)
+08:18:15 INFO  gateway.gateway_api  GatewayAPI started  api=0.0.0.0:8080
+08:18:15 INFO  gateway.ha_discovery  Starting HA discovery  instance_id=1258f4ac408845bc90f66d336842fcf3  base_url=http://127.0.0.1:8080  addon=True
+08:18:16 INFO  gateway.ha_discovery  Zeroconf registered: service_name=ipbgw-1258f4ac._ipbgw._tcp.local. server=ipbgw.local. port=8080 publish_ip=127.0.0.1 has_host_in_properties=True has_port_in_properties=True
+08:18:16 INFO  gateway.main  IPBuilding Gateway v1.6.2  rest=0.0.0.0:30200  shim_enabled=False  api=0.0.0.0:8080  buttons_via_ha=True  hub_role=slave  input_poll=2.0s  actuator_poll=20.0s  simulated=False  install=relay@10.10.1.30, relay@10.10.1.31, relay@10.10.1.32, dimmer@10.10.1.42, input@10.10.1.55
+08:18:16 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:18:16 +0200] "GET /api/v1/status HTTP/1.1" 200 1038 "-" "Python/3.14 aiohttp/3.13.5"
+08:18:16 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=dca165bb236c468083ad44aceb41df59
+08:18:16 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:18:16 +0200] "GET /api/v1/status HTTP/1.1" 200 1038 "-" "Python/3.14 aiohttp/3.13.5"
+08:18:16 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:18:16 +0200] "GET /api/v1/modules HTTP/1.1" 200 1044 "-" "Python/3.14 aiohttp/3.13.5"
+08:18:16 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:18:16 +0200] "GET /api/v1/devices HTTP/1.1" 200 21059 "-" "Python/3.14 aiohttp/3.13.5"
+08:18:16 INFO  gateway.gateway_api  WS client connected (total 1)
+08:18:32 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:18:32 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:18:32 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:18:32 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 25187 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:18:32 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:18:32 +0200] "GET /api/v1/modules HTTP/1.1" 200 1044 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:18:32 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:18:32 +0200] "GET /api/v1/status HTTP/1.1" 200 1038 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:18:45 INFO  gateway.auto_discovery  ARP: new module 00:24:77:06:70:ba at 10.10.1.55
+08:19:34 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:19:34 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:19:34 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:19:34 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 25187 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:19:34 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:19:34 +0200] "GET /api/v1/modules HTTP/1.1" 200 1120 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:19:34 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:19:34 +0200] "GET /api/v1/status HTTP/1.1" 200 1038 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:23:16 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=dca165bb236c468083ad44aceb41df59
+08:28:06 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:28:06 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:28:06 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:28:06 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 25187 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:28:06 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:28:06 +0200] "GET /api/v1/modules HTTP/1.1" 200 1120 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:28:06 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:28:06 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:28:16 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=dca165bb236c468083ad44aceb41df59
+08:29:12 INFO  gateway.gateway_api  WS client disconnected (total 0)
+08:29:12 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:18:16 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.13.5"
+08:29:27 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:29:27 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Python/3.14 aiohttp/3.13.5"
+08:29:27 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:29:27 +0200] "GET /api/v1/modules HTTP/1.1" 200 1120 "-" "Python/3.14 aiohttp/3.13.5"
+08:29:27 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:29:27 +0200] "GET /api/v1/devices HTTP/1.1" 200 21059 "-" "Python/3.14 aiohttp/3.13.5"
+08:29:27 INFO  gateway.gateway_api  WS client connected (total 1)
+08:30:05 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:30:05 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:30:05 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:30:05 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 25187 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:30:05 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:30:05 +0200] "GET /api/v1/modules HTTP/1.1" 200 1120 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:30:05 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:30:05 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:32:36 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:32:36 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:32:36 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:32:36 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 25187 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:32:36 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:32:36 +0200] "GET /api/v1/modules HTTP/1.1" 200 1120 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:32:36 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:32:36 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:33:09 INFO  aiohttp.access  127.0.0.1 [08/Aug/2026:08:33:09 +0200] "GET /api/v1/status HTTP/1.1" 200 1039 "-" "Python/3.14 aiohttp/3.13.5"
+08:33:16 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=dca165bb236c468083ad44aceb41df59
+08:34:05 INFO  gateway.device_registry  Relay 10.10.1.32 ch7: unknown -> unknown
+08:34:05 INFO  gateway.main  STATE  10.10.1.32 ch7: None → RelayState(state='unknown', state_code='0015')
+08:34:53 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:34:53 +0200] "GET / HTTP/1.1" 200 38234 "http://homeassistant.local:8123/3059e002_ipbuilding_gateway" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:34:53 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:34:53 +0200] "GET /api/v1/devices?include_inactive=true HTTP/1.1" 200 25187 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:34:53 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:34:53 +0200] "GET /api/v1/status HTTP/1.1" 200 1040 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+08:34:53 INFO  aiohttp.access  172.30.32.2 [08/Aug/2026:08:34:53 +0200] "GET /api/v1/modules HTTP/1.1" 200 1120 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"

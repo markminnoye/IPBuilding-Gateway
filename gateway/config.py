@@ -8,27 +8,10 @@ import os
 from dataclasses import dataclass, field
 
 from gateway.installation import InstallationConfig, InstallationError
-from gateway.payloads.dimmer import DIM_OFF_STYLES
 
 log = logging.getLogger(__name__)
 
 _LEGACY_HUB_ROLES = frozenset({"slave", "master"})
-
-DIMMER_OFF_STYLE_AUTO = "auto"
-_DIMMER_OFF_STYLES = frozenset({DIMMER_OFF_STYLE_AUTO, *DIM_OFF_STYLES})
-
-
-def _dimmer_off_style_from_env() -> str:
-    raw = os.getenv("GATEWAY_DIMMER_OFF_STYLE", DIMMER_OFF_STYLE_AUTO)
-    style = raw.lower().strip() or DIMMER_OFF_STYLE_AUTO
-    if style not in _DIMMER_OFF_STYLES:
-        log.warning(
-            "Unknown GATEWAY_DIMMER_OFF_STYLE=%r — using %s",
-            raw,
-            DIMMER_OFF_STYLE_AUTO,
-        )
-        return DIMMER_OFF_STYLE_AUTO
-    return style
 
 
 def _buttons_via_ha_from_env() -> bool:
@@ -155,9 +138,6 @@ class GatewayConfig:
     multi_press_window_ms: int = 350
     # True: poll inputs + button events to HA. False: module-local buttons.
     buttons_via_ha: bool = True
-    # How to switch a dimmer channel off: "auto" follows the reply family the
-    # module answers with, "cut"/"zero" force one encoding for every dimmer.
-    dimmer_off_style: str = "auto"
 
     @property
     def claims_input_modules(self) -> bool:
@@ -266,5 +246,4 @@ class GatewayConfig:
             multi_press=multi_press,
             multi_press_window_ms=multi_press_window_ms,
             buttons_via_ha=_buttons_via_ha_from_env(),
-            dimmer_off_style=_dimmer_off_style_from_env(),
         )
