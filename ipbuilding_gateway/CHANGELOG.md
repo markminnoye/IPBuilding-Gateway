@@ -5,10 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [1.6.7] - 2026-08-27
+Planned for **1.6.7** (not released yet).
 
 ### Changed
-- **Dimmer off:** one off command for all IP0300PoE dimmers (`C…00…`), no longer per module generation. **Automatic** uses this by default. **Cut** (`C…99…`) remains as a manual override in Modules if a dimmer misbehaves.
+- **Dimmer off (follow-up to 1.6.6):** **Automatic** always uses one off method for all IP0300PoE dimmers, instead of picking by module generation. 1.6.6 already used the new method on older modules; 1.6.7 applies it everywhere (including before the gateway has seen a dimmer reply). Lab and older field modules: same practical off behaviour; simpler logic.
+- **Modules → How to switch a dimmer off:** clearer help text (when to leave Automatic, when to try IPBox-style Cut on newer modules).
 
 ## [1.6.6] - 2026-08-26
 

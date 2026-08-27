@@ -28,14 +28,23 @@ configuration:
       dimmer_off_style:
         name: Manier van dimmer uitzetten
         description: >-
-          Automatisch (standaard): `C…00…` — één uit-commando voor alle dimmers.
-          Laat dit staan tenzij een dimmer verkeerd reageert.
+          Als je een dimmer in Home Assistant uitzet (slider naar 0 % of uit),
+          stuurt de gateway een uit-commando naar de IP0300-module op de veldbus.
 
 
-          Onderbreken: IPBox-stijl `C…99…` (alleen als override).
+          Automatisch (standaard): aanbevolen voor elke installatie. Eén methode
+          die werkt op recente dimmers én op oudere modules waar “uit” in HA
+          vroeger juist vol licht gaf. Laat dit staan tenzij één dimmer nog
+          verkeerd reageert.
 
 
-          Naar nul: expliciet `C…00…` (zelfde als Automatisch).
+          Onderbreken (IPBox-stijl): zo deed de originele IPBox dimmers uit.
+          Alleen proberen als Automatisch vreemd gedrag geeft op een nieuwere
+          dimmermodule — bijvoorbeeld als de lamp anders uitfadet dan verwacht.
+
+
+          Naar nul: hetzelfde als Automatisch. Alleen kiezen als je de
+          uniforme methode expliciet wilt vastzetten i.p.v. “Automatisch”.
 
 
           Na wijziging: add-on herstarten.
