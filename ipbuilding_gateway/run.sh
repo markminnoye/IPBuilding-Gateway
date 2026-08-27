@@ -52,9 +52,6 @@ GATEWAY_POLL_INTERVAL=$(opt fieldbus.poll_interval poll_interval "2.0")
 export GATEWAY_ACTUATOR_POLL_INTERVAL
 GATEWAY_ACTUATOR_POLL_INTERVAL=$(opt fieldbus.actuator_poll_interval actuator_poll_interval "20.0")
 
-export GATEWAY_DIMMER_OFF_STYLE
-GATEWAY_DIMMER_OFF_STYLE=$(opt fieldbus.dimmer_off_style dimmer_off_style "auto")
-
 # Buttons via HA (bool). Prefer new key; fall back to legacy hub_role slave|master.
 export GATEWAY_BUTTONS_VIA_HA
 _BVH=$(opt fieldbus.buttons_via_ha buttons_via_ha "")
@@ -157,7 +154,6 @@ GATEWAY_SIMULATED="${GATEWAY_SIMULATED:-0}"
 
 echo "[run.sh] GATEWAY_POLL_INTERVAL=$GATEWAY_POLL_INTERVAL"
 echo "[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=$GATEWAY_ACTUATOR_POLL_INTERVAL"
-echo "[run.sh] GATEWAY_DIMMER_OFF_STYLE=$GATEWAY_DIMMER_OFF_STYLE"
 echo "[run.sh] GATEWAY_BUTTONS_VIA_HA=$GATEWAY_BUTTONS_VIA_HA"
 echo "[run.sh] GATEWAY_BIND_IP=$GATEWAY_BIND_IP"
 echo "[run.sh] GATEWAY_EXPOSE_INACTIVE_CHANNELS=$GATEWAY_EXPOSE_INACTIVE_CHANNELS"

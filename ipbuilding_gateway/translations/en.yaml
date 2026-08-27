@@ -25,29 +25,6 @@ configuration:
       actuator_poll_interval:
         name: Actuator poll interval
         description: How often (seconds) the gateway polls relay and dimmer modules to keep them online (default ~20 s).
-      dimmer_off_style:
-        name: How to switch a dimmer off
-        description: >-
-          When you turn a dimmer off in Home Assistant (slider to 0 % or off),
-          the gateway sends an off command to the IP0300 module on the field bus.
-
-
-          Automatic (default): recommended for all installations. One method that
-          works on current dimmers and on older modules where “off” in HA used
-          to leave the light at full brightness. Leave this setting unless a
-          specific dimmer still misbehaves.
-
-
-          Cut (IPBox style): matches how the original IPBox turned dimmers off.
-          Only change to this if Automatic gives odd results on a newer dimmer
-          module — for example the light fades out differently than expected.
-
-
-          Zero: same as Automatic. Use only if you want to pin the unified
-          method explicitly instead of “Automatic”.
-
-
-          Restart the add-on after changing this.
   network:
     name: Network
     description: Settings for talking to the field-bus modules. The API and web UI port are set under the add-on's Network section (not here).

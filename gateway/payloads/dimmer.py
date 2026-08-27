@@ -34,11 +34,10 @@ Confirmed against the REST↔UDP correlation for the Bureau dimmer (ch1, comp
 
 ### OFF encoding
 
-Default hub OFF is ``C<ch>001030`` (cut with value ``00``). Lab confirms
-``C<ch>991030`` and ``C<ch>001030`` behave the same on family ``54``; family
-``15`` needs ``00`` because ``C<ch>991030`` can land as full brightness.
-Override via :data:`DIM_OFF_STYLES` only when needed (``cut`` = IPBox-style
-``C<ch>991030``).
+Hub OFF is always ``C<ch>001030`` (cut with value ``00``) for every IP0300PoE
+dimmer. Lab confirms ``C<ch>991030`` and ``C<ch>001030`` behave the same on
+recent modules; older modules need ``00`` because ``C<ch>991030`` can land as
+full brightness.
 
 ## Input-module→dimmer dialect (peer-to-peer)
 
@@ -86,12 +85,7 @@ _DIMMER_IDLE_DIALECT_BY_FAMILY = {
     "15": "dimmer.nolf.idle_keepalive",
 }
 
-# OFF encodings. Default ``C<ch>001030`` everywhere (lab 2026-08-27). ``cut`` keeps
-# IPBox-style ``C<ch>991030`` as a manual override only.
-DIM_OFF_CUT = "cut"
-DIM_OFF_ZERO = "zero"
-DIM_OFF_STYLES = (DIM_OFF_CUT, DIM_OFF_ZERO)
-DIM_OFF_DEFAULT = DIM_OFF_ZERO
+# Hub OFF wire: C<ch>001030 (lab 2026-08-27).
 
 # Input-module peer-to-peer dialect (IP1100PoE → IP0300PoE, observed only).
 _INPUT_TOGGLE_RE = re.compile(r"^T(?P<channel>\d)(?P<dimmax>\d{2})1000$")
@@ -252,28 +246,8 @@ def encode_dim_command(cmd: DimmerCommand) -> bytes:
     return wire
 
 
-def resolve_dim_off_style(configured: str, family: str | None) -> str:
-    """Pick the OFF encoding for one dimmer module.
-
-    An explicit ``configured`` style wins. ``auto`` (and unknown values) use
-    :data:`DIM_OFF_DEFAULT` — unified ``C<ch>001030``. ``family`` is ignored.
-    """
-    del family  # unified default; kept for call-site compatibility
-    if configured in DIM_OFF_STYLES:
-        return configured
-    return DIM_OFF_DEFAULT
-
-
-def encode_dim_off(channel: int, *, style: str = DIM_OFF_DEFAULT) -> bytes:
-    """Encode hub→dimmer OFF.
-
-    Default ``zero`` → ``C<ch>001030``. ``cut`` → ``C<ch>991030`` (IPBox-style
-    override). See :data:`DIM_OFF_STYLES`.
-    """
-    if style == DIM_OFF_CUT:
-        return f"C{channel}991030".encode("ascii")
-    if style != DIM_OFF_ZERO:
-        raise ValueError(f"unknown dimmer off style: {style!r}")
+def encode_dim_off(channel: int) -> bytes:
+    """Encode hub→dimmer OFF: ``C<ch>001030``."""
     return f"C{channel}001030".encode("ascii")
 
 
