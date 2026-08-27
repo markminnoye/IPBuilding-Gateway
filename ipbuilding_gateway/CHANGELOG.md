@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.6.7] - 2026-08-27
+
+### Changed
+- **Dimmer off:** one off command for all IP0300PoE dimmers (`C…00…`), no longer per module generation. **Automatic** uses this by default. **Cut** (`C…99…`) remains as a manual override in Modules if a dimmer misbehaves.
+
 ## [1.6.6] - 2026-08-26
 
 ### Fixed

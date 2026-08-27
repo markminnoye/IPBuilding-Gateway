@@ -28,16 +28,14 @@ configuration:
       dimmer_off_style:
         name: Manier van dimmer uitzetten
         description: >-
-          Automatisch (standaard): de gateway kiest zelf, op basis van het antwoord dat de
-          dimmermodule geeft. Laat dit staan tenzij een dimmer verkeerd reageert.
+          Automatisch (standaard): `C…00…` — één uit-commando voor alle dimmers.
+          Laat dit staan tenzij een dimmer verkeerd reageert.
 
 
-          Onderbreken: het commando dat de IPBox gebruikt. Werkt op nieuwere modules.
+          Onderbreken: IPBox-stijl `C…99…` (alleen als override).
 
 
-          Naar nul: zelfde onderbreken-commando, maar met waarde 0 i.p.v. 99.
-          Eerste poging voor oudere modules die bij "onderbreken" (met 99) juist
-          op vol licht springen.
+          Naar nul: expliciet `C…00…` (zelfde als Automatisch).
 
 
           Na wijziging: add-on herstarten.
