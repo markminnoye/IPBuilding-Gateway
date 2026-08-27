@@ -60,6 +60,7 @@ from gateway.payloads import (
     encode_dim_toggle,
     encode_relay_command,
 )
+from gateway.payloads.dimmer import resolve_dim_off_style
 from gateway.models import RelayAction, RelayCommand, DimmerCommand
 from gateway.udp_bus import UDPBus, format_payload
 from gateway.webui import INDEX_HTML
@@ -859,6 +860,12 @@ class GatewayAPI:
     # Command execution
     # -------------------------------------------------------------------------
 
+    def _dimmer_off_style(self, module_ip: str) -> str:
+        return resolve_dim_off_style(
+            self._cfg.dimmer_off_style,
+            self._registry.get_dimmer_family(module_ip),
+        )
+
     async def _execute_command(
         self, entity_id: str, action: str, value: Any
     ) -> tuple[bool, str | None]:
@@ -901,7 +908,9 @@ class GatewayAPI:
             if action == "DIM":
                 level = int(value) if value is not None else 0
                 if level == 0:
-                    payload = encode_dim_off(channel)
+                    payload = encode_dim_off(
+                        channel, style=self._dimmer_off_style(module_ip)
+                    )
                 else:
                     cmd = DimmerCommand(channel=channel, level=level)
                     payload = encode_dim_command(cmd)

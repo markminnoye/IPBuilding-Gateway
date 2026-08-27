@@ -270,6 +270,45 @@ class TestNolfDimmerCommandEcho:
         assert len(changes) == 1
 
 
+class TestDimmerFamilyDetection:
+    def test_unknown_until_the_module_answers(self):
+        reg = _registry_with_modules()
+        assert reg.get_dimmer_family("10.10.1.40") is None
+
+    def test_lab_status_reply_marks_family_54(self):
+        reg = _registry_with_modules()
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0154130"))
+        assert reg.get_dimmer_family("10.10.1.40") == "54"
+
+    def test_nolf_status_reply_marks_family_15(self):
+        reg = _registry_with_modules()
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115184"))
+        assert reg.get_dimmer_family("10.10.1.40") == "15"
+
+    def test_idle_keepalive_also_marks_the_family(self):
+        """I0115000 carries no level but still identifies the generation."""
+        reg = _registry_with_modules()
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115000"))
+        assert reg.get_dimmer_family("10.10.1.40") == "15"
+
+    def test_command_echo_marks_family_15(self):
+        """Only Nolf-generation modules echo the command back."""
+        reg = _registry_with_modules()
+        reg.handle_packet(_make_pkt("10.10.1.40", b"S1231030"))
+        assert reg.get_dimmer_family("10.10.1.40") == "15"
+
+    def test_family_is_logged_once(self, caplog):
+        import logging
+
+        reg = _registry_with_modules()
+        caplog.set_level(logging.INFO, logger="gateway.device_registry")
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115184"))
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115000"))
+
+        lines = [r for r in caplog.records if "reply family" in r.message]
+        assert len(lines) == 1
+
+
 class TestInputEvents:
     def test_button_press_event(self):
         reg = _registry_with_modules()

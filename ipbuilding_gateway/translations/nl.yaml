@@ -25,6 +25,22 @@ configuration:
       actuator_poll_interval:
         name: Actuator-poll interval
         description: Hoe vaak (seconden) de gateway relais- en dimmermodules bevraagt om ze online te houden (standaard ~20 s).
+      dimmer_off_style:
+        name: Manier van dimmer uitzetten
+        description: >-
+          Automatisch (standaard): de gateway kiest zelf, op basis van het antwoord dat de
+          dimmermodule geeft. Laat dit staan tenzij een dimmer verkeerd reageert.
+
+
+          Onderbreken: het commando dat de IPBox gebruikt. Werkt op nieuwere modules.
+
+
+          Naar nul: zelfde onderbreken-commando, maar met waarde 0 i.p.v. 99.
+          Eerste poging voor oudere modules die bij "onderbreken" (met 99) juist
+          op vol licht springen.
+
+
+          Na wijziging: add-on herstarten.
   network:
     name: Netwerk
     description: Instellingen voor de verbinding met de veldbusmodules. De poort van de API en web-UI stel je in onder Network bij de add-on (niet in deze sectie).

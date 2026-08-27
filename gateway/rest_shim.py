@@ -16,7 +16,12 @@ from gateway.device_registry import DeviceKey, DeviceRegistry
 from gateway.types import DeviceType
 from gateway.installation import InstallationConfig
 from gateway.models import DimmerCommand, RelayAction, RelayCommand
-from gateway.payloads.dimmer import decode_dimmer_payload, encode_dim_command, encode_dim_off
+from gateway.payloads.dimmer import (
+    decode_dimmer_payload,
+    encode_dim_command,
+    encode_dim_off,
+    resolve_dim_off_style,
+)
 from gateway.payloads.relay import decode_relay_payload, encode_relay_command
 from gateway.udp_bus import UDPBus
 
@@ -117,7 +122,13 @@ class RESTShim:
                     raise web.HTTPBadRequest(text="value must be 0-100 for DIM")
                 payload = encode_dim_command(DimmerCommand(channel=ch, level=value))
             elif value == 0:
-                payload = encode_dim_off(ch)
+                payload = encode_dim_off(
+                    ch,
+                    style=resolve_dim_off_style(
+                        self.config.dimmer_off_style,
+                        self.registry.get_dimmer_family(module_ip),
+                    ),
+                )
             else:
                 payload = encode_dim_command(DimmerCommand(channel=ch, level=100))
         else:

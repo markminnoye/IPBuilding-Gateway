@@ -691,6 +691,8 @@ Waarde-code: `10`–`98` = dat %, `99` = 100%, `00` = off (in replies). **UIT st
 
 **Status reply:** `I0154<C><VV>` — 3 cijfers na `I0154` = `<kanaal><waarde-code>` (niet één getal; ch0 leek dat wel). `I0154999` = idle poll, geen setpoint. Detail: [2026-05-17_dimmer_I0154xxx_full_decode.md](evidence/2026-05-17_dimmer_I0154xxx_full_decode.md).
 
+**Geldt voor de lab-generatie (dimmer fw 5.4).** Oudere modules in het veld gebruiken family **`15`** i.p.v. `54` en bevestigen een commando met een **letterlijke echo** in plaats van een statusframe. Waarde-codes (`00` uit, `10`–`98` %, `99` = 100 %) blijven identiek. Canoniek overzicht per generatie: [veldbus_dialect_registry.md](reference/veldbus_dialect_registry.md).
+
 **Hub knop/ramp — format:** suffix `1000` / `1003` (8 bytes ASCII)
 
 | Brief | Actie | Wire (gateway) | Reply |

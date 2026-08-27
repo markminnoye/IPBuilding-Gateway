@@ -32,6 +32,15 @@ Confirmed against the REST↔UDP correlation for the Bureau dimmer (ch1, comp
 ``DIM 100→I0154199``, idle ``→I0154999``.  See
 ``resources_and_docs/evidence/2026-05-14_dimmer_rest_udp_timeline_writeup.md``.
 
+### OFF is family-dependent
+
+Family ``54`` (lab IP0300PoE) treats ``C`` as cut and ignores the value field —
+lab confirms both ``C<ch>991030`` and ``C<ch>001030`` fade to off. Family ``15``
+(Nolf-generation) appears to execute the value: ``C<ch>991030`` lands as
+**100 %** (HA shows off, lamp goes full). First hypothesis to field-test:
+``C<ch>001030`` (cut with value ``00``). Only if that fails, fall back to a
+set-to-0. Pick the encoding with :data:`DIM_OFF_STYLE_BY_FAMILY`.
+
 ## Input-module→dimmer dialect (peer-to-peer)
 
 The IP1100PoE input module sends commands **directly** to the IP0300PoE dimmer,
@@ -78,6 +87,18 @@ _DIMMER_IDLE_DIALECT_BY_FAMILY = {
     "15": "dimmer.nolf.idle_keepalive",
 }
 
+# OFF encodings. Lab modules read ``C`` as cut and ignore the value (lab
+# 2026-08-27: ``C1991030`` and ``C1001030`` both fade to off). Nolf symptom
+# with ``C…99…`` is full brightness — try ``C…00…`` first before an ``S…00…``
+# workaround. Field evidence:
+# resources_and_docs/evidence/2026-08-26_jan_nolf_165_field_test.md.
+DIM_OFF_CUT = "cut"
+DIM_OFF_ZERO = "zero"
+DIM_OFF_STYLES = (DIM_OFF_CUT, DIM_OFF_ZERO)
+
+# Reply family constant → OFF encoding that family understands.
+DIM_OFF_STYLE_BY_FAMILY = {"54": DIM_OFF_CUT, "15": DIM_OFF_ZERO}
+
 # Input-module peer-to-peer dialect (IP1100PoE → IP0300PoE, observed only).
 _INPUT_TOGGLE_RE = re.compile(r"^T(?P<channel>\d)(?P<dimmax>\d{2})1000$")
 _INPUT_DIM_START_RE = re.compile(r"^D(?P<channel>\d)(?P<dimmax>\d{2})1003$")
@@ -123,6 +144,7 @@ def decode_dimmer_payload(data: bytes) -> dict[str, Any] | None:
             result = {
                 "family": "dimmer_poll",
                 "action": "idle",
+                "family_constant": family,
                 "internal_value_code": code,
                 "raw": text,
             }
@@ -237,8 +259,30 @@ def encode_dim_command(cmd: DimmerCommand) -> bytes:
     return wire
 
 
-def encode_dim_off(channel: int) -> bytes:
-    """Encode hub→dimmer OFF: C<ch>991030 (value 99 = OFF pattern from sweep)."""
+def resolve_dim_off_style(configured: str, family: str | None) -> str:
+    """Pick the OFF encoding for one dimmer module.
+
+    An explicit ``configured`` style wins over everything. Otherwise the reply
+    family the module answered with decides; a module that has not answered yet
+    falls back to the lab encoding.
+    """
+    if configured in DIM_OFF_STYLES:
+        return configured
+    return DIM_OFF_STYLE_BY_FAMILY.get(family or "", DIM_OFF_CUT)
+
+
+def encode_dim_off(channel: int, *, style: str = DIM_OFF_CUT) -> bytes:
+    """Encode hub→dimmer OFF.
+
+    ``cut`` → ``C<ch>991030`` — the frame the IPBox itself sends on lab
+    hardware. ``zero`` → ``C<ch>001030`` — same cut prefix with value ``00``
+    (lab-proven equivalent to cut+99; preferred first try for Nolf modules
+    that treat ``99`` as 100 %). See :data:`DIM_OFF_STYLES`.
+    """
+    if style == DIM_OFF_ZERO:
+        return f"C{channel}001030".encode("ascii")
+    if style != DIM_OFF_CUT:
+        raise ValueError(f"unknown dimmer off style: {style!r}")
     return f"C{channel}991030".encode("ascii")
 
 

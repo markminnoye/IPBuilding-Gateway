@@ -49,6 +49,7 @@ class DeviceRegistry:
     _relay_states: dict[DeviceKey, RelayState] = field(default_factory=dict)
     _dimmer_states: dict[DeviceKey, DimmerState] = field(default_factory=dict)
     _dimmer_last_channel: dict[str, int] = field(default_factory=dict)  # ip → last commanded channel
+    _dimmer_families: dict[str, str] = field(default_factory=dict)  # ip → reply family constant
     _state_callbacks: list[StateChangeCallback] = field(default_factory=list)
     _event_callbacks: list[EventCallback] = field(default_factory=list)
     _module_ip_type: dict[str, DeviceType] = field(default_factory=dict)
@@ -126,6 +127,15 @@ class DeviceRegistry:
         only a fallback for replies where the channel cannot be resolved.
         """
         self._dimmer_last_channel[module_ip] = channel
+
+    def get_dimmer_family(self, module_ip: str) -> str | None:
+        """Return the reply family constant last seen from a dimmer module.
+
+        ``"54"`` for lab IP0300PoE, ``"15"`` for Nolf-generation hardware,
+        ``None`` until the module has answered. Command encodings that differ
+        per generation (notably OFF) resolve against this.
+        """
+        return self._dimmer_families.get(module_ip)
 
     def all_relay_states(self) -> dict[DeviceKey, RelayState]:
         return dict(self._relay_states)
@@ -246,12 +256,28 @@ class DeviceRegistry:
         elif family == "relay_reply_candidate":
             pass  # pulse echo, no state change
 
+    def _note_dimmer_family(self, module_ip: str, parsed: dict[str, Any]) -> None:
+        """Learn which dimmer generation a module belongs to from its reply.
+
+        Status and idle frames carry the family constant directly. A module
+        that echoes the command back instead of answering ``I0154…`` is
+        Nolf-generation by construction, so the echo counts as family ``15``.
+        """
+        observed = parsed.get("family_constant")
+        if observed is None and parsed.get("family") == "dimmer_command":
+            observed = "15"
+        if observed is None or self._dimmer_families.get(module_ip) == observed:
+            return
+        self._dimmer_families[module_ip] = observed
+        log.info("Dimmer %s speaks reply family %s", module_ip, observed)
+
     def _handle_dimmer(self, module_ip: str, data: bytes) -> None:
         parsed = decode_dimmer_payload(data)
         if not parsed:
             self._log_undecoded(module_ip, data)
             return
         family = parsed.get("family")
+        self._note_dimmer_family(module_ip, parsed)
         if family == "dimmer_status_reply":
             # The reply encodes the channel as the leading digit of the value
             # code (e.g. I0154130 → channel 1).  Fall back to the last

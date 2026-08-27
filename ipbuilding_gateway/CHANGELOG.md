@@ -5,6 +5,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.6.6] - 2026-08-26
+
+### Fixed
+- **Dimmer uitzetten op oudere modules.** Uit-zetten stuurde die modules
+  juist naar **vol licht**, terwijl Home Assistant netjes 0 % toonde. De
+  gateway kiest nu per dimmer het uit-commando: nieuwere modules blijven
+  op het IPBox-frame (`C…99…`), oudere krijgen eerst `C…00…` (zelfde cut,
+  waarde 0). Lab bevestigde 2026-08-27 dat beide frames daar hetzelfde
+  soft-off gedrag geven.
+
+### Added
+- **Modules → Manier van dimmer uitzetten.** Staat op **Automatisch**: de
+  gateway herkent zelf welke generatie een dimmer is. Reageert een dimmer
+  toch verkeerd, zet dit dan handmatig op **Onderbreken** (nieuwere
+  modules) of **Naar nul** (`C…00…`, eerste poging voor oudere modules).
+  Add-on herstarten na wijziging.
+
+### Field test (Jan)
+
+Dit vervangt de dimmer-UIT uit 1.6.5. Wat we op 26/08 zagen: relais volgt,
+dimmer toont een percentage en dimmen werkt, maar uit zetten (`C…99…`)
+gaf vol licht. 1.6.6 stuurt voor zijn generatie `C…00…`.
+
+1. Update naar **1.6.6**, **HA herstarten**, logniveau op `debug`.
+2. **Lichtstraat (dimmer ch1):** slider op 50 %, daarna **uit**. Gaat de
+   lamp nu echt uit (niet vol), en toont HA 0 %?
+3. **Zithoek (dimmer ch0):** staat die nog op Onbekend na de herstart?
+4. Logboek **meteen na de test** downloaden — na een paar minuten is het
+   testmoment weggeschoven door het gewone busverkeer. Daarna terug naar
+   `info`.
+
 ## [1.6.5] - 2026-08-25
 
 ### Fixed
