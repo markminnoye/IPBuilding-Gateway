@@ -81,15 +81,11 @@ def test_encode_dim_command():
 
 
 def test_encode_dim_off():
-    assert encode_dim_off(1) == b"C1001030"
-
-
-def test_encode_dim_off_cut_style():
-    assert encode_dim_off(1, style=DIM_OFF_CUT) == b"C1991030"
-    assert encode_dim_off(0, style=DIM_OFF_CUT) == b"C0991030"
+    assert encode_dim_off(1) == b"C1991030"
 
 
 def test_encode_dim_off_zero_style():
+    """Prefer C<ch>00 over C<ch>99 for modules that execute the value field."""
     assert encode_dim_off(1, style=DIM_OFF_ZERO) == b"C1001030"
     assert encode_dim_off(0, style=DIM_OFF_ZERO) == b"C0001030"
 
@@ -99,13 +95,14 @@ def test_encode_dim_off_rejects_unknown_style():
         encode_dim_off(1, style="nope")
 
 
-def test_resolve_dim_off_style_auto_is_unified_zero():
-    assert resolve_dim_off_style("auto", "54") == DIM_OFF_ZERO
+def test_resolve_dim_off_style_follows_reply_family():
+    assert resolve_dim_off_style("auto", "54") == DIM_OFF_CUT
     assert resolve_dim_off_style("auto", "15") == DIM_OFF_ZERO
 
 
-def test_resolve_dim_off_style_defaults_to_zero_without_family():
-    assert resolve_dim_off_style("auto", None) == DIM_OFF_ZERO
+def test_resolve_dim_off_style_defaults_to_cut_without_family():
+    """A module that has not answered yet keeps the lab encoding."""
+    assert resolve_dim_off_style("auto", None) == DIM_OFF_CUT
 
 
 def test_resolve_dim_off_style_explicit_setting_wins():

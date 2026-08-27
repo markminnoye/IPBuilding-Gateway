@@ -1043,19 +1043,19 @@ class TestDimmerOffStyle:
         api._cfg.dimmer_off_style = configured
         return api
 
-    def test_auto_uses_zero_for_lab_dimmer(self) -> None:
+    def test_auto_uses_cut_for_lab_dimmer(self) -> None:
         api = self._api("auto")
         api._registry.handle_packet(_dimmer_pkt("10.10.1.42", b"I0154130"))
-        assert api._dimmer_off_style("10.10.1.42") == "zero"
+        assert api._dimmer_off_style("10.10.1.42") == "cut"
 
     def test_auto_uses_zero_for_nolf_dimmer(self) -> None:
         api = self._api("auto")
         api._registry.handle_packet(_dimmer_pkt("10.10.1.42", b"I0115184"))
         assert api._dimmer_off_style("10.10.1.42") == "zero"
 
-    def test_auto_falls_back_to_zero_before_the_module_answers(self) -> None:
+    def test_auto_falls_back_to_cut_before_the_module_answers(self) -> None:
         api = self._api("auto")
-        assert api._dimmer_off_style("10.10.1.42") == "zero"
+        assert api._dimmer_off_style("10.10.1.42") == "cut"
 
     def test_explicit_setting_overrides_the_observed_family(self) -> None:
         api = self._api("zero")

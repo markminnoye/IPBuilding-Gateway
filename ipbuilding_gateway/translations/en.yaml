@@ -28,14 +28,15 @@ configuration:
       dimmer_off_style:
         name: How to switch a dimmer off
         description: >-
-          Automatic (default): `C…00…` — one off command for all dimmers.
-          Leave this alone unless a dimmer misbehaves.
+          Automatic (default): the gateway decides per module, based on the reply the
+          dimmer gives. Leave this alone unless a dimmer misbehaves.
 
 
-          Cut: IPBox-style `C…99…` (override only).
+          Cut: the command the IPBox uses. Works on newer modules.
 
 
-          Zero: explicit `C…00…` (same as Automatic).
+          Zero: same cut command, but with value 0 instead of 99. First try for
+          older modules that jump to full brightness on cut-with-99.
 
 
           Restart the add-on after changing this.
