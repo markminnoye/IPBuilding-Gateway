@@ -14,25 +14,12 @@ from typing import Any
 
 import aiohttp
 
+from gateway.button_id import canonical_button_id
 from gateway.health import GatewayHealthMonitor
 from gateway.installation import InstallationConfig, ModuleConfig
 from gateway.types import DeviceType
 
 log = logging.getLogger(__name__)
-
-
-def normalize_button_hardware_id(raw_id: str) -> str:
-    """Canonicalise an IP1100PoE button hardware id for northbound routing.
-
-    ``getButtons`` returns ids like ``2D2F8185190000DF`` (2-char type prefix
-    plus 14 hex chars). UDP ``B-...E`` frames carry the wire suffix only
-    (``2f8185190000df``). Northbound consumers (companion, snapshot) need
-    the wire form so a ``button_event.id`` always matches a device entry.
-    """
-    s = raw_id.strip().lower()
-    if len(s) >= 2 and s.startswith("2d"):
-        s = s[2:]
-    return s
 
 
 def _parse_get_sysset_body(text: str) -> dict[str, str]:
@@ -273,7 +260,9 @@ def extract_pushbutton_config(
     raw_id = button_json.get("id")
     if not raw_id:
         raise ValueError(f"button entry has no 'id': {button_json!r}")
-    btn_id = normalize_button_hardware_id(str(raw_id))
+    btn_id = canonical_button_id(str(raw_id))
+    if not btn_id:
+        raise ValueError(f"button entry has unrecognised id {raw_id!r}: {button_json!r}")
 
     func2 = button_json.get("func2") or {}
     hold = func2.get("holdSeconds")

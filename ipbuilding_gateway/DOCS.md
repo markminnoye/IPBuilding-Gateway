@@ -51,6 +51,10 @@ Kopieer `devices.json` naar de add-on config folder via **Samba** of **SSH**:
 
 Het `<repo-hash>` is zichtbaar in de add-on info panel.
 
+#### Drukknop-IDs (add-on 1.7.0)
+
+Knop-ids in `devices.json` zijn **8 hex-tekens**. Oude 10- of 14-teken ids worden overgeslagen tot je het bestand omzet. Companion **≥ 1.9.0** is vereist. Omzetten: download een backup, draai `python scripts/migrate_button_ids.py /pad/naar/devices.json` (maakt `.bak`), restore.
+
 #### Generate devices.json (fresh install)
 
 ```bash

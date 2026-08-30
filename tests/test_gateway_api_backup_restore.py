@@ -178,7 +178,7 @@ class TestExportAfterRefresh:
 
         input_module = next(m for m in exported["modules"] if m["type"] == "input")
         assert len(input_module["pushbuttons"]) == 1
-        assert input_module["pushbuttons"][0]["id"] == "2f8185190000df"
+        assert input_module["pushbuttons"][0]["id"] == "2f8185df"
         assert "channels" not in input_module
 
 

@@ -5,6 +5,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-08-30
+
+### Breaking
+- **Drukknop-IDs zijn 8 hex-tekens.** Oude 10- of 14-teken ids in `devices.json` worden **niet** meer herkend — eerst omzetten met `scripts/migrate_button_ids.py` (maakt `.bak`). **Companion ≥ 1.9.0 is vereist.**
+
+### Fixed
+- **Drukknoppen op oudere ingangsmodules** (o.a. typebyte `0x01`) komen nu door, net als hun 13-byte idle-antwoord. Onbekende types worden toch doorgestuurd, met één waarschuwing in het log.
+- **IPA-import** leest elk record als één knop met het juiste doelkanaal.
+
+### Upgrade
+1. Companion naar **1.9.0** (eerst of tegelijk).
+2. `devices.json` omzetten naar 8-teken ids: `python scripts/migrate_button_ids.py /pad/naar/devices.json` (maakt `.bak`), of restore een al omgezet bestand.
+3. Add-on naar **1.7.0**, daarna **Home Assistant herstarten**.
+
 ## [1.6.7] - 2026-08-27
 
 ### Changed

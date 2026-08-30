@@ -45,13 +45,14 @@ from gateway.device_config import (
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.discovery import fetch_module_backup_channels, resolve_module_model
 from gateway.health import GatewayHealthMonitor
+from gateway.button_id import canonical_button_id
 from gateway.installation import (
     InstallationConfig,
     PushbuttonConfig,
     module_by_northbound_id,
     northbound_module_id,
 )
-from gateway.module_metadata import ModuleMetadataCache, normalize_button_hardware_id
+from gateway.module_metadata import ModuleMetadataCache
 from gateway.payloads import (
     encode_dim_command,
     encode_dim_off,
@@ -971,7 +972,14 @@ class GatewayAPI:
 
     _MULTI_ACTION = {1: "single_press", 2: "double_press", 3: "triple_press"}
 
-    def _maybe_learn_button(self, key: DeviceKey, id_hex: str) -> None:
+    def _maybe_learn_button(
+        self,
+        key: DeviceKey,
+        id_hex: str,
+        *,
+        type_hex: str = "",
+        dialect_id: str = "",
+    ) -> None:
         """Persist an unknown button stub and notify clients (learn-on-press).
 
         Canonical inventory lives in ``devices.json`` pushbuttons. A first
@@ -1062,6 +1070,8 @@ class GatewayAPI:
                     "room": "",
                     "active": True,
                     "channel": None,
+                    "type_hex": type_hex,
+                    "dialect_id": dialect_id,
                 }
             )
         )
@@ -1081,14 +1091,19 @@ class GatewayAPI:
         """
         if not self._cfg.claims_input_modules:
             return
-        id_hex = normalize_button_hardware_id(evt.id_hex or "")
+        id_hex = canonical_button_id(evt.id_hex or "") or ""
         action = (evt.action or "").lower()
         if not id_hex or action not in ("press", "release"):
             log.debug("Button event ignored: id=%s action=%s", id_hex, action)
             return
 
         if action == "press":
-            self._maybe_learn_button(key, id_hex)
+            self._maybe_learn_button(
+                key,
+                id_hex,
+                type_hex=getattr(evt, "type_hex", "") or "",
+                dialect_id=getattr(evt, "dialect_id", "") or "",
+            )
 
         state = self._button_state.setdefault(id_hex, _ButtonState())
 
@@ -1379,12 +1394,12 @@ class GatewayAPI:
                         raw_id = btn.get("id")
                         if not raw_id:
                             continue
-                        meta_by_id[normalize_button_hardware_id(str(raw_id))] = btn
+                        meta_by_id[canonical_button_id(str(raw_id)) or str(raw_id).lower()] = btn
 
                 for cfg_btn in mc.pushbuttons:
                     if not cfg_btn.active and not show_inactive:
                         continue
-                    device_id = normalize_button_hardware_id(cfg_btn.id)
+                    device_id = canonical_button_id(cfg_btn.id) or cfg_btn.id.lower()
                     wire = meta_by_id.get(device_id)
                     meta_name = ""
                     meta_room = ""

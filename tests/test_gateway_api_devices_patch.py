@@ -112,7 +112,7 @@ def pushbutton_installation() -> InstallationConfig:
             "mac": "00:24:77:52:ad:aa",
             "pushbuttons": [
                 {
-                    "id": "2f8185190000df",
+                    "id": "2f8185df",
                     "channel": 1,
                     "name": "Badkamer knop",
                     "room": "1e verdieping",
@@ -161,7 +161,7 @@ class TestPatchDeviceHandler:
 
         request = MagicMock()
         request.json = AsyncMock(return_value={"name": "Douche knop", "active": False})
-        request.match_info = {"device_id": "2f8185190000df"}
+        request.match_info = {"device_id": "2f8185df"}
 
         response = await api._patch_device(request)
         body = json.loads(response.body)
@@ -189,7 +189,7 @@ class TestPatchDeviceHandler:
 
         request = MagicMock()
         request.json = AsyncMock(return_value={"multi_press": True})
-        request.match_info = {"device_id": "2f8185190000df"}
+        request.match_info = {"device_id": "2f8185df"}
 
         with pytest.raises(gateway_api.ApiError) as exc:
             await api._patch_device(request)
@@ -223,7 +223,7 @@ class TestPatchDeviceHandler:
                 "type": "input",
                 "mac": "00:24:77:52:ad:aa",
                 "pushbuttons": [
-                    {"id": "2f8185190000df", "name": "Badkamer knop", "room": "1e verdieping", "active": True}
+                    {"id": "2f8185df", "name": "Badkamer knop", "room": "1e verdieping", "active": True}
                 ],
             },
         ])
@@ -240,7 +240,7 @@ class TestPatchDeviceHandler:
         assert "buttons" not in disk
         input_module = next(m for m in disk["modules"] if m["type"] == "input")
         assert len(input_module["pushbuttons"]) == 1
-        assert input_module["pushbuttons"][0]["id"] == "2f8185190000df"
+        assert input_module["pushbuttons"][0]["id"] == "2f8185df"
 
     @pytest.mark.asyncio
     async def test_patch_invalid_json(
@@ -485,7 +485,7 @@ class TestPatchReviewFixes:
         request.json = AsyncMock(
             return_value={"name": "Patched name", "room": "Patched room"}
         )
-        request.match_info = {"device_id": "2f8185190000df"}
+        request.match_info = {"device_id": "2f8185df"}
 
         with patch.object(api, "_broadcast", new_callable=AsyncMock):
             response = await api._patch_device(request)
@@ -513,7 +513,7 @@ class TestUnconfiguredPushbuttonHasChannelFromMeta:
         api = _make_api(installation, devices_file, metadata_cache=meta_cache)
 
         devices = api._build_device_list()
-        pushbutton = next(d for d in devices if d["id"] == "2f8185190000df")
+        pushbutton = next(d for d in devices if d["id"] == "2f8185df")
         assert pushbutton["channel"] == 3
         # 'active' is intentionally omitted for unconfigured input-buttons
         # (see test_gateway_api_modules.py::test_input_button_omits_active_field) —

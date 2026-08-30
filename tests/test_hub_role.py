@@ -155,7 +155,7 @@ def _installation_with_input() -> InstallationConfig:
                 "channels": [],
                 "pushbuttons": [
                     {
-                        "id": "2f8185190000df",
+                        "id": "2f8185df",
                         "name": "Hall",
                         "active": True,
                         "channel": 0,
@@ -189,7 +189,7 @@ def _make_api(tmp_path: Path, *, buttons_via_ha: bool = True) -> GatewayAPI:
 
     api = GatewayAPI(bus, reg, cfg)
     meta = ModuleMetadata(
-        buttons=[{"id": "2f8185190000df", "descr": "Hall", "index": 0}],
+        buttons=[{"id": "2f8185df", "descr": "Hall", "index": 0}],
     )
     cache = ModuleMetadataCache()
     cache._by_mac["00:11:22:33:44:66"] = meta
@@ -251,5 +251,5 @@ class TestButtonsViaHaGatewayAPI:
         api._broadcast = capture  # type: ignore[method-assign]
 
         key = DeviceKey(DeviceType.INPUT, "10.10.1.50", 0)
-        api._on_button_event(key, ButtonEvent(id_hex="2f8185190000df", action="press"))
+        api._on_button_event(key, ButtonEvent(id_hex="2f8185df", action="press"))
         assert not broadcasts

@@ -1,8 +1,8 @@
 # Canonical button id + input dialect map — design spec
 
 **Date:** 2026-08-30
-**Status:** draft for review
-**Repos:** IPBuilding Gateway (add-on) + `ha-ipbuilding-gateway` (companion)
+**Status:** approved
+**Repos:** IPBuilding Gateway (add-on **1.7.0**) + `ha-ipbuilding-gateway` (companion **≥ 1.9.0**)
 **Context:** Nolf 2026-08-29 debug log — 1.6.7 fixed relay/dimmer status, buttons still `undecoded RX from 10.10.1.55`
 **Predecessor:** [`2026-08-25-nolf-dialect-decode-design.md`](2026-08-25-nolf-dialect-decode-design.md) listed *"Mapping `input.nolf.binary`"* as an explicit non-goal. This spec does that mapping, and adds a second defect found while doing it.
 
@@ -233,8 +233,8 @@ Consequence to accept: re-importing an IPA now yields roughly twice as many butt
 
 There is no id validation on load today, so a typo produces a button that silently never responds. `InstallationConfig._parse()` gains, per pushbutton:
 
-- `canonical_button_id()` returns `None` → skip the entry, `WARNING` with the module IP and the raw value.
-- Duplicate canonical id within one module → keep the first, `WARNING` on the second.
+- id is not 8 lowercase hex → skip the entry, `WARNING` with the module IP, the raw value, and a pointer to `scripts/migrate_button_ids.py`. 10-hex and 14-hex config ids are **not** converted on load.
+- Duplicate 8-hex id → `raise InstallationError` (unchanged).
 
 The check byte cannot help here: testing 252 sum/XOR formulas over every subset of the six core bytes plus five CRC-8 variants gave at best 4 hits on 32 lab buttons, against ~0.1 expected by chance. Byte 6 is entropy, not redundancy. Shape and uniqueness are the only checks available.
 
@@ -244,9 +244,11 @@ The check byte cannot help here: testing 252 sum/XOR formulas over every subset 
 
 ### Gateway — `devices.json`
 
-On load, if any pushbutton id is not already canonical, the gateway writes `devices.json.bak-preid` and then rewrites `devices.json` with canonical ids, via the existing `AtomicWriter`. One `INFO` line reports how many ids were converted per module. Idempotent: a canonical file is left untouched and no backup is written.
+Migration is an **operator action**, not an automatic rewrite at startup.
 
-Rewriting on disk rather than canonicalising only in memory is deliberate — it is the only way the file, the API, the WebSocket and the companion all speak one id form, which is the entire objective.
+On load, only **8-hex** pushbutton ids are accepted. 10-hex / 14-hex / other forms are skipped with a `WARNING` that names `scripts/migrate_button_ids.py`. The file on disk is never rewritten at startup. The script is the backed-up rewrite (`.bak` first, idempotent). It lives under `scripts/` and is **not** in the add-on image — run it on a downloaded backup, then restore.
+
+Beta: only two installations exist. There is no in-memory compatibility layer for old config ids. Convert the file (or ship a converted file) before starting 1.7.0.
 
 ### Companion — entity and device registry
 
@@ -273,7 +275,7 @@ The fix is to make the companion **id-form agnostic on input**: it applies `cano
 | Gateway first | serves 8-hex; the old companion breaks until the companion is updated → **the add-on changelog must state the companion minimum version** |
 | Together | clean |
 
-The gateway-first row is the one real hazard, and it is handled with documentation plus a version floor rather than code, since the gateway cannot repair an old companion. Target versions: add-on **1.6.7 → 1.7.0** and companion **1.8.3 → 1.9.0**, both minor bumps carrying a breaking id change.
+The gateway-first row is the one real hazard, and it is handled with documentation plus a version floor rather than code, since the gateway cannot repair an old companion. Target versions: add-on **1.7.0** and companion **≥ 1.9.0**, both minor bumps carrying a breaking id change. The duplicated `canonical_button_id()` helper in the companion is accepted (no shared package). IPA `targets` stay as parsed; no separate autonomy-import issue.
 
 ### Outcome per installation
 
@@ -307,7 +309,7 @@ Note for Nolf specifically: because his configured ids will match after migratio
 | `resources_and_docs/reference/veldbus_dialect_registry.md` | replace the `input.nolf.binary` placeholder with the three button dialects and the two idle-reply families |
 | `docs/api/websocket.md` | `type_hex` and `dialect_id` on `device_added` |
 | `resources_and_docs/RE_STATE.md` | the input wire is no longer lab-only; two type bytes and two idle-reply families confirmed |
-| `ipbuilding_gateway/CHANGELOG.md` | breaking: button ids shorten to 8 hex, `devices.json` migrated on first start, **companion ≥ 1.9.0 required** |
+| `ipbuilding_gateway/CHANGELOG.md` | breaking: button ids are 8 hex; old config ids skipped until `scripts/migrate_button_ids.py`; **companion ≥ 1.9.0 required** |
 | companion `README` / changelog | the entity migration, and that automations keyed on `entity_id` are unaffected |
 
 ---
@@ -326,8 +328,8 @@ Note for Nolf specifically: because his configured ids will match after migratio
 | Regression | `_INPUT_EVENT_RE` still rejects a bad edge byte and a wrong length |
 | IPA parser | sample file → 33 buttons; all ids canonical; octets `{30,32,42}`; channels in range; the 3 previously-mismatched ids now resolve |
 | IPA parser | malformed record skipped with a warning, parse continues |
-| Config load | 10-hex and 14-hex configs both load to canonical; invalid id skipped with a warning; duplicate id warned |
-| Migration | non-canonical file → backup written, file rewritten, second load a no-op |
+| Config load | 8-hex accepted; 10-hex / 14-hex / garbage skipped with a warning; exact duplicate 8-hex still raises |
+| Migration script | non-canonical file → `.bak` written, file rewritten, second run a no-op; loader does **not** convert or rewrite on start |
 
 Existing tests carrying literal 14-hex ids must be updated: `test_input_payloads`, `test_module_metadata`, `test_installation`, `test_installation_serialization`, `test_device_config`, `test_learn_unknown_buttons`, `test_button_timing`, `test_gateway_api_modules`, `test_gateway_api_devices_patch`, `test_import_ipbox`, `test_migrate_buttons_to_nested`.
 
@@ -356,8 +358,8 @@ Ask for a fresh debug log plus the outcome of one press per module, at the **def
 
 ---
 
-## 11. Open questions for review
+## 11. Open questions — decided
 
-1. **Rewriting `devices.json` on load.** Chosen for a single id form everywhere, at the cost of the gateway touching operator config on upgrade. Acceptable, or should migration be an explicit operator action?
-2. **Duplicated canonical helper in the companion.** Accepted here over introducing a shared package. Confirm.
-3. **IPA `targets` scope.** Parsed correctly by this spec, but nothing consumes them beyond channel activation. Leave as is, or open a separate issue for autonomy import?
+1. **Rewriting `devices.json` on load.** **Operator action via script. No in-memory compat.** Loader accepts 8-hex only; `scripts/migrate_button_ids.py` rewrites the file.
+2. **Duplicated canonical helper in the companion.** **Accepted.** Same length-dispatch helper, no shared package.
+3. **IPA `targets` scope.** **Leave as is.** Parsed correctly and exposed; no separate autonomy-import issue.

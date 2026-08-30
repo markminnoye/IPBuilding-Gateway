@@ -340,7 +340,7 @@ class TestResolveEntityId:
 class TestPushbuttonConfig:
     def test_to_dict_excludes_module_id(self) -> None:
         btn = PushbuttonConfig(
-            id="2f8185190000df",
+            id="2f8185df",
             module_id="00:24:77:52:ad:aa",
             channel=1,
             name="Badkamer knop",
@@ -351,7 +351,7 @@ class TestPushbuttonConfig:
         d = btn.to_dict()
         assert "module_id" not in d
         assert d == {
-            "id": "2f8185190000df",
+            "id": "2f8185df",
             "channel": 1,
             "name": "Badkamer knop",
             "room": "1e verdieping",
@@ -366,7 +366,7 @@ class TestPushbuttonConfig:
 
     def test_from_dict_takes_module_id_as_argument(self) -> None:
         raw = {
-            "id": "2f8185190000df",
+            "id": "2f8185df",
             "channel": 1,
             "name": "Badkamer knop",
             "room": "1e verdieping",
@@ -406,7 +406,7 @@ class TestNestedPushbuttons:
                     "name": "IP1100PoE", "ip": "10.10.1.50", "type": "input",
                     "mac": "00:24:77:52:ad:aa",
                     "pushbuttons": [
-                        {"id": "2f8185190000df", "channel": 1, "name": "Badkamer knop", "room": "1e verdieping"}
+                        {"id": "2f8185df", "channel": 1, "name": "Badkamer knop", "room": "1e verdieping"}
                     ],
                 }
             ]
@@ -418,8 +418,10 @@ class TestNestedPushbuttons:
         assert len(cfg.pushbuttons) == 1
         btn = cfg.pushbutton_by_id("2f8185190000df")
         assert btn is not None
+        assert btn.id == "2f8185df"
         assert btn.channel == 1
         assert btn.module_id == "00:24:77:52:ad:aa"
+        assert cfg.pushbutton_by_id("2f8185df") is btn
 
     def test_pushbutton_threshold_default_when_unknown(self, tmp_path: Path) -> None:
         p = tmp_path / "empty.json"
@@ -445,8 +447,8 @@ class TestNestedPushbuttons:
                     "name": "IP1100PoE", "ip": "10.10.1.50", "type": "input",
                     "mac": "00:24:77:52:ad:aa",
                     "pushbuttons": [
-                        {"id": "2f8185190000df", "name": "A"},
-                        {"id": "2f8185190000df", "name": "B"},
+                        {"id": "2f8185df", "name": "A"},
+                        {"id": "2f8185df", "name": "B"},
                     ],
                 }
             ]
@@ -455,3 +457,55 @@ class TestNestedPushbuttons:
         p.write_text(json.dumps(data), encoding="utf-8")
         with pytest.raises(InstallationError, match="Duplicate"):
             InstallationConfig.load(p)
+
+    def test_ten_hex_skipped_with_warning(self, tmp_path: Path, caplog) -> None:
+        data = {
+            "modules": [{
+                "name": "IP1100PoE", "ip": "10.10.1.55", "type": "input",
+                "pushbuttons": [
+                    {"id": "dac46cc330", "name": "Keuken"},
+                    {"id": "dac46cc3", "name": "Canonical"},
+                ],
+            }]
+        }
+        p = tmp_path / "ten.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        cfg = InstallationConfig.load(p)
+        assert len(cfg.pushbuttons) == 1
+        assert cfg.pushbuttons[0].id == "dac46cc3"
+        assert cfg.pushbutton_by_id("dac46cc330") is cfg.pushbuttons[0]
+        assert "non-canonical id" in caplog.text.lower()
+
+    def test_invalid_id_skipped_with_warning(self, tmp_path: Path, caplog) -> None:
+        data = {
+            "modules": [{
+                "name": "IP1100PoE", "ip": "10.10.1.50", "type": "input",
+                "pushbuttons": [
+                    {"id": "not-a-button", "name": "Bad"},
+                    {"id": "2f8185df", "name": "Good"},
+                ],
+            }]
+        }
+        p = tmp_path / "skip.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        cfg = InstallationConfig.load(p)
+        assert len(cfg.pushbuttons) == 1
+        assert cfg.pushbuttons[0].id == "2f8185df"
+        assert "non-canonical id" in caplog.text.lower()
+
+    def test_fourteen_hex_skipped_not_converted(self, tmp_path: Path, caplog) -> None:
+        data = {
+            "modules": [{
+                "name": "IP1100PoE", "ip": "10.10.1.50", "type": "input",
+                "pushbuttons": [
+                    {"id": "2f8185190000df", "name": "Legacy"},
+                    {"id": "2f8185df", "name": "Good"},
+                ],
+            }]
+        }
+        p = tmp_path / "legacy.json"
+        p.write_text(json.dumps(data), encoding="utf-8")
+        cfg = InstallationConfig.load(p)
+        assert len(cfg.pushbuttons) == 1
+        assert cfg.pushbuttons[0].name == "Good"
+        assert "migrate_button_ids.py" in caplog.text

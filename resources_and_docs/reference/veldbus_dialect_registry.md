@@ -1,6 +1,6 @@
 # Veldbus dialect registry (UDP/1001)
 
-Last updated: 2026-08-25
+Last updated: 2026-08-30
 
 **Doel:** één canonieke lijst van **wire-dialecten** die we op UDP/1001 hebben gezien, met **implementatiestatus** in `gateway/payloads/` (Python) en sync naar embedded (C++ handmatig).
 
@@ -15,7 +15,7 @@ Last updated: 2026-08-25
 |--------|--------|-------|
 | Relay | [`gateway/payloads/relay.py`](../../gateway/payloads/relay.py) | [`tests/test_relay_payload.py`](../../tests/test_relay_payload.py) |
 | Dimmer | [`gateway/payloads/dimmer.py`](../../gateway/payloads/dimmer.py) | [`tests/test_dimmer_payload.py`](../../tests/test_dimmer_payload.py) |
-| Input | [`gateway/payloads/input.py`](../../gateway/payloads/input.py) | — |
+| Input | [`gateway/payloads/input.py`](../../gateway/payloads/input.py) | [`tests/test_input_payloads.py`](../../tests/test_input_payloads.py) |
 
 ---
 
@@ -39,8 +39,11 @@ Last updated: 2026-08-25
 | `dimmer.nolf.status_reply` | Nolf 8×0-10V `.42` | dimmer→hub op poll | `I0115184` = ch1 84 % | ✅ sinds gw **1.6.5** (family `15`) | — | [2026-08-24](../evidence/2026-08-24_jan_nolf_field_test.md) §5.2 · [spec](../../docs/superpowers/specs/2026-08-25-nolf-dialect-decode-design.md) |
 | `dimmer.nolf.command_echo` | Nolf `.42` | dimmer→hub na S/C | `S1231030` → `S1231030` (letterlijke echo) | ✅ sinds gw **1.6.5** (echo = state-bron) | — | idem §5.3 |
 | `dimmer.nolf.idle_keepalive` | Nolf `.42` | dimmer→hub op `I9900` | `I0115000` | ✅ sinds gw **1.6.5** (family-15 sentinel, geen overwrite) | — | idem §5.2 |
-| `input.lab.button_event` | IP1100PoE (lab) | input→hub | `B-…E` ASCII | ✅ | — | Sprint 5 |
-| `input.nolf.binary` | Nolf `.55` | input→hub | hex `490228…`, `462878…` | ❌ observability only | — | [2026-08-24](../evidence/2026-08-24_jan_nolf_field_test.md) §6 |
+| `input.lab.button_event` | IP1100PoE / IP040x (lab) | input→hub | `B-…E` type `0x2d` | ✅ | — | Sprint 5 |
+| `input.nolf.button_event` | IP040x (Nolf `.55`) | input→hub | `B…E` type `0x01`, zelfde 13-byte layout | ✅ sinds gw **1.7.0** | — | [2026-08-29 log](../evidence/2026-08-24_jan_nolf_field_test.md) |
+| `input.unknown.button_event` | onbekend typebyte | input→hub | `B<type>…E` | ✅ gerouteerd + 1× WARNING | — | spec 2026-08-30 |
+| `input.lab.idle_reply` | IP1100PoE (lab) | input→hub | `I\x02R…E` 14 byte, family `0x52` | ✅ | — | Sprint 5 |
+| `input.nolf.idle_reply` | Nolf `.55` | input→hub | `I\x02(\x28)…E` 13 byte, family `0x28` | ✅ sinds gw **1.7.0** | — | 2026-08-29 log |
 
 ---
 
@@ -161,16 +164,15 @@ Voorbeelden uit log 2026-08-24 (poll ch0–3):
 
 ## Input — detail
 
-### `input.nolf.binary` (Nolf `.55`, geen module-HTTP)
+### `input.lab.button_event` / `input.nolf.button_event` / `input.unknown.button_event`
 
-Debug-log toont herhaaldelijk:
+13-byte `B<type><7-byte id><marker><edge>\x00E`. Type `0x2d` = lab, `0x01` = Nolf; any other type is routed as `input.unknown.button_event` with a once-per-typebyte WARNING. Canonical button id is 8 hex (bytes 0,1,2,6 of the wire id).
 
-```
-undecoded RX from 10.10.1.55: hex:49022800000000000000000045
-undecoded RX from 10.10.1.55: hex:462878d7af0200005406a50145
-```
+### `input.lab.idle_reply` / `input.nolf.idle_reply`
 
-**Status:** buiten scope sprint tenzij knoppen-overname (actieve hub) prioriteit krijgt. Knoppen komen nu uit `devices.nolf.json` (config), niet uit module-UDP.
+Lab: 14-byte `I\x02R<status×3>\x00×7E` (family `0x52`). Nolf: 13-byte `I\x02\x28<status×3>\x00×6E` (family `0x28`). Frames that match neither `B…E` nor this idle reply are logged once per signature at WARNING.
+
+The earlier `F`-frame (`462878…`) seen while the IPBox was still master is **not** decoded; it gets the per-signature undecoded warning.
 
 ---
 
@@ -213,6 +215,7 @@ Jan's installatie draait met **IPBox nog op de veldbus** (`hub_role=slave` in el
 | ≤1.6.2 | `0015`/`0115` → `unknown` in HA |
 | 1.6.4 | `relay_state_from_code`: prefix `00xx`/`01xx` |
 | **1.6.5** | `relay.nolf.command_reply` (state uit prefix, 9–10 tekens, geen `P`) + `dimmer.nolf.status_reply` (family `15`) + `dimmer.nolf.idle_keepalive` (`000`) + `dimmer.nolf.command_echo` → STATE; OFF-echo `level_percent` 0 i.p.v. 100 |
+| **1.7.0** | `input.nolf.button_event` (type `0x01`) + `input.unknown.button_event` (gerouteerd) + `input.nolf.idle_reply` (13-byte family `0x28`); canoniek 8-hex knop-id |
 
 ---
 

@@ -207,13 +207,13 @@ def test_input_module_to_dict_has_pushbuttons_and_detectors_not_channels() -> No
     mc = ModuleConfig(
         name="IP1100PoE", ip="10.10.1.50", type=DeviceType.INPUT,
         mac="00:24:77:52:ad:aa",
-        pushbuttons=[PushbuttonConfig(id="2f8185190000df", channel=1, name="Badkamer knop")],
+        pushbuttons=[PushbuttonConfig(id="2f8185df", channel=1, name="Badkamer knop")],
         detectors=[DetectorConfig(id="det1", name="Voordeur")],
     )
     d = mc.to_dict()
     assert "channels" not in d
     assert len(d["pushbuttons"]) == 1
-    assert d["pushbuttons"][0]["id"] == "2f8185190000df"
+    assert d["pushbuttons"][0]["id"] == "2f8185df"
     assert len(d["detectors"]) == 1
     assert d["detectors"][0]["id"] == "det1"
 
@@ -230,7 +230,7 @@ def test_module_from_dict_parses_nested_pushbuttons_with_module_id() -> None:
     raw = {
         "name": "IP1100PoE", "ip": "10.10.1.50", "type": "input",
         "mac": "00:24:77:52:ad:aa",
-        "pushbuttons": [{"id": "2f8185190000df", "channel": 1, "name": "Badkamer knop"}],
+        "pushbuttons": [{"id": "2f8185df", "channel": 1, "name": "Badkamer knop"}],
         "detectors": [{"id": "det1", "name": "Voordeur"}],
     }
     mc = ModuleConfig.from_dict(raw)
@@ -275,7 +275,7 @@ async def test_forced_discovery_preserves_nested_pushbuttons(tmp_path: Path) -> 
                 "name": "IP1100PoE", "ip": "10.10.1.50", "type": "input",
                 "firmware": "", "model": "IP1100PoE", "mac": "00:24:77:52:ad:aa",
                 "pushbuttons": [
-                    {"id": "2f8185190000df", "channel": 1, "name": "Badkamer knop",
+                    {"id": "2f8185df", "channel": 1, "name": "Badkamer knop",
                      "room": "1e verdieping", "active": True, "hold_threshold_s": 1.5}
                 ],
             },
@@ -307,9 +307,9 @@ async def test_forced_discovery_preserves_nested_pushbuttons(tmp_path: Path) -> 
     assert "buttons" not in written
     input_module = next(m for m in written["modules"] if m["type"] == "input")
     assert len(input_module["pushbuttons"]) == 1
-    assert input_module["pushbuttons"][0]["id"] == "2f8185190000df"
+    assert input_module["pushbuttons"][0]["id"] == "2f8185df"
     assert input_module["pushbuttons"][0]["channel"] == 1
 
     reloaded = InstallationConfig.load(devices_file)
     assert len(reloaded.pushbuttons) == 1
-    assert reloaded.pushbutton_by_id("2f8185190000df") is not None
+    assert reloaded.pushbutton_by_id("2f8185df") is not None

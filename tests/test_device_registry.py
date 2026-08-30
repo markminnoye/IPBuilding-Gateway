@@ -321,6 +321,42 @@ class TestInputEvents:
 
         assert len(events) == 1
         assert events[0][1].action == "press"
+        assert events[0][1].id_hex == "41424347"
+        assert events[0][1].dialect_id == "input.lab.button_event"
+
+    def test_nolf_button_press_canonical_id(self):
+        reg = _registry_with_modules()
+        events: list[tuple[DeviceKey, ButtonEvent]] = []
+        reg.on_button_event(lambda key, evt: events.append((key, evt)))
+        raw = bytes.fromhex("4201dac46c100000c301010045")
+        reg.handle_packet(_make_pkt("10.10.1.50", raw))
+        assert events[0][1].action == "press"
+        assert events[0][1].id_hex == "dac46cc3"
+        assert events[0][1].dialect_id == "input.nolf.button_event"
+
+    def test_unknown_type_routes_and_warns_once(self, caplog):
+        import logging
+        reg = _registry_with_modules()
+        events: list[tuple[DeviceKey, ButtonEvent]] = []
+        reg.on_button_event(lambda key, evt: events.append((key, evt)))
+        caplog.set_level(logging.WARNING, logger="gateway.device_registry")
+        raw = bytes.fromhex("42aa2f8185190000df03010045")
+        reg.handle_packet(_make_pkt("10.10.1.50", raw))
+        reg.handle_packet(_make_pkt("10.10.1.50", raw))
+        assert len(events) == 2
+        assert events[0][1].dialect_id == "input.unknown.button_event"
+        warnings = [r for r in caplog.records if "Unknown input type byte" in r.message]
+        assert len(warnings) == 1
+
+    def test_undecoded_warns_once_per_signature(self, caplog):
+        import logging
+        reg = _registry_with_modules()
+        caplog.set_level(logging.WARNING, logger="gateway.device_registry")
+        junk = b"F\x28xxxxE"
+        reg.handle_packet(_make_pkt("10.10.1.50", junk))
+        reg.handle_packet(_make_pkt("10.10.1.50", junk))
+        warnings = [r for r in caplog.records if "undecoded RX" in r.message]
+        assert len(warnings) == 1
 
     def test_button_release_event(self):
         reg = _registry_with_modules()

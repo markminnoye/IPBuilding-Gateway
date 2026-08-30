@@ -292,7 +292,7 @@ class TestBuildDeviceList:
                 "ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa",
                 "channels": [],
                 "pushbuttons": [
-                    {"id": "2f8185190000df", "name": "", "room": "", "active": True},
+                    {"id": "2f8185df", "name": "", "room": "", "active": True},
                 ],
             }
         ])
@@ -311,7 +311,7 @@ class TestBuildDeviceList:
         devices = api._build_device_list()
         assert len(devices) == 1
         btn = devices[0]
-        assert btn["id"] == "2f8185190000df"
+        assert btn["id"] == "2f8185df"
         assert btn["device_type"] == "input"
         assert btn["semantic_type"] == "button"
         assert btn["module_id"] == "00:24:77:52:ad:aa"
@@ -333,7 +333,7 @@ class TestBuildDeviceList:
                 "channels": [],
                 "pushbuttons": [
                     {
-                        "id": "2f8185190000df",
+                        "id": "2f8185df",
                         "name": "Badkamer knop",
                         "multi_press": True,
                     }
@@ -393,7 +393,7 @@ class TestBuildDeviceList:
                 "channels": [],
                 "pushbuttons": [
                     {
-                        "id": "2f8185190000df",
+                        "id": "2f8185df",
                         "name": "",
                         "room": "",
                         "active": True,
@@ -404,8 +404,8 @@ class TestBuildDeviceList:
         api = _make_api(inst)  # no meta cache
         devices = api._build_device_list()
         assert len(devices) == 1
-        assert devices[0]["id"] == "2f8185190000df"
-        assert devices[0]["name"] == "Button 2f8185190000df"
+        assert devices[0]["id"] == "2f8185df"
+        assert devices[0]["name"] == "Button 2f8185df"
         assert devices[0]["active"] is True
         assert devices[0]["room"] == ""
 
@@ -974,7 +974,7 @@ class TestModulesRefreshPersist:
         on_disk = json.loads(devices_file.read_text(encoding="utf-8"))
         input_module = next(m for m in on_disk["modules"] if m["type"] == "input")
         assert len(input_module["pushbuttons"]) == 1
-        assert input_module["pushbuttons"][0]["id"] == "2f8185190000df"
+        assert input_module["pushbuttons"][0]["id"] == "2f8185df"
         assert "channels" not in input_module
 
     @pytest.mark.asyncio

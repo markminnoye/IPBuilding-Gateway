@@ -49,7 +49,7 @@ def _sample_installation() -> InstallationConfig:
                 "mac": "00:24:77:52:ad:aa",
                 "pushbuttons": [
                     {
-                        "id": "2f8185190000df",
+                        "id": "2f8185df",
                         "name": "Badkamer",
                         "room": "1e verdieping",
                         "active": True,
@@ -153,8 +153,8 @@ class TestApplyPatches:
 
     def test_apply_pushbutton_patch(self) -> None:
         inst = _sample_installation()
-        apply_pushbutton_patch(inst, "2f8185190000df", {"name": "Douche", "active": False})
-        btn = inst.pushbutton_by_id("2f8185190000df")
+        apply_pushbutton_patch(inst, "2f8185df", {"name": "Douche", "active": False})
+        btn = inst.pushbutton_by_id("2f8185df")
         assert btn is not None
         assert btn.name == "Douche"
         assert btn.active is False
@@ -170,7 +170,7 @@ class TestInstallationToRawDict:
         assert "buttons" not in raw
         input_module = next(m for m in raw["modules"] if m["type"] == "input")
         assert len(input_module["pushbuttons"]) == 1
-        assert input_module["pushbuttons"][0]["id"] == "2f8185190000df"
+        assert input_module["pushbuttons"][0]["id"] == "2f8185df"
         relay_module = next(m for m in raw["modules"] if m["type"] == "relay")
         assert relay_module["channels"][0]["room"] == "Nieuwe kamer"
 
@@ -274,7 +274,7 @@ class TestSyncInputPushbuttonsFromCache:
         count = sync_input_pushbuttons_from_cache(inst, cache)
         assert count == 1
 
-        existing = inst.pushbutton_by_id("2f8185190000df")
+        existing = inst.pushbutton_by_id("2f8185df")
         assert existing is not None
         assert existing.name == "Badkamer"
         assert existing.room == "1e verdieping"
@@ -282,7 +282,7 @@ class TestSyncInputPushbuttonsFromCache:
         assert existing.hold_threshold_s == 1.5
         assert existing.channel == 1
 
-        new_btn = inst.pushbutton_by_id("e341851900001f")
+        new_btn = inst.pushbutton_by_id("e341851f")
         assert new_btn is not None
         assert new_btn.name == "Nieuwe knop"
         assert new_btn.room == "Hal"
@@ -298,7 +298,7 @@ class TestSyncInputPushbuttonsFromCache:
                     "mac": "00:24:77:52:ad:aa",
                     "pushbuttons": [
                         {
-                            "id": "2f8185190000df",
+                            "id": "2f8185df",
                             "name": "",
                             "room": "",
                             "active": True,
@@ -322,13 +322,13 @@ class TestSyncInputPushbuttonsFromCache:
         )
 
         sync_input_pushbuttons_from_cache(inst, cache)
-        btn = inst.pushbutton_by_id("2f8185190000df")
+        btn = inst.pushbutton_by_id("2f8185df")
         assert btn is not None
         assert btn.name == "From wire"
         assert btn.room == "From room"
         assert btn.channel == 3
 
-    def test_merge_canonicalizes_legacy_button_id_casing_and_prefix(self) -> None:
+    def test_merge_matches_getbuttons_sixteen_hex_to_canonical_config_id(self) -> None:
         inst = InstallationConfig._parse({
             "modules": [
                 {
@@ -338,7 +338,7 @@ class TestSyncInputPushbuttonsFromCache:
                     "mac": "00:24:77:52:ad:aa",
                     "pushbuttons": [
                         {
-                            "id": "2D2F8185190000DF",
+                            "id": "2f8185df",
                             "name": "Badkamer",
                             "room": "1e verdieping",
                             "active": True,
@@ -365,11 +365,11 @@ class TestSyncInputPushbuttonsFromCache:
 
         input_module = next(m for m in inst.modules if m.type.value == "input")
         assert len(input_module.pushbuttons) == 1
-        assert input_module.pushbuttons[0].id == "2f8185190000df"
+        assert input_module.pushbuttons[0].id == "2f8185df"
         assert input_module.pushbuttons[0].name == "Badkamer"
 
         reloaded = InstallationConfig._parse(installation_to_raw_dict(inst))
-        assert reloaded.pushbutton_by_id("2f8185190000df") is not None
+        assert reloaded.pushbutton_by_id("2f8185df") is not None
 
 
 class TestValidateDevicesDocument:

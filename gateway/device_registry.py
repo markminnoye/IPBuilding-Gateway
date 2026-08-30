@@ -31,6 +31,8 @@ class DimmerState:
 class ButtonEvent:
     action: str  # "press" / "release"
     id_hex: str
+    type_hex: str = ""
+    dialect_id: str = ""
 
 
 StateChangeCallback = Callable[[DeviceKey, Any, Any], None]
@@ -54,6 +56,10 @@ class DeviceRegistry:
     _event_callbacks: list[EventCallback] = field(default_factory=list)
     _module_ip_type: dict[str, DeviceType] = field(default_factory=dict)
     _seen_unrecognized_state_codes: set[tuple[str, int, str]] = field(
+        default_factory=set
+    )
+    _seen_unknown_input_types: set[str] = field(default_factory=set)
+    _seen_undecoded_signatures: set[tuple[str, int, int | None, int | None]] = field(
         default_factory=set
     )
 
@@ -197,8 +203,13 @@ class DeviceRegistry:
         )
 
     def _log_undecoded(self, module_ip: str, data: bytes) -> None:
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug("undecoded RX from %s: %s", module_ip, format_payload(data))
+        first = data[0] if data else None
+        last = data[-1] if data else None
+        key = (module_ip, len(data), first, last)
+        if key in self._seen_undecoded_signatures:
+            return
+        self._seen_undecoded_signatures.add(key)
+        log.warning("undecoded RX from %s: %s", module_ip, format_payload(data))
 
     def _handle_relay(self, module_ip: str, data: bytes) -> None:
         parsed = decode_relay_payload(data)
@@ -337,8 +348,25 @@ class DeviceRegistry:
         family = parsed.get("family")
         if family == "input_button_event":
             action = parsed.get("action", "unknown")
-            id_hex = f"{parsed.get('id_core_hex', '')}{parsed.get('id_suffix_hex', '')}"
-            evt = ButtonEvent(action=action, id_hex=id_hex)
+            id_hex = parsed.get("id_hex") or ""
+            type_hex = parsed.get("type_hex") or ""
+            dialect_id = parsed.get("dialect_id") or ""
+            if dialect_id == "input.unknown.button_event" and type_hex not in self._seen_unknown_input_types:
+                self._seen_unknown_input_types.add(type_hex)
+                log.warning(
+                    "Unknown input type byte 0x%s from %s: id=%s wire=%s action=%s",
+                    type_hex,
+                    module_ip,
+                    id_hex,
+                    parsed.get("id_wire_hex"),
+                    action,
+                )
+            evt = ButtonEvent(
+                action=action,
+                id_hex=id_hex,
+                type_hex=type_hex,
+                dialect_id=dialect_id,
+            )
             key = DeviceKey(DeviceType.INPUT, module_ip, 0)
             log.info("Input %s button %s: %s", module_ip, id_hex, action)
             self._fire_button_event(key, evt)
