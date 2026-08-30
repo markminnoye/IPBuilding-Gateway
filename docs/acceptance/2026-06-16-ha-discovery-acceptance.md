@@ -38,7 +38,7 @@ Core, which is what this document covers.
   with `{"addon": "ipbuilding_gateway"}` to confirm Supervisor sees
    the add-on.
 4. Open **Instellingen → Apparaten & Diensten → Ontdekt**.
-5. **Expected:** a card titled **IPBuilding Gateway HA** appears in the
+5. **Expected:** a card titled **IPBuilding Gateway Companion App** appears in the
   Discovered list.
 6. Click **Toevoegen** (Add). A confirmation step shows the add-on
   name; submit.
@@ -85,7 +85,7 @@ Core, which is what this document covers.
    (or `dns-sd -B _ipbuilding-gateway._tcp.local.` on macOS).
    The service should appear with the gateway's LAN IP and port 8080.
 3. Open **Instellingen → Apparaten & Diensten → Ontdekt** in HA.
-4. **Expected:** a card titled **IPBuilding Gateway HA** (no add-on
+4. **Expected:** a card titled **IPBuilding Gateway Companion App** (no add-on
   suffix) appears. The description shows the advertised `base_url`.
 5. Click **Toevoegen**, confirm, submit. The integration entry is
   created; entities populate.
@@ -100,7 +100,7 @@ Core, which is what this document covers.
   VLAN without an mDNS reflector.
 - [ ] **Expected:** no entry in **Ontdekt** via Zeroconf. The
   Supervisor discovery path is also unavailable (no add-on context).
-- [ ] As a fallback, use **Integratie toevoegen → IPBuilding Gateway HA**
+- [ ] As a fallback, use **Integratie toevoegen → IPBuilding Gateway Companion App**
   and enter host + port manually. The integration should still
   configure correctly.
 

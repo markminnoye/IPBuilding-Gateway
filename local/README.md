@@ -82,7 +82,7 @@ Both run on the Mac host, so they reach each other over plain
 ./local/ha-core/setup.sh
 ./local/ha-core/start.sh
 # Onboard at http://localhost:8123
-# Add integration: IPBuilding Gateway HA
+# Add integration: IPBuilding Gateway Companion App
 #   Host: 127.0.0.1
 #   Port: 8080
 ```

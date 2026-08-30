@@ -2,7 +2,7 @@
 
 Open veldbus-hub voor IPBuilding relais, dimmers en drukknoppen via **UDP/1001**.
 Dit vervangt de propriëtaire IPBox op de veldbus en voedt de companion
-[**IPBuilding Gateway HA**](https://github.com/markminnoye/ha-ipbuilding-gateway)
+[**IPBuilding Gateway Companion App**](https://github.com/markminnoye/ha-ipbuilding-gateway)
 via WebSocket (`8080`) en optioneel REST (`30200` shim).
 
 > **Zonder companion geen HA-entiteiten.** Deze add-on alleen levert de gateway;
@@ -247,7 +247,7 @@ Install **[ipbuilding-gateway-ha](https://github.com/markminnoye/ha-ipbuilding-g
 voor de meest recente versie.
 
 1. **HACS** → Custom repository → `https://github.com/markminnoye/ha-ipbuilding-gateway`
-2. Install **IPBuilding Gateway HA** and restart Home Assistant
+2. Install **IPBuilding Gateway Companion App** and restart Home Assistant
 3. With the add-on **running**, open **Settings → Devices & Services → Discovered**
    and add the integration (Supervisor discovery — no host/port needed)
 

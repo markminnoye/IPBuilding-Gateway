@@ -28,7 +28,7 @@ the [add-on documentation](ipbuilding_gateway/DOCS.md).
 The gateway only speaks the northbound protocol (WebSocket `/ws` + REST
 `/api/v1/` on port **8080**). To get lights, switches, sensors, and buttons in
 HA you also need the companion integration
-[**IPBuilding Gateway HA**](https://github.com/markminnoye/ha-ipbuilding-gateway)
+[**IPBuilding Gateway Companion App**](https://github.com/markminnoye/ha-ipbuilding-gateway)
 at the latest release of both. This holds for **any** deployment variant — HA
 add-on, standalone Docker container, or ESP32 firmware — as long as HA is the
 client that turns protocol messages into entities.
@@ -57,7 +57,7 @@ This add-on does **not** implement IPBox scenes, moods, or button→relay rules.
 ## Requirements {#prerequisites}
 
 - Home Assistant **OS** or **Supervised**
-- [**IPBuilding Gateway HA**](https://github.com/markminnoye/ha-ipbuilding-gateway)
+- [**IPBuilding Gateway Companion App**](https://github.com/markminnoye/ha-ipbuilding-gateway)
   companion — any recent release; see the
   [companion releases page](https://github.com/markminnoye/ha-ipbuilding-gateway/releases)
 - IPBuilding modules reachable on **`10.10.1.x`** with HA using a **source IP on
@@ -72,7 +72,7 @@ This add-on does **not** implement IPBox scenes, moods, or button→relay rules.
 [![Open companion in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=markminnoye&repository=ha-ipbuilding-gateway&category=integration)
 
 Adds custom repository `markminnoye/ha-ipbuilding-gateway` in HACS, then download
-**IPBuilding Gateway HA** and restart HA. Full steps:
+**IPBuilding Gateway Companion App** and restart HA. Full steps:
 [companion README](https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/README.md#2-companion-integration-hacs-recommended)
 
 ### 2. Add-on repository
@@ -99,7 +99,7 @@ Then follow **[add-on documentation](ipbuilding_gateway/DOCS.md)** for:
 
 With the add-on **running** and the companion **installed**:
 
-**Settings → Devices & Services → Discovered** → **IPBuilding Gateway HA** →
+**Settings → Devices & Services → Discovered** → **IPBuilding Gateway Companion App** →
 **Add**
 
 Manual host/port remains available if discovery is blocked; see the
