@@ -60,7 +60,7 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   "multi_press": false,
   "multi_press_window_ms": 350,
   "remote_debugging": false,
-  "capabilities": [],
+  "capabilities": ["log_stream"],
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
     "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" }
@@ -77,8 +77,8 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `input_mode_label` | string | Operator label: `Slave` / `Master`. |
 | `multi_press` | boolean | Global double/triple-press classification for all wall buttons (add-on option). When `false`, short release emits `single_press` immediately. |
 | `multi_press_window_ms` | integer | Inter-click window in ms when `multi_press` is enabled (default 350). |
-| `remote_debugging` | boolean | Add-on option **Remote debugging and control**. `false` until a user turns it on in the add-on configuration. It stays on until they turn it off. While it is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. |
-| `capabilities` | list of strings | Features this gateway build actually implements. Empty until a feature is shipped. Later builds may add `log_stream`, `udp_frame`, and `raw_send`. Unknown extra fields are safe for older clients. |
+| `remote_debugging` | boolean | Add-on option **Remote debugging and control**. `false` until a user turns it on in the add-on configuration. It stays on until they turn it off. While it is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Check this field before calling a remote-debugging route. |
+| `capabilities` | list of strings | Features this gateway build actually implements. `log_stream` is live logs over WebSocket. Later builds may add `udp_frame` and `raw_send`. The list stays present when `remote_debugging` is `false`, so a client can tell “this build has the feature” from “the option is off”. Unknown extra fields are safe for older clients. |
 
 ---
 
@@ -423,6 +423,51 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) re
 ```json
 {"ok": true, "added": [], "changed": [], "removed": [], "duration_ms": 512}
 ```
+
+---
+
+## POST /api/v1/debug/log-level
+
+**Description:** Raise or lower the gateway log level for a limited time. The change applies to the whole process (including the Home Assistant add-on log) and is **not** written to add-on options or `GATEWAY_LOG_LEVEL`. When several requests overlap, the most verbose level wins. Each request expires on its own `ttl`. The level is never set quieter than the configured baseline.
+
+There is no login on port 8080. While **Remote debugging and control** is on, anyone who can reach this port can change the level and read logs. Token- and password-like values in log lines are redacted. Turn the option off when finished.
+
+**Request body:**
+```json
+{"level": "debug", "ttl": 900}
+```
+
+`level`: `debug`, `info`, `warning`, or `error` (case-insensitive). `ttl`: integer seconds from 1 to 3600. Required. Boolean `true` is rejected.
+
+**Response 200:**
+```json
+{
+  "ok": true,
+  "level": "debug",
+  "ttl": 900,
+  "effective_level": "debug"
+}
+```
+
+`effective_level` is the level actually applied. A request quieter than the configured baseline leaves the baseline in place.
+
+**Response 403** — remote debugging is off. The same code and sentence are returned on the WebSocket. `GET /api/v1/status` stays available so a client can read `remote_debugging` and `capabilities` before calling this route.
+
+```json
+{
+  "error": "remote_debugging_disabled",
+  "message": "Remote debugging is off. Turn on \"Remote debugging and control\" (Nederlands: \"Debuggen en bedienen op afstand\") under Settings > Add-ons > IPBuilding Gateway > Configuration."
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `error` | Stable code `remote_debugging_disabled`. Later remote-debugging routes (`udp_frame`, raw send) use this same code when the option is off. |
+| `message` | English hint. Names the add-on option in English and Dutch, and where to find it. |
+
+**Response 400:** `invalid_json`, `invalid_log_level`, or `invalid_ttl`.
+
+**Response 429:** `log_level_rate_limited` — more than 10 level changes in 60 seconds from REST.
 
 ---
 

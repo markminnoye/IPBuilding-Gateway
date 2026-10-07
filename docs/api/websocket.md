@@ -126,12 +126,12 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
     },
     "issues": [],
     "remote_debugging": false,
-    "capabilities": []
+    "capabilities": ["log_stream"]
   }
 }
 ```
 
-`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (empty until one is added). `remote_debugging` is the add-on option **Remote debugging and control**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway.
+`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream` today). `remote_debugging` is the add-on option **Remote debugging and control**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing to logs.
 
 ### `gateway_status` -- aggregate health update
 
@@ -161,7 +161,7 @@ Pushed when aggregate `status` or the set of open `issues[].id` changes. Same fi
     }
   ],
   "remote_debugging": false,
-  "capabilities": []
+  "capabilities": ["log_stream"]
 }
 ```
 
@@ -360,6 +360,90 @@ Emitted after a forced sweep (`POST /api/v1/discover` or WS `discover` message) 
 ---
 
 ## Client -> Gateway messages
+
+### Remote debugging gate
+
+`subscribe_logs`, `unsubscribe_logs`, and `set_log_level` are remote-debugging features. When `remote_debugging` is false they do nothing and the gateway replies:
+
+```json
+{
+  "type": "error",
+  "error": "remote_debugging_disabled",
+  "message": "Remote debugging is off. Turn on \"Remote debugging and control\" (Nederlands: \"Debuggen en bedienen op afstand\") under Settings > Add-ons > IPBuilding Gateway > Configuration."
+}
+```
+
+`error` is the stable code. `message` is English and names the add-on option in English (**Remote debugging and control**) and Dutch (**Debuggen en bedienen op afstand**), plus where to turn it on. REST `POST /api/v1/debug/log-level` uses the same code and sentence with HTTP 403. Later `udp_frame` and raw-send messages will use this same refusal. `GET /api/v1/status` and this snapshot stay available either way.
+
+Other unknown message types are still ignored. The Home Assistant companion does not send these messages, so it does not receive `log` events.
+
+### `subscribe_logs` -- live gateway log
+
+```json
+{"type": "subscribe_logs", "min_level": "info"}
+```
+
+`min_level` is optional (`debug`, `info`, `warning`, `error`; default `info`). The gateway first replays the last lines it kept (up to 500, already filtered to `min_level`), then sends:
+
+```json
+{"type": "logs_subscribed", "min_level": "info", "buffered": 12}
+```
+
+Live lines follow, only to this subscriber:
+
+```json
+{
+  "type": "log",
+  "ts": "2026-06-15T11:42:00.123Z",
+  "level": "debug",
+  "logger": "gateway.udp_bus",
+  "message": "TX keepalive"
+}
+```
+
+A client that did not subscribe, including the companion, gets none of these. WebSocket-library loggers (`aiohttp`, `websockets`) are not forwarded.
+
+If the client falls behind, lines are dropped and the gateway sends `log_dropped` instead of waiting:
+
+```json
+{"type": "log_dropped", "count": 15}
+```
+
+That drop never blocks commands or `state_changed` for this or any other client.
+
+### `unsubscribe_logs`
+
+```json
+{"type": "unsubscribe_logs"}
+```
+
+Reply: `{"type": "logs_unsubscribed"}`. A temporary level requested by this client is dropped. If that was the most verbose active request, the next one applies, or the configured level returns.
+
+### `set_log_level` -- temporary level
+
+```json
+{"type": "set_log_level", "level": "debug", "ttl": 900}
+```
+
+`ttl` is required (integer seconds, 1–3600). The level applies to the whole gateway, so debug also fills the add-on log, and raw UDP TX/RX lines show up within seconds without a restart. It is not saved in add-on options.
+
+Reply:
+
+```json
+{"type": "log_level", "ok": true, "level": "debug", "ttl": 900, "effective_level": "debug"}
+```
+
+Several clients can request different levels at once. The most verbose request wins. Each has its own `ttl`. When one expires, or that client unsubscribes or disconnects, the next active request applies. The applied level stays at least as verbose as the configured baseline. REST level changes use the same rule and last until their own `ttl` even if no WebSocket client is subscribed.
+
+More than 10 level changes in 60 seconds from one client are refused:
+
+```json
+{"type": "error", "error": "log_level_rate_limited", "message": "Too many log level changes. Wait and try again."}
+```
+
+`invalid_log_level` and `invalid_ttl` use the same `type: error` shape.
+
+Token- and password-like values in `message` are replaced with `[redacted]`. While the option is on, anyone on the LAN who can open this WebSocket can read logs and change the level.
 
 ### `discover` -- force discovery sweep
 
