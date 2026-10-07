@@ -1,6 +1,10 @@
 # Documentation (`docs/`)
 
-Last updated: 2026-08-25
+Last updated: 2026-10-07
+
+## Ontwikkelkanaal
+
+- [develop-addon.md](develop-addon.md) — ontwikkelversie van de add-on in je eigen Home Assistant
 
 ## Context & tokens
 

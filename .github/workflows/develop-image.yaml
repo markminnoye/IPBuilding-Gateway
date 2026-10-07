@@ -1,0 +1,102 @@
+# develop-image.yaml — dev images for the develop branch only.
+#
+# On every push to develop this workflow:
+#   1. Derives X.Y.Z-dev.N from config.yaml (1.7.0 → 1.8.0-dev.<run>).
+#   2. Builds and pushes ghcr.io/markminnoye/ipbuilding-gateway:X.Y.Z-dev.N.
+#   3. Commits that version back to develop so Home Assistant offers an update.
+#
+# It never publishes :latest and never publishes a plain release tag.
+# Release tags stay on builder.yaml (v*.*.* only). The version-bump commit
+# uses [skip ci] so it does not build again. GITHUB_TOKEN pushes also do
+# not start a new workflow run.
+
+name: Develop add-on image
+
+on:
+  push:
+    branches:
+      - develop
+
+concurrency:
+  group: develop-addon-image
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  version:
+    name: Compute dev version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.compute.outputs.version }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Compute X.Y.Z-dev.N
+        id: compute
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          version="$(python3 scripts/dev_version.py next --run-number "$RUN_NUMBER")"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Dev image tag: ${version}"
+
+  build-app:
+    name: Build and publish dev image
+    needs: version
+    uses: ./.github/workflows/build-app.yaml
+    with:
+      app: ipbuilding_gateway
+      publish: true
+      version_override: ${{ needs.version.outputs.version }}
+    secrets: inherit
+
+  record-version:
+    name: Record dev version on develop
+    needs: [version, build-app]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit the dev version
+        env:
+          DEV_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          commit_if_newer() {
+            python3 scripts/dev_version.py write \
+              --version "$DEV_VERSION" \
+              --no-downgrade
+            if git diff --quiet -- ipbuilding_gateway/config.yaml; then
+              echo "develop already has this dev version or a newer one"
+              return 1
+            fi
+            git add ipbuilding_gateway/config.yaml
+            git commit -m "ci: set develop image version to ${DEV_VERSION} [skip ci]"
+            return 0
+          }
+
+          for attempt in 1 2 3; do
+            git fetch origin develop
+            git reset --hard origin/develop
+            if ! commit_if_newer; then
+              exit 0
+            fi
+            if git push origin HEAD:develop; then
+              exit 0
+            fi
+            echo "push rejected, retry ${attempt}"
+          done
+          echo "could not record ${DEV_VERSION} on develop" >&2
+          exit 1
