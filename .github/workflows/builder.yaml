@@ -4,6 +4,7 @@
 # - The image tag is always derived from config.yaml's `version` field.
 # - On git tag v<semver>:    build and push :<semver> (strip the leading 'v')
 # - Push to main / PR:       no build (releases only via tags)
+# - Push to develop:        develop-image.yaml publishes X.Y.Z-dev.N only
 #
 # Before tagging a release:
 #   1. Bump `version:` in ipbuilding_gateway/config.yaml  (e.g. 0.0.1 → 0.0.2)
