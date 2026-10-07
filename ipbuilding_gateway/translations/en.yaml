@@ -95,6 +95,17 @@ configuration:
       log_level:
         name: Log level
         description: debug, info, warning, or error. debug also logs field-bus TX/RX (keepalives, commands, unmatched replies).
+  debug:
+    name: Debug
+    description: Extra access for troubleshooting. Off unless you turn it on.
+    fields:
+      remote_debugging_and_control:
+        name: Remote debugging and control
+        description: >-
+          Off by default. Stays on until you turn it off; there is no automatic
+          switch-off. While it is on, Home Assistant shows a notification:
+          anyone on your network can read field-bus traffic and send raw packets
+          to your modules through this gateway. Changing this restarts the add-on.
 network:
   8080/tcp: API and web UI — WebSocket /ws and REST /api/v1/ (companion integration; web UI via Ingress).
   30200/tcp: IPBox REST compatibility (only used when enabled under Network → IPBox REST compatibility).

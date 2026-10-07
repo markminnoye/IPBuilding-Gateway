@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Remote debugging and control** in the add-on configuration, off by default. It stays on until you turn it off. While it is on, Home Assistant keeps a notification that anyone on your network can read field-bus traffic and send raw packets through this gateway.
+
 ## [1.7.0] - 2026-08-30
 
 ### Breaking

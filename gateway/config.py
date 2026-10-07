@@ -138,6 +138,9 @@ class GatewayConfig:
     multi_press_window_ms: int = 350
     # True: poll inputs + button events to HA. False: module-local buttons.
     buttons_via_ha: bool = True
+    # Add-on option debug.remote_debugging_and_control. Stays as set until
+    # the user changes it. Gates later debug-toolkit features (udp_frame, raw send).
+    remote_debugging: bool = False
 
     @property
     def claims_input_modules(self) -> bool:
@@ -215,6 +218,7 @@ class GatewayConfig:
         multi_press_window_ms = max(
             1, int(os.getenv("GATEWAY_MULTI_PRESS_WINDOW_MS", "350"))
         )
+        remote_debugging = _env_truthy("GATEWAY_REMOTE_DEBUGGING")
 
         return cls(
             hub_port=int(os.getenv("GATEWAY_HUB_PORT", "1001")),
@@ -246,4 +250,5 @@ class GatewayConfig:
             multi_press=multi_press,
             multi_press_window_ms=multi_press_window_ms,
             buttons_via_ha=_buttons_via_ha_from_env(),
+            remote_debugging=remote_debugging,
         )

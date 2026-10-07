@@ -124,10 +124,14 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
       "module_metadata": "ok",
       "discovery": "ok"
     },
-    "issues": []
+    "issues": [],
+    "remote_debugging": false,
+    "capabilities": []
   }
 }
 ```
+
+`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (empty until one is added). `remote_debugging` is the add-on option **Remote debugging and control**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway.
 
 ### `gateway_status` -- aggregate health update
 
@@ -155,7 +159,9 @@ Pushed when aggregate `status` or the set of open `issues[].id` changes. Same fi
       "context": { "ip": "10.10.1.30", "method": "getSysSet" },
       "since": "2026-06-15T11:40:00Z"
     }
-  ]
+  ],
+  "remote_debugging": false,
+  "capabilities": []
 }
 ```
 
