@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "ipbuilding-debug": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${CLAUDE_PLUGIN_ROOT}",
+        "python",
+        "-m",
+        "ipbuilding_debug"
+      ],
+      "env": {
+        "IPBUILDING_GATEWAY_ADDRESS": "${user_config.gateway_address}"
+      }
+    }
+  }
+}

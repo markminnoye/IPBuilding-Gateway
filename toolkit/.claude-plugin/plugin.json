@@ -1,0 +1,19 @@
+{
+  "name": "ipbuilding-debug",
+  "displayName": "IPBuilding debug",
+  "version": "0.1.0",
+  "description": "Onderzoek een probleem in je IPBuilding-installatie via de gateway-add-on.",
+  "author": {
+    "name": "Sonic Rocket"
+  },
+  "license": "MIT",
+  "userConfig": {
+    "gateway_address": {
+      "type": "string",
+      "title": "Gateway-adres",
+      "description": "Adres van de IPBuilding Gateway in je thuisnetwerk, zonder http:// en zonder poort. Meestal homeassistant.local.",
+      "default": "homeassistant.local",
+      "required": true
+    }
+  }
+}
