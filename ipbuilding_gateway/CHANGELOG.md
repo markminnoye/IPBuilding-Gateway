@@ -5,25 +5,131 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-08-30
+
+### Breaking
+- **Drukknop-IDs zijn 8 hex-tekens.** Oude 10- of 14-teken ids in `devices.json` worden **niet** meer herkend — eerst omzetten met `scripts/migrate_button_ids.py` (maakt `.bak`). **Companion ≥ 1.9.0 is vereist.**
+
+### Fixed
+- **Drukknoppen op oudere ingangsmodules** (o.a. typebyte `0x01`) komen nu door, net als hun 13-byte idle-antwoord. Onbekende types worden toch doorgestuurd, met één waarschuwing in het log.
+- **IPA-import** leest elk record als één knop met het juiste doelkanaal.
+
+### Upgrade
+1. Companion naar **1.9.0** (eerst of tegelijk).
+2. `devices.json` omzetten naar 8-teken ids: `python scripts/migrate_button_ids.py /pad/naar/devices.json` (maakt `.bak`), of restore een al omgezet bestand.
+3. Add-on naar **1.7.0**, daarna **Home Assistant herstarten**.
+
+## [1.6.7] - 2026-08-27
+
+### Changed
+- **Dimmer off:** one off command for all IP0300PoE dimmers (recent and older). Replaces the per-generation choice introduced in 1.6.6.
+
+### Removed
+- **Modules → How to switch a dimmer off.** No user setting; behaviour is fixed.
+
+## [1.6.6] - 2026-08-26
+
+### Fixed
+- **Dimmer uitzetten op oudere modules.** Uit-zetten stuurde die modules
+  juist naar **vol licht**, terwijl Home Assistant netjes 0 % toonde. De
+  gateway kiest nu per dimmer het uit-commando: nieuwere modules blijven
+  op het IPBox-frame (`C…99…`), oudere krijgen eerst `C…00…` (zelfde cut,
+  waarde 0). Lab bevestigde 2026-08-27 dat beide frames daar hetzelfde
+  soft-off gedrag geven.
+
+### Added
+- **Modules → Manier van dimmer uitzetten.** Staat op **Automatisch**: de
+  gateway herkent zelf welke generatie een dimmer is. Reageert een dimmer
+  toch verkeerd, zet dit dan handmatig op **Onderbreken** (nieuwere
+  modules) of **Naar nul** (`C…00…`, eerste poging voor oudere modules).
+  Add-on herstarten na wijziging.
+
+### Field test (Jan)
+
+Dit vervangt de dimmer-UIT uit 1.6.5. Wat we op 26/08 zagen: relais volgt,
+dimmer toont een percentage en dimmen werkt, maar uit zetten (`C…99…`)
+gaf vol licht. 1.6.6 stuurt voor zijn generatie `C…00…`.
+
+1. Update naar **1.6.6**, **HA herstarten**, logniveau op `debug`.
+2. **Lichtstraat (dimmer ch1):** slider op 50 %, daarna **uit**. Gaat de
+   lamp nu echt uit (niet vol), en toont HA 0 %?
+3. **Zithoek (dimmer ch0):** staat die nog op Onbekend na de herstart?
+4. Logboek **meteen na de test** downloaden — na een paar minuten is het
+   testmoment weggeschoven door het gewone busverkeer. Daarna terug naar
+   `info`.
+
+## [1.6.5] - 2026-08-25
+
+### Fixed
+- **Relay status after switching on older modules.** After you turn a
+  channel on or off, Home Assistant now follows immediately instead of
+  keeping the old value until the next poll.
+- **Dimmer status and brightness on older dimmer hardware.** Dimmer
+  channels no longer stay Unknown after startup or a change; the current
+  level comes through.
+
+### Changed
+- **REST shim dimmer OFF reply.** When the optional IPBox-compatible
+  REST shim returns a parsed OFF command, `level_percent` is now **0**
+  (it was 100, because the wire placeholder uses `99`). The raw wire
+  code is unchanged.
+
+### Field test (Jan)
+
+Relaisstatus volgt nu direct na schakelen. Dimmerstatus en helderheid
+komen door. Zolang de IPBox nog op de veldbus staat, kunnen antwoorden
+deels naar de IPBox gaan — test eerst mét IPBox, daarna met ethernet
+eruit.
+
+Checklist (volledig: [evidence §8](../resources_and_docs/evidence/2026-08-24_jan_nolf_field_test.md)):
+
+1. Update naar **1.6.5**, companion ≥1.8.3, **HA herstarten**.
+2. Relais **ch9** (bureau Jan): in HA **AAN** en daarna **UIT**.
+3. Dimmer **ch1 Lichtstraat** op **50 %** — percentage in HA, niet Onbekend.
+4. **Zithoek (ch0)** tijdens keepalive: brandt die lamp? (sentinel-vraag)
+5. Vlak na schakelen: gateway (`/api/v1/devices` of Web UI) naast de
+   HA-entity. Gateway goed / HA fout → companion; gateway ook fout →
+   decode.
+6. IPBox-ethernet eruit, herhaal 2–4.
+
+## [1.6.4] - 2026-08-23
+
+### Fixed
+- **Relay status on older modules.** After a restart, channels on older
+  relay hardware no longer stay **Unknown** in Home Assistant. They now
+  show on or off like the rest, so the toggle works immediately.
+
+## [1.6.3] - 2026-08-23
+
+### Added
+- **Field-bus debug logging.** Set **Logging → Log level** to `debug` to
+  record keepalive TX/RX, unmatched replies during status polls, and
+  command TX/RX. Unrecognized relay `state_code` values (e.g. `0015`)
+  already show a one-time warning at `info`. Switch back to `info`
+  after capturing a log, or the add-on log keeps growing.
+
 ## [1.6.2] - 2026-08-06
 
 ### Added
-- **Learn unknown wall buttons on first press.** When you press a physical
-  button that is not yet in `devices.json`, the gateway adds it, notifies
-  clients (`device_added`), and then forwards the normal `button_event` so
-  Home Assistant can create the entity immediately.
+- **Unknown wall buttons appear after the first press.** If you press a
+  physical button that is not yet in your installation, the gateway adds it
+  and notifies Home Assistant so the entity can show up immediately
+  (companion **1.8.1+**).
 
 ### Changed
-- Device snapshots list wall buttons from `devices.json` (with soft
-  retention). Live module data only enriches names; buttons are no longer
-  dropped when they are missing from a module refresh.
+- **Wall buttons follow your saved installation.** The gateway lists buttons
+  from `devices.json` first. Module data only fills in missing names when
+  available. Buttons you configured (manual edit, restore, or IPA import)
+  stay visible even when the input module has no live button list — typical
+  for older installations without a modern module web API.
 
 ## [1.6.1] - 2026-08-06
 
 ### Added
-- At startup (and after discovery), the gateway reads current **dimmer
-  levels** from each active channel so Home Assistant sees the real
-  brightness immediately — not only after the first change.
+- **Dimmer brightness right after startup.** When the gateway starts (and
+  after discovery), it reads the current level of each active dimmer so
+  Home Assistant shows the real brightness immediately — not only after the
+  next change.
 
 ## [1.6.0] - 2026-07-16
 

@@ -1,0 +1,25 @@
+|
+‘Ingangsmodule
+ma: eo # sa a7f%
+Relais faces ~ NO contact NC contact Temperatuur Indicatie Indicatie2
+a)
+40 |s013605661000008002_|verlichting badkamer in... |ingangboven | H |10.10.1.55 | 02!
+41 |01518861000009F02 _|trapverlichting in gang b... [ingangboven | |10.20.1.55 | 02,
+mgs 43 Jeox7as96c100000c02__|verlichting gangboven a... |sandeurjens_——| 7 [10.10.55 | 02.
+2. 44 Je0121265C1000001002_|rechtsonder san deur jens |sandeurjens | [10.10.55 {02
+Hardware 45 JeoisieasBi00000re02__|linksonder aan deur ens |sandeurjens | [s0.10.55 | 02.
+46 Je014279se100000F602__|verlichting skkj ens aan... |sanveluxiens | FF [10.10.55 {02
+pat 47 Je0110F96c1000008102_|verlichting gang boven ...|sanveluxiens | [s0.10..55 {02
+48 Je01a030561000007402_|rechtsonder san velux j... |sanveluxiens | FH [10.10.1.55 {02}
+49 Jp01cc006¢1000001702_|linksonder aan veluxie...laenveluxiens | [so.101.55 | 02!
+t 50 [20187905C100000c002 _|verlichting gang boven... |insikz | IW |10.10.1.55 | 02!
+Si |poir7respi000008E02 |verlichting sikz ——insik” | |0.n0.4.55 | 02!
+A S2[20114676c1000003202 _|rechtsonder in slka___insikz | IW |10.30.1.55 | 02!
+fe 33 |Bo10Ds2661000007102 _inksonder in sik2 ———insik2 | IW [0.0.4.5 | 02!
+Ua) $4 [01Fe306D1000009802 _|verfichting gang boven... |insiki | IW |10.30.1.55 {02 |
+35 [Boressrecio00007E02 |verlichting ski insika | I [0.0.4.5 {02 |
+$6 [201612s6D100000a02 _rechtsonder in sla __finsika._— | IW |10.30.1.55 | 02!
+57 |po.oszs6Di000001002_|linksonder insiki ——finsika | IW [0.0.4.5 | 02!
+$8 [0103eCse1000001501_|poort achterdeur___—_aanachterdeur___—| IW |10.10.1.55 {OL !
+59 [oreiFo6ci000006303 _|tuinhuis links tuinhuis | I |0.n0.4.55 | 03!
+0 Jeoxrsrs6cio00000E03 tuinhuisrechts | [s0.10.1.55 {03 IF

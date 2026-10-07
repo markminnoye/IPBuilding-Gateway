@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 
+from gateway.button_id import canonical_button_id
 from gateway.installation import (
     ChannelConfig,
     InstallationConfig,
@@ -18,7 +19,6 @@ from gateway.installation import (
 from gateway.module_metadata import (
     ModuleMetadataCache,
     extract_pushbuttons_from_getbuttons,
-    normalize_button_hardware_id,
 )
 from gateway.types import DeviceType
 
@@ -295,7 +295,14 @@ def sync_input_pushbuttons_from_cache(
         seen_ids: set[str] = set()
 
         for existing in mc.pushbuttons:
-            canonical_id = normalize_button_hardware_id(existing.id)
+            canonical_id = canonical_button_id(existing.id)
+            if canonical_id is None:
+                log.warning(
+                    "Skipping pushbutton with unrecognised id %r on module %s",
+                    existing.id,
+                    mc.ip,
+                )
+                continue
             wire = wire_by_id.get(canonical_id)
             if wire is not None:
                 merged.append(
@@ -343,7 +350,8 @@ def sync_input_pushbuttons_from_cache(
             continue
         for btn in mc.pushbuttons:
             all_buttons.append(btn)
-            pushbuttons_by_id[btn.id.lower()] = btn
+            key = canonical_button_id(btn.id) or btn.id.lower()
+            pushbuttons_by_id[key] = btn
 
     installation.pushbuttons = all_buttons
     installation._pushbuttons_by_id = pushbuttons_by_id

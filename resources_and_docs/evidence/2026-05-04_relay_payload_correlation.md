@@ -121,11 +121,16 @@ Gecorrigeerde commando’s (ASCII naar `10.10.1.30`): `C0000`/`S0000` (kanaal 0)
 ## State_code → betekenis (evidence-backed)
 
 
-| state_code        | Betekenis           | Confidence                     | Evidence                                                                                                                            |
+| state_code        | Betekenis (gateway) | Confidence                     | Evidence                                                                                                                            |
 | ----------------- | ------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `0100`            | Relaykanaal **ON**  | **Confirmed**                  | 15× in `2026-05-03T192700Z` golden pcap (`I000xx0100` payloads); correlatie-export relay status summary                             |
-| `0000`            | Relaykanaal **OFF** | **Confirmed**                  | `I000000000` (ch 0 off) zelfde capture                                                                                              |
-| *(ander quartet)* | —                   | **Unconfirmed / not observed** | Volledige UDP/1001 scan van golden `2026-05-03` en nieuwe status-run `2026-05-04`: **geen** andere state-quartets dan `0000`/`0100` |
+| `0100`            | Relaykanaal **ON**  | **Confirmed** (lab)            | 15× in `2026-05-03T192700Z` golden pcap (`I000xx0100` payloads); correlatie-export relay status summary                             |
+| `0000`            | Relaykanaal **OFF** | **Confirmed** (lab + Nolf)     | Lab: `I000000000` (ch 0 off). Nolf 2026-08-08: o.a. bureau Jan / eetplaats / TL tuinhuis bij startup-poll                            |
+| `0015`            | Relaykanaal **OFF** (`00xx`) | **Hypothesized (prefix)** | Nolf oudere IP0200 `.30` (3×8 kaarten): 16/24 actieve kanalen bij startup-poll; stabiel over boots. **Niet** = ongebruikt. Decoder sinds gateway 1.6.4. Zie [2026-08-08_jan_nolf_restore_test.md](2026-08-08_jan_nolf_restore_test.md) §5 |
+| `0115`            | Relaykanaal **ON** (`01xx`)  | **Hypothesized (prefix)** | Nolf: één kanaal (`.30` ch14 *Verlichting toilet*). `0115` ≈ `0100 \| 0015` (hex). Fysieke AAN bij Jan nog te bevestigen |
+| `00xx` / `01xx`   | OFF / ON            | **Hypothesized (prefix)**      | Generieke prefix-regel in `relay_state_from_code` (lab `0000`/`0100` blijft geldig) |
+| *(ander quartet)* | → HA **unknown**    | Decoder fallback               | Prefix niet `00`/`01` → `unknown` + ruwe `state_code`; éénmalige warning                    |
+
+**Lab vs Nolf:** lab-IP0200PoE (fw ~5.x) gebruikt alleen `0000`/`0100`. `0015`/`0115` alleen op Jan Nolf’s oudere generatie (Diagnostic 03.03 / geen module-HTTP). **Dual encoding:** Nolf startup-poll → `0015`/`0115`/`0000`; na `S`/`C` antwoordt dezelfde module met `0100`/`0000`. Prefix-mapping is hypothesized; fysieke AAN/UIT bij Jan is de validatiegate.
 
 
 ### Niet-gemapte payload (open)

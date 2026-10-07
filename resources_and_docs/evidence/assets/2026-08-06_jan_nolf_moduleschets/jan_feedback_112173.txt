@@ -1,0 +1,56 @@
+ID: 112173
+  Subject: RE: integratie IPBuilding in HA — moduleschets, EEPROM’s & WebUI
+  From: Jan Nolf <jan@nolfvdh.be>
+  To: Mark Minnoye <mark@sonicrocket.be>
+  Date: 2026-08-06 17:21
+  Flags: attachment
+
+  1) Korte schets van je kast / installatie
+  
+  Geen nette tekening nodig — foto van de DIN-rail of een simpele lijst is genoeg. Ideaal per module:
+  
+  
+  • IP-adres 10.10.1.30
+  • Type (relaisstuur IP0200
+  • Ongeveer hoeveel relais- of dimkaarten eraan hangen 3x8
+  • Wat er roughly op zit : zie printscreen
+  
+  
+  
+  • IP-adres 10.10.1.31
+  • Type (relaisstuur IP0200
+  • Ongeveer hoeveel relais- of dimkaarten eraan hangen 1x8
+  • Wat er roughly op zit : leeg
+  
+  
+  
+  • IP-adres 10.10.1.32
+  • Type (relaisstuur IP0200
+  • Ongeveer hoeveel relais- of dimkaarten eraan hangen 1x8
+  • Wat er roughly op zit : zie printscreen
+  • Deze kaart staat niet op de foto want deze hangt in het tuinhuis
+  
+  
+  
+  • IP-adres 10.10.1.42
+  • Type (DIM dim IP0300)
+  • Ongeveer hoeveel relais- of dimkaarten eraan hangen 1*4
+  • Wat er roughly op zit : zie printscreen
+  
+  
+  
+  • IP-adres 10.10.1.55
+  • Type (input)
+  • 3 buslijnen: 1 beneden / 1 boven / 1 tuinhuis
+  • Wat er roughly op zit : zie printscreen drukknoppen
+  
+  Screenshots webinterface HA in bijlage
+  
+  Een eeprom-dump buiten de inputmodule is niet mogelijk. Als ik deze via het diagnostic-programma inlees, dan krijg ik enkel de statusuitgangen. (zie printscreen in bijlage)
+  Groeten
+  Jan
+  
+
+────────────────────────────────────────────────────────────────────────
+
+  

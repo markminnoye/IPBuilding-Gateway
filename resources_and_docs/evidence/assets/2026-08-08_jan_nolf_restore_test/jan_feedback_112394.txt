@@ -1,0 +1,16 @@
+Dag Mark
+Nog een kleine update
+
+1. Nu — gateway → 1.6.2, restore devices.nolf.json, check of namen/kanalen kloppen in de Web UI en of lights/switches/dimmers in HA verschijnen. Bestaande centrale/box nog niet uitzetten.
+Gelukt, alles lijkt zichtbaar
+
+2. Passief testen — 1–2 bekende relais + 1 dimmer vanuit HA schakelen. Wandknoppen blijven voorlopig via de oude IPBuilding-logica werken. Status in HA is dan niet altijd 100% up-to-date.
+Gelukt, behalve de dimmers. Relais zijn aanstuurbaar, maar de status wordt niet aangepast. Daardoor kan ik ook niet met toggle functies werken in HA, maar moet alles via switch gebeuren.
+
+3. Evalueren — als dat goed voelt: of we passief blijven, of we naar actief gaan.
+Als de ipbox er tussenuit kan, graag!
+
+4. Actief (later) — dan pas centrale uit / ethernet eruit, zodat de gateway ook de inputs overneemt. Knop→actie moet dan opnieuw in Home Assistant (Automatiseringen en scènes), niet meer in het IPBuilding-project.
+
+Groeten
+Jan

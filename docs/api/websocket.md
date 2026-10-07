@@ -195,7 +195,7 @@ active in config but no recent fieldbus response was received.
 ```json
 {
   "type": "button_event",
-  "id": "2f8185190000df",
+  "id": "2f8185df",
   "action": "single_press"
 }
 ```
@@ -205,19 +205,21 @@ Multi-press frames (opt-in per button) include a `count` field:
 ```json
 {
   "type": "button_event",
-  "id": "2f8185190000df",
+  "id": "2f8185df",
   "action": "double_press",
   "count": 2
 }
 ```
 
-The `id` field carries the normalized hardware hex ID (14 lowercase hex
-characters). `getButtons` returns the same id with a `2D` type prefix
-(e.g. `2D2F8185190000DF`); the gateway strips the prefix on the
-northbound WS so a `button_event.id` always matches a pushbutton `id`
+The `id` field carries the canonical hardware hex ID (8 lowercase hex
+characters). `getButtons` returns the same id with a type prefix plus the
+14-hex wire form (e.g. `2D2F8185190000DF`); the gateway canonicalises
+on the northbound WS so a `button_event.id` always matches a pushbutton `id`
 on an input module. The `id` is stable per physical button; do
 not key on `module_ip` because DHCP can change the input module's
-address.
+address. `devices.json` stores this 8-hex form; older 10-hex or
+14-hex files must be converted with `scripts/migrate_button_ids.py`
+before load (those ids are skipped, not rewritten).
 
 Possible `action` values:
 
@@ -277,18 +279,22 @@ lost. Distinguish from module discovery via `semantic_type: "button"`.
 {
   "type": "device_added",
   "semantic_type": "button",
-  "id": "2f8185190000df",
+  "id": "2f8185df",
   "module_id": "00:24:77:52:ad:aa",
   "module_ip": "10.10.1.50",
   "device_type": "input",
   "name": "",
   "room": "",
   "active": true,
-  "channel": null
+  "channel": null,
+  "type_hex": "2d",
+  "dialect_id": "input.lab.button_event"
 }
 ```
 
-`id` is the normalized 14-hex hardware id (same form as `button_event.id`).
+`id` is the canonical 8-hex hardware id (same form as `button_event.id`).
+`type_hex` is the wire type byte; `dialect_id` is `input.lab.button_event`,
+`input.nolf.button_event`, or `input.unknown.button_event`.
 
 ### `device_removed` -- module not seen for N polls
 
@@ -417,6 +423,6 @@ The `module_id` field on each device contains the stable MAC of the parent modul
 
 ## Routing button events to HA entities
 
-`button_event.id` is the normalized hardware hex ID from the IP1100PoE (14 lowercase hex characters, e.g. `2f8185190000df`). The companion routes these to Home Assistant `event.<hardware_id>` entities via the `ipbuilding-gateway-ha` integration, then exposes `single_pressed` / `double_pressed` / `triple_pressed` / `long_pressed` device triggers in the automation editor for each physical button. The HA / Matter standard event types are also forwarded in `event_data` (`press_start`, `press_end`, `long_press_start`, `multi_press_end`).
+`button_event.id` is the canonical hardware hex ID from the IP1100PoE (8 lowercase hex characters, e.g. `2f8185df`). The companion routes these to Home Assistant `event.<hardware_id>` entities via the `ipbuilding-gateway-ha` integration, then exposes `single_pressed` / `double_pressed` / `triple_pressed` / `long_pressed` device triggers in the automation editor for each physical button. The HA / Matter standard event types are also forwarded in `event_data` (`press_start`, `press_end`, `long_press_start`, `multi_press_end`).
 
 See [ARCHITECTURE.md -- section 6](../../ARCHITECTURE.md#6-northbound-protocol-websocket) for the full sequence diagram and [`coordinator.py`](https://github.com/markminnoye/ha-ipbuilding-gateway/blob/main/custom_components/ha_ipbuilding_gateway/coordinator.py) in the companion repo for how button events are dispatched in HA.

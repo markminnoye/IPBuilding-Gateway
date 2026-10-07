@@ -32,6 +32,7 @@ Zelfde sweep opnieuw gevangen bij een volgende cold boot, dit keer **kanalen 16�
 **Formaat:**
 - Query = `I` + `<CH,2 cijfers>` + `00` (5 bytes ASCII). Kanaal staat in de **eerste twee cijfers**.
 - Reply = `I000` + `<CH,2 cijfers>` + `<VVVV>` (10 bytes ASCII), `VVVV=0100` = AAN, `0000` = UIT.
+- **Addendum 2026-08-08 (Nolf):** op oudere IP0200 ook `0015` / `0115` gezien. **Addendum 2026-08-23:** gateway ≥1.6.4 mapt die via prefix `00xx`→off / `01xx`→on (hypothesized; veldcheck bij Jan open). Zie [2026-05-04_relay_payload_correlation.md](2026-05-04_relay_payload_correlation.md) §State_code en [2026-08-08_jan_nolf_restore_test.md](2026-08-08_jan_nolf_restore_test.md) §5.
 
 De sweep dekte alleen kanalen **17–23** (de in dit project geconfigureerde uitgangen van deze relay), niet 0–23. De gateway moet dus sweepen over de outputs die in zijn eigen config staan.
 

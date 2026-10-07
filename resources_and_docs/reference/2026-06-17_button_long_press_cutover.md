@@ -34,7 +34,7 @@ gateway al op de veldbus als `10.10.1.1` zodra de IPBox uit is.
 ```text
 HACS → Integrations → ⋯ → Custom repositories
 → https://github.com/markminnoye/ha-ipbuilding-gateway
-→ Categorie: Integration → Install "IPBuilding Gateway HA"
+→ Categorie: Integration → Install "IPBuilding Gateway Companion App"
 → Restart Home Assistant
 ```
 
@@ -45,7 +45,7 @@ HACS detecteert het add-on automatisch via Supervisor.
 
 ```text
 Instellingen → Apparaten & entiteiten → Integraties
-→ IPBuilding Gateway HA → ⋯ → Run discovery sweep
+→ IPBuilding Gateway Companion App → ⋯ → Run discovery sweep
 ```
 
 Of: `POST http://<gateway>:8080/api/v1/discover` vanuit een REST tool.

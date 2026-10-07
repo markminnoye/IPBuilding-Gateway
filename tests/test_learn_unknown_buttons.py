@@ -72,6 +72,7 @@ class TestLearnOnPress:
         api = _capturing_api(tmp_path, [INPUT_MODULE])
         key = DeviceKey(DeviceType.INPUT, "10.10.1.50", 0)
         btn_id = "2f8185190000df"
+        canonical = "2f8185df"
 
         api._on_button_event(key, ButtonEvent(id_hex=btn_id, action="press"))
 
@@ -82,7 +83,7 @@ class TestLearnOnPress:
         disk = json.loads((tmp_path / "devices.json").read_text(encoding="utf-8"))
         pbs = disk["modules"][0]["pushbuttons"]
         assert len(pbs) == 1
-        assert pbs[0]["id"] == btn_id
+        assert pbs[0]["id"] == canonical
         assert pbs[0]["name"] == ""
         assert pbs[0]["room"] == ""
         assert pbs[0]["active"] is True
@@ -96,14 +97,14 @@ class TestLearnOnPress:
 
         added = next(m for m in api._captured if m["type"] == "device_added")
         assert added["semantic_type"] == "button"
-        assert added["id"] == btn_id
+        assert added["id"] == canonical
         assert added["module_ip"] == "10.10.1.50"
         assert added["active"] is True
         assert added["name"] == ""
 
         press = next(m for m in api._captured if m["type"] == "button_event")
         assert press["action"] == "press"
-        assert press["id"] == btn_id
+        assert press["id"] == canonical
 
     @pytest.mark.asyncio
     async def test_second_press_does_not_duplicate_stub(self, tmp_path: Path) -> None:

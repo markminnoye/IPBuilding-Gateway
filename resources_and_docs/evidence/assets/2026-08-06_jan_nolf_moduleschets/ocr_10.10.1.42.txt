@@ -1,0 +1,5 @@
+‘TPBuilding hardware configuratie xi
+Configuratie _ | Dim interfaces:
+z E
+Dim interfaces Nr. Omschrijving Groep ZBSph __ Status %
+: arr (ow) [or =]

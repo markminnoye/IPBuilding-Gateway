@@ -90,9 +90,9 @@ class TestParseGetButtons:
     def test_normalises_id_to_wire_form(self) -> None:
         buttons = mod.parse_get_buttons(GETBUTTONS_FIXTURE)
         assert [b.id for b in buttons] == [
-            "2f8185190000df",
-            "cafebabe000001",
-            "dead0000000007",
+            "2f8185df",
+            "cafeba01",
+            "dead0007",
         ]
 
     def test_carries_descr_and_gr(self) -> None:
@@ -200,14 +200,14 @@ class TestImportButtons:
         entries, warnings, friendly = mod.import_buttons(buttons, {})
         assert entries == []
         assert any("Lege knop" in w for w in warnings)
-        assert "abcdef12345678" in friendly
+        assert "abcdef78" in friendly
 
     def test_creates_entry_with_func1_and_func2(self) -> None:
         channels = mod.parse_comp_items(COMPITEMS_FIXTURE)
         buttons = mod.parse_get_buttons(GETBUTTONS_FIXTURE)
         entries, warnings, friendly = mod.import_buttons(buttons, channels)
         assert any(e.func1_action == "on" and e.func2_action == "dim" for e in entries)
-        assert friendly["2f8185190000df"] == "Keuken knop 1"
+        assert friendly["2f8185df"] == "Keuken knop 1"
         # No fatal warnings expected.
         assert warnings == []
 

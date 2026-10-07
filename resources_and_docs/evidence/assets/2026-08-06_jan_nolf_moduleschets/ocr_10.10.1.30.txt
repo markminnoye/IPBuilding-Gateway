@@ -1,0 +1,26 @@
+Relaisinterfaces
+Configuratie en diagnose relais uitgangen
+4 Bediening port Poort Pt | on | [ot |
+2 \Verlichting trap erlichting | | on | [ot
+3 |Verlichting kamer jas ___|verlichting | [| on | [ot
+4 |Verlichting kamer i __[Verlichting | |) on | |
+5 |Verlichting zolder ___iverlichting | BE | on | [ot
+& |Verlichting voordeur kant welVerlichting | [P| on | [oft |
+7 |tedverlichting keuken __|Verlichting | BE [Tt] on | ot
+8 |Verlichting keuken ____|Verlichting | BE [Pt | on | [ot
+S |Verlichting eetplaats ___verlichting | [P| on | [ot
+40 |Verlichting bureau Jan __[Verlichting | BP on | ot
+4 |Verlichting berging _____Verlichting | Be PT) on oft
+42 |Verlichting kamer 2 ___[Verlichting | BP on | ot
+43 |Spotsterras _[Verlichting | BP | on | ot
+44 |Verlichting bureau sara___[Verlichting | BP) on | ot
+45 |Verlichting toilet __[Verlichting | PT on | ot
+46 |Verlichting voordeur kant L..[Verlichting | BP |) on | ot
+Sy | i
+48 |Verlichting keukenpilaar _[Verlichting | BP |) on | ot
+49 |Wandverlichting boven __[Verlichting | BP |) on | ot
+20 |Verlichting voordeur buiten [Verlichting | BP | on | oft
+24 |Ventilatie toilet beneden _[Ventilatie | BP |) on | ot
+22 |Inbouwspot achterdeur __[Verlichting | BP |) on | ot
+23 |verstraler oversteek __[Verlichting | BP | on | oft
+24 |verlichting garage |Verlichting i ET | [on [ot]

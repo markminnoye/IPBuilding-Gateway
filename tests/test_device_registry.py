@@ -89,6 +89,83 @@ class TestRelayState:
         assert len(reg.all_relay_states()) == 0
 
 
+class TestNolfRelayCommandReply:
+    def test_echo_updates_state_and_preserves_state_code(self):
+        reg = _registry_with_modules()
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 6)
+        reg.seed_relay_state(key, "on", "0115")
+
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda k, old, new: changes.append((k, old, new)))
+        reg.handle_packet(_make_pkt("10.10.1.30", b"C060000000"))
+
+        state = reg.get_relay_state(key)
+        assert state is not None
+        assert state.state == "off"
+        assert state.state_code == "0115"
+        assert len(changes) == 1
+        assert changes[0][2].state == "off"
+        assert changes[0][2].state_code == "0115"
+
+    def test_echo_logs_nolf_command_reply(self, caplog):
+        import logging
+
+        reg = _registry_with_modules()
+        caplog.set_level(logging.INFO, logger="gateway.device_registry")
+        reg.handle_packet(_make_pkt("10.10.1.30", b"C060000000"))
+        assert any(
+            "decoded relay.nolf.command_reply from 10.10.1.30: C060000000 (ch6 → off)"
+            in r.message
+            for r in caplog.records
+        )
+
+    def test_echo_first_packet_empty_state_code_no_warning(self, caplog):
+        import logging
+
+        reg = _registry_with_modules()
+        caplog.set_level(logging.WARNING, logger="gateway.device_registry")
+        reg.handle_packet(_make_pkt("10.10.1.30", b"C060000000"))
+
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 6)
+        state = reg.get_relay_state(key)
+        assert state is not None
+        assert state.state == "off"
+        assert state.state_code == ""
+        warnings = [
+            r for r in caplog.records if "unrecognized state_code=" in r.message
+        ]
+        assert warnings == []
+
+    def test_toggle_echo_does_not_change_state(self):
+        reg = _registry_with_modules()
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 11)
+        reg.seed_relay_state(key, "on", "0100")
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda k, old, new: changes.append((k, old, new)))
+
+        reg.handle_packet(_make_pkt("10.10.1.30", b"T11001000"))
+
+        state = reg.get_relay_state(key)
+        assert state is not None
+        assert state.state == "on"
+        assert state.state_code == "0100"
+        assert changes == []
+
+    def test_p2p_toggle_from_dimmer_ip_does_not_update_relay(self):
+        """Routing safety: T11001000 from a dimmer IP never hits the relay decoder."""
+        reg = _registry_with_modules()
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda k, old, new: changes.append((k, old, new)))
+        reg.handle_packet(_make_pkt("10.10.1.40", b"T11001000"))
+        assert reg.get_relay_state(
+            DeviceKey(DeviceType.RELAY, "10.10.1.30", 11)
+        ) is None
+        assert reg.get_relay_state(
+            DeviceKey(DeviceType.RELAY, "10.10.1.40", 11)
+        ) is None
+        assert changes == []
+
+
 class TestDimmerState:
     def test_dimmer_status_reply(self):
         reg = _registry_with_modules()
@@ -156,6 +233,82 @@ class TestDimmerState:
         assert changes[1][2].level_percent == 100
 
 
+class TestNolfDimmerCommandEcho:
+    def test_set_echo_updates_level(self):
+        reg = _registry_with_modules()
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda k, old, new: changes.append((k, old, new)))
+        reg.handle_packet(_make_pkt("10.10.1.40", b"S1231030"))
+
+        key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 1)
+        state = reg.get_dimmer_state(key)
+        assert state is not None
+        assert state.level_percent == 23
+        assert len(changes) == 1
+        assert changes[0][2].level_percent == 23
+
+    def test_off_echo_is_zero_percent(self):
+        reg = _registry_with_modules()
+        reg.handle_packet(_make_pkt("10.10.1.40", b"C1991030"))
+
+        key = DeviceKey(DeviceType.DIMMER, "10.10.1.40", 1)
+        state = reg.get_dimmer_state(key)
+        assert state is not None
+        assert state.level_percent == 0
+
+    def test_nolf_idle_keepalive_does_not_overwrite_level(self):
+        reg = _registry_with_modules()
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda k, old, new: changes.append((k, old, new)))
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115099"))  # ch0 → 100%
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115000"))
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115000"))
+
+        ch0 = reg.get_dimmer_state(DeviceKey(DeviceType.DIMMER, "10.10.1.40", 0))
+        assert ch0 is not None
+        assert ch0.level_percent == 100
+        assert len(changes) == 1
+
+
+class TestDimmerFamilyDetection:
+    def test_unknown_until_the_module_answers(self):
+        reg = _registry_with_modules()
+        assert reg.get_dimmer_family("10.10.1.40") is None
+
+    def test_lab_status_reply_marks_family_54(self):
+        reg = _registry_with_modules()
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0154130"))
+        assert reg.get_dimmer_family("10.10.1.40") == "54"
+
+    def test_nolf_status_reply_marks_family_15(self):
+        reg = _registry_with_modules()
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115184"))
+        assert reg.get_dimmer_family("10.10.1.40") == "15"
+
+    def test_idle_keepalive_also_marks_the_family(self):
+        """I0115000 carries no level but still identifies the generation."""
+        reg = _registry_with_modules()
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115000"))
+        assert reg.get_dimmer_family("10.10.1.40") == "15"
+
+    def test_command_echo_marks_family_15(self):
+        """Only Nolf-generation modules echo the command back."""
+        reg = _registry_with_modules()
+        reg.handle_packet(_make_pkt("10.10.1.40", b"S1231030"))
+        assert reg.get_dimmer_family("10.10.1.40") == "15"
+
+    def test_family_is_logged_once(self, caplog):
+        import logging
+
+        reg = _registry_with_modules()
+        caplog.set_level(logging.INFO, logger="gateway.device_registry")
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115184"))
+        reg.handle_packet(_make_pkt("10.10.1.40", b"I0115000"))
+
+        lines = [r for r in caplog.records if "reply family" in r.message]
+        assert len(lines) == 1
+
+
 class TestInputEvents:
     def test_button_press_event(self):
         reg = _registry_with_modules()
@@ -168,6 +321,42 @@ class TestInputEvents:
 
         assert len(events) == 1
         assert events[0][1].action == "press"
+        assert events[0][1].id_hex == "41424347"
+        assert events[0][1].dialect_id == "input.lab.button_event"
+
+    def test_nolf_button_press_canonical_id(self):
+        reg = _registry_with_modules()
+        events: list[tuple[DeviceKey, ButtonEvent]] = []
+        reg.on_button_event(lambda key, evt: events.append((key, evt)))
+        raw = bytes.fromhex("4201dac46c100000c301010045")
+        reg.handle_packet(_make_pkt("10.10.1.50", raw))
+        assert events[0][1].action == "press"
+        assert events[0][1].id_hex == "dac46cc3"
+        assert events[0][1].dialect_id == "input.nolf.button_event"
+
+    def test_unknown_type_routes_and_warns_once(self, caplog):
+        import logging
+        reg = _registry_with_modules()
+        events: list[tuple[DeviceKey, ButtonEvent]] = []
+        reg.on_button_event(lambda key, evt: events.append((key, evt)))
+        caplog.set_level(logging.WARNING, logger="gateway.device_registry")
+        raw = bytes.fromhex("42aa2f8185190000df03010045")
+        reg.handle_packet(_make_pkt("10.10.1.50", raw))
+        reg.handle_packet(_make_pkt("10.10.1.50", raw))
+        assert len(events) == 2
+        assert events[0][1].dialect_id == "input.unknown.button_event"
+        warnings = [r for r in caplog.records if "Unknown input type byte" in r.message]
+        assert len(warnings) == 1
+
+    def test_undecoded_warns_once_per_signature(self, caplog):
+        import logging
+        reg = _registry_with_modules()
+        caplog.set_level(logging.WARNING, logger="gateway.device_registry")
+        junk = b"F\x28xxxxE"
+        reg.handle_packet(_make_pkt("10.10.1.50", junk))
+        reg.handle_packet(_make_pkt("10.10.1.50", junk))
+        warnings = [r for r in caplog.records if "undecoded RX" in r.message]
+        assert len(warnings) == 1
 
     def test_button_release_event(self):
         reg = _registry_with_modules()
@@ -296,3 +485,62 @@ class TestSeedState:
 
         assert reg.get_dimmer_state(key).level_percent == 50
         assert received == []
+
+
+class TestUnrecognizedRelayStateCode:
+    def test_first_seen_0015_is_off_no_warn(self, caplog):
+        import logging
+
+        reg = _registry_with_modules()
+        caplog.set_level(logging.WARNING, logger="gateway.device_registry")
+        pkt = _make_pkt("10.10.1.30", b"I00000015")
+        reg.handle_packet(pkt)
+        reg.handle_packet(pkt)
+
+        warnings = [
+            r for r in caplog.records if "unrecognized state_code=" in r.message
+        ]
+        assert warnings == []
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 0)
+        rs = reg.get_relay_state(key)
+        assert rs is not None
+        assert rs.state == "off"
+        assert rs.state_code == "0015"
+
+    def test_first_seen_0200_warns_once(self, caplog):
+        import logging
+
+        reg = _registry_with_modules()
+        caplog.set_level(logging.WARNING, logger="gateway.device_registry")
+        pkt = _make_pkt("10.10.1.30", b"I00000200")
+        reg.handle_packet(pkt)
+        reg.handle_packet(pkt)
+
+        warnings = [
+            r for r in caplog.records if "unrecognized state_code=0200" in r.message
+        ]
+        assert len(warnings) == 1
+        key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 0)
+        rs = reg.get_relay_state(key)
+        assert rs is not None
+        assert rs.state == "unknown"
+        assert rs.state_code == "0200"
+
+    def test_0015_to_0115_fires_callback(self, caplog):
+        import logging
+
+        reg = _registry_with_modules()
+        changes: list[tuple] = []
+        reg.on_state_changed(lambda key, old, new: changes.append((key, old, new)))
+        caplog.set_level(logging.INFO, logger="gateway.device_registry")
+
+        reg.handle_packet(_make_pkt("10.10.1.30", b"I00000015"))
+        reg.handle_packet(_make_pkt("10.10.1.30", b"I00000115"))
+
+        assert len(changes) == 2
+        assert changes[0][2].state == "off"
+        assert changes[0][2].state_code == "0015"
+        assert changes[1][1].state_code == "0015"
+        assert changes[1][2].state_code == "0115"
+        assert changes[1][2].state == "on"
+        assert any("0015" in r.message and "0115" in r.message for r in caplog.records)

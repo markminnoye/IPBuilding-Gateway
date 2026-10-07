@@ -2,7 +2,7 @@
 
 Open veldbus-hub voor IPBuilding relais, dimmers en drukknoppen via **UDP/1001**.
 Dit vervangt de propriëtaire IPBox op de veldbus en voedt de companion
-[**IPBuilding Gateway HA**](https://github.com/markminnoye/ha-ipbuilding-gateway)
+[**IPBuilding Gateway Companion App**](https://github.com/markminnoye/ha-ipbuilding-gateway)
 via WebSocket (`8080`) en optioneel REST (`30200` shim).
 
 > **Zonder companion geen HA-entiteiten.** Deze add-on alleen levert de gateway;
@@ -50,6 +50,10 @@ Kopieer `devices.json` naar de add-on config folder via **Samba** of **SSH**:
 ```
 
 Het `<repo-hash>` is zichtbaar in de add-on info panel.
+
+#### Drukknop-IDs (add-on 1.7.0)
+
+Knop-ids in `devices.json` zijn **8 hex-tekens**. Oude 10- of 14-teken ids worden overgeslagen tot je het bestand omzet. Companion **≥ 1.9.0** is vereist. Omzetten: download een backup, draai `python scripts/migrate_button_ids.py /pad/naar/devices.json` (maakt `.bak`), restore.
 
 #### Generate devices.json (fresh install)
 
@@ -116,7 +120,7 @@ Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Co
 | `discovery.passive_arp_monitor` | `true` | Detecteer nieuwe/verdwenen modules via netwerkverkeer (zonder broadcast-scan) |
 | `discovery.arp_poll_interval_s` | `30.0` | Hoe vaak (s) de passieve monitor het netwerk bekijkt |
 | `discovery.use_env_defaults` | `false` | Lab/test: vaste `.30/.40/.50` IPs als `devices.json` ontbreekt. Productie: uit laten |
-| `logging.log_level` | `info` | Logniveau: `debug`, `info`, `warning`, `error` |
+| `logging.log_level` | `info` | Logniveau: `debug`, `info`, `warning`, `error`. `debug` logt ook veldbus TX/RX (keepalives, commando’s, unmatched replies) |
 
 De API/web-UI-poort (`8080`) en de IPBox REST-compatibiliteitspoort (`30200`) liggen vast en staan **niet** in deze tabel — ze staan onder Supervisor’s eigen **Network**-sectie op de add-on info-pagina (zie [Ports](#ports)).
 
@@ -243,7 +247,7 @@ Install **[ipbuilding-gateway-ha](https://github.com/markminnoye/ha-ipbuilding-g
 voor de meest recente versie.
 
 1. **HACS** → Custom repository → `https://github.com/markminnoye/ha-ipbuilding-gateway`
-2. Install **IPBuilding Gateway HA** and restart Home Assistant
+2. Install **IPBuilding Gateway Companion App** and restart Home Assistant
 3. With the add-on **running**, open **Settings → Devices & Services → Discovered**
    and add the integration (Supervisor discovery — no host/port needed)
 

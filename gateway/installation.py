@@ -29,6 +29,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from gateway.button_id import canonical_button_id
 from gateway.types import DeviceType
 
 log = logging.getLogger(__name__)
@@ -158,7 +159,7 @@ class PushbuttonConfig:
     2026-06-16: dit is dezelfde drempel die IPBox hanteert).
     """
 
-    id: str  # hardware hex, e.g. "2f8185190000df" (14 lowercase hex chars)
+    id: str  # hardware hex, e.g. "2f8185df" (8 lowercase hex chars, canonical)
     module_id: str = ""  # parent module MAC — derived from nesting position, never read from the button's own dict
     channel: int | None = None  # physical port index; from getButtons/backupConfig "index"
     name: str = ""  # operator-friendly description, default from getButtons.descr
@@ -445,10 +446,20 @@ class InstallationConfig:
                 if not btn_id:
                     log.warning("Skipping pushbutton entry without id: %r", btn_entry)
                     continue
-                key = btn_id.lower()
+                key = str(btn_id).strip().lower()
+                if len(key) != 8 or canonical_button_id(key) != key:
+                    log.warning(
+                        "Skipping pushbutton with non-canonical id %r on module %s "
+                        "(expected 8 hex chars; run scripts/migrate_button_ids.py)",
+                        btn_id,
+                        mod_ip,
+                    )
+                    continue
                 if key in pushbuttons_by_id:
                     raise InstallationError(f"Duplicate pushbutton id {btn_id!r}")
-                btn = PushbuttonConfig.from_dict(btn_entry, module_id=mac_normalised)
+                btn = PushbuttonConfig.from_dict(
+                    {**btn_entry, "id": key}, module_id=mac_normalised
+                )
                 pushbuttons_for_module.append(btn)
                 pushbuttons_by_id[key] = btn
                 pushbuttons.append(btn)
@@ -532,10 +543,17 @@ class InstallationConfig:
         return list(self._ipbox_id_to_entry.keys())
 
     def pushbutton_by_id(self, button_id: str) -> PushbuttonConfig | None:
-        """Look up a pushbutton by hardware id (case-insensitive). Returns None if unknown."""
+        """Look up a pushbutton by hardware id. Returns None if unknown.
+
+        The argument is canonicalised so a wire (14 hex) or getButtons
+        (16 hex) id still matches the 8-hex key stored in devices.json.
+        """
         if not button_id:
             return None
-        return self._pushbuttons_by_id.get(button_id.lower())
+        key = canonical_button_id(button_id)
+        if key is None:
+            return None
+        return self._pushbuttons_by_id.get(key)
 
     def pushbutton_threshold(self, button_id: str) -> float:
         """Return the hold threshold (seconds) for a pushbutton.

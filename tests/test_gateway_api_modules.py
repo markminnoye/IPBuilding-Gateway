@@ -18,6 +18,14 @@ def _make_installation(modules: list[dict[str, Any]]) -> InstallationConfig:
     return InstallationConfig._parse({"modules": modules})
 
 
+def _dimmer_pkt(src_ip: str, data: bytes):
+    from gateway.udp_bus import UDPPacket
+
+    return UDPPacket(
+        data=data, src_ip=src_ip, src_port=1001, dst_ip="", dst_port=0, monotonic_ts=0.0
+    )
+
+
 def _make_registry(installation: InstallationConfig) -> DeviceRegistry:
     reg = DeviceRegistry()
     for mc in installation.modules:
@@ -284,7 +292,7 @@ class TestBuildDeviceList:
                 "ip": "10.10.1.50", "type": "input", "mac": "00:24:77:52:ad:aa",
                 "channels": [],
                 "pushbuttons": [
-                    {"id": "2f8185190000df", "name": "", "room": "", "active": True},
+                    {"id": "2f8185df", "name": "", "room": "", "active": True},
                 ],
             }
         ])
@@ -303,7 +311,7 @@ class TestBuildDeviceList:
         devices = api._build_device_list()
         assert len(devices) == 1
         btn = devices[0]
-        assert btn["id"] == "2f8185190000df"
+        assert btn["id"] == "2f8185df"
         assert btn["device_type"] == "input"
         assert btn["semantic_type"] == "button"
         assert btn["module_id"] == "00:24:77:52:ad:aa"
@@ -325,7 +333,7 @@ class TestBuildDeviceList:
                 "channels": [],
                 "pushbuttons": [
                     {
-                        "id": "2f8185190000df",
+                        "id": "2f8185df",
                         "name": "Badkamer knop",
                         "multi_press": True,
                     }
@@ -385,7 +393,7 @@ class TestBuildDeviceList:
                 "channels": [],
                 "pushbuttons": [
                     {
-                        "id": "2f8185190000df",
+                        "id": "2f8185df",
                         "name": "",
                         "room": "",
                         "active": True,
@@ -396,8 +404,8 @@ class TestBuildDeviceList:
         api = _make_api(inst)  # no meta cache
         devices = api._build_device_list()
         assert len(devices) == 1
-        assert devices[0]["id"] == "2f8185190000df"
-        assert devices[0]["name"] == "Button 2f8185190000df"
+        assert devices[0]["id"] == "2f8185df"
+        assert devices[0]["name"] == "Button 2f8185df"
         assert devices[0]["active"] is True
         assert devices[0]["room"] == ""
 
@@ -656,6 +664,35 @@ class TestDimmerDownstreamCommands:
         assert ok is False
         assert "unsupported dimmer action" in (error or "")
         api._bus.send_command.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_command_timeout_logs_warning(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        import asyncio
+        import logging
+
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.30", "type": "relay", "mac": "00:24:77:52:ac:be",
+                "channels": [{"ch": 0, "name": "A", "active": True, "max_watt": 60}],
+            }
+        ])
+        api = _make_api(inst)
+        api._cfg.reply_timeout_ms = 50
+        api._bus.last_send_ts = 0.0
+        send_future: asyncio.Future = asyncio.Future()
+        send_future.set_result(None)
+        api._bus.send_command.return_value = send_future
+        timeout_future: asyncio.Future = asyncio.Future()
+        timeout_future.set_result(None)
+        api._bus.correlate_reply = MagicMock(return_value=timeout_future)
+
+        caplog.set_level(logging.WARNING, logger="gateway.gateway_api")
+        ok, error = await api._execute_command("10.10.1.30-0", "ON", None)
+        assert ok is True
+        assert error is None
+        assert any("timed out (no reply)" in r.message for r in caplog.records)
 
 
 class TestStateChangedInactive:
@@ -937,7 +974,7 @@ class TestModulesRefreshPersist:
         on_disk = json.loads(devices_file.read_text(encoding="utf-8"))
         input_module = next(m for m in on_disk["modules"] if m["type"] == "input")
         assert len(input_module["pushbuttons"]) == 1
-        assert input_module["pushbuttons"][0]["id"] == "2f8185190000df"
+        assert input_module["pushbuttons"][0]["id"] == "2f8185df"
         assert "channels" not in input_module
 
     @pytest.mark.asyncio

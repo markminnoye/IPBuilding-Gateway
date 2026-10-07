@@ -253,7 +253,7 @@
       "mac": "00:24:77:52:ad:aa",
       "pushbuttons": [
         {
-          "id": "e341851900001f",
+          "id": "e341851f",
           "name": "Badkamer",
           "room": "Badkamer",
           "active": true,
@@ -261,7 +261,7 @@
           "channel": 0
         },
         {
-          "id": "d68c5219000050",
+          "id": "d68c5250",
           "name": "Slaapkamer vooraan",
           "room": "Slaapkamer",
           "active": true,
@@ -269,7 +269,7 @@
           "channel": 1
         },
         {
-          "id": "8a948419000049",
+          "id": "8a948449",
           "name": "Slaapkamer achteraan",
           "room": "Slaapkamer",
           "active": true,
@@ -277,7 +277,7 @@
           "channel": 2
         },
         {
-          "id": "7993521900003b",
+          "id": "7993523b",
           "name": "1e gang",
           "room": "Traphal",
           "active": true,
@@ -285,7 +285,7 @@
           "channel": 3
         },
         {
-          "id": "cd5e85190000a9",
+          "id": "cd5e85a9",
           "name": "Inkom R",
           "room": "Inkomhal",
           "active": true,
@@ -293,7 +293,7 @@
           "channel": 4
         },
         {
-          "id": "4fd3521900008d",
+          "id": "4fd3528d",
           "name": "Inkom L",
           "room": "Inkomhal",
           "active": true,
@@ -301,7 +301,7 @@
           "channel": 5
         },
         {
-          "id": "dc5d851900008b",
+          "id": "dc5d858b",
           "name": "Trap R",
           "room": "Inkomhal",
           "active": true,
@@ -309,7 +309,7 @@
           "channel": 6
         },
         {
-          "id": "1e6a85190000af",
+          "id": "1e6a85af",
           "name": "Trap L",
           "room": "Inkomhal",
           "active": true,
@@ -317,7 +317,7 @@
           "channel": 7
         },
         {
-          "id": "69a384190000ec",
+          "id": "69a384ec",
           "name": "Keuken 1",
           "room": "Keuken",
           "active": true,
@@ -325,7 +325,7 @@
           "channel": 8
         },
         {
-          "id": "c9bc84190000a3",
+          "id": "c9bc84a3",
           "name": "Keuken 2",
           "room": "Keuken",
           "active": true,
@@ -333,7 +333,7 @@
           "channel": 9
         },
         {
-          "id": "b1bd8419000057",
+          "id": "b1bd8457",
           "name": "Keuken 3",
           "room": "Keuken",
           "active": true,
@@ -341,7 +341,7 @@
           "channel": 10
         },
         {
-          "id": "83a284190000c7",
+          "id": "83a284c7",
           "name": "Keuken 4",
           "room": "Keuken",
           "active": true,
@@ -349,7 +349,7 @@
           "channel": 11
         },
         {
-          "id": "41ae521900001f",
+          "id": "41ae521f",
           "name": "Woonkamer patio M",
           "room": "Woonkamer",
           "active": true,
@@ -357,7 +357,7 @@
           "channel": 12
         },
         {
-          "id": "b39652190000b9",
+          "id": "b39652b9",
           "name": "Woonkamer patio R",
           "room": "Woonkamer",
           "active": true,
@@ -365,7 +365,7 @@
           "channel": 13
         },
         {
-          "id": "2f8185190000df",
+          "id": "2f8185df",
           "name": "Woonkamer hal L",
           "room": "Woonkamer",
           "active": true,
@@ -373,7 +373,7 @@
           "channel": 14
         },
         {
-          "id": "dc93851900000b",
+          "id": "dc93850b",
           "name": "Woonkamer Hal M",
           "room": "Woonkamer",
           "active": true,
@@ -381,7 +381,7 @@
           "channel": 15
         },
         {
-          "id": "86885219000061",
+          "id": "86885261",
           "name": "Woonkamer Hal R",
           "room": "Woonkamer",
           "active": true,
@@ -389,7 +389,7 @@
           "channel": 16
         },
         {
-          "id": "899b841900007f",
+          "id": "899b847f",
           "name": " Bureau L",
           "room": "Bureau",
           "active": true,
@@ -397,7 +397,7 @@
           "channel": 17
         },
         {
-          "id": "38a58419000069",
+          "id": "38a58469",
           "name": "2e gang L",
           "room": "Traphal",
           "active": true,
@@ -405,7 +405,7 @@
           "channel": 18
         },
         {
-          "id": "b8a3841900001f",
+          "id": "b8a3841f",
           "name": "2e gang R",
           "room": "Traphal",
           "active": true,
@@ -413,7 +413,7 @@
           "channel": 19
         },
         {
-          "id": "59bbed14000050",
+          "id": "59bbed50",
           "name": "Speelkamer L",
           "room": "Speelkamer",
           "active": true,
@@ -421,7 +421,7 @@
           "channel": 20
         },
         {
-          "id": "2ebbed1400004d",
+          "id": "2ebbed4d",
           "name": "Speelkamer R",
           "room": "Speelkamer",
           "active": true,
@@ -429,7 +429,7 @@
           "channel": 21
         },
         {
-          "id": "644e851900001f",
+          "id": "644e851f",
           "name": "Slaapkamer kinderen L",
           "room": "Slaapkamers 2e",
           "active": true,
@@ -437,7 +437,7 @@
           "channel": 22
         },
         {
-          "id": "72a3841900004f",
+          "id": "72a3844f",
           "name": "Slaapkamer Kinderen R",
           "room": "Slaapkamers 2e",
           "active": true,
@@ -445,7 +445,7 @@
           "channel": 23
         },
         {
-          "id": "5ea052190000c2",
+          "id": "5ea052c2",
           "name": "Gordijn NEER",
           "room": "Woonkamer",
           "active": true,
@@ -453,7 +453,7 @@
           "channel": 24
         },
         {
-          "id": "b6ae52190000e8",
+          "id": "b6ae52e8",
           "name": "Gordijn OP",
           "room": "Woonkamer",
           "active": true,
@@ -461,7 +461,7 @@
           "channel": 25
         },
         {
-          "id": "5791521900001d",
+          "id": "5791521d",
           "name": "Woonkamer patio L",
           "room": "Woonkamer",
           "active": true,
@@ -469,7 +469,7 @@
           "channel": 26
         },
         {
-          "id": "8154851900001c",
+          "id": "8154851c",
           "name": " Bureau OP",
           "room": "Bureau",
           "active": true,
@@ -477,7 +477,7 @@
           "channel": 27
         },
         {
-          "id": "b95e85190000ed",
+          "id": "b95e85ed",
           "name": " Bureau NEER",
           "room": "Bureau",
           "active": true,
@@ -485,7 +485,7 @@
           "channel": 28
         },
         {
-          "id": "a84c6f2c0000c7",
+          "id": "a84c6fc7",
           "name": "Toilet rechts",
           "room": "Keuken",
           "active": true,
@@ -493,7 +493,7 @@
           "channel": 29
         },
         {
-          "id": "e5bc6f2c00005e",
+          "id": "e5bc6f5e",
           "name": "Toilet midden",
           "room": "Keuken",
           "active": true,
@@ -501,7 +501,7 @@
           "channel": 30
         },
         {
-          "id": "25ca6e2c0000bf",
+          "id": "25ca6ebf",
           "name": "Toilet links",
           "room": "Keuken",
           "active": true,

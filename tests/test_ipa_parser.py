@@ -16,7 +16,7 @@ from gateway.ipa_parser import (
     parse_ipa_file,
 )
 
-# Minimal valid record: one button → relay .30 ch 2/3
+# Minimal valid record: one button → dimmer .42 ch 1 (d6 = FF)
 _SAMPLE_IPA = """\
 88
 19
@@ -76,21 +76,22 @@ class TestParseIpaFile:
         ipa.write_text(_SAMPLE_IPA, encoding="utf-8")
         result = parse_ipa_file(ipa)
         assert result.input_ip == "10.10.1.55"
-        assert len(result.buttons) == 1
-        btn = result.buttons[0]
-        assert btn.button_id == "88196c3142"
-        assert btn.input_port == 1
-        assert len(btn.targets) == 2
-        assert btn.targets[0].ip == "10.10.1.30"
-        assert btn.targets[0].channel == 2
-        assert btn.targets[1].channel == 3
+        assert len(result.buttons) == 2
+        first, second = result.buttons
+        assert first.button_id == "88196c31"
+        assert len(first.targets) == 1
+        assert first.targets[0].ip == "10.10.1.42"
+        assert first.targets[0].channel == 1
+        assert second.button_id == "47507ca8"
+        assert second.targets[0].ip == "10.10.1.30"
+        assert second.targets[0].channel == 23
 
-    def test_reference_ipa_has_sixteen_buttons(self, reference_ipa_path: Path) -> None:
+    def test_reference_ipa_has_thirty_three_buttons(self, reference_ipa_path: Path) -> None:
         result = parse_ipa_file(reference_ipa_path)
         assert result.input_ip == "10.10.1.55"
-        assert len(result.buttons) == 16
-        ports = {b.input_port for b in result.buttons}
-        assert ports == {0, 1, 2}
+        assert len(result.buttons) == 33
+        assert all(len(b.button_id) == 8 for b in result.buttons)
+        assert len({b.button_id for b in result.buttons}) == 33
 
     def test_reference_ipa_target_modules(self, reference_ipa_path: Path) -> None:
         draft = build_devices_json_from_ipa(parse_ipa_file(reference_ipa_path))
@@ -99,6 +100,44 @@ class TestParseIpaFile:
         assert ips["10.10.1.30"] == "relay"
         assert ips["10.10.1.32"] == "relay"
         assert ips["10.10.1.42"] == "dimmer"
+
+    def test_reference_ipa_channels_in_range(self, reference_ipa_path: Path) -> None:
+        result = parse_ipa_file(reference_ipa_path)
+        octets = {tgt.ip.rsplit(".", 1)[-1] for b in result.buttons for tgt in b.targets}
+        assert octets == {"30", "32", "42"}
+        for btn in result.buttons:
+            for tgt in btn.targets:
+                octet = int(tgt.ip.rsplit(".", 1)[-1])
+                if octet in range(30, 40):
+                    assert 0 <= tgt.channel <= 23
+                elif octet in range(40, 50):
+                    assert 0 <= tgt.channel <= 7
+
+    def test_previously_mismatched_ids_now_resolve(self, reference_ipa_path: Path) -> None:
+        """Ids that swallowed the target octet under the old pairing parser."""
+        result = parse_ipa_file(reference_ipa_path)
+        ids = {b.button_id for b in result.buttons}
+        assert "88196c31" in ids  # was 88196c3142
+        assert "d56c6cea" in ids  # was d56c6cea42
+        assert "ae316cf3" in ids  # was ae316cf342
+        by_id = {b.button_id: b for b in result.buttons}
+        assert by_id["88196c31"].targets[0].ip == "10.10.1.42"
+        assert by_id["d56c6cea"].targets[0].ip == "10.10.1.42"
+        assert by_id["ae316cf3"].targets[0].ip == "10.10.1.42"
+
+    def test_malformed_record_skipped_with_warning(self, tmp_path: Path, caplog) -> None:
+        ipa = tmp_path / "10.10.1.55.IPA"
+        ipa.write_text(
+            "88\n19\n6C\n31\n42\n31\nFF\nT\n"
+            "AA\nBB\nT\n"
+            "47\n50\n7C\nA8\n30\n32\n33\nT\n",
+            encoding="utf-8",
+        )
+        result = parse_ipa_file(ipa)
+        assert len(result.buttons) == 2
+        assert "Skipping IPA record 1" in caplog.text
+        assert result.buttons[0].button_id == "88196c31"
+        assert result.buttons[1].button_id == "47507ca8"
 
     def test_generated_document_loads(self, reference_ipa_path: Path) -> None:
         draft = build_devices_json_from_ipa(parse_ipa_file(reference_ipa_path))
@@ -113,7 +152,8 @@ class TestBuildDevicesJson:
         relay = next(m for m in draft["modules"] if m["ip"] == "10.10.1.30")
         assert all(c["active"] for c in relay["channels"])
         input_mod = next(m for m in draft["modules"] if m["type"] == "input")
-        assert input_mod["pushbuttons"][0]["channel"] == 1
+        assert input_mod["pushbuttons"][0]["id"] == "88196c31"
+        assert "channel" not in input_mod["pushbuttons"][0]
 
     def test_conservative_profile_limits_relay_channels(self, tmp_path: Path) -> None:
         ipa = tmp_path / "10.10.1.55.IPA"
@@ -124,7 +164,7 @@ class TestBuildDevicesJson:
         relay = next(m for m in draft["modules"] if m["ip"] == "10.10.1.30")
         active = [c for c in relay["channels"] if c["active"]]
         assert len(active) == 1
-        assert active[0]["ch"] == 2
+        assert active[0]["ch"] == 23
 
 
 class TestMergeDevicesJson:

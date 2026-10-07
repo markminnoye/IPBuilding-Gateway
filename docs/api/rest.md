@@ -210,7 +210,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
       "current_watt": 150
     },
     {
-      "id": "2f8185190000df",
+      "id": "2f8185df",
       "module_id": "00:24:77:52:ad:aa",
       "module_ip": "10.10.1.50",
       "channel": 1,
@@ -228,7 +228,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Device-ID: `{module_ip}-{channel}` (relay/dimmer) or `custom slug`, or the IP1100PoE button **hardware id** (lowercase, 14 hex chars) for input modules |
+| `id` | string | Device-ID: `{module_ip}-{channel}` (relay/dimmer) or `custom slug`, or the IP1100PoE button **hardware id** (lowercase, 8 hex chars) for input modules |
 | `module_id` | string | Parent module MAC (stable, use for grouping) |
 | `module_ip` | string | Current module IP (mutable, use for display) |
 | `channel` | integer | Channel index on the module (relay/dimmer), or physical wiring position for buttons. For buttons this is **read-only** (from the module's physical wiring), not PATCH-able |

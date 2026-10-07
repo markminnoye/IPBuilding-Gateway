@@ -10,7 +10,7 @@ from gateway.payloads.dimmer import decode_dimmer_payload
 from gateway.payloads.input import decode_input_payload
 from gateway.payloads.relay import decode_relay_payload
 from gateway.types import DeviceKey, DeviceType
-from gateway.udp_bus import UDPPacket
+from gateway.udp_bus import UDPPacket, format_payload
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +31,8 @@ class DimmerState:
 class ButtonEvent:
     action: str  # "press" / "release"
     id_hex: str
+    type_hex: str = ""
+    dialect_id: str = ""
 
 
 StateChangeCallback = Callable[[DeviceKey, Any, Any], None]
@@ -49,9 +51,17 @@ class DeviceRegistry:
     _relay_states: dict[DeviceKey, RelayState] = field(default_factory=dict)
     _dimmer_states: dict[DeviceKey, DimmerState] = field(default_factory=dict)
     _dimmer_last_channel: dict[str, int] = field(default_factory=dict)  # ip → last commanded channel
+    _dimmer_families: dict[str, str] = field(default_factory=dict)  # ip → reply family constant
     _state_callbacks: list[StateChangeCallback] = field(default_factory=list)
     _event_callbacks: list[EventCallback] = field(default_factory=list)
     _module_ip_type: dict[str, DeviceType] = field(default_factory=dict)
+    _seen_unrecognized_state_codes: set[tuple[str, int, str]] = field(
+        default_factory=set
+    )
+    _seen_unknown_input_types: set[str] = field(default_factory=set)
+    _seen_undecoded_signatures: set[tuple[str, int, int | None, int | None]] = field(
+        default_factory=set
+    )
 
     def register_module(self, module_ip: str, device_type: DeviceType) -> None:
         """Associate a module IP with a device type for packet routing."""
@@ -90,6 +100,9 @@ class DeviceRegistry:
         later when the gateway API is created.
         """
         self._relay_states[key] = RelayState(state=state, state_code=state_code)
+        self._warn_if_unknown_relay_state(
+            key.module_ip, key.channel, state, state_code
+        )
 
     def seed_dimmer_state(
         self,
@@ -120,6 +133,15 @@ class DeviceRegistry:
         only a fallback for replies where the channel cannot be resolved.
         """
         self._dimmer_last_channel[module_ip] = channel
+
+    def get_dimmer_family(self, module_ip: str) -> str | None:
+        """Return the reply family constant last seen from a dimmer module.
+
+        ``"54"`` for lab IP0300PoE, ``"15"`` for Nolf-generation hardware,
+        ``None`` until the module has answered. Command encodings that differ
+        per generation (notably OFF) resolve against this.
+        """
+        return self._dimmer_families.get(module_ip)
 
     def all_relay_states(self) -> dict[DeviceKey, RelayState]:
         return dict(self._relay_states)
@@ -164,9 +186,35 @@ class DeviceRegistry:
         elif dtype == DeviceType.INPUT:
             self._handle_input(src, pkt.data)
 
+    def _warn_if_unknown_relay_state(
+        self, module_ip: str, channel: int, state: str, state_code: str
+    ) -> None:
+        if state != "unknown" or not state_code:
+            return
+        key = (module_ip, channel, state_code)
+        if key in self._seen_unrecognized_state_codes:
+            return
+        self._seen_unrecognized_state_codes.add(key)
+        log.warning(
+            "Relay %s ch%d: unrecognized state_code=%s",
+            module_ip,
+            channel,
+            state_code,
+        )
+
+    def _log_undecoded(self, module_ip: str, data: bytes) -> None:
+        first = data[0] if data else None
+        last = data[-1] if data else None
+        key = (module_ip, len(data), first, last)
+        if key in self._seen_undecoded_signatures:
+            return
+        self._seen_undecoded_signatures.add(key)
+        log.warning("undecoded RX from %s: %s", module_ip, format_payload(data))
+
     def _handle_relay(self, module_ip: str, data: bytes) -> None:
         parsed = decode_relay_payload(data)
         if not parsed:
+            self._log_undecoded(module_ip, data)
             return
         family = parsed.get("family")
         if family == "relay_status":
@@ -177,23 +225,70 @@ class DeviceRegistry:
             old = self._relay_states.get(key)
             new_rs = RelayState(state=new_state, state_code=new_code)
             self._relay_states[key] = new_rs
-            if old is None or old.state != new_state:
+            self._warn_if_unknown_relay_state(module_ip, ch, new_state, new_code)
+            if (
+                old is None
+                or old.state != new_state
+                or old.state_code != new_code
+            ):
                 log.info(
-                    "Relay %s ch%d: %s -> %s",
+                    "Relay %s ch%d: %s (%s) -> %s (%s)",
                     module_ip,
                     ch,
                     old.state if old else "unknown",
+                    old.state_code if old else "",
                     new_state,
+                    new_code,
                 )
+                self._fire_state_changed(key, old, new_rs)
+        elif family == "relay_command_reply":
+            ch = parsed["channel"]
+            new_state = parsed["state"]
+            raw = parsed.get("raw", "")
+            log.info(
+                "decoded relay.nolf.command_reply from %s: %s (ch%d → %s)",
+                module_ip,
+                raw,
+                ch,
+                new_state,
+            )
+            if new_state == "unknown":
+                return
+            key = DeviceKey(DeviceType.RELAY, module_ip, ch)
+            old = self._relay_states.get(key)
+            # Echo carries no reliable quartet; keep the last polled code.
+            # First-ever echo keeps "" — _warn_if_unknown_relay_state already
+            # skips that case via `not state_code`.
+            preserved_code = old.state_code if old else ""
+            new_rs = RelayState(state=new_state, state_code=preserved_code)
+            self._relay_states[key] = new_rs
+            if old is None or old.state != new_state:
                 self._fire_state_changed(key, old, new_rs)
         elif family == "relay_reply_candidate":
             pass  # pulse echo, no state change
 
+    def _note_dimmer_family(self, module_ip: str, parsed: dict[str, Any]) -> None:
+        """Learn which dimmer generation a module belongs to from its reply.
+
+        Status and idle frames carry the family constant directly. A module
+        that echoes the command back instead of answering ``I0154…`` is
+        Nolf-generation by construction, so the echo counts as family ``15``.
+        """
+        observed = parsed.get("family_constant")
+        if observed is None and parsed.get("family") == "dimmer_command":
+            observed = "15"
+        if observed is None or self._dimmer_families.get(module_ip) == observed:
+            return
+        self._dimmer_families[module_ip] = observed
+        log.info("Dimmer %s speaks reply family %s", module_ip, observed)
+
     def _handle_dimmer(self, module_ip: str, data: bytes) -> None:
         parsed = decode_dimmer_payload(data)
         if not parsed:
+            self._log_undecoded(module_ip, data)
             return
         family = parsed.get("family")
+        self._note_dimmer_family(module_ip, parsed)
         if family == "dimmer_status_reply":
             # The reply encodes the channel as the leading digit of the value
             # code (e.g. I0154130 → channel 1).  Fall back to the last
@@ -218,16 +313,60 @@ class DeviceRegistry:
                     new_level,
                 )
                 self._fire_state_changed(key, old, new_ds)
+        elif family == "dimmer_command":
+            # Nolf dimmers echo the command instead of I0115…; the echo is
+            # the state source (lab dimmers reply I0154… and never hit this).
+            ch = parsed.get("channel")
+            new_level = parsed.get("level_percent")
+            if ch is None or new_level is None:
+                return
+            raw = parsed.get("raw", "")
+            log.info(
+                "decoded dimmer.nolf.command_echo from %s: %s (ch%d → %s%%)",
+                module_ip,
+                raw,
+                ch,
+                new_level,
+            )
+            key = DeviceKey(DeviceType.DIMMER, module_ip, ch)
+            new_code = parsed.get("internal_value_code") or parsed.get(
+                "value_code", ""
+            )
+            old = self._dimmer_states.get(key)
+            new_ds = DimmerState(
+                level_percent=new_level, internal_value_code=new_code
+            )
+            self._dimmer_states[key] = new_ds
+            if old is None or old.level_percent != new_level:
+                self._fire_state_changed(key, old, new_ds)
 
     def _handle_input(self, module_ip: str, data: bytes) -> None:
         parsed = decode_input_payload(data)
         if not parsed:
+            self._log_undecoded(module_ip, data)
             return
         family = parsed.get("family")
         if family == "input_button_event":
             action = parsed.get("action", "unknown")
-            id_hex = f"{parsed.get('id_core_hex', '')}{parsed.get('id_suffix_hex', '')}"
-            evt = ButtonEvent(action=action, id_hex=id_hex)
+            id_hex = parsed.get("id_hex") or ""
+            type_hex = parsed.get("type_hex") or ""
+            dialect_id = parsed.get("dialect_id") or ""
+            if dialect_id == "input.unknown.button_event" and type_hex not in self._seen_unknown_input_types:
+                self._seen_unknown_input_types.add(type_hex)
+                log.warning(
+                    "Unknown input type byte 0x%s from %s: id=%s wire=%s action=%s",
+                    type_hex,
+                    module_ip,
+                    id_hex,
+                    parsed.get("id_wire_hex"),
+                    action,
+                )
+            evt = ButtonEvent(
+                action=action,
+                id_hex=id_hex,
+                type_hex=type_hex,
+                dialect_id=dialect_id,
+            )
             key = DeviceKey(DeviceType.INPUT, module_ip, 0)
             log.info("Input %s button %s: %s", module_ip, id_hex, action)
             self._fire_button_event(key, evt)

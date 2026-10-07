@@ -3,6 +3,8 @@
 Last updated: 2026-07-12 (local)
 Canonieke RE-index: [RE_STATE.md](../RE_STATE.md). Detailbewijs: gelinkte evidence per rij.
 
+**Scope:** deze matrix beschrijft de **lab-generatie** (relay fw ~5.1, dimmer fw 5.4, input fw 5.2.4). Oudere modules in het veld wijken af in family-byte en ack-vorm — canoniek per dialect: [veldbus_dialect_registry.md](../reference/veldbus_dialect_registry.md).
+
 | Family / pattern | Context (module / path) | Direction notes | Label | Evidence pointer |
 | ---------------- | ------------------------- | ----------------- | ----- | ------------------ |
 | `S<CH>00` | Relay command ON (logische kern) | Parser moet optionele `[pfx]J`-wrapper strippen; op draad vaak 7 bytes | **confirmed** (kern) | [2026-05-04_relay_payload_correlation.md](2026-05-04_relay_payload_correlation.md), `/tmp/rest_stimulus_capture_20260516.pcapng` |

@@ -11,6 +11,15 @@ _RELAY_CMD_RE = re.compile(r"^(?P<prefix>[SCTP])(?P<channel>\d{2})00$")
 _RELAY_STATUS_RE = re.compile(r"^I(?P<module>\d{3})(?P<channel>\d{2})(?P<state>\d{4})$")
 _RELAY_STATUS_SHORT_RE = re.compile(r"^I(?P<channel>\d{4})(?P<state>\d{4})$")
 _RELAY_REPLY_PULSE_RE = re.compile(r"^P\d{9}$")
+# Nolf IP0200 command echo (9–10 ASCII). Prefix [SCT] only — P000000000 must
+# stay relay_reply_candidate (otherwise ch0 would be forced off every poll).
+# Routing-only safety: T11001000 (input→dimmer p2p toggle, 9 chars) also
+# matches this regex as toggle ch11. Harmless today because
+# decode_relay_payload is only called for relay-module IPs; do not run this
+# decoder generically on dimmer/input traffic.
+_RELAY_NOLF_CMD_REPLY_RE = re.compile(
+    r"^(?P<prefix>[SCT])(?P<channel>\d{2})(?P<tail>\d{6,7})$"
+)
 _J_ENVELOPE_RE = re.compile(r"^.(?P<core>[SCPT]\d{4,5})$")
 
 # Prefix-byte → first command letter mapping (Sprint 2 confirmed)
@@ -21,6 +30,23 @@ _CMD_LETTER: dict[RelayAction, str] = {
     RelayAction.PULSE: "P",
     RelayAction.TOGGLE: "T",
 }
+
+
+def relay_state_from_code(state_code: str) -> str:
+    """Map a 4-digit ASCII state quartet to on/off/unknown.
+
+    Prefix rule (hypothesized from Nolf IP0200 Diagnostic 03.03):
+    ``01xx`` → on, ``00xx`` → off. Lab firmware uses ``0100``/``0000``;
+    older modules also report ``0115``/``0015`` on status-poll. Command
+    replies on those modules still use ``0100``/``0000``. The raw
+    ``state_code`` is kept on the northbound object.
+    """
+    if len(state_code) == 4 and state_code.isdigit():
+        if state_code.startswith("01"):
+            return "on"
+        if state_code.startswith("00"):
+            return "off"
+    return "unknown"
 
 
 def strip_j_envelope(data: bytes) -> bytes:
@@ -59,7 +85,7 @@ def decode_relay_payload(data: bytes) -> dict[str, Any] | None:
     m = _RELAY_STATUS_RE.match(text)
     if m:
         state_code = m.group("state")
-        state = "on" if state_code == "0100" else "off" if state_code == "0000" else "unknown"
+        state = relay_state_from_code(state_code)
         return {
             "family": "relay_status",
             "channel": int(m.group("channel")),
@@ -72,7 +98,7 @@ def decode_relay_payload(data: bytes) -> dict[str, Any] | None:
     m = _RELAY_STATUS_SHORT_RE.match(text)
     if m:
         state_code = m.group("state")
-        state = "on" if state_code == "0100" else "off" if state_code == "0000" else "unknown"
+        state = relay_state_from_code(state_code)
         return {
             "family": "relay_status",
             "channel": int(m.group("channel")),
@@ -88,6 +114,22 @@ def decode_relay_payload(data: bytes) -> dict[str, Any] | None:
             "action": "pulse_reply",
             "raw": text,
             "suffix_nine": text[1:],
+        }
+
+    m = _RELAY_NOLF_CMD_REPLY_RE.match(text)
+    if m:
+        prefix = m.group("prefix")
+        action_map = {"S": "on", "C": "off", "T": "toggle"}
+        state_map = {"S": "on", "C": "off", "T": "unknown"}
+        return {
+            "dialect_id": "relay.nolf.command_reply",
+            "family": "relay_command_reply",
+            "action": action_map[prefix],
+            "channel": int(m.group("channel")),
+            "state": state_map[prefix],
+            "state_code": "",
+            "tail": text[1:],
+            "raw": text,
         }
 
     return None
@@ -133,6 +175,9 @@ def encode_relay_status_poll(channel: int) -> bytes:
     """Encode hub→relay on-demand status read (IPBox cold-boot sweep format).
 
     Query ``I<CH>00`` (5 bytes ASCII) returns ``I000<CH><state>`` where
-    ``0100`` = on and ``0000`` = off.  See RE evidence 2026-06-12.
+    the first two digits of the state quartet are on/off (``01xx`` = on,
+    ``00xx`` = off). Lab firmware uses ``0100``/``0000``; older Nolf
+    IP0200 modules also report ``0115``/``0015`` on this poll. See RE
+    evidence 2026-06-12 and 2026-08-08.
     """
     return f"I{channel:02d}00".encode("ascii")

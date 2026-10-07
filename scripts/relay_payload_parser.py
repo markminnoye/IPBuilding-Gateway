@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Parse IPBuilding relay UDP payload ASCII according to proto-map v0.3.
 
-Status (`I<module><channel><state>`): in lab captures only `0100` (= ON) and `0000`
-(= OFF) have been observed as `state` quartets. Other quartets may exist but were
-**not** seen in UDP/1001 inventory across golden + relay sweep pcaps (2026-05-04).
+Status (`I<module><channel><state>`): first two digits of the state quartet are
+on/off (`01xx` = ON, `00xx` = OFF). Lab captures use `0100`/`0000`; older Nolf
+IP0200 modules also report `0115`/`0015` on status-poll (keep in sync with
+`gateway.payloads.relay.relay_state_from_code`).
 
 `P000000000` (10 ASCII chars): relay → hub (or relay → IPBox home leg) **fixed-width echo**
 of the hub → relay `P0000` pulse; sub-5 ms follow-up when both directions appear in one export
@@ -31,6 +32,17 @@ from typing import Any
 _RELAY_CMD_RE = re.compile(r"^(?P<prefix>[SCTP])(?P<channel>\d{2})00$")
 _RELAY_STATUS_RE = re.compile(r"^I(?P<module>\d{3})(?P<channel>\d{2})(?P<state>\d{4})$")
 _RELAY_REPLY_PULSE_RE = re.compile(r"^P\d{9}$")
+
+
+def relay_state_from_code(state_code: str) -> str:
+    """Map a 4-digit ASCII state quartet to on/off/unknown (prefix rule)."""
+    if len(state_code) == 4 and state_code.isdigit():
+        if state_code.startswith("01"):
+            return "on"
+        if state_code.startswith("00"):
+            return "off"
+    return "unknown"
+
 
 def parse_relay_payload_ascii(payload: str) -> dict[str, Any] | None:
     """Return structured fields for a relay payload, else None."""
@@ -61,12 +73,7 @@ def parse_relay_payload_ascii(payload: str) -> dict[str, Any] | None:
     if m:
         channel = int(m.group("channel"))
         state_code = m.group("state")
-        if state_code == "0100":
-            state = "on"
-        elif state_code == "0000":
-            state = "off"
-        else:
-            state = "unknown"
+        state = relay_state_from_code(state_code)
         return {
             "raw": raw,
             "family": "relay_status",
@@ -110,6 +117,9 @@ def _run_self_test() -> int:
         ("C0200", {"family": "relay_command", "action": "off", "channel": 2}),
         ("I000120100", {"family": "relay_status", "action": "status", "channel": 12, "state": "on"}),
         ("I000000000", {"family": "relay_status", "action": "status", "channel": 0, "state": "off"}),
+        ("I000000015", {"family": "relay_status", "action": "status", "channel": 0, "state": "off"}),
+        ("I000000115", {"family": "relay_status", "action": "status", "channel": 0, "state": "on"}),
+        ("I000000200", {"family": "relay_status", "action": "status", "channel": 0, "state": "unknown"}),
         (
             "P000000000",
             {

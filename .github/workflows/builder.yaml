@@ -22,6 +22,8 @@ on:
   push:
     tags:
       - "v*.*.*"
+  # Manual rebuild (e.g. when a tag push did not start CI).
+  workflow_dispatch:
 
 jobs:
   build-app:

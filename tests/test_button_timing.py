@@ -88,28 +88,28 @@ async def _drain_broadcasts(api: gateway_api.GatewayAPI) -> list[dict[str, Any]]
 class TestButtonThreshold:
     def test_default_threshold_when_no_button(self) -> None:
         inst = _make_installation()
-        assert inst.pushbutton_threshold("2f8185190000df") == DEFAULT_BUTTON_HOLD_THRESHOLD_S
+        assert inst.pushbutton_threshold("2f8185df") == DEFAULT_BUTTON_HOLD_THRESHOLD_S
 
     def test_explicit_threshold_from_config(self) -> None:
         inst = _make_installation([
-            {"id": "2f8185190000df", "module_id": "00:24:77:52:ad:aa",
+            {"id": "2f8185df", "module_id": "00:24:77:52:ad:aa",
              "name": "Keuken knop", "hold_threshold_s": 2.0}
         ])
-        assert inst.pushbutton_threshold("2f8185190000df") == 2.0
+        assert inst.pushbutton_threshold("2f8185df") == 2.0
 
     def test_threshold_lookup_is_case_insensitive(self) -> None:
         inst = _make_installation([
-            {"id": "2F8185190000DF", "hold_threshold_s": 1.0}
+            {"id": "2F8185DF", "hold_threshold_s": 1.0}
         ])
-        assert inst.pushbutton_threshold("2f8185190000df") == 1.0
+        assert inst.pushbutton_threshold("2f8185df") == 1.0
 
 
 class TestMultiPressConfig:
     def test_legacy_multi_press_keys_ignored_on_load(self) -> None:
         inst = _make_installation([
-            {"id": "2f8185190000df", "multi_press": True, "multi_press_window_ms": 250}
+            {"id": "2f8185df", "multi_press": True, "multi_press_window_ms": 250}
         ])
-        btn = inst.pushbutton_by_id("2f8185190000df")
+        btn = inst.pushbutton_by_id("2f8185df")
         assert btn is not None
         d = btn.to_dict()
         assert "multi_press" not in d
@@ -169,29 +169,29 @@ class TestButtonStateMachine:
     @pytest.mark.asyncio
     async def test_short_press_emits_press_then_release(self) -> None:
         inst = _make_installation([
-            {"id": "2f8185190000df", "hold_threshold_s": 0.5}
+            {"id": "2f8185df", "hold_threshold_s": 0.5}
         ])
         api = self._make_capturing_api(inst)
 
-        self._press(api, "2f8185190000df")
+        self._press(api, "2f8185df")
         # Manually fire the long_press callback before release — that's
         # exactly what the asyncio timer would do if held past threshold.
-        self._run_long_press_timer(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")
+        self._run_long_press_timer(api, "2f8185df")
+        self._release(api, "2f8185df")
 
         actions = [m["action"] for m in api._captured]
         assert actions == ["press", "long_press", "release"]
-        assert all(m["id"] == "2f8185190000df" for m in api._captured)
+        assert all(m["id"] == "2f8185df" for m in api._captured)
 
     @pytest.mark.asyncio
     async def test_short_press_no_long_press(self) -> None:
         inst = _make_installation([
-            {"id": "2f8185190000df", "hold_threshold_s": 0.5}
+            {"id": "2f8185df", "hold_threshold_s": 0.5}
         ])
         api = self._make_capturing_api(inst)
 
-        self._press(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")
+        self._press(api, "2f8185df")
+        self._release(api, "2f8185df")
 
         actions = [m["action"] for m in api._captured]
         # short press without crossing the long-press threshold emits
@@ -201,12 +201,12 @@ class TestButtonStateMachine:
     @pytest.mark.asyncio
     async def test_short_press_emits_single_press_before_release(self) -> None:
         inst = _make_installation([
-            {"id": "2f8185190000df", "hold_threshold_s": 0.5}
+            {"id": "2f8185df", "hold_threshold_s": 0.5}
         ])
         api = self._make_capturing_api(inst)
 
-        self._press(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")
+        self._press(api, "2f8185df")
+        self._release(api, "2f8185df")
 
         actions = [m["action"] for m in api._captured]
         # single_press is emitted on release when no long_press fired,
@@ -216,13 +216,13 @@ class TestButtonStateMachine:
     @pytest.mark.asyncio
     async def test_long_press_does_not_emit_single_press(self) -> None:
         inst = _make_installation([
-            {"id": "2f8185190000df", "hold_threshold_s": 0.5}
+            {"id": "2f8185df", "hold_threshold_s": 0.5}
         ])
         api = self._make_capturing_api(inst)
 
-        self._press(api, "2f8185190000df")
-        self._run_long_press_timer(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")
+        self._press(api, "2f8185df")
+        self._run_long_press_timer(api, "2f8185df")
+        self._release(api, "2f8185df")
 
         actions = [m["action"] for m in api._captured]
         assert actions == ["press", "long_press", "release"]
@@ -231,34 +231,34 @@ class TestButtonStateMachine:
     @pytest.mark.asyncio
     async def test_double_press_resets_state(self) -> None:
         inst = _make_installation([
-            {"id": "2f8185190000df", "hold_threshold_s": 0.5}
+            {"id": "2f8185df", "hold_threshold_s": 0.5}
         ])
         api = self._make_capturing_api(inst)
 
         # Press -> long_press fired -> press again before release
-        self._press(api, "2f8185190000df")
-        self._run_long_press_timer(api, "2f8185190000df")
+        self._press(api, "2f8185df")
+        self._run_long_press_timer(api, "2f8185df")
         # A second press without an intervening release should reset
         # press_started_at and long_press_fired, so a subsequent manual
         # timer fire emits a second long_press frame. That's the current
         # gateway behaviour — dedup is a companion concern.
-        self._press(api, "2f8185190000df")
-        self._run_long_press_timer(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")
+        self._press(api, "2f8185df")
+        self._run_long_press_timer(api, "2f8185df")
+        self._release(api, "2f8185df")
         actions = [m["action"] for m in api._captured]
         assert actions == ["press", "long_press", "press", "long_press", "release"]
 
     @pytest.mark.asyncio
     async def test_long_press_after_release_is_noop(self) -> None:
         inst = _make_installation([
-            {"id": "2f8185190000df", "hold_threshold_s": 0.1}
+            {"id": "2f8185df", "hold_threshold_s": 0.1}
         ])
         api = self._make_capturing_api(inst)
 
-        self._press(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")
+        self._press(api, "2f8185df")
+        self._release(api, "2f8185df")
         # Fire long_press callback after release — should be a no-op.
-        self._run_long_press_timer(api, "2f8185190000df")
+        self._run_long_press_timer(api, "2f8185df")
 
         actions = [m["action"] for m in api._captured]
         # No long_press frame in the captured output.
@@ -271,11 +271,11 @@ class TestButtonStateMachine:
         # A release with no preceding press (lost press frame, startup edge)
         # must only forward the raw release — never a synthetic single_press.
         inst = _make_installation([
-            {"id": "2f8185190000df", "hold_threshold_s": 0.5}
+            {"id": "2f8185df", "hold_threshold_s": 0.5}
         ])
         api = self._make_capturing_api(inst)
 
-        self._release(api, "2f8185190000df")
+        self._release(api, "2f8185df")
 
         actions = [m["action"] for m in api._captured]
         assert actions == ["release"]
@@ -286,13 +286,13 @@ class TestButtonStateMachine:
         # A duplicate release frame must not produce a second single_press,
         # or a toggle would fire twice for one physical tap.
         inst = _make_installation([
-            {"id": "2f8185190000df", "hold_threshold_s": 0.5}
+            {"id": "2f8185df", "hold_threshold_s": 0.5}
         ])
         api = self._make_capturing_api(inst)
 
-        self._press(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")  # duplicate
+        self._press(api, "2f8185df")
+        self._release(api, "2f8185df")
+        self._release(api, "2f8185df")  # duplicate
 
         actions = [m["action"] for m in api._captured]
         assert actions == ["press", "single_press", "release", "release"]
@@ -309,43 +309,43 @@ class TestButtonStateMachine:
     @pytest.mark.asyncio
     async def test_case_insensitive_id_matching(self) -> None:
         inst = _make_installation([
-            {"id": "2F8185190000DF", "hold_threshold_s": 0.1}
+            {"id": "2F8185DF", "hold_threshold_s": 0.1}
         ])
         api = self._make_capturing_api(inst)
-        self._press(api, "2f8185190000df")  # lowercase
+        self._press(api, "2f8185df")  # lowercase
         # The id_hex should be normalised to lowercase in the broadcast.
-        assert api._captured[-1]["id"] == "2f8185190000df"
+        assert api._captured[-1]["id"] == "2f8185df"
 
     @pytest.mark.asyncio
     async def test_multi_press_disabled_emits_single_immediately(self) -> None:
-        inst = _make_installation([{"id": "2f8185190000df"}])
+        inst = _make_installation([{"id": "2f8185df"}])
         api = self._make_capturing_api(inst, multi_press=False)
-        self._press(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")
+        self._press(api, "2f8185df")
+        self._release(api, "2f8185df")
         actions = [m["action"] for m in api._captured]
         assert actions == ["press", "single_press", "release"]
 
     @pytest.mark.asyncio
     async def test_multi_press_single_after_window(self) -> None:
-        inst = _make_installation([{"id": "2f8185190000df"}])
+        inst = _make_installation([{"id": "2f8185df"}])
         api = self._make_capturing_api(inst, multi_press=True)
-        self._press(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")
+        self._press(api, "2f8185df")
+        self._release(api, "2f8185df")
         # No single_press yet — waiting for a possible second click.
         assert [m["action"] for m in api._captured] == ["press", "release"]
-        self._run_multi_timer(api, "2f8185190000df")
+        self._run_multi_timer(api, "2f8185df")
         emitted = [m for m in api._captured if m["action"] == "single_press"]
         assert emitted and emitted[-1]["count"] == 1
 
     @pytest.mark.asyncio
     async def test_multi_press_double(self) -> None:
-        inst = _make_installation([{"id": "2f8185190000df"}])
+        inst = _make_installation([{"id": "2f8185df"}])
         api = self._make_capturing_api(inst, multi_press=True)
-        self._press(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")
-        self._press(api, "2f8185190000df")  # second click within window
-        self._release(api, "2f8185190000df")
-        self._run_multi_timer(api, "2f8185190000df")
+        self._press(api, "2f8185df")
+        self._release(api, "2f8185df")
+        self._press(api, "2f8185df")  # second click within window
+        self._release(api, "2f8185df")
+        self._run_multi_timer(api, "2f8185df")
         emitted = [
             m
             for m in api._captured
@@ -356,12 +356,12 @@ class TestButtonStateMachine:
 
     @pytest.mark.asyncio
     async def test_multi_press_triple(self) -> None:
-        inst = _make_installation([{"id": "2f8185190000df"}])
+        inst = _make_installation([{"id": "2f8185df"}])
         api = self._make_capturing_api(inst, multi_press=True)
         for _ in range(3):
-            self._press(api, "2f8185190000df")
-            self._release(api, "2f8185190000df")
-        self._run_multi_timer(api, "2f8185190000df")
+            self._press(api, "2f8185df")
+            self._release(api, "2f8185df")
+        self._run_multi_timer(api, "2f8185df")
         emitted = [
             m
             for m in api._captured
@@ -374,14 +374,14 @@ class TestButtonStateMachine:
     async def test_multi_press_long_press_bypasses_window(self) -> None:
         inst = _make_installation([
             {
-                "id": "2f8185190000df",
+                "id": "2f8185df",
                 "hold_threshold_s": 0.1,
             }
         ])
         api = self._make_capturing_api(inst, multi_press=True)
-        self._press(api, "2f8185190000df")
-        self._run_long_press_timer(api, "2f8185190000df")
-        self._release(api, "2f8185190000df")
+        self._press(api, "2f8185df")
+        self._run_long_press_timer(api, "2f8185df")
+        self._release(api, "2f8185df")
         actions = [m["action"] for m in api._captured]
         assert actions == ["press", "long_press", "release"]
         assert all(a not in ("single_press", "double_press") for a in actions)

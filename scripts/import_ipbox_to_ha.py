@@ -50,6 +50,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from gateway.button_id import canonical_button_id  # noqa: E402
+
 log = logging.getLogger("import_ipbox_to_ha")
 
 
@@ -76,7 +82,7 @@ def http_get_json(url: str, timeout: float = 5.0) -> Any:
 class Button:
     """A physical IP1100PoE button with its IPBox-side actions."""
 
-    id: str  # hardware id, lowercase 14 hex chars
+    id: str  # hardware id, lowercase 8 hex chars (canonical)
     name: str = ""
     room: str = ""
     func1: dict | None = None  # action on press
@@ -111,7 +117,7 @@ class ImportEntry:
 # ---------------------------------------------------------------------------
 
 
-_BUTTON_ID_RE = re.compile(r"^[0-9a-fA-F]{14,16}$")
+_BUTTON_ID_RE = re.compile(r"^[0-9a-fA-F]{8,16}$")
 
 
 def parse_get_buttons(raw: list[dict]) -> list[Button]:
@@ -122,13 +128,12 @@ def parse_get_buttons(raw: list[dict]) -> list[Button]:
             log.warning("getButtons entry without id, skipping: %r", entry)
             continue
         if not _BUTTON_ID_RE.match(raw_id):
-            log.warning("getButtons id %r not 14 hex chars, skipping", raw_id)
+            log.warning("getButtons id %r not hex, skipping", raw_id)
             continue
-        # Normalise to wire form: 14 lowercase hex chars (drop the 2-char
-        # "2D" type prefix that getButtons returns).
-        normalised = raw_id.lower()
-        if len(normalised) >= 2 and normalised.startswith("2d"):
-            normalised = normalised[2:]
+        normalised = canonical_button_id(raw_id)
+        if normalised is None:
+            log.warning("getButtons id %r not a known button-id form, skipping", raw_id)
+            continue
         out.append(
             Button(
                 id=normalised,

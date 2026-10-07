@@ -1,0 +1,26 @@
+:
+|
+Ingangsmodule
+ma: eo # sa a7f%
+Relais faces ~ NO contact NC contact Temperatuur Indicatie Indicatie2
+, (Q
+: 22 |b014a036C1000005F01_|verlichting living aan sch....aanschuifvenster | [10.10.1.55 {01
+23 |p0141676C100000A901 __|verlichting keuken aan s... aanschuifvenster | |10.10.1.55 {01}
+mgs 25 |po1ze4F6c1000006401__|verlichting gang aan deu...|sandeurliving | [10.10.55 {oi
+2. 26 }0013435601000001001_|verlichting eetplaats aan... sandeurliving | FF [10.10.1.55 {1
+3 Hardware 27 |p014180661000001601 _|verlichting trap aan deur...|sandeurliving | [10.10.55 {oi
+a= 28 Je018649681000000501_|verlichting gang benede... jingangbeneden | 7 [10.10.1.55 {1
+ini 29 |p0162105C1000002401 _|verlichting gang boven’... jingangbeneden | 7 [10.10.55 {oi
+30 Je01asaD661000002C01_|verichting living in gang... jingangbeneden | 7 [10.10.1.55 {1
+31 Jb0154F8661000001901__|trapverlchting in gang b...|ingangbeneden | 7 [10.10.55 {Oi
+t 32 Jeoirs49901300001101 _|verichting gang inwe _inwe | [10.10.55 {on}
+33 Jeo1B856901300004001 _|verlichting weinwe inwe | [s0.10..55 {oi
+A 34 ]e018609601000003C01_|verichting gang in bureau [inbureau | FH [10.10.1.55 {1
+fe 35 Jb010E3C6C1000004301__|verlichting bureau Sara i..inbureau | [s0.10..55 | oi!
+Ua) 36 Je0xe0275C1000007501 _|verichting bureau Jan in... inbureau | [10.10.1.55 {1
+'37 ]e01se6A661000008C01_tinksonderin bureau |inbureau | [s0.10..55 | oi:
+38 Je01se3F6D1000004102 _|verlichting gang benede... jingangboven | FF [10.10.1.55 {02
+39 Je01AE316c100000F302_|verlichting gang boven’... jingangboven | 7 [s0.10..55 | 02:
+40 J201360568100000A002 _|verichting badkamer in... jingangboven | FF [10.10.1.55 {02
+41 Jeoisisesei000009F02 _|trepverlchting in gang b.../ingangboven | 7 [10.10.55 | 02
+42 Jeo:209a561000008502_|verichting sik jan en sar....sandeurjens_— | [10.10.1.55 {02 is)

@@ -1,0 +1,500 @@
+22:30:06 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:30:06 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:07 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:30:07 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:14 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:30:14 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:21 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:30:21 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:21 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:30:21 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:23 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:30:23 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:29 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:30:29 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:36 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:30:36 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:37 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:30:37 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:38 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:30:38 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:45 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:30:45 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:51 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:30:51 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:52 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:30:52 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:30:53 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:30:53 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:00 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:31:00 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:06 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:31:06 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:07 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:31:07 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:08 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:31:08 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:15 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:31:15 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:21 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:31:21 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:22 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:31:22 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:23 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:31:23 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:30 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:31:30 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:36 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:31:36 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:38 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:31:38 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:38 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:31:38 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:45 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:31:45 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:51 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:31:51 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:53 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:31:53 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:31:54 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:31:54 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:00 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:32:00 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:03 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=97c4b4c36a594ac4bf22814f5a9de73c
+22:32:06 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:32:06 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:08 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:32:08 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:09 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:32:09 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:15 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:32:15 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:21 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:32:21 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:23 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:32:23 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:24 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:32:24 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:31 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:32:31 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:36 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:32:36 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:39 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:32:39 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:39 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:32:39 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:46 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:32:46 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:52 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:32:52 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:54 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:32:54 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:32:54 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:32:54 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:01 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:33:01 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:07 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:33:07 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:09 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:33:09 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:10 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:33:10 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:16 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:33:16 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:22 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:33:22 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:24 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:33:24 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:25 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:33:25 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:31 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:33:31 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:37 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:33:37 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:39 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:33:39 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:40 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:33:40 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:46 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:33:46 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:52 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:33:52 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:55 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:33:55 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:33:55 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:33:55 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:01 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:34:01 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:07 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:34:07 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:10 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:34:10 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:10 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:34:10 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:17 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:34:17 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:19 INFO  gateway.main  Shutting down…
+22:34:19 INFO  gateway.auto_discovery  DiscoveryOrchestrator: stopped
+22:34:19 INFO  gateway.gateway_api  WS client disconnected (total 0)
+22:34:19 INFO  aiohttp.access  127.0.0.1 [24/Aug/2026:22:27:49 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.14.3"
+22:34:19 INFO  gateway.gateway_api  GatewayAPI stopped
+22:34:19 INFO  gateway.ha_discovery  Stopping HA discovery
+22:34:19 INFO  gateway.udp_bus  Poll loop cancelled
+22:34:19 INFO  gateway.udp_bus  UDPBus stopped
+22:34:19 INFO  gateway.main  Gateway stopped
+[run.sh] GATEWAY_POLL_INTERVAL=2.0
+[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=20.0
+[run.sh] GATEWAY_BUTTONS_VIA_HA=1
+[run.sh] GATEWAY_BIND_IP=0.0.0.0
+[run.sh] GATEWAY_EXPOSE_INACTIVE_CHANNELS=0
+[run.sh] GATEWAY_MULTI_PRESS=0
+[run.sh] GATEWAY_MULTI_PRESS_WINDOW_MS=350
+[run.sh] GATEWAY_DEVICES_FILE=/config/devices.json
+[run.sh] GATEWAY_REST_SHIM_ENABLED=0
+[run.sh] GATEWAY_LOG_LEVEL=debug
+[run.sh] GATEWAY_DISCOVERY_SUBNET=10.10.1
+[run.sh] GATEWAY_DISCOVERY_RANGE_START=0
+[run.sh] GATEWAY_DISCOVERY_RANGE_END=254
+[run.sh] GATEWAY_AUTO_DISCOVER_ON_START=0
+[run.sh] GATEWAY_PASSIVE_ARP_MONITOR=1
+[run.sh] GATEWAY_ARP_POLL_INTERVAL_S=30.0
+[run.sh] GATEWAY_HTTP_TIMEOUT_S=2.0
+[run.sh] GATEWAY_USE_ENV_DEFAULTS=0
+22:34:21 DEBUG asyncio  Using selector: EpollSelector
+22:34:21 INFO  gateway.udp_bus  UDPBus started  input_poll=2.0s  actuator_poll=20.0s  modules=['relay:10.10.1.30', 'relay:10.10.1.31', 'relay:10.10.1.32', 'dimmer:10.10.1.42', 'input:10.10.1.55']  simulated=False
+22:34:21 DEBUG gateway.udp_bus  TX 10.10.1.30 keepalive P0000
+22:34:21 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+22:34:21 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I0000
+22:34:21 DEBUG gateway.udp_bus  RX 10.10.1.30 keepalive P000000000
+22:34:21 DEBUG gateway.udp_bus  TX 10.10.1.31 keepalive P0000
+22:34:21 DEBUG gateway.udp_bus  unmatched reply from 10.10.1.30 during wait: P000000000
+22:34:21 DEBUG gateway.udp_bus  RX 10.10.1.31 keepalive P000000000
+22:34:21 DEBUG gateway.udp_bus  TX 10.10.1.32 keepalive P0000
+22:34:21 DEBUG gateway.udp_bus  RX 10.10.1.32 keepalive P000000000
+22:34:21 DEBUG gateway.udp_bus  TX 10.10.1.42 keepalive I9900
+22:34:21 DEBUG gateway.device_registry  undecoded RX from 10.10.1.42: I0115000
+22:34:21 DEBUG gateway.udp_bus  RX 10.10.1.42 keepalive I0115000
+22:34:21 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:21 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:21 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:22 WARNING gateway.state_poll  Relay status poll 10.10.1.30 ch0: no reply within timeout
+22:34:22 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I0100
+22:34:22 INFO  gateway.device_registry  Relay 10.10.1.30 ch1: unknown () -> off (0015)
+22:34:22 INFO  gateway.main  STATE  10.10.1.30 ch1: None → RelayState(state='off', state_code='0015')
+22:34:22 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000010015
+22:34:22 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded off (state_code=0015)
+22:34:22 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I0200
+22:34:22 INFO  gateway.device_registry  Relay 10.10.1.30 ch2: unknown () -> on (0115)
+22:34:22 INFO  gateway.main  STATE  10.10.1.30 ch2: None → RelayState(state='on', state_code='0115')
+22:34:22 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000020115
+22:34:22 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded on (state_code=0115)
+22:34:22 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:462878d7af0200005406a50145
+22:34:22 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I0300
+22:34:22 INFO  gateway.device_registry  Relay 10.10.1.30 ch3: unknown () -> off (0015)
+22:34:22 INFO  gateway.main  STATE  10.10.1.30 ch3: None → RelayState(state='off', state_code='0015')
+22:34:22 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000030015
+22:34:22 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded off (state_code=0015)
+22:34:22 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I0400
+22:34:22 INFO  gateway.device_registry  Relay 10.10.1.30 ch4: unknown () -> off (0015)
+22:34:22 INFO  gateway.main  STATE  10.10.1.30 ch4: None → RelayState(state='off', state_code='0015')
+22:34:22 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000040015
+22:34:22 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch4: seeded off (state_code=0015)
+22:34:22 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I0500
+22:34:22 INFO  gateway.device_registry  Relay 10.10.1.30 ch5: unknown () -> off (0015)
+22:34:22 INFO  gateway.main  STATE  10.10.1.30 ch5: None → RelayState(state='off', state_code='0015')
+22:34:22 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000050015
+22:34:22 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch5: seeded off (state_code=0015)
+22:34:22 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I0600
+22:34:22 INFO  gateway.device_registry  Relay 10.10.1.30 ch6: unknown () -> on (0115)
+22:34:22 INFO  gateway.main  STATE  10.10.1.30 ch6: None → RelayState(state='on', state_code='0115')
+22:34:22 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000060115
+22:34:22 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded on (state_code=0115)
+22:34:22 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I0700
+22:34:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch7: unknown () -> on (0115)
+22:34:23 INFO  gateway.main  STATE  10.10.1.30 ch7: None → RelayState(state='on', state_code='0115')
+22:34:23 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000070115
+22:34:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded on (state_code=0115)
+22:34:23 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I0800
+22:34:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch8: unknown () -> on (0100)
+22:34:23 INFO  gateway.main  STATE  10.10.1.30 ch8: None → RelayState(state='on', state_code='0100')
+22:34:23 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000080100
+22:34:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded on (state_code=0100)
+22:34:23 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I0900
+22:34:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch9: unknown () -> off (0000)
+22:34:23 INFO  gateway.main  STATE  10.10.1.30 ch9: None → RelayState(state='off', state_code='0000')
+22:34:23 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000090000
+22:34:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch9: seeded off (state_code=0000)
+22:34:23 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I1000
+22:34:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch10: unknown () -> on (0100)
+22:34:23 INFO  gateway.main  STATE  10.10.1.30 ch10: None → RelayState(state='on', state_code='0100')
+22:34:23 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000100100
+22:34:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch10: seeded on (state_code=0100)
+22:34:23 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I1100
+22:34:23 DEBUG gateway.udp_bus  unmatched reply from 10.10.1.30 during wait: P000000000
+22:34:23 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:23 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:23 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:23 WARNING gateway.state_poll  Relay status poll 10.10.1.30 ch11: no reply within timeout
+22:34:24 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I1200
+22:34:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch12: unknown () -> off (0015)
+22:34:24 INFO  gateway.main  STATE  10.10.1.30 ch12: None → RelayState(state='off', state_code='0015')
+22:34:24 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000120015
+22:34:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch12: seeded off (state_code=0015)
+22:34:24 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I1300
+22:34:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch13: unknown () -> off (0015)
+22:34:24 INFO  gateway.main  STATE  10.10.1.30 ch13: None → RelayState(state='off', state_code='0015')
+22:34:24 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000130015
+22:34:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch13: seeded off (state_code=0015)
+22:34:24 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I1400
+22:34:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch14: unknown () -> off (0015)
+22:34:24 INFO  gateway.main  STATE  10.10.1.30 ch14: None → RelayState(state='off', state_code='0015')
+22:34:24 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000140015
+22:34:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch14: seeded off (state_code=0015)
+22:34:24 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I1500
+22:34:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch15: unknown () -> off (0015)
+22:34:24 INFO  gateway.main  STATE  10.10.1.30 ch15: None → RelayState(state='off', state_code='0015')
+22:34:24 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000150015
+22:34:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch15: seeded off (state_code=0015)
+22:34:24 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I1700
+22:34:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch17: unknown () -> off (0015)
+22:34:24 INFO  gateway.main  STATE  10.10.1.30 ch17: None → RelayState(state='off', state_code='0015')
+22:34:24 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000170015
+22:34:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch17: seeded off (state_code=0015)
+22:34:24 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I1800
+22:34:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch18: unknown () -> off (0015)
+22:34:24 INFO  gateway.main  STATE  10.10.1.30 ch18: None → RelayState(state='off', state_code='0015')
+22:34:24 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000180015
+22:34:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch18: seeded off (state_code=0015)
+22:34:24 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I1900
+22:34:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch19: unknown () -> on (0100)
+22:34:24 INFO  gateway.main  STATE  10.10.1.30 ch19: None → RelayState(state='on', state_code='0100')
+22:34:24 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000190100
+22:34:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch19: seeded on (state_code=0100)
+22:34:24 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I2000
+22:34:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch20: unknown () -> off (0015)
+22:34:24 INFO  gateway.main  STATE  10.10.1.30 ch20: None → RelayState(state='off', state_code='0015')
+22:34:24 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000200015
+22:34:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch20: seeded off (state_code=0015)
+22:34:25 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I2100
+22:34:25 INFO  gateway.device_registry  Relay 10.10.1.30 ch21: unknown () -> off (0015)
+22:34:25 INFO  gateway.main  STATE  10.10.1.30 ch21: None → RelayState(state='off', state_code='0015')
+22:34:25 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000210015
+22:34:25 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch21: seeded off (state_code=0015)
+22:34:25 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I2200
+22:34:25 INFO  gateway.device_registry  Relay 10.10.1.30 ch22: unknown () -> off (0015)
+22:34:25 INFO  gateway.main  STATE  10.10.1.30 ch22: None → RelayState(state='off', state_code='0015')
+22:34:25 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000220015
+22:34:25 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch22: seeded off (state_code=0015)
+22:34:25 DEBUG gateway.state_poll  TX 10.10.1.30 status-poll I2300
+22:34:25 INFO  gateway.device_registry  Relay 10.10.1.30 ch23: unknown () -> on (0115)
+22:34:25 INFO  gateway.main  STATE  10.10.1.30 ch23: None → RelayState(state='on', state_code='0115')
+22:34:25 DEBUG gateway.state_poll  RX 10.10.1.30 status-poll I000230115
+22:34:25 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch23: seeded on (state_code=0115)
+22:34:25 DEBUG gateway.state_poll  TX 10.10.1.32 status-poll I0000
+22:34:25 INFO  gateway.device_registry  Relay 10.10.1.32 ch0: unknown () -> off (0000)
+22:34:25 INFO  gateway.main  STATE  10.10.1.32 ch0: None → RelayState(state='off', state_code='0000')
+22:34:25 DEBUG gateway.state_poll  RX 10.10.1.32 status-poll I000000000
+22:34:25 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off (state_code=0000)
+22:34:25 INFO  gateway.state_poll  Registry seeded from relay status poll (22 channel updates)
+22:34:25 DEBUG gateway.state_poll  TX 10.10.1.42 status-poll I0000000
+22:34:25 DEBUG gateway.device_registry  undecoded RX from 10.10.1.42: I0115099
+22:34:25 DEBUG gateway.udp_bus  unmatched reply from 10.10.1.42 during wait: I0115099
+22:34:25 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:25 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:25 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:26 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch0: no reply within timeout
+22:34:26 DEBUG gateway.state_poll  TX 10.10.1.42 status-poll I1000000
+22:34:26 DEBUG gateway.device_registry  undecoded RX from 10.10.1.42: I0115184
+22:34:26 DEBUG gateway.udp_bus  unmatched reply from 10.10.1.42 during wait: I0115184
+22:34:26 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch1: no reply within timeout
+22:34:26 DEBUG gateway.state_poll  TX 10.10.1.42 status-poll I2000000
+22:34:26 DEBUG gateway.device_registry  undecoded RX from 10.10.1.42: I0115299
+22:34:26 DEBUG gateway.udp_bus  unmatched reply from 10.10.1.42 during wait: I0115299
+22:34:27 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch2: no reply within timeout
+22:34:27 DEBUG gateway.state_poll  TX 10.10.1.42 status-poll I3000000
+22:34:27 DEBUG gateway.device_registry  undecoded RX from 10.10.1.42: I0115300
+22:34:27 DEBUG gateway.udp_bus  unmatched reply from 10.10.1.42 during wait: I0115300
+22:34:27 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:27 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:27 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:27 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch3: no reply within timeout
+22:34:27 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (5 modules, 60 pushbuttons)
+22:34:27 INFO  gateway.auto_discovery  DiscoveryOrchestrator: started (passive ARP every 30 s)
+22:34:27 INFO  gateway.gateway_api  GatewayAPI started  api=0.0.0.0:8080
+22:34:27 INFO  gateway.ha_discovery  Starting HA discovery  instance_id=4e2b963b97b94b37b7cdbe36ca9d2c3e  base_url=http://127.0.0.1:8080  addon=True
+22:34:29 INFO  gateway.ha_discovery  Zeroconf registered: service_name=ipbgw-4e2b963b._ipbgw._tcp.local. server=ipbgw.local. port=8080 publish_ip=127.0.0.1 has_host_in_properties=True has_port_in_properties=True
+22:34:29 INFO  gateway.main  IPBuilding Gateway v1.6.4  rest=0.0.0.0:30200  shim_enabled=False  api=0.0.0.0:8080  buttons_via_ha=True  hub_role=slave  input_poll=2.0s  actuator_poll=20.0s  simulated=False  install=relay@10.10.1.30, relay@10.10.1.31, relay@10.10.1.32, dimmer@10.10.1.42, input@10.10.1.55
+22:34:29 INFO  aiohttp.access  127.0.0.1 [24/Aug/2026:22:34:29 +0200] "GET /api/v1/status HTTP/1.1" 200 696 "-" "Python/3.14 aiohttp/3.14.3"
+22:34:29 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=8ac9b9079c6e44a997f9daef03edd813
+22:34:29 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:29 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:29 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:30 INFO  gateway.gateway_api  WS client connected (total 1)
+22:34:31 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:31 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:31 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:32 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:34:32 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:33 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:33 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:33 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:35 DEBUG gateway.gateway_api  TX 10.10.1.42 command DIM S1231030
+22:34:35 DEBUG gateway.gateway_api  RX 10.10.1.42 command DIM S1231030
+22:34:35 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:35 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:35 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:35 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:34:35 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:36 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:34:36 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:36 DEBUG gateway.gateway_api  TX 10.10.1.42 command DIM S1471030
+22:34:36 DEBUG gateway.gateway_api  RX 10.10.1.42 command DIM S1471030
+22:34:37 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:37 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:37 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:37 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:34:37 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:39 DEBUG gateway.gateway_api  TX 10.10.1.42 command DIM S1471030
+22:34:39 DEBUG gateway.gateway_api  RX 10.10.1.42 command DIM S1471030
+22:34:39 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:39 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:39 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:41 DEBUG gateway.gateway_api  TX 10.10.1.42 command DIM C1991030
+22:34:41 DEBUG gateway.gateway_api  RX 10.10.1.42 command DIM C1991030
+22:34:41 DEBUG gateway.udp_bus  TX 10.10.1.30 keepalive P0000
+22:34:41 DEBUG gateway.udp_bus  RX 10.10.1.30 keepalive P000000000
+22:34:41 DEBUG gateway.udp_bus  TX 10.10.1.31 keepalive P0000
+22:34:42 DEBUG gateway.udp_bus  RX 10.10.1.31 keepalive P000000000
+22:34:42 DEBUG gateway.udp_bus  TX 10.10.1.32 keepalive P0000
+22:34:42 DEBUG gateway.udp_bus  RX 10.10.1.32 keepalive P000000000
+22:34:42 DEBUG gateway.udp_bus  TX 10.10.1.42 keepalive I9900
+22:34:42 DEBUG gateway.device_registry  undecoded RX from 10.10.1.42: I0115000
+22:34:42 DEBUG gateway.udp_bus  RX 10.10.1.42 keepalive I0115000
+22:34:42 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:42 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:42 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:44 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:44 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:44 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:44 DEBUG gateway.gateway_api  TX 10.10.1.30 command OFF C0600
+22:34:44 DEBUG gateway.device_registry  undecoded RX from 10.10.1.30: C060000000
+22:34:44 DEBUG gateway.gateway_api  RX 10.10.1.30 command OFF C060000000
+22:34:46 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:46 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:46 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:47 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:34:47 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:48 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:48 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:48 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:50 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:50 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:50 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:51 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:34:51 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:51 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:34:51 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:52 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:52 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:52 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:52 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:462878d7af0200005406a50145
+22:34:53 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:34:53 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:34:54 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:54 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:54 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:56 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:56 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:56 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:34:57 DEBUG gateway.gateway_api  TX 10.10.1.30 command OFF C0600
+22:34:57 DEBUG gateway.device_registry  undecoded RX from 10.10.1.30: C060000000
+22:34:57 DEBUG gateway.gateway_api  RX 10.10.1.30 command OFF C060000000
+22:34:57 INFO  gateway.auto_discovery  ARP: new module 00:24:77:06:70:ba at 10.10.1.55
+22:34:58 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:34:58 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:34:58 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:35:00 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:35:00 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:35:00 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:35:02 DEBUG gateway.udp_bus  TX 10.10.1.30 keepalive P0000
+22:35:02 DEBUG gateway.udp_bus  RX 10.10.1.30 keepalive P000000000
+22:35:02 DEBUG gateway.udp_bus  TX 10.10.1.31 keepalive P0000
+22:35:02 DEBUG gateway.udp_bus  RX 10.10.1.31 keepalive P000000000
+22:35:02 DEBUG gateway.udp_bus  TX 10.10.1.32 keepalive P0000
+22:35:02 DEBUG gateway.udp_bus  RX 10.10.1.32 keepalive P000000000
+22:35:02 DEBUG gateway.udp_bus  TX 10.10.1.42 keepalive I9900
+22:35:02 DEBUG gateway.device_registry  undecoded RX from 10.10.1.42: I0115000
+22:35:02 DEBUG gateway.udp_bus  RX 10.10.1.42 keepalive I0115000
+22:35:02 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:35:02 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:35:02 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:35:03 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:35:03 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:35:04 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:35:04 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:35:04 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:35:06 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:35:06 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:35:06 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:35:06 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:35:06 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:35:06 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:35:06 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:35:08 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:35:08 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:35:08 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:35:08 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:35:08 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:35:10 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:35:10 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:35:10 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:35:12 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:35:12 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:35:12 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:35:14 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:35:14 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:35:14 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:35:16 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:35:16 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:35:16 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:35:18 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:35:18 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:35:18 DEBUG gateway.udp_bus  TX 10.10.1.55 keepalive I0000
+22:35:18 DEBUG gateway.device_registry  undecoded RX from 10.10.1.55: hex:49022800000000000000000045
+22:35:18 DEBUG gateway.udp_bus  RX 10.10.1.55 keepalive hex:49022800000000000000000045
+22:35:19 INFO  gateway.main  Shutting down…
+22:35:19 INFO  gateway.auto_discovery  DiscoveryOrchestrator: stopped
+22:35:19 INFO  gateway.gateway_api  WS client disconnected (total 0)
+22:35:19 INFO  aiohttp.access  127.0.0.1 [24/Aug/2026:22:34:30 +0200] "GET /ws HTTP/1.1" 101 0 "-" "Python/3.14 aiohttp/3.14.3"
+22:35:19 INFO  gateway.gateway_api  GatewayAPI stopped
+22:35:19 INFO  gateway.ha_discovery  Stopping HA discovery
+22:35:19 INFO  gateway.udp_bus  Poll loop cancelled
+22:35:19 INFO  gateway.udp_bus  UDPBus stopped
+22:35:19 INFO  gateway.main  Gateway stopped
+[run.sh] GATEWAY_POLL_INTERVAL=2.0
+[run.sh] GATEWAY_ACTUATOR_POLL_INTERVAL=20.0
+[run.sh] GATEWAY_BUTTONS_VIA_HA=1
+[run.sh] GATEWAY_BIND_IP=0.0.0.0
+[run.sh] GATEWAY_EXPOSE_INACTIVE_CHANNELS=0
+[run.sh] GATEWAY_MULTI_PRESS=0
+[run.sh] GATEWAY_MULTI_PRESS_WINDOW_MS=350
+[run.sh] GATEWAY_DEVICES_FILE=/config/devices.json
+[run.sh] GATEWAY_REST_SHIM_ENABLED=0
+[run.sh] GATEWAY_LOG_LEVEL=info
+[run.sh] GATEWAY_DISCOVERY_SUBNET=10.10.1
+[run.sh] GATEWAY_DISCOVERY_RANGE_START=0
+[run.sh] GATEWAY_DISCOVERY_RANGE_END=254
+[run.sh] GATEWAY_AUTO_DISCOVER_ON_START=0
+[run.sh] GATEWAY_PASSIVE_ARP_MONITOR=1
+[run.sh] GATEWAY_ARP_POLL_INTERVAL_S=30.0
+[run.sh] GATEWAY_HTTP_TIMEOUT_S=2.0
+[run.sh] GATEWAY_USE_ENV_DEFAULTS=0
+22:35:21 INFO  gateway.udp_bus  UDPBus started  input_poll=2.0s  actuator_poll=20.0s  modules=['relay:10.10.1.30', 'relay:10.10.1.31', 'relay:10.10.1.32', 'dimmer:10.10.1.42', 'input:10.10.1.55']  simulated=False
+22:35:21 INFO  gateway.module_metadata  ModuleMetadataCache refreshed 0 modules
+22:35:22 WARNING gateway.state_poll  Relay status poll 10.10.1.30 ch0: no reply within timeout
+22:35:22 INFO  gateway.device_registry  Relay 10.10.1.30 ch1: unknown () -> off (0015)
+22:35:22 INFO  gateway.main  STATE  10.10.1.30 ch1: None → RelayState(state='off', state_code='0015')
+22:35:22 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch1: seeded off (state_code=0015)
+22:35:22 INFO  gateway.device_registry  Relay 10.10.1.30 ch2: unknown () -> on (0115)
+22:35:22 INFO  gateway.main  STATE  10.10.1.30 ch2: None → RelayState(state='on', state_code='0115')
+22:35:22 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch2: seeded on (state_code=0115)
+22:35:22 INFO  gateway.device_registry  Relay 10.10.1.30 ch3: unknown () -> off (0015)
+22:35:22 INFO  gateway.main  STATE  10.10.1.30 ch3: None → RelayState(state='off', state_code='0015')
+22:35:22 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch3: seeded off (state_code=0015)
+22:35:22 INFO  gateway.device_registry  Relay 10.10.1.30 ch4: unknown () -> off (0015)
+22:35:22 INFO  gateway.main  STATE  10.10.1.30 ch4: None → RelayState(state='off', state_code='0015')
+22:35:22 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch4: seeded off (state_code=0015)
+22:35:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch5: unknown () -> off (0015)
+22:35:23 INFO  gateway.main  STATE  10.10.1.30 ch5: None → RelayState(state='off', state_code='0015')
+22:35:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch5: seeded off (state_code=0015)
+22:35:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch6: unknown () -> off (0015)
+22:35:23 INFO  gateway.main  STATE  10.10.1.30 ch6: None → RelayState(state='off', state_code='0015')
+22:35:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch6: seeded off (state_code=0015)
+22:35:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch7: unknown () -> on (0115)
+22:35:23 INFO  gateway.main  STATE  10.10.1.30 ch7: None → RelayState(state='on', state_code='0115')
+22:35:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch7: seeded on (state_code=0115)
+22:35:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch8: unknown () -> on (0100)
+22:35:23 INFO  gateway.main  STATE  10.10.1.30 ch8: None → RelayState(state='on', state_code='0100')
+22:35:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch8: seeded on (state_code=0100)
+22:35:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch9: unknown () -> off (0000)
+22:35:23 INFO  gateway.main  STATE  10.10.1.30 ch9: None → RelayState(state='off', state_code='0000')
+22:35:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch9: seeded off (state_code=0000)
+22:35:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch10: unknown () -> on (0100)
+22:35:23 INFO  gateway.main  STATE  10.10.1.30 ch10: None → RelayState(state='on', state_code='0100')
+22:35:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch10: seeded on (state_code=0100)
+22:35:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch11: unknown () -> off (0000)
+22:35:23 INFO  gateway.main  STATE  10.10.1.30 ch11: None → RelayState(state='off', state_code='0000')
+22:35:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch11: seeded off (state_code=0000)
+22:35:23 INFO  gateway.device_registry  Relay 10.10.1.30 ch12: unknown () -> off (0015)
+22:35:23 INFO  gateway.main  STATE  10.10.1.30 ch12: None → RelayState(state='off', state_code='0015')
+22:35:23 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch12: seeded off (state_code=0015)
+22:35:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch13: unknown () -> off (0015)
+22:35:24 INFO  gateway.main  STATE  10.10.1.30 ch13: None → RelayState(state='off', state_code='0015')
+22:35:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch13: seeded off (state_code=0015)
+22:35:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch14: unknown () -> off (0015)
+22:35:24 INFO  gateway.main  STATE  10.10.1.30 ch14: None → RelayState(state='off', state_code='0015')
+22:35:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch14: seeded off (state_code=0015)
+22:35:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch15: unknown () -> off (0015)
+22:35:24 INFO  gateway.main  STATE  10.10.1.30 ch15: None → RelayState(state='off', state_code='0015')
+22:35:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch15: seeded off (state_code=0015)
+22:35:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch17: unknown () -> off (0015)
+22:35:24 INFO  gateway.main  STATE  10.10.1.30 ch17: None → RelayState(state='off', state_code='0015')
+22:35:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch17: seeded off (state_code=0015)
+22:35:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch18: unknown () -> off (0015)
+22:35:24 INFO  gateway.main  STATE  10.10.1.30 ch18: None → RelayState(state='off', state_code='0015')
+22:35:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch18: seeded off (state_code=0015)
+22:35:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch19: unknown () -> on (0100)
+22:35:24 INFO  gateway.main  STATE  10.10.1.30 ch19: None → RelayState(state='on', state_code='0100')
+22:35:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch19: seeded on (state_code=0100)
+22:35:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch20: unknown () -> off (0015)
+22:35:24 INFO  gateway.main  STATE  10.10.1.30 ch20: None → RelayState(state='off', state_code='0015')
+22:35:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch20: seeded off (state_code=0015)
+22:35:24 INFO  gateway.device_registry  Relay 10.10.1.30 ch21: unknown () -> off (0015)
+22:35:24 INFO  gateway.main  STATE  10.10.1.30 ch21: None → RelayState(state='off', state_code='0015')
+22:35:24 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch21: seeded off (state_code=0015)
+22:35:25 INFO  gateway.device_registry  Relay 10.10.1.30 ch22: unknown () -> off (0015)
+22:35:25 INFO  gateway.main  STATE  10.10.1.30 ch22: None → RelayState(state='off', state_code='0015')
+22:35:25 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch22: seeded off (state_code=0015)
+22:35:25 INFO  gateway.device_registry  Relay 10.10.1.30 ch23: unknown () -> on (0115)
+22:35:25 INFO  gateway.main  STATE  10.10.1.30 ch23: None → RelayState(state='on', state_code='0115')
+22:35:25 INFO  gateway.state_poll  Relay status poll 10.10.1.30 ch23: seeded on (state_code=0115)
+22:35:25 INFO  gateway.device_registry  Relay 10.10.1.32 ch0: unknown () -> off (0000)
+22:35:25 INFO  gateway.main  STATE  10.10.1.32 ch0: None → RelayState(state='off', state_code='0000')
+22:35:25 INFO  gateway.state_poll  Relay status poll 10.10.1.32 ch0: seeded off (state_code=0000)
+22:35:25 INFO  gateway.state_poll  Registry seeded from relay status poll (23 channel updates)
+22:35:25 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch0: no reply within timeout
+22:35:26 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch1: no reply within timeout
+22:35:27 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch2: no reply within timeout
+22:35:27 WARNING gateway.state_poll  Dimmer status poll 10.10.1.42 ch3: no reply within timeout
+22:35:27 INFO  gateway.auto_discovery  AtomicWriter: read_modify_write /config/devices.json (5 modules, 60 pushbuttons)
+22:35:27 INFO  gateway.auto_discovery  DiscoveryOrchestrator: started (passive ARP every 30 s)
+22:35:27 INFO  gateway.gateway_api  GatewayAPI started  api=0.0.0.0:8080
+22:35:27 INFO  gateway.ha_discovery  Starting HA discovery  instance_id=4e2b963b97b94b37b7cdbe36ca9d2c3e  base_url=http://127.0.0.1:8080  addon=True
+22:35:28 INFO  aiohttp.access  10.10.1.131 [24/Aug/2026:22:35:28 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:35:28 INFO  gateway.ha_discovery  Zeroconf registered: service_name=ipbgw-4e2b963b._ipbgw._tcp.local. server=ipbgw.local. port=8080 publish_ip=127.0.0.1 has_host_in_properties=True has_port_in_properties=True
+22:35:28 INFO  gateway.main  IPBuilding Gateway v1.6.4  rest=0.0.0.0:30200  shim_enabled=False  api=0.0.0.0:8080  buttons_via_ha=True  hub_role=slave  input_poll=2.0s  actuator_poll=20.0s  simulated=False  install=relay@10.10.1.30, relay@10.10.1.31, relay@10.10.1.32, dimmer@10.10.1.42, input@10.10.1.55
+22:35:29 INFO  gateway.ha_discovery  HassIO discovery announced: uuid=659cc773c7934dbfaf0630625bd95f68
+22:35:32 INFO  aiohttp.access  10.10.1.211 [24/Aug/2026:22:35:32 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:35:32 INFO  aiohttp.access  10.10.1.218 [24/Aug/2026:22:35:32 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"
+22:35:32 INFO  gateway.gateway_api  WS client connected (total 1)
+22:35:33 INFO  aiohttp.access  10.10.1.207 [24/Aug/2026:22:35:33 +0200] "POST /inform HTTP/1.1" 404 174 "-" "AirControl Agent v1.0"

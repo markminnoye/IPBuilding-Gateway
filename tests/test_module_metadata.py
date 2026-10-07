@@ -8,11 +8,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from gateway.button_id import canonical_button_id
 from gateway.module_metadata import (
     ModuleMetadata,
     ModuleMetadataCache,
     _parse_get_sysset_body,
-    normalize_button_hardware_id,
     extract_pushbutton_config,
     extract_pushbuttons_from_getbuttons,
 )
@@ -183,15 +183,15 @@ class TestModuleMetadataCache:
         assert cache.get("de:ad:be:ef:00:01") is None
 
 
-class TestNormalizeButtonHardwareId:
-    def test_strips_type_prefix_and_lowercases(self) -> None:
-        assert normalize_button_hardware_id("2D2F8185190000DF") == "2f8185190000df"
+class TestCanonicalButtonId:
+    def test_strips_type_prefix_and_canonicalises(self) -> None:
+        assert canonical_button_id("2D2F8185190000DF") == "2f8185df"
 
-    def test_already_wire_form_unchanged(self) -> None:
-        assert normalize_button_hardware_id("2f8185190000df") == "2f8185190000df"
+    def test_already_canonical_unchanged(self) -> None:
+        assert canonical_button_id("2f8185df") == "2f8185df"
 
     def test_handles_whitespace(self) -> None:
-        assert normalize_button_hardware_id("  2D2F8185190000DF\n") == "2f8185190000df"
+        assert canonical_button_id("  2D2F8185190000DF\n") == "2f8185df"
 
 
 class TestExtractPushbuttonConfig:
@@ -203,7 +203,7 @@ class TestExtractPushbuttonConfig:
         }
         btn = extract_pushbutton_config("00:24:77:52:ad:aa", raw)
         assert btn.channel == 1
-        assert btn.id == "2f8185190000df"
+        assert btn.id == "2f8185df"
         assert btn.module_id == "00:24:77:52:ad:aa"
         assert btn.name == "Badkamer"
         assert btn.room == "Badkamer"
@@ -218,7 +218,7 @@ class TestExtractPushbuttonConfig:
             extract_pushbutton_config("mac1", {"descr": "no id"})
 
     def test_hold_threshold_from_func2(self) -> None:
-        raw = {"id": "abc", "func2": {"holdSeconds": 2.5}}
+        raw = {"id": "2f8185df", "func2": {"holdSeconds": 2.5}}
         btn = extract_pushbutton_config("mac1", raw)
         assert btn.hold_threshold_s == 2.5
 
