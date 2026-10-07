@@ -10,7 +10,9 @@ from ipbuilding_debug.buffer import clamp_timeout
 from ipbuilding_debug.decode import decode_frame, parse_frame
 from ipbuilding_debug.errors import (
     KIND_NOT_AVAILABLE,
+    KIND_NO_ADDRESS,
     KIND_OTHER,
+    KIND_UNREACHABLE,
     MSG_REMOTE_DEBUGGING_OFF,
     PLANNED_CAPABILITIES,
     ClassifiedError,
@@ -39,7 +41,8 @@ class ToolResult:
 
 
 def _from_error(error: ClassifiedError, **extra: Any) -> ToolResult:
-    return ToolResult(error.message, {"ok": False, "kind": error.kind, **extra})
+    data = {"ok": False, **extra, "kind": error.kind}
+    return ToolResult(error.message, data)
 
 
 def _capabilities(status: dict[str, Any] | None) -> list[str]:
@@ -263,10 +266,10 @@ async def send_raw(
 
     error = await session.refresh_status()
     if error is not None:
-        return _from_error(error, **preview, sent=False)
+        return _from_error(error, **preview)
     gated = gate_feature(session.status, "raw_send")
     if gated is not None:
-        return _from_error(gated, **preview, sent=False)
+        return _from_error(gated, **preview)
 
     body, call_error = await session.post_json(
         RAW_SEND_PATH,
@@ -285,7 +288,7 @@ async def send_raw(
                 msg_not_available("raw_send"),
                 call_error.detail,
             )
-        return _from_error(call_error, **preview, sent=False)
+        return _from_error(call_error, **preview)
     replies = []
     if isinstance(body, dict):
         raw_replies = body.get("replies") or []

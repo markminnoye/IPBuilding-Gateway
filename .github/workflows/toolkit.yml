@@ -31,10 +31,10 @@ jobs:
           node-version: "22"
 
       - name: Install mcpb
-        run: npm install -g @anthropic-ai/mcpb
+        run: npm install --prefix "${RUNNER_TEMP}/mcpb" @anthropic-ai/mcpb
 
       - name: Build bundle
-        run: python toolkit/scripts/build.py
+        run: PATH="${RUNNER_TEMP}/mcpb/node_modules/.bin:$PATH" python toolkit/scripts/build.py
 
       - uses: actions/upload-artifact@v4
         with:

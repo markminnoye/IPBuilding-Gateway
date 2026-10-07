@@ -215,11 +215,8 @@ def pack(staging: Path, version: str) -> Path:
     output = DIST / f"ipbuilding-debug-toolkit-{version}.mcpb"
     if output.exists():
         output.unlink()
-    subprocess.run(["mcpb", "validate", str(staging)], check=True)
-    subprocess.run(
-        ["mcpb", "pack", str(staging), "--output", str(output)],
-        check=True,
-    )
+    subprocess.run(["mcpb", "validate", str(staging / "manifest.json")], check=True)
+    subprocess.run(["mcpb", "pack", str(staging), str(output)], check=True)
     if not output.is_file():
         raise SystemExit(f"mcpb pack did not write {output}")
     return output
