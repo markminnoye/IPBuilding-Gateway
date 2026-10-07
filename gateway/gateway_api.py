@@ -44,6 +44,7 @@ from gateway.device_config import (
 )
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.discovery import fetch_module_backup_channels, resolve_module_model
+from gateway.capabilities import CAPABILITIES
 from gateway.health import GatewayHealthMonitor
 from gateway.button_id import canonical_button_id
 from gateway.installation import (
@@ -438,10 +439,27 @@ class GatewayAPI:
     def _status_payload(self) -> dict[str, Any]:
         """Health snapshot plus deployment-specific input-mode fields."""
         body = self._health.snapshot()
-        body.update(self._input_mode_status_fields())
-        body["multi_press"] = self._cfg.multi_press
-        body["multi_press_window_ms"] = self._cfg.multi_press_window_ms
+        body.update(self._deployment_status_fields())
         return body
+
+    def _remote_debugging_enabled(self) -> bool:
+        enabled = getattr(self._cfg, "remote_debugging", False)
+        return enabled if isinstance(enabled, bool) else False
+
+    def _toolkit_status_fields(self) -> dict[str, Any]:
+        """Fields the debug toolkit reads. Extra keys are safe for older clients."""
+        return {
+            "remote_debugging": self._remote_debugging_enabled(),
+            "capabilities": list(CAPABILITIES),
+        }
+
+    def _deployment_status_fields(self) -> dict[str, Any]:
+        return {
+            **self._input_mode_status_fields(),
+            "multi_press": self._cfg.multi_press,
+            "multi_press_window_ms": self._cfg.multi_press_window_ms,
+            **self._toolkit_status_fields(),
+        }
 
     def _input_mode_status_fields(self) -> dict[str, Any]:
         return {
@@ -1215,9 +1233,7 @@ class GatewayAPI:
 
     def _on_health_changed(self) -> None:
         payload = self._health.snapshot(include_actions=False)
-        payload.update(self._input_mode_status_fields())
-        payload["multi_press"] = self._cfg.multi_press
-        payload["multi_press_window_ms"] = self._cfg.multi_press_window_ms
+        payload.update(self._deployment_status_fields())
         asyncio.create_task(
             self._broadcast({"type": "gateway_status", **payload})
         )
@@ -1300,11 +1316,7 @@ class GatewayAPI:
             "modules": self._build_module_list(),
             "devices": self._build_device_list(),
             "gateway_status": self._health.snapshot(include_actions=False)
-            | self._input_mode_status_fields()
-            | {
-                "multi_press": self._cfg.multi_press,
-                "multi_press_window_ms": self._cfg.multi_press_window_ms,
-            },
+            | self._deployment_status_fields(),
         }
 
     def _resolve_include_inactive(self, include_inactive: bool | None) -> bool:

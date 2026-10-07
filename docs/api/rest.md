@@ -41,8 +41,7 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   "subsystems": {
     "installation": "ok",
     "module_metadata": "degraded",
-    "discovery": "ok",
-    "fieldbus": "ok"
+    "discovery": "ok"
   },
   "issues": [
     {
@@ -60,10 +59,11 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   "input_mode_label": "Slave",
   "multi_press": false,
   "multi_press_window_ms": 350,
+  "remote_debugging": false,
+  "capabilities": [],
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
-    "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" },
-    "set_fieldbus_polling": { "method": "POST", "path": "/api/v1/debug/fieldbus-polling" }
+    "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" }
   }
 }
 ```
@@ -77,6 +77,8 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `input_mode_label` | string | Operator label: `Slave` / `Master`. |
 | `multi_press` | boolean | Global double/triple-press classification for all wall buttons (add-on option). When `false`, short release emits `single_press` immediately. |
 | `multi_press_window_ms` | integer | Inter-click window in ms when `multi_press` is enabled (default 350). |
+| `remote_debugging` | boolean | Add-on option **Remote debugging and control**. `false` until a user turns it on in the add-on configuration. It stays on until they turn it off. While it is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. |
+| `capabilities` | list of strings | Features this gateway build actually implements. Empty until a feature is shipped. Later builds may add `log_stream`, `udp_frame`, and `raw_send`. Unknown extra fields are safe for older clients. |
 
 ---
 
@@ -433,45 +435,6 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) re
 **Response 501:**
 ```json
 {"ok": false, "error": "not yet implemented"}
-```
-
----
-
-## POST /api/v1/debug/fieldbus-polling
-
-**Description:** Runtime debug toggle for the UDP/1001 keep-alive poll loop. Surfaces in the companion as the `Veldbus polling (debug)` switch on the gateway device. **Not persistent** — the gateway restarts with `poll_interval` / `actuator_poll_interval` config defaults on the next start.
-
-**Request headers:** `Content-Type: application/json`
-
-**Request body:**
-```json
-{"enabled": false}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `enabled` | boolean | `false` stops the periodic poll loop; `true` resumes it |
-
-**Behaviour while polling is disabled:**
-
-- The background `_poll_loop` keeps running on the faster of `poll_interval_s` and `actuator_poll_interval_s` but skips the per-round due-module poll step. The loop stays alive so flipping the flag back on resumes polling almost immediately, without a bus restart.
-- On-demand `send_command` calls (light on/off, dimmer set level, relay toggle) keep working — only the periodic keep-alive polls stop.
-- Input modules cache the last hub IP and may direct `B-…E` events to the IPBox instead of this gateway while polling is off.
-- A `fieldbus.polling_disabled` warning is reported in `/api/v1/status` (`level: warning`, `subsystems.fieldbus: degraded`).
-
-**Response 200:**
-```json
-{
-  "polling_enabled": false,
-  "poll_interval_s": 2.0,
-  "actuator_poll_interval_s": 20.0
-}
-```
-
-**Response 400** (missing or wrong type):
-```json
-{"error": "missing_field", "message": "Body must include 'enabled' boolean"}
-{"error": "invalid_type",  "message": "'enabled' must be a boolean"}
 ```
 
 ---

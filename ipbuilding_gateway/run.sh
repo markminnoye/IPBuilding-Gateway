@@ -148,6 +148,10 @@ GATEWAY_USE_ENV_DEFAULTS=$(opt discovery.use_env_defaults use_env_defaults "0")
 export GATEWAY_LOG_LEVEL
 GATEWAY_LOG_LEVEL=$(opt logging.log_level log_level "info")
 
+# ── Remote debugging (default off; stays on until the user turns it off) ──
+export GATEWAY_REMOTE_DEBUGGING
+GATEWAY_REMOTE_DEBUGGING=$(opt debug.remote_debugging_and_control remote_debugging_and_control "0")
+
 # ── Simulated mode (default off) ─────────────────────────────────────────────
 export GATEWAY_SIMULATED
 GATEWAY_SIMULATED="${GATEWAY_SIMULATED:-0}"
@@ -162,6 +166,7 @@ echo "[run.sh] GATEWAY_MULTI_PRESS_WINDOW_MS=$GATEWAY_MULTI_PRESS_WINDOW_MS"
 echo "[run.sh] GATEWAY_DEVICES_FILE=$GATEWAY_DEVICES_FILE"
 echo "[run.sh] GATEWAY_REST_SHIM_ENABLED=$GATEWAY_REST_SHIM_ENABLED"
 echo "[run.sh] GATEWAY_LOG_LEVEL=$GATEWAY_LOG_LEVEL"
+echo "[run.sh] GATEWAY_REMOTE_DEBUGGING=$GATEWAY_REMOTE_DEBUGGING"
 echo "[run.sh] GATEWAY_DISCOVERY_SUBNET=$GATEWAY_DISCOVERY_SUBNET"
 echo "[run.sh] GATEWAY_DISCOVERY_RANGE_START=$GATEWAY_DISCOVERY_RANGE_START"
 echo "[run.sh] GATEWAY_DISCOVERY_RANGE_END=$GATEWAY_DISCOVERY_RANGE_END"

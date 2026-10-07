@@ -121,6 +121,7 @@ Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Co
 | `discovery.arp_poll_interval_s` | `30.0` | Hoe vaak (s) de passieve monitor het netwerk bekijkt |
 | `discovery.use_env_defaults` | `false` | Lab/test: vaste `.30/.40/.50` IPs als `devices.json` ontbreekt. Productie: uit laten |
 | `logging.log_level` | `info` | Logniveau: `debug`, `info`, `warning`, `error`. `debug` logt ook veldbus TX/RX (keepalives, commando’s, unmatched replies) |
+| `debug.remote_debugging_and_control` | `false` | **Remote debugging and control.** Blijft aan tot je het uitzet. Zolang het aan staat, toont Home Assistant een melding: iedereen op je netwerk kan veldbusverkeer meelezen en ruwe pakketten naar je modules sturen via deze gateway. Wijzigen herstart de add-on. |
 
 De API/web-UI-poort (`8080`) en de IPBox REST-compatibiliteitspoort (`30200`) liggen vast en staan **niet** in deze tabel — ze staan onder Supervisor’s eigen **Network**-sectie op de add-on info-pagina (zie [Ports](#ports)).
 
@@ -150,6 +151,16 @@ Of de IP1100PoE-drukknoppen events naar **Home Assistant** sturen, stel je in me
 **Verschil met kanaal `active`:** `active: false` op een drukknop schakelt alleen de northbound/HA-entity uit; bij knoppen via HA pollt de gateway de input-module nog steeds. `buttons_via_ha` bepaalt of **deze gateway** de veldbus-claim voor ingangen overneemt.
 
 Uitgebreide uitleg staat ook in de Configuration-UI (translations) en in de add-on docs tab.
+
+### Remote debugging and control
+
+Optie **`debug.remote_debugging_and_control`** (Configuration → **Debug**). Standaard **uit**.
+
+Zet je hem aan, dan herstart de add-on en blijft hij aan tot je hem zelf weer uitzet. Er is geen tijdslimiet. Home Assistant toont dan een blijvende melding:
+
+> Remote debugging and control is ON. Anyone on your network can read field-bus traffic and send raw packets to your IPBuilding modules via this gateway. Turn it off in the add-on configuration when you are done.
+
+Zet je hem uit, dan verdwijnt die melding na de herstart. `GET /api/v1/status` en de WebSocket-`snapshot` tonen `remote_debugging` (`true`/`false`) en `capabilities` (een lijst van wat deze versie echt kan). Die lijst is nu leeg.
 
 ---
 

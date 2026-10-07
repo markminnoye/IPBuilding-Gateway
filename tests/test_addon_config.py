@@ -174,6 +174,31 @@ def test_translations_present_for_multi_press() -> None:
             assert fields[key].get("description")
 
 
+def test_remote_debugging_option_defaults_off() -> None:
+    cfg = _load_config()
+    assert cfg["homeassistant_api"] is True
+    assert cfg["hassio_api"] is True
+    assert cfg["options"]["debug"]["remote_debugging_and_control"] is False
+    assert cfg["schema"]["debug"]["remote_debugging_and_control"] == "bool"
+
+
+def test_translations_present_for_remote_debugging() -> None:
+    path_en = _CONFIG.parent / "translations" / "en.yaml"
+    path_nl = _CONFIG.parent / "translations" / "nl.yaml"
+    en = yaml.safe_load(path_en.read_text(encoding="utf-8"))
+    nl = yaml.safe_load(path_nl.read_text(encoding="utf-8"))
+    en_field = en["configuration"]["debug"]["fields"]["remote_debugging_and_control"]
+    nl_field = nl["configuration"]["debug"]["fields"]["remote_debugging_and_control"]
+    assert en_field["name"] == "Remote debugging and control"
+    assert "network" in en_field["description"].lower()
+    assert nl_field["name"]
+    assert "netwerk" in nl_field["description"].lower()
+    for field in (en_field, nl_field):
+        assert field.get("description")
+        assert en["configuration"]["debug"].get("name")
+        assert nl["configuration"]["debug"].get("name")
+
+
 def test_required_manifest_fields() -> None:
     cfg = _load_config()
     for key in ("name", "version", "slug", "description", "arch"):
