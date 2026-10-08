@@ -52,7 +52,7 @@ def test_toolkit_sources_have_no_private_addresses() -> None:
 
 def test_versions_match() -> None:
     versions_agree()
-    assert file_version() == "0.1.0"
+    assert re.fullmatch(r"0\.1\.0-rc\.[1-9]\d*", file_version())
 
 
 def test_skill_mentions_the_switch_up_front_and_at_the_end() -> None:
@@ -78,6 +78,9 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
     assert "Debuggen en bedienen op afstand" in text
     assert "Een lamp gaat niet uit" in text
     assert "weer uit" in text
+    assert "0.1.0-rc.1" in text
+    assert "Update" in text
+    assert "Install" in text
     lowered = text.lower()
     for banned in ("git ", "terminal", "pip ", "ssh ", "npm "):
         assert banned not in lowered
@@ -86,6 +89,7 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
 def test_staged_manifest_asks_for_the_gateway_address(tmp_path: Path) -> None:
     staged = stage(file_version(), dest=tmp_path / "bundle")
     manifest = json.loads((staged / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["version"] == file_version()
     assert manifest["server"]["type"] == "uv"
     setting = manifest["user_config"]["gateway_address"]
     assert setting["required"] is True

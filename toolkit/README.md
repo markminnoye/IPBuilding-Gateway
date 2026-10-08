@@ -51,6 +51,8 @@ python3 toolkit/scripts/build.py
 
 The script stages a bundle, copies the decoders it needs, and runs `mcpb validate` and `mcpb pack`. CI does the same on every pull request. A tag `toolkit-vX.Y.Z` whose number matches `VERSION` attaches the `.mcpb` to a GitHub release.
 
+Each test bundle uses the next `0.1.0-rc.N` (`rc.1`, `rc.2`, …) in `toolkit/VERSION`. The same string goes in `.claude-plugin/plugin.json`, `pyproject.toml`, and the `.mcpb` manifest. Raise N by one for every new test build so Claude Desktop offers Update instead of Install, and so the builds stay distinct. Do not reuse a number.
+
 Do not use a `vX.Y.Z` tag for this package. That tag builds the Home Assistant add-on.
 
 ## Tests

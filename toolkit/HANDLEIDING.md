@@ -10,6 +10,10 @@ Je krijgt één bestand: `ipbuilding-debug-toolkit.mcpb`.
 2. Lukt dubbelklikken niet, open dan Claude Desktop, ga naar **Instellingen → Extensies** en kies het bestand.
 3. Vul het **gateway-adres** in. Meestal is dat `homeassistant.local`. Zonder `http://` en zonder poort. Dit is het adres van Home Assistant in je thuisnetwerk, niet een adres van een losse module.
 
+## Nieuwere testversie
+
+Elke testversie heeft een eigen nummer: `0.1.0-rc.1`, daarna `0.1.0-rc.2`, enzovoort. Dat nummer staat in de naam van het bestand. Staat de toolkit er al, dan toont Claude Desktop **Update** in plaats van **Install**. Zo zie je welke build je hebt.
+
 ## Schakelaar in Home Assistant
 
 De toolkit kan pas meekijken als een schakelaar aan staat.

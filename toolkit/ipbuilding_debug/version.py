@@ -1,4 +1,4 @@
-"""Toolkit version. The release tag must match toolkit/VERSION."""
+"""Toolkit version. Test builds use 0.1.0-rc.N. A release tag must match toolkit/VERSION."""
 
 from __future__ import annotations
 
