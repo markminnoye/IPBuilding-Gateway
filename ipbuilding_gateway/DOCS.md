@@ -1,6 +1,7 @@
 # IPBuilding Gateway — Home Assistant Add-on
 
-Open veldbus-hub voor IPBuilding relais, dimmers en drukknoppen via **UDP/1001**.
+Open IPBuilding field-bus gateway, replaces proprietary IPBox.
+
 Dit vervangt de propriëtaire IPBox op de veldbus en voedt de companion
 [**IPBuilding Gateway Companion App**](https://github.com/markminnoye/ha-ipbuilding-gateway)
 via WebSocket (`8080`) en optioneel REST (`30200` shim).

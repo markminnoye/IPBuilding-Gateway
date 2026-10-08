@@ -8,6 +8,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - In add-on mode the gateway announces its LAN address over mDNS, so a computer on the network can connect. It does not announce the loopback address. Discovery for Home Assistant on the same machine is unchanged.
 
+### Changed
+- The add-on description is "Open IPBuilding field-bus gateway, replaces proprietary IPBox".
+- The develop add-on is listed in Home Assistant as **IPBuilding Gateway (develop)**. The release keeps the name **IPBuilding Gateway**.
+
 ### Added
 - **Remote debugging and control** in the add-on configuration, off by default. It stays on until you turn it off. While it is on, Home Assistant keeps a notification that anyone on your network can read field-bus traffic and send raw packets through this gateway.
 - **Live logs** while that option is on. A subscribed client receives recent lines and then new ones. The log level can be raised for a limited time (debug shows field-bus traffic) and returns on its own. It is not saved in the add-on configuration. With the option off, those calls are refused.

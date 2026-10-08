@@ -8,6 +8,8 @@
 #
 # Before tagging a release:
 #   1. Bump `version:` in ipbuilding_gateway/config.yaml  (e.g. 0.0.1 → 0.0.2)
+#      In that same edit, set `name` and `panel_title` back to
+#      "IPBuilding Gateway" when they still carry the channel suffix.
 #   2. Update ipbuilding_gateway/CHANGELOG.md (see .cursor/rules/release-process.mdc)
 #   3. Commit and push
 #   4. Tag that commit:  git tag v0.0.2 && git push --tags
