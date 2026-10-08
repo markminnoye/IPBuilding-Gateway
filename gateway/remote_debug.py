@@ -1,7 +1,7 @@
 """Refusal shared by every remote-debugging feature.
 
-Log subscription uses this today. Later ``udp_frame`` and raw send must
-use the same code and message, on REST and on WebSocket, whenever
+Log subscription and field-bus frame subscription use this. Raw send
+must use the same code and message, on REST and on WebSocket, whenever
 ``remote_debugging`` is off.
 """
 

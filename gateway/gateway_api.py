@@ -46,6 +46,7 @@ from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, Relay
 from gateway.discovery import fetch_module_backup_channels, resolve_module_model
 from gateway.capabilities import CAPABILITIES
 from gateway.log_stream import LogStream, LogStreamError, baseline_from_config
+from gateway.udp_frames import UdpFrameHub
 from gateway.remote_debug import (
     REMOTE_DEBUGGING_DISABLED,
     REMOTE_DEBUGGING_DISABLED_MESSAGE,
@@ -203,6 +204,8 @@ class GatewayAPI:
         self._log_stream = LogStream(
             baseline_level=baseline_from_config(getattr(config, "log_level", None))
         )
+        self._udp_frames = UdpFrameHub()
+        self._udp_frame_listener = False
 
     # -------------------------------------------------------------------------
     # Lifecycle
@@ -288,6 +291,7 @@ class GatewayAPI:
         ``runner.cleanup()`` finishes within a bounded time.
         """
         self._log_stream.detach()
+        self._detach_udp_frames()
         # Force-close open WS clients first so runner.cleanup() doesn't
         # wait for their linger timeout.
         for ws in list(self._ws_clients):
@@ -399,6 +403,7 @@ class GatewayAPI:
                     log.warning("WS error: %s", ws.exception())
         finally:
             await self._log_stream.disconnect(ws)
+            await self._udp_frames.disconnect(ws)
             async with self._ws_lock:
                 self._ws_clients.discard(ws)
             log.info("WS client disconnected (total %d)", len(self._ws_clients))
@@ -423,6 +428,9 @@ class GatewayAPI:
         if msg_type in ("subscribe_logs", "unsubscribe_logs", "set_log_level"):
             await self._handle_log_ws(ws, data)
             return
+        if msg_type in ("subscribe_udp_frames", "unsubscribe_udp_frames"):
+            await self._handle_udp_frame_ws(ws, data)
+            return
         if msg_type != "command":
             log.debug("WS ignored non-command message type %r", msg_type)
             return
@@ -443,8 +451,8 @@ class GatewayAPI:
     async def _handle_log_ws(self, ws: WebSocketResponse, data: dict[str, Any]) -> None:
         """Log subscription and temporary level. Refused while remote debugging is off.
 
-        Later remote-debugging messages (udp frame, raw send) must refuse with
-        the same ``ws_remote_debugging_disabled()`` frame before doing work.
+        Raw send, when it exists, must refuse with the same
+        ``ws_remote_debugging_disabled()`` frame before doing work.
         """
         if not self._remote_debugging_enabled():
             await ws.send_json(ws_remote_debugging_disabled())
@@ -463,6 +471,41 @@ class GatewayAPI:
             await ws.send_json(
                 {"type": "error", "error": exc.code, "message": exc.message}
             )
+
+    async def _handle_udp_frame_ws(
+        self, ws: WebSocketResponse, data: dict[str, Any]
+    ) -> None:
+        """Field-bus frame subscription. Refused while remote debugging is off."""
+        if not self._remote_debugging_enabled():
+            await ws.send_json(ws_remote_debugging_disabled())
+            return
+        msg_type = data.get("type")
+        if msg_type == "subscribe_udp_frames":
+            self._attach_udp_frames()
+            await self._udp_frames.subscribe(ws)
+        elif msg_type == "unsubscribe_udp_frames":
+            await self._udp_frames.unsubscribe(ws)
+
+    def _attach_udp_frames(self) -> None:
+        if self._udp_frame_listener:
+            return
+        add = getattr(self._bus, "add_frame_listener", None)
+        if not callable(add):
+            return
+        add(self._udp_frames.publish)
+        self._udp_frame_listener = True
+
+    def _detach_udp_frames(self) -> None:
+        self._udp_frames.close()
+        if not self._udp_frame_listener:
+            return
+        remove = getattr(self._bus, "remove_frame_listener", None)
+        if callable(remove):
+            try:
+                remove(self._udp_frames.publish)
+            except ValueError:
+                pass
+        self._udp_frame_listener = False
 
     # -------------------------------------------------------------------------
     # REST handlers

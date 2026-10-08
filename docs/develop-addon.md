@@ -52,7 +52,7 @@ Die schakelaar staat bij de add-on die je gebruikt (de gewone of de ontwikkelver
 
 Open de groep **Debug**. De schakelaar heet **Debuggen en bedienen op afstand**. In het Engels heet dezelfde schakelaar **Remote debugging and control**.
 
-Zet hem alleen aan als je een probleem onderzoekt. Hij laat een hulpprogramma op je netwerk de gateway-logs live meelezen en het logniveau een tijdje hoger zetten, zodat ook het veldbusverkeer in het log verschijnt. Zonder deze schakelaar weigert de gateway dat.
+Zet hem alleen aan als je een probleem onderzoekt. Hij laat een hulpprogramma op je netwerk de gateway-logs live meelezen, het logniveau een tijdje hoger zetten, en de veldbusberichten zien die deze gateway zelf verstuurt en ontvangt. Zonder deze schakelaar weigert de gateway dat.
 
 De schakelaar blijft aan tot je hem zelf weer uitzet. Hij gaat niet vanzelf uit.
 

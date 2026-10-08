@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - **Remote debugging and control** in the add-on configuration, off by default. It stays on until you turn it off. While it is on, Home Assistant keeps a notification that anyone on your network can read field-bus traffic and send raw packets through this gateway.
 - **Live logs** while that option is on. A subscribed client receives recent lines and then new ones. The log level can be raised for a limited time (debug shows field-bus traffic) and returns on its own. It is not saved in the add-on configuration. With the option off, those calls are refused.
+- **Live field-bus frames** while that option is on. A subscribed client sees each payload this gateway sends or receives. With the option off, that subscription is refused.
 
 ## [1.7.0] - 2026-08-30
 
