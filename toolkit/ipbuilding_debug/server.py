@@ -37,7 +37,7 @@ def skill_text() -> str:
     return (
         "Praat Nederlands met de tester. "
         "Roep eerst connection_status aan. "
-        "Staat Remote debugging and control uit, vraag dan om die schakelaar aan te zetten."
+        "Staat Remote control (for debugging) uit, vraag dan om die schakelaar aan te zetten."
     )
 
 
@@ -65,7 +65,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
 
     @mcp.tool(name="connection_status")
     async def connection_status_tool(log_level: str | None = None) -> str:
-        """Check whether the gateway answers, whether Remote debugging and control is on, and which capabilities this version has.
+        """Check whether the gateway answers, whether Remote control (for debugging) is on, and which capabilities this version has.
 
         Call this first in every debug session. When remote_debugging is false, tell the tester to turn the switch on. When a capability is missing, say that feature is not in this gateway version yet.
         log_level is optional (INFO or DEBUG) and is only sent when the gateway advertises log_stream.

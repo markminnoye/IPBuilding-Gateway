@@ -1,7 +1,7 @@
 {
   "name": "ipbuilding-gateway-tools",
   "displayName": "IPBuilding Gateway Tools",
-  "version": "0.1.0-rc.5",
+  "version": "0.1.0-rc.6",
   "description": "Onderzoek een probleem in je IPBuilding-installatie via de gateway-add-on.",
   "author": {
     "name": "Sonic Rocket"
@@ -11,7 +11,7 @@
     "gateway_address": {
       "type": "string",
       "title": "Gateway-adres",
-      "description": "Adres van de IPBuilding Gateway in je thuisnetwerk, zonder http:// en zonder poort. Laat leeg voor homeassistant.local.",
+      "description": "homeassistant.local volstaat meestal. Lukt dat niet, vul het adres in waarmee je Home Assistant in je browser opent, zonder http:// en zonder poort.",
       "default": "homeassistant.local",
       "required": false
     }

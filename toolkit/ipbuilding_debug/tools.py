@@ -21,6 +21,7 @@ from ipbuilding_debug.errors import (
     MSG_LOGS_USE_ADDON_TAB,
     MSG_LOG_LEVEL_RATE_LIMITED,
     MSG_REMOTE_DEBUGGING_OFF,
+    SWITCH_NAME,
     PLANNED_CAPABILITIES,
     ClassifiedError,
     gate_feature,
@@ -103,11 +104,11 @@ def _from_error(error: ClassifiedError, **extra: Any) -> ToolResult:
 
 REASON_UNSUPPORTED = "Deze gateway-versie kan dit nog niet."
 REASON_SWITCH_OFF = (
-    "De schakelaar 'Remote debugging and control' staat uit. "
+    f"De schakelaar '{SWITCH_NAME}' staat uit. "
     "Dit werkt pas als die aan staat."
 )
 REASON_SWITCH_OFF_LOGS = (
-    "De schakelaar 'Remote debugging and control' staat uit. "
+    f"De schakelaar '{SWITCH_NAME}' staat uit. "
     "Logregels komen dan niet binnen. Knoppen en statuswijzigingen blijven wel binnenkomen."
 )
 REASON_UNKNOWN = "De gateway meldt niet of dit nu werkt."
@@ -1056,7 +1057,7 @@ def unavailable_tools(
                     "missing": "remote_debugging",
                     "reason": (
                         f"{tool} is niet te gebruiken: de schakelaar "
-                        "Remote debugging and control staat uit."
+                        f"{SWITCH_NAME} staat uit."
                     ),
                 }
             )

@@ -15,10 +15,10 @@ Praat in de taal van de tester. Standaard is dat **Nederlands**. Geen jargon: ze
 
 ## Schakelaar in Home Assistant
 
-Er is een schakelaar in de add-on. Engelse naam: **Remote debugging and control**. Nederlandse naam: **Debuggen en bedienen op afstand**.
+Er is een schakelaar in de add-on. Engelse naam: **Remote control (for debugging)**. Nederlandse naam: **Bediening op afstand (voor debuggen)**.
 
 - **Waar:** Home Assistant → Instellingen → Add-ons → IPBuilding Gateway → Configuratie, onder **Debug**.
-- **Wat hij doet:** hij zet live logs, veldbusframes en het sturen van testpakketten open. Knoppen en statuswijzigingen komen ook binnen als de schakelaar uit staat. Alleen de logregels vallen dan weg. Zolang hij aan staat, toont Home Assistant een blijvende melding. Hij blijft aan tot de tester hem zelf uitzet. Er is geen tijdslimiet. Wijzigen herstart de add-on.
+- **Wat hij doet:** hij zet live logs, veldbusframes en het sturen van testpakketten open. Knoppen en statuswijzigingen komen ook binnen als de schakelaar uit staat. Alleen de logregels vallen dan weg. Zolang hij aan staat, toont Home Assistant een blijvende melding: "Bediening op afstand staat aan. IPBuilding Gateway Tools kan live verkeer lezen en commando's naar je modules sturen. Zet het uit in de instellingen van de add-on als het debuggen klaar is." Hij blijft aan tot de tester hem zelf uitzet. Er is geen tijdslimiet. Wijzigen herstart de add-on. Iedereen op het netwerk kan dan meelezen en testpakketten sturen.
 - **Wanneer je hem voorstelt, uit jezelf, niet pas na een fout:**
   1. **Aan het begin** van elke sessie: roep eerst `connection_status` aan. Voor een knop of een lampstatus hoef je de schakelaar niet aan te zetten: `recent_events` werkt dan ook. Vraag hem aan te zetten als je live logs, veldbusframes of een testpakket nodig hebt (`switch_active` is false, of `remote_debugging` is false). Wacht tot de add-on opnieuw is opgestart en controleer daarna opnieuw.
   2. **Aan het eind** van de sessie: stel voor de schakelaar weer uit te zetten. De melding in Home Assistant verdwijnt nadat de add-on opnieuw is opgestart. Laat hem niet aan staan.
@@ -32,7 +32,7 @@ Er is een schakelaar in de add-on. Engelse naam: **Remote debugging and control*
 - Poort 30200 is IpbService op de oude IPBox. Dat is niet deze gateway. Noem die poort niet de gateway-API.
 - HTTP rechtstreeks op een module bestaat alleen bij nieuwere modules. Deze tools openen dat niet.
 - Gebruik eerst de tools. Home Assistant is een aanvulling (een entiteit, het tabblad Log). Zeg bij elk feit de bron: welke tool, of Home Assistant.
-- De bundel zoekt de gateway ook via mDNS (`_ipbgw._tcp.local.`). Een loopback-adres uit die aankondiging (het adres van de gateway-computer zelf) wordt overgeslagen. Daarna komt de hostnaam uit mDNS (bijvoorbeeld `ipbgw.local`), en pas daarna het adres uit de bundel (`homeassistant.local` of wat de tester invulde). `address_source` is `mdns`, `mdns_hostname`, `config_default` of `manual`. Noem het adres, de bron, en `tried` uit `connection_status`. Antwoordde niets, en noemt de melding een loopback-adres, vraag dan om in Configure een hostnaam of adres in te vullen.
+- De bundel zoekt de gateway ook via mDNS (`_ipbgw._tcp.local.`). `homeassistant.local` volstaat meestal. Een loopback-adres uit die aankondiging (het adres van de gateway-computer zelf) wordt overgeslagen. Daarna komt de hostnaam uit mDNS (bijvoorbeeld `ipbgw.local`), en pas daarna het adres uit de bundel. Vanaf de nieuwe develop-versie kondigt de gateway zijn adres op het thuisnetwerk aan. `address_source` is `mdns`, `mdns_hostname`, `config_default` of `manual`. Noem het adres, de bron, en `tried` uit `connection_status`. Zegt `connection_status` dat de gateway niet bereikbaar is, vraag dan of de add-on draait en of de schakelaar aan staat, en laat in **Configure** het adres invullen dat de tester in de browser gebruikt om Home Assistant te openen (zonder `http://` en zonder poort). Noemt de melding een loopback-adres, leg dan hetzelfde uit.
 
 ## Verloop
 
@@ -84,7 +84,7 @@ Een gewoon commando dat de gateway al kent (`ok: true`) bewijst niet dat de modu
 
 Geef de boodschap van de tool door, in de taal van de tester. Vier gevallen:
 
-- **Niet bereikbaar.** De add-on draait niet, of het gateway-adres in de bundel klopt niet (bijvoorbeeld `homeassistant.local`, zonder `http://` en zonder poort).
+- **Niet bereikbaar.** De add-on draait niet, de schakelaar staat uit, of het gateway-adres klopt niet. `homeassistant.local` volstaat meestal. Vraag of de add-on draait en of de schakelaar aan staat. Laat in **Configure** het adres invullen waarmee Home Assistant in de browser opengaat, zonder `http://` en zonder poort.
 - **Add-on draait, schakelaar uit.** De gateway zegt `remote_debugging_disabled`, of `/status.remote_debugging` is false. Wijs de weg naar de schakelaar.
 - **Deze versie kan het nog niet.** Capability ontbreekt.
 - **Iets anders.** Vraag of de add-on nog draait en bewaar de melding.

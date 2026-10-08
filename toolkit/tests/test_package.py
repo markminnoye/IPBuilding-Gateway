@@ -62,8 +62,11 @@ def test_versions_match() -> None:
 
 def test_skill_mentions_the_switch_up_front_and_at_the_end() -> None:
     text = (TOOLKIT / "skills" / "ipbuilding-gateway-tools" / "SKILL.md").read_text(encoding="utf-8")
-    assert "Remote debugging and control" in text
-    assert "Debuggen en bedienen op afstand" in text
+    assert "Remote control (for debugging)" in text
+    assert "Bediening op afstand (voor debuggen)" in text
+    assert "Remote debugging and control" not in text
+    assert "Debuggen en bedienen op afstand" not in text
+    assert "debug-toolkit" not in text.lower()
     assert "Instellingen" in text
     assert "blijvende melding" in text
     assert "blijft aan" in text
@@ -79,8 +82,11 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
     text = (TOOLKIT / "HANDLEIDING.md").read_text(encoding="utf-8")
     assert "Dubbelklik" in text
     assert "homeassistant.local" in text
-    assert "Remote debugging and control" in text
-    assert "Debuggen en bedienen op afstand" in text
+    assert "Remote control (for debugging)" in text
+    assert "Bediening op afstand (voor debuggen)" in text
+    assert "Remote debugging and control" not in text
+    assert "Debuggen en bedienen op afstand" not in text
+    assert "debug-toolkit" not in text.lower()
     assert "Een lamp gaat niet uit" in text
     assert "weer uit" in text
     assert "0.1.0-rc.1" in text
@@ -88,7 +94,20 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
     assert "Install" in text
     assert "IPBuilding Gateway Tools" in text
     assert "ipbuilding-gateway-tools.mcpb" in text
-    assert "debug" not in text.lower().replace("remote debugging and control", "").replace("debuggen en bedienen op afstand", "").replace("onder **debug**", "")
+    lowered_for_debug = text.lower()
+    for allowed in (
+        "remote control (for debugging)",
+        "bediening op afstand (voor debuggen)",
+        "als het debuggen klaar is",
+        "onder **debug**",
+    ):
+        lowered_for_debug = lowered_for_debug.replace(allowed, "")
+    assert "debug" not in lowered_for_debug
+    assert "volstaat meestal" in text
+    assert "niet bereikbaar" in text.lower()
+    assert "Bediening op afstand staat aan." in text
+    assert "meelezen" in text
+    assert "testpakket" in text
     lowered = text.lower()
     for banned in ("git ", "terminal", "pip ", "ssh ", "npm "):
         assert banned not in lowered
@@ -133,6 +152,14 @@ def test_staged_manifest_asks_for_the_gateway_address(tmp_path: Path) -> None:
     assert "weggefilterd" in lowered
     for technical in ("websocket", "capability", "udp", "payload", "mdns"):
         assert technical not in lowered
+    blob = json.dumps(manifest)
+    assert "debug-toolkit" not in blob.lower()
+    assert "Remote debugging and control" not in blob
+    readme = (TOOLKIT / "README.md").read_text(encoding="utf-8")
+    assert "debug-toolkit" not in readme.lower()
+    assert "Remote debugging and control" not in readme
+    assert "Remote control (for debugging)" in readme
+    assert "Bediening op afstand (voor debuggen)" in readme
     assert manifest["icon"] == "icon.png"
     icon = staged / "icon.png"
     addon_icon = TOOLKIT.parent / "ipbuilding_gateway" / "icon.png"

@@ -89,7 +89,7 @@ async def test_connection_status_switch_on() -> None:
         await gateway.stop()
     assert result.data["ok"] is True
     assert result.data["remote_debugging"] is True
-    assert "Remote debugging and control" in result.message
+    assert "Remote control (for debugging)" in result.message
     assert NOT_AVAILABLE_PHRASE in result.message
     assert "log_stream" in result.data["missing_capabilities"]
 
@@ -770,7 +770,7 @@ async def test_switch_off_keeps_button_and_state_and_drops_logs() -> None:
     rows = {row["name"]: row for row in status.data["capability_status"]}
     assert rows["log_stream"]["supported"] is True
     assert rows["log_stream"]["active"] is False
-    assert "Remote debugging and control" in rows["log_stream"]["reason"]
+    assert "Remote control (for debugging)" in rows["log_stream"]["reason"]
     assert "Knoppen" in rows["log_stream"]["reason"]
     assert rows["raw_send"]["supported"] is False
     assert rows["udp_frame"]["active"] is False
@@ -800,7 +800,7 @@ async def test_switch_is_probed_when_status_omits_it() -> None:
     assert rows["log_stream"]["active"] is False
     assert rows["raw_send"]["active"] is False
     assert rows["udp_frame"]["active"] is False
-    assert "Remote debugging and control" in rows["raw_send"]["reason"]
+    assert "Remote control (for debugging)" in rows["raw_send"]["reason"]
     assert any(item.get("type") == "subscribe_logs" for item in gateway.received)
 
 

@@ -15,7 +15,7 @@ IPBuilding Gateway Tools only talks to the gateway REST and WebSocket API on por
 | `scripts/build.py` | One build used locally and in CI |
 | `VERSION` | Version. A release tag `gateway-tools-vX.Y.Z` must match this file |
 
-The gateway address is a user setting (`gateway_address` in the bundle, the same key in the Claude Code plugin). It is optional. The manifest default is `homeassistant.local`, and the server uses that host when the setting is empty. It is passed as `IPBUILDING_GATEWAY_ADDRESS`.
+The gateway address is a user setting (`gateway_address` in the bundle, the same key in the Claude Code plugin). It is optional. The manifest default is `homeassistant.local`, and that host usually suffices. The server skips a loopback address from mDNS, then tries the mDNS hostname, then the configured address. From the newer develop add-on the gateway announces its LAN address. If `connection_status` says the gateway is unreachable, the tester checks that the add-on is running and the switch is on, and fills Configure with the address used in the browser to open Home Assistant. It is passed as `IPBUILDING_GATEWAY_ADDRESS`.
 
 ## Tools
 
@@ -38,7 +38,7 @@ If a name is missing from `/status.capabilities`, the tool returns a not-availab
 
 Dialect ids and display names are `Dialect` values in `ipbuilding_debug/dialect.py`. An older gateway id is rewritten there and is not repeated in docs or tool output. A new dialect from another tester gets a random city, never a home town and never a personal name.
 
-`connection_status` also tells the tester when **Remote debugging and control** is off (`remote_debugging: false`, or error code `remote_debugging_disabled`).
+`connection_status` also tells the tester when **Remote control (for debugging)** is off (`remote_debugging: false`, or error code `remote_debugging_disabled`). In Dutch the switch is **Bediening op afstand (voor debuggen)**.
 
 ## Contract the later gateway changes should meet
 

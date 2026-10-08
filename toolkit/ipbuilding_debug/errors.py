@@ -19,8 +19,8 @@ KIND_NO_ADDRESS = "no_address"
 # Exact phrase the assistant must be able to quote when a feature is absent.
 NOT_AVAILABLE_PHRASE = "not available in this gateway version yet"
 
-SWITCH_NAME = "Remote debugging and control"
-SWITCH_NAME_NL = "Debuggen en bedienen op afstand"
+SWITCH_NAME = "Remote control (for debugging)"
+SWITCH_NAME_NL = "Bediening op afstand (voor debuggen)"
 SWITCH_WHERE = (
     "Instellingen > Add-ons > IPBuilding Gateway > Configuratie"
 )
@@ -29,8 +29,11 @@ MSG_UNREACHABLE = (
     "De gateway is niet bereikbaar. "
     "Controleer of de add-on IPBuilding Gateway in Home Assistant draait "
     "(Instellingen > Add-ons > IPBuilding Gateway) "
-    "en of het gateway-adres in de instellingen van deze bundel klopt "
-    "(bijvoorbeeld homeassistant.local, zonder http:// en zonder poort)."
+    f"en of de schakelaar '{SWITCH_NAME}' aan staat "
+    f"(bij Nederlands: '{SWITCH_NAME_NL}'). "
+    "homeassistant.local volstaat meestal. "
+    "Lukt dat niet, vul dan in Configure het adres in dat je ook in je browser "
+    "gebruikt om Home Assistant te openen, zonder http:// en zonder poort."
 )
 
 MSG_NO_ADDRESS = (
@@ -40,12 +43,12 @@ MSG_NO_ADDRESS = (
 )
 
 MSG_REMOTE_DEBUGGING_OFF = (
-    "De add-on draait, maar 'Remote debugging and control' staat uit. "
-    "Zet de schakelaar 'Remote debugging and control' aan in Home Assistant "
-    "(Instellingen > Add-ons > IPBuilding Gateway > Configuratie) "
+    f"De add-on draait, maar '{SWITCH_NAME}' staat uit. "
+    f"Zet de schakelaar '{SWITCH_NAME}' aan in Home Assistant "
+    f"({SWITCH_WHERE}) "
     "zodat de assistent opnieuw kan verbinden. "
     "Bij een Nederlandse Home Assistant heet de schakelaar "
-    "'Debuggen en bedienen op afstand' (onder Debug). "
+    f"'{SWITCH_NAME_NL}' (onder Debug). "
     "De schakelaar zet live logs, veldbusframes en het sturen van testpakketten open, "
     "toont een blijvende melding in Home Assistant, en blijft aan tot je hem zelf uitzet. "
     "Wijzigen herstart de add-on."
@@ -53,10 +56,10 @@ MSG_REMOTE_DEBUGGING_OFF = (
 
 MSG_SWITCH_UNKNOWN = (
     "De gateway antwoordt, maar deze versie meldt niet of "
-    "'Remote debugging and control' aan staat. "
+    f"'{SWITCH_NAME}' aan staat. "
     "Kijk in Home Assistant bij Instellingen > Add-ons > IPBuilding Gateway > Configuratie. "
-    "Zet 'Remote debugging and control' aan als je live wilt meekijken "
-    "(bij Nederlands: 'Debuggen en bedienen op afstand'). "
+    f"Zet '{SWITCH_NAME}' aan als je live wilt meekijken "
+    f"(bij Nederlands: '{SWITCH_NAME_NL}'). "
     "Een oudere add-on heeft die schakelaar nog niet; dan is eerst een update nodig."
 )
 
@@ -115,8 +118,9 @@ def msg_mdns_loopback(*, loopback: list[str], tried: list[dict[str, Any]]) -> st
         f"({skipped}). Dat adres hoort bij deze computer en is overgeslagen. "
         f"Daarna geprobeerd: {attempted_text}. "
         "Geen van die adressen antwoordde. "
-        "Vul in Configure een hostnaam of adres in "
-        "(bijvoorbeeld homeassistant.local, zonder http:// en zonder poort)."
+        "Vul in Configure het adres in dat je ook in je browser gebruikt "
+        "om Home Assistant te openen "
+        "(vaak homeassistant.local, zonder http:// en zonder poort)."
     )
 
 
@@ -164,7 +168,7 @@ def msg_connected(*, remote_debugging: bool | None, capabilities: list[str]) -> 
     missing = [name for name in PLANNED_CAPABILITIES if name not in capabilities]
     if not missing:
         return (
-            "De gateway is bereikbaar en 'Remote debugging and control' staat aan. "
+            f"De gateway is bereikbaar en '{SWITCH_NAME}' staat aan. "
             "Live logs, veldbusframes en testpakketten zijn beschikbaar. "
             "Zet de schakelaar na afloop weer uit in Home Assistant "
             "(Instellingen > Add-ons > IPBuilding Gateway > Configuratie). "
@@ -172,7 +176,7 @@ def msg_connected(*, remote_debugging: bool | None, capabilities: list[str]) -> 
         )
     if len(missing) == len(PLANNED_CAPABILITIES):
         return (
-            "De gateway is bereikbaar en 'Remote debugging and control' staat aan. "
+            f"De gateway is bereikbaar en '{SWITCH_NAME}' staat aan. "
             "Live logs, veldbusframes en testpakketten sturen zijn in deze versie "
             f"nog niet beschikbaar ({NOT_AVAILABLE_PHRASE}). "
             "De installatie bekijken kan wel. "
@@ -180,7 +184,7 @@ def msg_connected(*, remote_debugging: bool | None, capabilities: list[str]) -> 
         )
     ready = [name for name in PLANNED_CAPABILITIES if name in capabilities]
     return (
-        "De gateway is bereikbaar en 'Remote debugging and control' staat aan. "
+        f"De gateway is bereikbaar en '{SWITCH_NAME}' staat aan. "
         f"Beschikbaar: {', '.join(ready)}. "
         f"Nog niet in deze versie ({NOT_AVAILABLE_PHRASE}): {', '.join(missing)}. "
         "Zet de schakelaar na afloop weer uit."

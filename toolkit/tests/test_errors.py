@@ -18,6 +18,7 @@ from ipbuilding_debug.errors import (
     MSG_UNREACHABLE,
     NOT_AVAILABLE_PHRASE,
     SWITCH_NAME,
+    SWITCH_NAME_NL,
     SWITCH_WHERE,
     classify_http,
     classify_transport,
@@ -30,13 +31,19 @@ from ipbuilding_debug.errors import (
 def test_unreachable_message_tells_the_tester_what_to_check() -> None:
     assert "IPBuilding Gateway" in MSG_UNREACHABLE
     assert "homeassistant.local" in MSG_UNREACHABLE
+    assert "volstaat meestal" in MSG_UNREACHABLE
+    assert "schakelaar" in MSG_UNREACHABLE
+    assert "browser" in MSG_UNREACHABLE
+    assert "Configure" in MSG_UNREACHABLE
     assert "Instellingen > Add-ons > IPBuilding Gateway" in MSG_UNREACHABLE
 
 
 def test_switch_off_message_names_the_control_and_where_it_is() -> None:
     assert SWITCH_NAME in MSG_REMOTE_DEBUGGING_OFF
     assert SWITCH_WHERE in MSG_REMOTE_DEBUGGING_OFF
-    assert "Debuggen en bedienen op afstand" in MSG_REMOTE_DEBUGGING_OFF
+    assert SWITCH_NAME_NL in MSG_REMOTE_DEBUGGING_OFF
+    assert "Remote debugging and control" not in MSG_REMOTE_DEBUGGING_OFF
+    assert "Debuggen en bedienen op afstand" not in MSG_REMOTE_DEBUGGING_OFF
     assert "blijft aan" in MSG_REMOTE_DEBUGGING_OFF
     assert "blijvende melding" in MSG_REMOTE_DEBUGGING_OFF
 
