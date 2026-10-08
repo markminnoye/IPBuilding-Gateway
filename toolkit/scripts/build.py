@@ -101,6 +101,8 @@ def stage(version: str, dest: Path = STAGING) -> Path:
     dest.mkdir(parents=True)
     for name in COPY_NAMES:
         _copy_tree(TOOLKIT / name, dest / name)
+    # Same square PNG the Home Assistant add-on uses (512x512).
+    shutil.copy2(REPO / "ipbuilding_gateway" / "icon.png", dest / "icon.png")
     for rel in GATEWAY_FILES:
         target = dest / rel
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -133,6 +135,8 @@ def _write_manifest(dest: Path, version: str) -> None:
         "name": "ipbuilding-gateway-tools",
         "display_name": "IPBuilding Gateway Tools",
         "version": version,
+        # Legacy single-asset field. Clients use this when `icons` is omitted.
+        "icon": "icon.png",
         "description": "Meekijken en testen via de IPBuilding Gateway in je thuisnetwerk.",
         "long_description": (TOOLKIT / "HANDLEIDING.md").read_text(encoding="utf-8"),
         "author": {"name": "Sonic Rocket"},

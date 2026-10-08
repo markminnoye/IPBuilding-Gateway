@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import struct
 from pathlib import Path
 
 _SPEC = importlib.util.spec_from_file_location(
@@ -117,3 +118,11 @@ def test_staged_manifest_asks_for_the_gateway_address(tmp_path: Path) -> None:
         "export_session",
     ]
     assert (staged / "gateway" / "payloads" / "relay.py").is_file()
+    assert manifest["icon"] == "icon.png"
+    icon = staged / "icon.png"
+    addon_icon = TOOLKIT.parent / "ipbuilding_gateway" / "icon.png"
+    assert icon.read_bytes() == addon_icon.read_bytes()
+    raw = icon.read_bytes()
+    assert raw[:8] == b"\x89PNG\r\n\x1a\n"
+    width, height = struct.unpack(">II", raw[16:24])
+    assert (width, height) == (512, 512)
