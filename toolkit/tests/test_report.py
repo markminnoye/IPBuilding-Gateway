@@ -490,15 +490,16 @@ def test_skill_describes_the_report_and_the_backlog() -> None:
     assert "Txxxxxx-1" in text
     assert "hoofdletterongevoelig" in text
     assert "spelling in de inventaris" in text
-    assert "Toegang op afstand" in text
+    assert "Toegang op afstand" not in text
     assert "Debuggen en bedienen op afstand" not in text
-    assert "onder Debug" not in text
+    assert "onder **Debug**" in text
     assert "T" + "riage" not in text
     readme = (TOOLKIT / "README.md").read_text(encoding="utf-8")
     guide = (TOOLKIT / "HANDLEIDING.md").read_text(encoding="utf-8")
     assert readme.startswith(guide)
     for blob in (text, readme, guide, privacy_notice()):
         assert "T" + "riage" not in blob
+        assert "Toegang op afstand" not in blob
 
 
 def test_default_tree_has_no_intake_address() -> None:

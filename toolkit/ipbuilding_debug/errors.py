@@ -52,7 +52,7 @@ MSG_REMOTE_DEBUGGING_OFF = (
     f"({SWITCH_WHERE}) "
     "zodat de assistent opnieuw kan verbinden. "
     "Bij een Nederlandse Home Assistant heet de schakelaar "
-    f"'{SWITCH_NAME_NL}' (onder Toegang op afstand). "
+    f"'{SWITCH_NAME_NL}' (onder Debug). "
     "De schakelaar zet live logs, veldbusframes en het sturen van testpakketten open, "
     "toont een blijvende melding in Home Assistant, en blijft aan tot je hem zelf uitzet. "
     "Wijzigen herstart de add-on."

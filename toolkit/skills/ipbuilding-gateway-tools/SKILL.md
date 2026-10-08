@@ -17,7 +17,7 @@ Praat in de taal van de tester. Standaard is dat **Nederlands**. Geen jargon: ze
 
 Er is een schakelaar in de add-on. Engelse naam: **Remote control (for debugging)**. Nederlandse naam: **Bediening op afstand (voor debuggen)**.
 
-- **Waar:** Home Assistant → Instellingen → Add-ons → IPBuilding Gateway → Configuratie, onder **Toegang op afstand**.
+- **Waar:** Home Assistant → Instellingen → Add-ons → IPBuilding Gateway → Configuratie, onder **Debug**.
 - **Wat hij doet:** hij zet live logs, veldbusframes en het sturen van testpakketten open. Knoppen en statuswijzigingen komen ook binnen als de schakelaar uit staat. Alleen de logregels vallen dan weg. Zolang hij aan staat, toont Home Assistant een blijvende melding: "Bediening op afstand staat aan. IPBuilding Gateway Tools kan live verkeer lezen en commando's naar je modules sturen. Zet het uit in de instellingen van de add-on als het debuggen klaar is." Hij blijft aan tot de tester hem zelf uitzet. Er is geen tijdslimiet. Wijzigen herstart de add-on. Iedereen op het netwerk kan dan meelezen en testpakketten sturen.
 - **Wanneer je hem voorstelt, uit jezelf, niet pas na een fout:**
   1. **Aan het begin** van elke sessie: roep eerst `connection_status` aan. Voor een knop of een lampstatus hoef je de schakelaar niet aan te zetten: `recent_events` werkt dan ook. Vraag hem aan te zetten als je live logs, veldbusframes of een testpakket nodig hebt (`switch_active` is false, of `remote_debugging` is false). Wacht tot de add-on opnieuw is opgestart en controleer daarna opnieuw.

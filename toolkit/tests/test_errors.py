@@ -44,8 +44,8 @@ def test_switch_off_message_names_the_control_and_where_it_is() -> None:
     assert SWITCH_NAME_NL in MSG_REMOTE_DEBUGGING_OFF
     assert "Remote debugging and control" not in MSG_REMOTE_DEBUGGING_OFF
     assert "Debuggen en bedienen op afstand" not in MSG_REMOTE_DEBUGGING_OFF
-    assert "Toegang op afstand" in MSG_REMOTE_DEBUGGING_OFF
-    assert "onder Debug" not in MSG_REMOTE_DEBUGGING_OFF
+    assert "Toegang op afstand" not in MSG_REMOTE_DEBUGGING_OFF
+    assert "onder Debug" in MSG_REMOTE_DEBUGGING_OFF
     assert "blijft aan" in MSG_REMOTE_DEBUGGING_OFF
     assert "blijvende melding" in MSG_REMOTE_DEBUGGING_OFF
 
