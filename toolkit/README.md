@@ -81,7 +81,7 @@ The gateway address is a user setting (`gateway_address` in the bundle, the same
 | `export_session` | Local notes and buffered events. Each event gets `local_time` (ISO 8601 with offset) and `time_source` (`gateway` or `received`). Redacts addresses, MAC addresses, email addresses, and names unless `redact=false`. Adds a fixed plain-text report and YAML frontmatter | Live logs appear in the export once `log_stream` is active |
 | `send_report` | On by default. Shows the privacy notice and the filtered report, then a `mailto:` link after `confirmed=true`. The process does not send mail. Without `IPBUILDING_REPORT_INTAKE` the option is unavailable. The Linear template files the ticket in the backlog with the label Agent | — |
 | `capture_frames` | Subscribes when `udp_frame` is advertised | Gateway `udp_frame` |
-| `send_raw` | Posts when `raw_send` is advertised, and only after `confirmed=true` | Gateway raw send |
+| `send_raw` | `POST /api/v1/debug/raw-send` when `raw_send` is advertised, and only after `confirmed=true`. Body is `module_ip`, optional port 1001, `payload_hex` (1–64 bytes), `window_ms` (1–3000, default 2000). Empty `replies` is success | Gateway raw send |
 
 If a name is missing from `/status.capabilities`, the tool returns a not-available message instead of failing. Planned names: `log_stream`, `udp_frame`, `raw_send`. A listed name with the switch off is `supported` and not `active`. Button and state events still arrive while the switch is off; log lines do not.
 

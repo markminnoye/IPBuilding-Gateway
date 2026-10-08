@@ -201,6 +201,9 @@ async def test_log_level_rate_limit_is_explained() -> None:
     assert sent[-1]["ttl"] == 900
 
 
+_MODULE = "192.0.2.10"
+
+
 @pytest.mark.asyncio
 async def test_send_raw_preview_does_not_send() -> None:
     gateway = FakeGateway(remote_debugging=True, capabilities=["raw_send"])
@@ -209,7 +212,7 @@ async def test_send_raw_preview_does_not_send() -> None:
     try:
         result = await send_raw(
             session,
-            target="module-a",
+            module_ip=_MODULE,
             payload_hex="5330303030",
             confirmed=False,
         )
@@ -230,14 +233,35 @@ async def test_send_raw_not_available_does_not_post() -> None:
     try:
         result = await send_raw(
             session,
-            target="module-a",
+            module_ip=_MODULE,
             payload_hex="53 30 30 30 30",
             confirmed=True,
         )
     finally:
         await session.stop()
         await gateway.stop()
-    assert NOT_AVAILABLE_PHRASE in result.message
+    assert "niet ondersteund in deze gatewayversie" in result.message
+    assert gateway.raw_calls == []
+
+
+@pytest.mark.asyncio
+async def test_send_raw_switch_off_does_not_post() -> None:
+    gateway = FakeGateway(remote_debugging=False, capabilities=["raw_send"])
+    await gateway.start()
+    session = GatewaySession(f"127.0.0.1:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await send_raw(
+            session,
+            module_ip=_MODULE,
+            payload_hex="5330303030",
+            confirmed=True,
+        )
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert result.message == (
+        'Zet in de gateway "Bediening op afstand (voor debuggen)" aan.'
+    )
     assert gateway.raw_calls == []
 
 
@@ -251,16 +275,54 @@ async def test_send_raw_disabled_code_from_gateway() -> None:
     try:
         result = await send_raw(
             session,
-            target="module-a",
+            module_ip=_MODULE,
             payload_hex="5330303030",
             confirmed=True,
         )
     finally:
         await session.stop()
         await gateway.stop()
-    assert result.message == MSG_REMOTE_DEBUGGING_OFF
+    assert result.message == (
+        'Zet in de gateway "Bediening op afstand (voor debuggen)" aan.'
+    )
     assert result.data["sent"] is False
     assert len(gateway.raw_calls) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("status", "code"),
+    [
+        (422, "target_not_allowed"),
+        (422, "invalid_target"),
+        (429, "raw_send_rate_limited"),
+        (429, "raw_send_busy"),
+        (503, "send_failed"),
+        (400, "invalid_payload"),
+        (400, "invalid_window"),
+    ],
+)
+async def test_send_raw_surfaces_gateway_errors(status: int, code: str) -> None:
+    gateway = FakeGateway(remote_debugging=True, capabilities=["raw_send"])
+    gateway.raw_status = status
+    gateway.raw_body = {"error": code, "message": "english"}
+    await gateway.start()
+    session = GatewaySession(f"127.0.0.1:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await send_raw(
+            session,
+            module_ip=_MODULE,
+            payload_hex="5330303030",
+            confirmed=True,
+        )
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert result.data["ok"] is False
+    assert result.data["kind"] == code
+    assert result.message
+    assert "english" not in result.message
+    assert code not in result.message
 
 
 @pytest.mark.asyncio
@@ -271,25 +333,69 @@ async def test_send_raw_confirmed_returns_replies() -> None:
     try:
         result = await send_raw(
             session,
-            target="module-a",
+            module_ip=_MODULE,
             payload_hex="5330303030",
             port=1001,
             window_ms=2000,
+            confirmed=True,
+        )
+        gateway.replies = []
+        gateway.raw_truncated = True
+        empty = await send_raw(
+            session,
+            module_ip=_MODULE,
+            payload_hex="5330303030",
             confirmed=True,
         )
     finally:
         await session.stop()
         await gateway.stop()
     assert result.data["sent"] is True
-    assert gateway.raw_calls == [
-        {
-            "target": "module-a",
-            "port": 1001,
-            "payload_hex": "5330303030",
-            "window_ms": 2000,
-        }
-    ]
+    assert result.data["ok"] is True
+    assert gateway.raw_calls[0] == {
+        "module_ip": _MODULE,
+        "port": 1001,
+        "payload_hex": "5330303030",
+        "window_ms": 2000,
+    }
+    assert result.data["sent_hex"] == "5330303030"
+    assert result.data["window_ms"] == 2000
+    assert result.data["truncated"] is False
+    assert result.data["replies"][0]["delay_ms"] == 40
     assert result.data["replies"][0]["local_decode"]["matched"] is True
+    assert empty.data["ok"] is True
+    assert empty.data["replies"] == []
+    assert empty.data["truncated"] is True
+    assert "gelukt" in empty.message
+    assert "hoogstens 8" in empty.message
+
+
+@pytest.mark.asyncio
+async def test_send_raw_rejects_a_bad_window_and_a_long_payload() -> None:
+    gateway = FakeGateway(remote_debugging=True, capabilities=["raw_send"])
+    await gateway.start()
+    session = GatewaySession(f"127.0.0.1:{gateway.port}", backoff_start=0.05)
+    try:
+        window = await send_raw(
+            session,
+            module_ip=_MODULE,
+            payload_hex="5330303030",
+            window_ms=3001,
+            confirmed=True,
+        )
+        payload = await send_raw(
+            session,
+            module_ip=_MODULE,
+            payload_hex="aa" * 65,
+            confirmed=False,
+        )
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert window.data["kind"] == "invalid_window"
+    assert "3000" in window.message
+    assert payload.data["kind"] == "invalid_payload"
+    assert gateway.raw_calls == []
 
 
 def test_decode_test_matches_relay_and_reports_a_miss() -> None:

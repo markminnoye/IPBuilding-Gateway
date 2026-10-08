@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import re
 from dataclasses import dataclass, field
@@ -16,6 +17,7 @@ from ipbuilding_debug.dialect import present_decode, present_event
 from ipbuilding_debug.errors import (
     KIND_NOT_AVAILABLE,
     KIND_NO_ADDRESS,
+    KIND_REMOTE_DEBUGGING_OFF,
     KIND_OTHER,
     KIND_UNREACHABLE,
     MSG_GATEWAY_TOO_OLD,
@@ -58,6 +60,23 @@ from ipbuilding_debug.report import (
 from ipbuilding_debug.session import GatewaySession
 
 RAW_SEND_PATH = "/api/v1/debug/raw-send"
+_RAW_ERROR_TEXT = {
+    "remote_debugging_disabled": (
+        'Zet in de gateway "Bediening op afstand (voor debuggen)" aan.'
+    ),
+    "target_not_allowed": "Dit adres hoort niet bij een module van deze installatie.",
+    "invalid_target": "Dit is geen geldig module-adres.",
+    "invalid_port": "De poort moet 1001 zijn.",
+    "payload_too_large": "Het pakket is te groot. Het maximum is 64 bytes.",
+    "raw_send_rate_limited": (
+        "Er zijn te veel testpakketten verstuurd. Wacht even en probeer het opnieuw."
+    ),
+    "raw_send_busy": "Er loopt nog een testpakket. Wacht tot dat venster klaar is.",
+    "send_failed": "De gateway kon het pakket niet versturen.",
+    "invalid_payload": "Dit pakket is niet geldig. Gebruik 1 tot 64 bytes hex.",
+    "invalid_window": "Het venster moet tussen 1 en 3000 milliseconden liggen.",
+    "invalid_json": "De gateway begreep het verzoek niet.",
+}
 SHARING_WARNING = (
     "Ruimte-, lamp- en knopnamen zijn gemaskeerd. "
     "Adressen en apparaat-ids zijn weggehaald. "
@@ -887,7 +906,7 @@ async def capture_frames(
 async def send_raw(
     session: GatewaySession,
     *,
-    target: str,
+    module_ip: str,
     payload_hex: str,
     port: int = 1001,
     window_ms: int = 2000,
@@ -897,23 +916,20 @@ async def send_raw(
     try:
         hex_payload = _normalize_hex(payload_hex)
     except ValueError:
-        return ToolResult(
-            "Dit is geen geldig pakket. Gebruik hexadecimale tekens, twee per byte, "
-            "bijvoorbeeld 5330303030.",
-            {"ok": False, "kind": KIND_OTHER},
-        )
-    target = (target or "").strip()
-    if not target:
-        return ToolResult(
-            "Er is geen module opgegeven. Zeg naar welke module het pakket moet.",
-            {"ok": False, "kind": KIND_OTHER},
-        )
-    port = int(port)
-    window_ms = max(100, min(int(window_ms), 5000))
+        return _raw_rejected("invalid_payload")
+    if not 1 <= len(hex_payload) // 2 <= 64:
+        return _raw_rejected("invalid_payload")
+    module_ip = (module_ip or "").strip()
+    if _raw_module_ip(module_ip) is None:
+        return _raw_rejected("invalid_target")
+    if isinstance(port, bool) or not isinstance(port, int) or port != 1001:
+        return _raw_rejected("invalid_port")
+    if isinstance(window_ms, bool) or not isinstance(window_ms, int) or not 1 <= window_ms <= 3000:
+        return _raw_rejected("invalid_window")
     preview = {
         "ok": False,
         "kind": "confirmation_required",
-        "target": target,
+        "module_ip": module_ip,
         "port": port,
         "payload_hex": hex_payload,
         "window_ms": window_ms,
@@ -922,7 +938,7 @@ async def send_raw(
     if not confirmed:
         return ToolResult(
             (
-                f"Nog niet verstuurd. Dit pakket gaat naar module {target} "
+                f"Nog niet verstuurd. Dit pakket gaat naar module {module_ip} "
                 f"op poort {port}: {hex_payload}. "
                 "Het kan een lamp of een ander kanaal veranderen. "
                 "Vraag de tester expliciet of dit verstuurd mag worden. "
@@ -936,12 +952,22 @@ async def send_raw(
         return _from_error(error, **preview)
     gated = gate_feature(session.status, "raw_send")
     if gated is not None:
+        if gated.kind == KIND_NOT_AVAILABLE:
+            return ToolResult(
+                "Een testpakket sturen is niet ondersteund in deze gatewayversie.",
+                {**preview, "ok": False, "kind": KIND_NOT_AVAILABLE},
+            )
+        if gated.kind == KIND_REMOTE_DEBUGGING_OFF:
+            return ToolResult(
+                _RAW_ERROR_TEXT["remote_debugging_disabled"],
+                {**preview, "ok": False, "kind": KIND_REMOTE_DEBUGGING_OFF},
+            )
         return _from_error(gated, **preview)
 
     body, call_error = await session.post_json(
         RAW_SEND_PATH,
         {
-            "target": target,
+            "module_ip": module_ip,
             "port": port,
             "payload_hex": hex_payload,
             "window_ms": window_ms,
@@ -949,18 +975,31 @@ async def send_raw(
         timeout=max(8.0, window_ms / 1000 + 3),
     )
     if call_error is not None:
+        code = _raw_error_code(body)
+        if code in _RAW_ERROR_TEXT:
+            return ToolResult(
+                _RAW_ERROR_TEXT[code],
+                {**preview, "ok": False, "kind": code},
+            )
         if call_error.kind == KIND_NOT_AVAILABLE:
-            call_error = ClassifiedError(
-                KIND_NOT_AVAILABLE,
-                msg_not_available("raw_send"),
-                call_error.detail,
+            return ToolResult(
+                "Een testpakket sturen is niet ondersteund in deze gatewayversie.",
+                {**preview, "ok": False, "kind": KIND_NOT_AVAILABLE},
             )
         return _from_error(call_error, **preview)
-    replies = []
+    replies: list[Any] = []
+    truncated = False
+    sent_hex = hex_payload
+    reported_window = window_ms
     if isinstance(body, dict):
         raw_replies = body.get("replies") or []
         if isinstance(raw_replies, list):
             replies = raw_replies
+        truncated = body.get("truncated") is True
+        if isinstance(body.get("sent_hex"), str) and body.get("sent_hex"):
+            sent_hex = body["sent_hex"]
+        if type(body.get("window_ms")) is int:
+            reported_window = body["window_ms"]
     decoded = []
     for reply in replies:
         if isinstance(reply, dict) and isinstance(reply.get("hex"), str):
@@ -969,17 +1008,25 @@ async def send_raw(
             decoded.append(item)
         else:
             decoded.append(reply)
+    if decoded:
+        summary = f"{len(decoded)} antwoord(en) binnen het venster."
+    else:
+        summary = "Geen antwoord binnen het venster. Dat is gelukt."
+    if truncated:
+        summary += " Er was nog een antwoord; de gateway bewaart er hoogstens 8."
     return ToolResult(
-        f"Pakket verstuurd naar {target} op poort {port}. {len(decoded)} antwoord(en) binnen het venster.",
+        f"Pakket verstuurd naar {module_ip} op poort {port}. {summary}",
         {
             "ok": True,
             "kind": "sent",
             "sent": True,
-            "target": target,
+            "module_ip": module_ip,
             "port": port,
             "payload_hex": hex_payload,
-            "window_ms": window_ms,
+            "sent_hex": sent_hex,
+            "window_ms": reported_window,
             "replies": decoded,
+            "truncated": truncated,
         },
     )
 
@@ -1684,6 +1731,42 @@ def _frame_matches(event: dict[str, Any], *, direction: str, module: str, patter
         if pattern.lower() not in haystack.lower():
             return False
     return True
+
+
+def _raw_rejected(code: str) -> ToolResult:
+    return ToolResult(
+        _RAW_ERROR_TEXT[code],
+        {"ok": False, "kind": code, "sent": False},
+    )
+
+
+def _raw_error_code(body: Any) -> str:
+    if not isinstance(body, dict):
+        return ""
+    for key in ("error", "code"):
+        value = body.get(key)
+        if isinstance(value, str):
+            return value
+    return ""
+
+
+def _raw_module_ip(value: str) -> str | None:
+    try:
+        addr = ipaddress.ip_address(value)
+    except ValueError:
+        return None
+    if not isinstance(addr, ipaddress.IPv4Address):
+        return None
+    if (
+        addr.is_multicast
+        or addr.is_unspecified
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_reserved
+        or addr == ipaddress.IPv4Address("255.255.255.255")
+    ):
+        return None
+    return str(addr)
 
 
 def _normalize_hex(payload: str) -> str:

@@ -77,7 +77,7 @@ Zet je het logniveau op debug, herhaal dan het terugvalmoment uit `connection_st
 
 ## Testpakketten
 
-`send_raw` verstuurt niets zolang `confirmed` false is. Toon de tester waar het naartoe gaat, op welke poort, en wat het kan doen (een lamp kan aan of uit gaan). Vraag expliciet "zal ik dit versturen?". Pas na een duidelijk ja roep je de tool opnieuw aan met `confirmed=true`. Geen configuratie wijzigen.
+`send_raw` verstuurt niets zolang `confirmed` false is. Toon de tester het module-adres (`module_ip`), poort 1001, en wat het kan doen (een lamp kan aan of uit gaan). Het venster is standaard 2000 ms en hoogstens 3000. Vraag expliciet "zal ik dit versturen?". Pas na een duidelijk ja roep je de tool opnieuw aan met `confirmed=true`. Geen configuratie wijzigen. Ontbreekt capability `raw_send`, dan is een testpakket niet ondersteund in deze gatewayversie. Die capability staat in de status, of ze ontbreekt, ook als de schakelaar uit staat. Staat de schakelaar uit, geef dan door: Zet in de gateway "Bediening op afstand (voor debuggen)" aan. Een leeg antwoordenlijstje is gelukt. Geef de melding van de tool door.
 
 Een gewoon commando dat de gateway al kent (`ok: true`) bewijst niet dat de module antwoordde. Geen binnenkomend statusbericht is zelf een testresultaat.
 

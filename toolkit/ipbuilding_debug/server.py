@@ -188,7 +188,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
 
     @mcp.tool(name="send_raw")
     async def send_raw_tool(
-        target: str,
+        module_ip: str,
         payload_hex: str,
         port: int = 1001,
         window_ms: int = 2000,
@@ -196,11 +196,11 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
     ) -> str:
         """Send one raw field-bus packet through the gateway, then collect replies.
 
-        First call with confirmed=false. Show the tester the target, port, and hex, and ask for an explicit yes. Only then call again with confirmed=true. Never send without that yes. Needs capability raw_send.
+        POST /api/v1/debug/raw-send. module_ip is the module IPv4 address. port is optional and must be 1001. payload_hex is 1 to 64 bytes. window_ms is optional, 1 to 3000, default 2000. An empty replies list is success. First call with confirmed=false. Show the tester the module, port, and hex, and ask for an explicit yes. Only then call again with confirmed=true. Never send without that yes. Needs capability raw_send. If that capability is absent, this gateway version does not support it.
         """
         result = await send_raw(
             gateway,
-            target=target,
+            module_ip=module_ip,
             payload_hex=payload_hex,
             port=port,
             window_ms=window_ms,

@@ -42,8 +42,9 @@ class FakeGateway:
         self.raw_status = 200
         self.raw_body: dict[str, Any] | None = None
         self.replies: list[dict[str, Any]] = [
-            {"hex": "5330303030", "from": "module", "port": 1001}
+            {"hex": "5330303030", "delay_ms": 40}
         ]
+        self.raw_truncated = False
         self.frame_on_subscribe: dict[str, Any] | None = None
         self.log_level_reply: dict[str, Any] | None = None
         self.log_lines: list[dict[str, Any]] = []
@@ -172,7 +173,16 @@ class FakeGateway:
         if self.raw_status >= 400:
             return web.json_response(self.raw_body or {"error": "rejected"}, status=self.raw_status)
         return web.json_response(
-            {"ok": True, "sent_hex": body.get("payload_hex"), "replies": self.replies}
+            {
+                "ok": True,
+                "schema_version": 2,
+                "sent_hex": body.get("payload_hex"),
+                "module_ip": body.get("module_ip"),
+                "port": body.get("port", 1001),
+                "window_ms": body.get("window_ms", 2000),
+                "replies": self.replies,
+                "truncated": self.raw_truncated,
+            }
         )
 
     async def _ws(self, request: web.Request) -> web.WebSocketResponse:
