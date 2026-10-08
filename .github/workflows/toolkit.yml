@@ -34,6 +34,9 @@ jobs:
         run: npm install --prefix "${RUNNER_TEMP}/mcpb" @anthropic-ai/mcpb
 
       - name: Build bundle
+        env:
+          # Empty when the secret is not set. The bundle then has no intake address.
+          IPBUILDING_REPORT_INTAKE: ${{ secrets.IPBUILDING_REPORT_INTAKE }}
         run: PATH="${RUNNER_TEMP}/mcpb/node_modules/.bin:$PATH" python toolkit/scripts/build.py
 
       - uses: actions/upload-artifact@v4

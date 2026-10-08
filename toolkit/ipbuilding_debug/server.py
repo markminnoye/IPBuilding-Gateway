@@ -10,6 +10,7 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
+from ipbuilding_debug.report import report_send_enabled
 from ipbuilding_debug.session import GatewaySession
 from ipbuilding_debug.tools import (
     capture_frames,
@@ -24,6 +25,7 @@ from ipbuilding_debug.tools import (
     read_logs,
     recent_events,
     send_raw,
+    send_report,
 )
 from ipbuilding_debug.version import __version__
 
@@ -222,10 +224,26 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
     ) -> str:
         """Export the session buffer for the report. Addresses and names are removed by default.
 
+        The result includes a fixed plain-text report and YAML frontmatter.
         Pass redact=false only when the tester wants the raw text locally. Tell them not to share that raw text.
         """
         result = await export_session(gateway, note=note, marker=marker, redact=redact)
         return result.render()
+
+    if report_send_enabled():
+
+        @mcp.tool(name="send_report")
+        async def send_report_tool(confirmed: bool = False, korte_fout: str = "") -> str:
+            """Offer the filtered report as a mailto link after the tester confirms.
+
+            The first call shows the privacy notice and the report. Nothing is sent.
+            Call again with confirmed=true only after an explicit yes. The tester chooses the sender and sends the mail.
+            Without an intake address the option is unavailable.
+            """
+            result = await send_report(
+                gateway, confirmed=confirmed, korte_fout=korte_fout
+            )
+            return result.render()
 
     return mcp
 

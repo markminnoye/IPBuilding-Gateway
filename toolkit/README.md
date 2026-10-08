@@ -78,7 +78,8 @@ The gateway address is a user setting (`gateway_address` in the bundle, the same
 | `device_command` | `POST /api/v1/devices/{id}/command` only after `confirmed=true`. Reports `module_confirmed`, `confirm_ms`, and `reported` when the gateway sends them. Without those fields, says this version cannot confirm the module | — |
 | `probe_generation` | Works against `/status`, `/modules`, `/devices` | — |
 | `decode_test` | Local, uses `gateway/payloads`, then shows the current dialect city name. Kessel-Lo (`kessel-lo`) and Torhout (`torhout`) are defined in `ipbuilding_debug/dialect.py` | — |
-| `export_session` | Local notes and buffered events. Each event gets `local_time` (ISO 8601 with offset) and `time_source` (`gateway` or `received`). Redacts addresses and names unless `redact=false` | Live logs appear in the export once `log_stream` is active |
+| `export_session` | Local notes and buffered events. Each event gets `local_time` (ISO 8601 with offset) and `time_source` (`gateway` or `received`). Redacts addresses, MAC addresses, email addresses, and names unless `redact=false`. Adds a fixed plain-text report and YAML frontmatter | Live logs appear in the export once `log_stream` is active |
+| `send_report` | On by default. Shows the privacy notice and the filtered report, then a `mailto:` link after `confirmed=true`. The process does not send mail. Without `IPBUILDING_REPORT_INTAKE` the option is unavailable. The Linear template files the ticket in the backlog with the label Agent | — |
 | `capture_frames` | Subscribes when `udp_frame` is advertised | Gateway `udp_frame` |
 | `send_raw` | Posts when `raw_send` is advertised, and only after `confirmed=true` | Gateway raw send |
 
@@ -106,6 +107,8 @@ python3 toolkit/scripts/build.py
 ```
 
 The script stages a bundle, copies the decoders it needs, and runs `mcpb validate` and `mcpb pack`. CI does the same on every pull request. A tag `gateway-tools-vX.Y.Z` whose number matches `VERSION` attaches the `.mcpb` to a GitHub release. The release text is `HANDLEIDING.md`. The workflow artifact is `ipbuilding-gateway-tools`. The packed file is `ipbuilding-gateway-tools-<version>.mcpb`.
+
+Sending a report is on unless `IPBUILDING_REPORT_SEND` is `0`, `false`, `no`, or `off`. The intake address is not in the repository. CI passes the Actions secret `IPBUILDING_REPORT_INTAKE` into the bundle environment of the same name, and only when that value is non-empty. Without it, `send_report` stays unavailable. A confirmed call returns a `mailto:` link; the toolkit does not send the mail. The Linear template puts the ticket in the backlog with the label Agent.
 
 Each test bundle uses the next `0.1.0-rc.N` (`rc.1`, `rc.2`, …) in `toolkit/VERSION`. The same string goes in `.claude-plugin/plugin.json`, `pyproject.toml`, and the `.mcpb` manifest. Raise N by one for every new test build so Claude Desktop offers Update instead of Install, and so the builds stay distinct. Do not reuse a number.
 

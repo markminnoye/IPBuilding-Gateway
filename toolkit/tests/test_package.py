@@ -8,6 +8,8 @@ import re
 import struct
 from pathlib import Path
 
+import pytest
+
 _SPEC = importlib.util.spec_from_file_location(
     "toolkit_build",
     Path(__file__).resolve().parents[1] / "scripts" / "build.py",
@@ -118,7 +120,11 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
     assert readme.startswith(text)
 
 
-def test_staged_manifest_asks_for_the_gateway_address(tmp_path: Path) -> None:
+def test_staged_manifest_asks_for_the_gateway_address(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("IPBUILDING_REPORT_INTAKE", raising=False)
+    monkeypatch.delenv("IPBUILDING_REPORT_SEND", raising=False)
     staged = stage(file_version(), dest=tmp_path / "bundle")
     manifest = json.loads((staged / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["version"] == file_version()
@@ -146,7 +152,9 @@ def test_staged_manifest_asks_for_the_gateway_address(tmp_path: Path) -> None:
         "send_raw",
         "decode_test",
         "export_session",
+        "send_report",
     ]
+    assert "IPBUILDING_REPORT_INTAKE" not in manifest["server"]["mcp_config"]["env"]
     assert (staged / "gateway" / "payloads" / "relay.py").is_file()
     description = manifest["long_description"]
     expected = (

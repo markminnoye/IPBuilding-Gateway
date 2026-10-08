@@ -143,7 +143,92 @@ def _write_pyproject(dest: Path, version: str) -> None:
     (dest / "pyproject.toml").write_text("".join(lines), encoding="utf-8")
 
 
+_SEND_OFF = {"0", "false", "no", "off"}
+
+
+def _report_send_enabled() -> bool:
+    """Same default as the toolkit: on unless the build explicitly turns it off."""
+    raw = os.environ.get("IPBUILDING_REPORT_SEND")
+    if raw is None or not raw.strip():
+        return True
+    return raw.strip().lower() not in _SEND_OFF
+
+
+def _intake_address() -> str:
+    """Build-time intake address. Empty means the bundle does not embed one."""
+    return os.environ.get("IPBUILDING_REPORT_INTAKE", "").strip()
+
+
 def _write_manifest(dest: Path, version: str) -> None:
+    env = {
+        "IPBUILDING_GATEWAY_ADDRESS": "${user_config.gateway_address}",
+    }
+    intake = _intake_address()
+    # Inject only while sending is on, so a build with the flag off does not
+    # embed the address. A normal build has no address until CI supplies
+    # the Actions secret IPBUILDING_REPORT_INTAKE.
+    if _report_send_enabled() and intake:
+        env["IPBUILDING_REPORT_INTAKE"] = intake
+    tools = [
+        {
+            "name": "connection_status",
+            "description": "Verbinding, adres, gezondheid en ontbrekende mogelijkheden.",
+        },
+        {
+            "name": "gateway_health",
+            "description": "Status, subsystemen, meldingen, looptijd en buffer.",
+        },
+        {
+            "name": "list_devices",
+            "description": "Module, kanaal, type, naam en status. Kanalen tellen vanaf 0.",
+        },
+        {
+            "name": "recent_events",
+            "description": "Statuswijzigingen en knoppen uit de buffer.",
+        },
+        {
+            "name": "read_logs",
+            "description": "Logregels van de gateway, als deze versie dat kan.",
+        },
+        {
+            "name": "discover",
+            "description": "Scan starten nadat de tester het bevestigd heeft, daarna het verschil.",
+        },
+        {
+            "name": "device_command",
+            "description": "Eén apparaat schakelen of dimmen nadat de tester het bevestigd heeft.",
+        },
+        {
+            "name": "probe_generation",
+            "description": "Modules en versie van deze installatie.",
+        },
+        {
+            "name": "capture_frames",
+            "description": "Veldbusframes meelezen, als deze versie dat kan.",
+        },
+        {
+            "name": "send_raw",
+            "description": "Een testpakket sturen nadat de tester het bevestigd heeft.",
+        },
+        {
+            "name": "decode_test",
+            "description": "Een frame lokaal door de decoders halen.",
+        },
+        {
+            "name": "export_session",
+            "description": "Sessie bundelen. Namen en adressen zijn standaard weggehaald.",
+        },
+    ]
+    if _report_send_enabled():
+        tools.append(
+            {
+                "name": "send_report",
+                "description": (
+                    "Gefilterd rapport als mailto, nadat de tester het bevestigd heeft. "
+                    "De toolkit verstuurt niets."
+                ),
+            }
+        )
     manifest = {
         "manifest_version": "0.4",
         "name": "ipbuilding-gateway-tools",
@@ -172,9 +257,7 @@ def _write_manifest(dest: Path, version: str) -> None:
                     "-m",
                     "ipbuilding_debug",
                 ],
-                "env": {
-                    "IPBUILDING_GATEWAY_ADDRESS": "${user_config.gateway_address}",
-                },
+                "env": env,
             },
         },
         "compatibility": {
@@ -198,56 +281,7 @@ def _write_manifest(dest: Path, version: str) -> None:
                 "default": "homeassistant.local",
             }
         },
-        "tools": [
-            {
-                "name": "connection_status",
-                "description": "Verbinding, adres, gezondheid en ontbrekende mogelijkheden.",
-            },
-            {
-                "name": "gateway_health",
-                "description": "Status, subsystemen, meldingen, looptijd en buffer.",
-            },
-            {
-                "name": "list_devices",
-                "description": "Module, kanaal, type, naam en status. Kanalen tellen vanaf 0.",
-            },
-            {
-                "name": "recent_events",
-                "description": "Statuswijzigingen en knoppen uit de buffer.",
-            },
-            {
-                "name": "read_logs",
-                "description": "Logregels van de gateway, als deze versie dat kan.",
-            },
-            {
-                "name": "discover",
-                "description": "Scan starten nadat de tester het bevestigd heeft, daarna het verschil.",
-            },
-            {
-                "name": "device_command",
-                "description": "Eén apparaat schakelen of dimmen nadat de tester het bevestigd heeft.",
-            },
-            {
-                "name": "probe_generation",
-                "description": "Modules en versie van deze installatie.",
-            },
-            {
-                "name": "capture_frames",
-                "description": "Veldbusframes meelezen, als deze versie dat kan.",
-            },
-            {
-                "name": "send_raw",
-                "description": "Een testpakket sturen nadat de tester het bevestigd heeft.",
-            },
-            {
-                "name": "decode_test",
-                "description": "Een frame lokaal door de decoders halen.",
-            },
-            {
-                "name": "export_session",
-                "description": "Sessie bundelen. Namen en adressen zijn standaard weggehaald.",
-            },
-        ],
+        "tools": tools,
         "keywords": ["ipbuilding", "home-assistant", "gateway"],
     }
     (dest / "manifest.json").write_text(

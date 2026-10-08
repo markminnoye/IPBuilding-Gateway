@@ -133,6 +133,9 @@ class GatewaySession:
         self.mdns_timeout = mdns_timeout
         self.tried: list[dict[str, Any]] = []
         self.mdns_loopback: list[str] = []
+        # Seq already returned by capture_frames. The next capture continues
+        # here, so frames that arrive between two calls are not dropped.
+        self.frame_cursor: int | None = None
         self.log_level_info: dict[str, Any] | None = None
         self._switch_probe_value: bool | None = None
         self._switch_probe_done = False

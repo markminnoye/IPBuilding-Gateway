@@ -128,6 +128,11 @@ def msg_mdns_loopback(*, loopback: list[str], tried: list[dict[str, Any]]) -> st
     )
 
 
+MSG_LOG_LEVEL_NOT_REPORTED = (
+    "Het actuele logniveau en de terugvaltijd zijn niet gemeld."
+)
+
+
 def msg_log_level_applied(info: dict[str, Any]) -> str:
     """Dutch sentence from a gateway ``log_level`` reply (``ttl`` is seconds)."""
     level = info.get("effective_level") or info.get("level") or "onbekend"

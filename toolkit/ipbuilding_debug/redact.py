@@ -18,7 +18,11 @@ _IPV6_RUN = re.compile(
 _MAC_COLON = re.compile(r"\b(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\b")
 _MAC_DASH = re.compile(r"\b(?:[0-9A-Fa-f]{2}-){5}[0-9A-Fa-f]{2}\b")
 _MAC_DOT = re.compile(r"\b(?:[0-9A-Fa-f]{4}\.){2}[0-9A-Fa-f]{4}\b")
-_MAC_BARE = re.compile(r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{12}(?![0-9A-Fa-f])")
+# A hyphen on either side keeps the last group of a UUID intact.
+_MAC_BARE = re.compile(r"(?<![0-9A-Fa-f-])[0-9A-Fa-f]{12}(?![0-9A-Fa-f-])")
+_EMAIL = re.compile(
+    r"(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?![A-Za-z0-9.-])"
+)
 # Hostname in free text. Boundaries keep dotted ids such as
 # input.kessel-lo.button_event intact. Two labels only when the last
 # one is not a file type.
@@ -142,13 +146,14 @@ def redact_text(
     tokens: set[str] | None = None,
     hosts: set[str] | None = None,
 ) -> str:
-    """Replace addresses, MAC addresses, hostnames, and known names inside one string."""
+    """Replace addresses, MAC addresses, emails, hostnames, and known names."""
     cleaned = _IPV6_RUN.sub(_ipv6_or_keep, text)
     cleaned = _IPV4.sub("[adres]", cleaned)
     cleaned = _MAC_COLON.sub("[mac]", cleaned)
     cleaned = _MAC_DASH.sub("[mac]", cleaned)
     cleaned = _MAC_DOT.sub("[mac]", cleaned)
     cleaned = _MAC_BARE.sub("[mac]", cleaned)
+    cleaned = _EMAIL.sub("[e-mail]", cleaned)
     cleaned = _HOST_IN_TEXT.sub(_host_or_keep, cleaned)
     known_hosts = {host.lower() for host in hosts or () if host}
     for host in sorted(known_hosts, key=len, reverse=True):

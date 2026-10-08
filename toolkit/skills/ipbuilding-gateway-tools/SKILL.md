@@ -37,8 +37,8 @@ Er is een schakelaar in de add-on. Engelse naam: **Remote control (for debugging
 ## Verloop
 
 1. **Vraag het probleem uit.** Wat ziet de tester, sinds wanneer, welke ruimte, welke lamp of knop, altijd of soms.
-2. **`connection_status`.** Eerst dit, vóór iets anders. Handel de schakelaar af zoals hierboven. Noem het adres en hoe het gevonden is. Lees `capability_status`: per functie `supported` en `active`, en bij `active: false` de reden. Staat er een `log_level` met `reported: true`, noem dan het huidige niveau en wanneer het terugvalt (`reverts_at` of `reverts_in_seconds`). De gateway geeft daarvoor een `ttl` in seconden; het tijdstip is daaruit berekend. `unavailable_tools` zegt per tool welke capability of schakelaar ontbreekt. Die tools blijven in de lijst. Bij een vraag of de gateway zelf gezond is: `gateway_health` (status, subsystemen, meldingen, looptijd, buffer).
-3. **`list_devices`.** Welk kanaal bij welke lamp of knop hoort. Module, kanaal, type, naam, status. Relay- en dimmerkanalen tellen vanaf 0. Een knop toont de index van de module.
+2. **`connection_status`.** Eerst dit, vóór iets anders. Handel de schakelaar af zoals hierboven. Noem het adres en hoe het gevonden is. Lees `capability_status`: per functie `supported` en `active`, en bij `active: false` de reden. Staat er een `log_level` met `reported: true`, noem dan het huidige niveau en wanneer het terugvalt (`reverts_at` of `reverts_in_seconds`). De gateway geeft daarvoor een `ttl` in seconden; het tijdstip is daaruit berekend. Zegt de tool dat het actuele logniveau en de terugvaltijd niet gemeld zijn, geef die zin dan exact door. Verzin geen niveau, ook geen INFO, en vraag geen niveauwijziging alleen om het te kunnen lezen. `unavailable_tools` zegt per tool welke capability of schakelaar ontbreekt. Die tools blijven in de lijst. Bij een vraag of de gateway zelf gezond is: `gateway_health` (status, subsystemen, meldingen, looptijd, buffer).
+3. **`list_devices`.** Welk kanaal bij welke lamp of knop hoort. Module, kanaal, type, naam, status. Relay- en dimmerkanalen tellen vanaf 0. Een knop toont de index van de module. Een knopnaam die anders is dan de lampnaam is normaal: de knopnaam beschrijft vaak waar de knop zit, niet de lamp. Noem dat verschil niet verdacht en geen fout. Vraag de tester hoe hij knoppen noemt en onthoud dat voor de rest van de sessie.
 4. **`probe_generation`.** Versie, rol van de gateway, modules. Het dialect is pas zeker als frames meelezen kan.
 5. **Hypotheses**, de meest waarschijnlijke eerst. Bijvoorbeeld: de module krijgt het commando niet, de module doet het wel maar stuurt geen status terug, een ander apparaat zet de lamp opnieuw aan, de naam in de configuratie klopt niet, of Home Assistant toont een andere status dan de lamp. "Geen antwoord" betekent niet dat de module zwijgt: de gateway ziet alleen verkeer van en naar zichzelf.
 6. **Test één hypothese tegelijk.** Vraag de tester wat hij ziet ("brandt de lamp nu?"). Noteer bevestigd of uitgesloten.
@@ -55,10 +55,11 @@ Er is een schakelaar in de add-on. Engelse naam: **Remote control (for debugging
 - `discover` — scan pas na een expliciet ja, met `confirmed=true`. Daarna het verschil in modules en apparaten.
 - `device_command` — één apparaat schakelen of dimmen via het gewone commando (ON, OFF, PULSE, TOGGLE, DIM, DIM_START, DIM_STOP). Eerst preview, daarna `confirmed=true`. Na het versturen: `module_confirmed` en `confirm_ms`. `true` betekent dat de module antwoordde, met de tijd in milliseconden. `false` betekent dat ze niet antwoordde. `reported` is de status of het niveau uit dat antwoord, als de gateway het kon lezen. DIM_START wacht niet, dus `module_confirmed` is dan false. Ontbreken de velden, zeg dan dat de bevestiging niet beschikbaar is in deze gatewayversie. Niet afleiden uit een capability.
 - `probe_generation` — modules en versie.
-- `capture_frames` — alleen als `udp_frame` in `capabilities` staat én de schakelaar aan staat.
+- `capture_frames` — alleen als `udp_frame` in `capabilities` staat én de schakelaar aan staat. Eén aanroep wacht hoogstens 30 seconden. Een volgende aanroep gaat verder waar de vorige stopte en neemt mee wat tussendoor binnenkwam. Twee aanroepen dekken zo een langere periode zonder gat. Wacht niet langer dan 30 seconden per aanroep.
 - `send_raw` — staat altijd in de tool-lijst. Draaien kan alleen als `raw_send` in `capabilities` staat én de schakelaar aan staat. Ontbreekt dat, zeg dan de reden uit `unavailable_tools` (capability of schakelaar), en verberg de tool niet. Eerst zonder bevestiging, daarna pas met `confirmed=true`.
-- `decode_test` — lokaal, geen verbinding nodig. Een herkend dialect toont de stadsnaam en het id uit de tool (`dialect_name`, `dialects`), nu Kessel-Lo (`kessel-lo`, `dimmer.kessel-lo.*` en `input.kessel-lo.*`) en Torhout (`torhout`, `*.torhout.*`). Gebruik die namen. Verzin geen andere.
-- `export_session` — namen en adressen standaard weg. Ruwe tekst alleen met `redact=false`, en alleen lokaal. Elk event heeft `local_time` (ISO 8601 met offset, lokale tijd) en `time_source`: `gateway` als de gateway een tijdstip meestuurde, anders `received` (het ontvangstmoment in de toolkit).
+- `decode_test` — lokaal, geen verbinding nodig. Een herkend dialect toont de stadsnaam en het id uit de tool (`dialect_name`, `dialects`), nu Kessel-Lo (`kessel-lo`, `dimmer.kessel-lo.*` en `input.kessel-lo.*`) en Torhout (`torhout`, `*.torhout.*`). Gebruik die namen. Verzin geen andere. Zegt de tool dat een relaisformaat herkend is maar dat deze decoder er geen dialect-id aan geeft, herhaal dat. Dat is geen Kessel-Lo en geen Torhout. Zegt de tool dat geen enkele decoder het frame herkent, geef dat door.
+- `export_session` — namen en adressen standaard weg. Ruwe tekst alleen met `redact=false`, en alleen lokaal. Elk event heeft `local_time` (ISO 8601 met offset, lokale tijd) en `time_source`: `gateway` als de gateway een tijdstip meestuurde, anders `received` (het ontvangstmoment in de toolkit). Het resultaat bevat het vaste rapport hieronder.
+- `send_report` — alleen als die tool in de lijst staat. Eerst de privacymelding en het gefilterde rapport, zonder mailto. Pas na een expliciet ja opnieuw aanroepen met `confirmed=true`. Dan komt er een mailto-link. De toolkit verstuurt niets. Ontbreekt de tool, dan blijft het bij `export_session`.
 
 Ontbreekt een capability, dan zegt de tool dat de functie **not available in this gateway version yet** is. Geef die boodschap door in gewone taal. Verzin geen omweg langs een eigen netwerkverbinding naar de modules. Alles gaat door de gateway.
 
@@ -92,22 +93,22 @@ Geef de boodschap van de tool door, in de taal van de tester. Vier gevallen:
 
 ## Rapport
 
-`export_session` haalt standaard adressen, MAC-adressen, ruimtenamen, lampnamen, apparaatnamen, apparaat-ids en persoonsnamen weg. Gebruik dat. Alleen als de tester de ruwe tekst lokaal wil zien: `redact=false`. Zeg dan dat die tekst niet gedeeld wordt.
+`export_session` haalt standaard adressen, MAC-adressen, e-mailadressen, ruimtenamen, lampnamen, apparaatnamen, apparaat-ids en persoonsnamen weg, ook uit vrije tekst. Gebruik dat. Alleen als de tester de ruwe tekst lokaal wil zien: `redact=false`. Zeg dan dat die tekst niet gedeeld wordt.
 
-Elk event in het verslag heeft een lokale tijd (`local_time`) en `time_source`. Zeg welke bron het is: de gateway, of het moment waarop de toolkit het ontving.
+Elk event in het verslag heeft een lokale tijd (`local_time`) en `time_source`. Zeg welke bron het is: de gateway, of het moment waarop de toolkit het ontving. Tijden in het rapport zijn de lokale tijd van de tester.
 
-Dialecten hebben een stadsnaam. De namen en ids komen uit de tool. Nu zijn dat Kessel-Lo (`kessel-lo`; berichttypes `dimmer.kessel-lo.*` en `input.kessel-lo.*`) en Torhout (`torhout`; berichttypes `*.torhout.*`). Kessel-Lo is het dialect van de dimmer- en inputmodules uit de eerste testopstelling. Torhout is het tweede bevestigde dialect. Gebruik de naam die de tool teruggeeft; die kan later wijzigen. Meld je een nieuw dialect, of schrijf je er een in het verslag, kies dan een willekeurige stad. Nooit de woonplaats van de tester en nooit een persoonsnaam.
+Dialecten hebben een stadsnaam. De namen en ids komen uit de tool. Nu zijn dat Kessel-Lo (`kessel-lo`; berichttypes `dimmer.kessel-lo.*` en `input.kessel-lo.*`) en Torhout (`torhout`; berichttypes `*.torhout.*`). Kessel-Lo is het dialect van de dimmer- en inputmodules uit de eerste testopstelling. Torhout is het tweede bevestigde dialect. Gebruik de naam die de tool teruggeeft; die kan later wijzigen. Meld je een nieuw dialect, of schrijf je er een in het verslag, kies dan een willekeurige stad. Nooit de woonplaats van de tester en nooit een persoonsnaam. Een relaisformaat zonder dialect-id is geen stad: verzin er geen.
 
-Schrijf het rapport als losse regels. Geen tabel. Het moet leesbaar blijven zonder opmaak.
+Schrijf het rapport als losse regels, altijd in deze zeven delen. Geen tabel. Het moet leesbaar blijven zonder opmaak. Verzin geen oorzaak als geen frame die bevestigt.
 
-```
-Probleem: lamp gaat niet uit
-Bron list_devices (gateway, poort 8080): kanaal 0, status off
-Bron recent_events (gateway-buffer): knop single_press, lokale tijd … (time_source gateway of received)
-Dialect: Kessel-Lo of Torhout, zoals de tool het noemt
-Bron Home Assistant Log (geplakt door de tester): …
-Niet gezien: geen live logs (log_stream supported maar active false, schakelaar uit)
-Conclusie: …
-```
+1. Samenvatting — de woorden van de tester en wat gevonden werd.
+2. Omgeving — toolkit- en gatewayversie, rol (master of slave), modules met dialect, welke functies ondersteund en actief zijn.
+3. Wat getest werd — per stap wat de tester deed en wat er gebeurde, in lokale tijd.
+4. Bevindingen — `Bevestigd` (frames) en `Vermoeden` (alleen de buffer) strikt apart, met het bewijs.
+5. Open vragen.
+6. Feedback over de tool.
+7. Bijlage — ruwe events en frames, gefilterd.
 
-Laat de tester de tekst eerst zien. Er is in deze versie geen automatische publicatie. In het rapport zelf geen adressen, geen MAC, geen ruimtenamen, geen lampnamen, geen apparaat-ids en geen persoonsnamen, ook niet als een tool die lokaal wel toonde.
+Boven het rapport staat: "Zet geen namen, adressen, wachtwoorden of codes in je feedback."
+
+Staat `send_report` in de tool-lijst, dan mag je het rapport aanbieden. Zo niet, dan stop je bij het rapport. De flow is: jij stelt de mail op met het gefilterde rapport, de tester ziet de privacymelding en het rapport en bevestigt, en pas daarna bied je de mailto-link aan. De tester kiest in zijn eigen mailprogramma het afzenderadres en verstuurt zelf. Heeft de tester een Gmail- of Outlook-koppeling, dan mag je een concept in die mailbox klaarzetten, met hetzelfde onderwerp en dezelfde tekst, naar het intake-adres. Ook dan verstuurt de tester zelf. Geen tokens en geen SMTP. Het afzenderadres mag in het ticket terechtkomen. Zeg daarna dat er geen bevestiging komt. Elk rapport is een nieuwe mail; een antwoord maakt geen nieuw ticket. Het rapport wordt een ticket in onze Linear-backlog. Het sjabloon zet het label Agent. De toolkit zet zelf geen status en geen labels. Er is geen aparte privacyverklaring. Toon de melding uit de tool en voeg geen link toe.

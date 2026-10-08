@@ -1026,6 +1026,10 @@ async def test_debug_log_level_reports_when_it_reverts() -> None:
     assert 800 <= level["reverts_in_seconds"] <= 900
     assert again.data["log_level"]["effective_level"] == "debug"
     assert again.data["log_level"]["reverts_at"] == level["reverts_at"]
+    assert result.message.count("Logniveau is nu") == 1
+    assert "niet gemeld" not in result.message
+    assert "Logniveau is nu" in again.message
+    assert again.message.count("Logniveau is nu") == 1
 
 
 def test_explicit_active_flag_from_the_gateway_wins() -> None:

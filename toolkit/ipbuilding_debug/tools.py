@@ -19,6 +19,7 @@ from ipbuilding_debug.errors import (
     KIND_UNREACHABLE,
     MSG_GATEWAY_TOO_OLD,
     MSG_LOGS_USE_ADDON_TAB,
+    MSG_LOG_LEVEL_NOT_REPORTED,
     MSG_LOG_LEVEL_RATE_LIMITED,
     MSG_NOT_IN_THIS_GATEWAY_VERSION,
     MSG_REMOTE_DEBUGGING_OFF,
@@ -31,11 +32,25 @@ from ipbuilding_debug.errors import (
     msg_mdns_loopback,
     msg_not_available,
 )
+from ipbuilding_debug.installation_id import installation_id
 from ipbuilding_debug.redact import (
     collect_tokens,
     redact_payload,
     redact_text,
     session_hosts,
+)
+from ipbuilding_debug.report import (
+    disabled_message,
+    email_body,
+    intake_address,
+    mailto_link,
+    preview_message,
+    render_report,
+    report_send_enabled,
+    section_map,
+    sent_message,
+    subject_line,
+    unavailable_message,
 )
 from ipbuilding_debug.session import GatewaySession
 
@@ -352,6 +367,16 @@ async def connection_status(
                 log_note = "Logniveau gevraagd."
         else:
             log_note = gated.message
+    if (
+        not log_note
+        and "log_stream" in caps
+        and message not in (MSG_REMOTE_DEBUGGING_OFF, MSG_LOG_LEVEL_RATE_LIMITED)
+    ):
+        if session.log_level_status().get("reported") and session.log_level_info:
+            level_sentence = msg_log_level_applied(session.log_level_info)
+        else:
+            level_sentence = MSG_LOG_LEVEL_NOT_REPORTED
+        message = f"{message} {level_sentence}"
     blocked = unavailable_tools(caps, effective)
     note = _unavailable_note(blocked)
     if note and message not in (MSG_REMOTE_DEBUGGING_OFF, MSG_LOG_LEVEL_RATE_LIMITED):
@@ -791,8 +816,12 @@ async def capture_frames(
     seconds = clamp_timeout(seconds if seconds > 0 else 0.1)
     limit = max(1, min(int(limit), 200))
     direction = (direction or "both").lower()
-    # Cursor is taken before subscribe, so a frame that is the reply to that
-    # subscribe is inside the window. The wait below is only the upper bound.
+    # The first capture takes its cursor before subscribe, so a frame that is
+    # the reply to that subscribe is inside the window and frames from before
+    # the call stay outside it. A later capture continues from the seq stored
+    # at the end of the previous one, so the pause between calls is included
+    # and frames already returned are not repeated. The wait stays capped.
+    continued = session.frame_cursor is not None
     since = await session.ensure_udp_subscription(timeout=3)
     if since is None:
         return ToolResult(
@@ -800,6 +829,8 @@ async def capture_frames(
             "Probeer het zo meteen opnieuw.",
             {"ok": False, "kind": "connecting", "frames": []},
         )
+    if session.frame_cursor is not None:
+        since = session.frame_cursor
     frames = await _collect_frames(
         session,
         since,
@@ -809,6 +840,7 @@ async def capture_frames(
         pattern=pattern,
         limit=limit,
     )
+    session.frame_cursor = session.buffer.latest_seq
     if not frames:
         message = (
             "Er kwamen geen passende frames binnen in deze periode. "
@@ -817,6 +849,12 @@ async def capture_frames(
         )
     else:
         message = f"{len(frames)} frame(s) ontvangen."
+    if continued:
+        message = (
+            "Deze opname gaat verder waar de vorige stopte, "
+            "inclusief wat tussendoor binnenkwam. "
+            + message
+        )
     return ToolResult(
         message,
         {
@@ -825,6 +863,7 @@ async def capture_frames(
             "frames": frames,
             "seconds": seconds,
             "direction": direction,
+            "continued": continued,
         },
     )
 
@@ -949,6 +988,11 @@ def decode_test(payload: str) -> ToolResult:
         ]
         if cities:
             message = f"{message} Dialect: {', '.join(cities)}."
+        elif any(item.get("decoder") == "relay" for item in decoded["matches"]):
+            message += (
+                " Het relaisformaat is herkend, maar deze decoder geeft er geen dialect-id aan."
+                " Dat is geen Kessel-Lo en geen Torhout."
+            )
     else:
         message = "Geen enkele decoder herkent dit frame."
     return ToolResult(message, {"ok": True, "kind": "decode", **decoded})
@@ -1021,11 +1065,16 @@ async def export_session(
     body: dict[str, Any] = {
         "gateway": {
             "version": status.get("version"),
+            "hub_role": status.get("hub_role"),
             "remote_debugging": status.get("remote_debugging"),
             "capabilities": _capabilities(status),
             "connection": session.state,
             "address": session.host,
         },
+        # Random local id. The gateway instance id is a different value and
+        # is not copied into the report.
+        "installatie_id": installation_id(),
+        "modules": _export_modules(session),
         "notes": [_stamp_note(note) for note in session.notes],
         "gaps": [event for event in exported if event.get("type") == "gap"],
         "events": exported[-500:],
@@ -1038,6 +1087,7 @@ async def export_session(
     else:
         message = RAW_LOCAL_WARNING
         sharing = RAW_LOCAL_WARNING
+    report, frontmatter = render_report(body)
     return ToolResult(
         message,
         {
@@ -1045,7 +1095,63 @@ async def export_session(
             "kind": "export",
             "redacted": redact,
             "sharing": sharing,
+            "report": report,
+            "frontmatter": frontmatter,
             **body,
+        },
+    )
+
+
+async def send_report(
+    session: GatewaySession,
+    *,
+    confirmed: bool = False,
+    korte_fout: str = "",
+) -> ToolResult:
+    """Show the filtered report, then a mailto link after an explicit yes.
+
+    Nothing is sent from this process. Without an intake address the option
+    is unavailable. With the feature flag off, only the local report remains.
+    """
+    if not report_send_enabled():
+        return ToolResult(
+            disabled_message(),
+            {"ok": False, "kind": "report_disabled", "sent": False, "mailto": None},
+        )
+    address = intake_address()
+    if not address:
+        return ToolResult(
+            unavailable_message(),
+            {"ok": False, "kind": "report_unavailable", "sent": False, "mailto": None},
+        )
+    exported = await export_session(session, redact=True)
+    report = str(exported.data.get("report") or "")
+    if not confirmed:
+        return ToolResult(
+            preview_message(report),
+            {
+                "ok": True,
+                "kind": "report_preview",
+                "confirmed": False,
+                "sent": False,
+                "mailto": None,
+                "report": report,
+            },
+        )
+    frontmatter = str(exported.data.get("frontmatter") or "")
+    link = mailto_link(
+        address,
+        subject_line(str(exported.data.get("installatie_id") or ""), korte_fout),
+        email_body(section_map(exported.data), frontmatter),
+    )
+    return ToolResult(
+        sent_message(link),
+        {
+            "ok": True,
+            "kind": "report_mailto",
+            "confirmed": True,
+            "sent": False,
+            "mailto": link,
         },
     )
 
@@ -1403,6 +1509,22 @@ def _count_by(items: list[dict[str, Any]], key: str) -> dict[str, int]:
         name = str(item.get(key) or "onbekend")
         counts[name] = counts.get(name, 0) + 1
     return counts
+
+
+def _export_modules(session: GatewaySession) -> list[dict[str, Any]]:
+    """Type and model for the report. The name is included so redaction can drop it."""
+    modules = []
+    for module in session.modules.values():
+        if not isinstance(module, dict):
+            continue
+        modules.append(
+            {
+                "type": module.get("type"),
+                "model": module.get("model"),
+                "name": module.get("name"),
+            }
+        )
+    return modules
 
 
 def _module_summary(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
