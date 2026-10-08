@@ -72,7 +72,8 @@ class FakeGateway:
             "input_mode_label": "Slave",
         }
         if not self.omit_toolkit_fields:
-            body["remote_debugging"] = self.remote_debugging
+            if not getattr(self, "omit_remote_debugging", False):
+                body["remote_debugging"] = self.remote_debugging
             body["capabilities"] = list(self.capabilities)
         return body
 
@@ -193,15 +194,24 @@ class FakeGateway:
                     if data.get("type") == "subscribe_udp_frames":
                         reply = self.frame_on_subscribe
                     elif data.get("type") == "subscribe_logs":
-                        await ws.send_json(
-                            {
-                                "type": "logs_subscribed",
-                                "min_level": data.get("min_level") or "info",
-                                "buffered": len(self.log_lines),
-                            }
-                        )
-                        for line in self.log_lines:
-                            await ws.send_json(line)
+                        if not self.remote_debugging:
+                            await ws.send_json(
+                                {
+                                    "type": "error",
+                                    "error": "remote_debugging_disabled",
+                                    "message": "uit",
+                                }
+                            )
+                        else:
+                            await ws.send_json(
+                                {
+                                    "type": "logs_subscribed",
+                                    "min_level": data.get("min_level") or "info",
+                                    "buffered": len(self.log_lines),
+                                }
+                            )
+                            for line in self.log_lines:
+                                await ws.send_json(line)
                         reply = None
                     elif data.get("type") == "set_log_level":
                         reply = self.log_level_reply

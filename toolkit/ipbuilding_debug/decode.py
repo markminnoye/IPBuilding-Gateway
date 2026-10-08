@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from ipbuilding_debug.dialect import present_decode
+
 
 def ensure_import_paths() -> None:
     """Make ``gateway`` importable from the repo or from a packed bundle."""
@@ -58,10 +60,12 @@ def decode_frame(data: bytes) -> dict[str, Any]:
         ascii_text = data.decode("ascii")
     except UnicodeDecodeError:
         ascii_text = None
-    return {
-        "hex": data.hex(),
-        "ascii": ascii_text,
-        "length": len(data),
-        "matched": bool(matches),
-        "matches": matches,
-    }
+    return present_decode(
+        {
+            "hex": data.hex(),
+            "ascii": ascii_text,
+            "length": len(data),
+            "matched": bool(matches),
+            "matches": matches,
+        }
+    )

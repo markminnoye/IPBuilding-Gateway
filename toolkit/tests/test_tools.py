@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import re
 import socket
+from datetime import datetime, timezone
 
 import pytest
 
+from ipbuilding_debug.dialect import legacy_segments
 from ipbuilding_debug.errors import (
     MSG_GATEWAY_TOO_OLD,
     MSG_LOG_LEVEL_RATE_LIMITED,
@@ -30,6 +33,7 @@ from ipbuilding_debug.tools import (
     recent_events,
     send_raw,
     unavailable_tools,
+    _feature_rows,
 )
 from fake_gateway import FakeGateway
 
@@ -703,3 +707,145 @@ async def test_debug_log_level_reports_when_it_reverts() -> None:
     assert 800 <= level["reverts_in_seconds"] <= 900
     assert again.data["log_level"]["effective_level"] == "debug"
     assert again.data["log_level"]["reverts_at"] == level["reverts_at"]
+
+
+def test_explicit_active_flag_from_the_gateway_wins() -> None:
+    rows = {
+        row["name"]: row
+        for row in _feature_rows(
+            {
+                "remote_debugging": True,
+                "capabilities": [
+                    {"name": "log_stream", "active": False, "reason": "even geduld"},
+                    "udp_frame",
+                ],
+            },
+            remote=True,
+            probed=None,
+            reachable=True,
+        )
+    }
+    assert rows["log_stream"]["supported"] is True
+    assert rows["log_stream"]["active"] is False
+    assert rows["log_stream"]["reason"] == "even geduld"
+    assert rows["udp_frame"]["active"] is True
+    assert rows["raw_send"]["supported"] is False
+    assert rows["raw_send"]["active"] is False
+
+
+@pytest.mark.asyncio
+async def test_switch_off_keeps_button_and_state_and_drops_logs() -> None:
+    gateway = FakeGateway(remote_debugging=False, capabilities=["log_stream"])
+    gateway.log_lines = [
+        {
+            "type": "log",
+            "ts": "2026-06-01T00:00:00Z",
+            "level": "info",
+            "logger": "gw",
+            "message": "verborgen-regel",
+        }
+    ]
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        await session.ensure_started()
+        assert await session.wait_until_connected(3)
+        await gateway.push({"type": "state_changed", "id": "channel-a", "state": "on"})
+        await gateway.push(
+            {"type": "button_event", "id": "abcd1234", "action": "single_press"}
+        )
+        await session.buffer.wait_until(
+            lambda event: event.get("type") == "button_event", 2, 0
+        )
+        events = await recent_events(session)
+        logs = await read_logs(session, seconds=0.2, limit=5)
+        status = await connection_status(session)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    kinds = {event.get("type") for event in events.data["events"]}
+    assert kinds == {"state_changed", "button_event"}
+    assert logs.message == MSG_REMOTE_DEBUGGING_OFF
+    assert "verborgen-regel" not in logs.render()
+    rows = {row["name"]: row for row in status.data["capability_status"]}
+    assert rows["log_stream"]["supported"] is True
+    assert rows["log_stream"]["active"] is False
+    assert "Remote debugging and control" in rows["log_stream"]["reason"]
+    assert "Knoppen" in rows["log_stream"]["reason"]
+    assert rows["raw_send"]["supported"] is False
+    assert rows["udp_frame"]["active"] is False
+    assert not any(item.get("type") == "subscribe_logs" for item in gateway.received)
+
+
+@pytest.mark.asyncio
+async def test_switch_is_probed_when_status_omits_it() -> None:
+    gateway = FakeGateway(
+        remote_debugging=False,
+        capabilities=["log_stream", "udp_frame", "raw_send"],
+    )
+    gateway.omit_remote_debugging = True
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await connection_status(session)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert result.data["connected"] is True
+    assert result.data["remote_debugging"] is None
+    assert result.data["switch_active"] is False
+    assert result.message == MSG_REMOTE_DEBUGGING_OFF
+    rows = {row["name"]: row for row in result.data["capability_status"]}
+    assert rows["log_stream"]["supported"] is True
+    assert rows["log_stream"]["active"] is False
+    assert rows["raw_send"]["active"] is False
+    assert rows["udp_frame"]["active"] is False
+    assert "Remote debugging and control" in rows["raw_send"]["reason"]
+    assert any(item.get("type") == "subscribe_logs" for item in gateway.received)
+
+
+@pytest.mark.asyncio
+async def test_export_stamps_local_time_and_hides_legacy_dialect_ids() -> None:
+    from ipbuilding_debug import dialect as dialect_mod
+
+    incoming = next(
+        f"input.{segment}.button_event"
+        for segment, dialect in dialect_mod._LEGACY.items()
+        if "input" in dialect.families
+    )
+    session = GatewaySession("localhost:9", backoff_start=30, backoff_max=30)
+    await session.buffer.append(
+        {
+            "type": "log",
+            "ts": "2026-01-02T03:04:05Z",
+            "level": "info",
+            "logger": "gw",
+            "message": "hallo",
+            "dialect_id": incoming,
+        }
+    )
+    await session.buffer.append(
+        {"type": "state_changed", "id": "channel-a", "state": "on"}
+    )
+    result = await export_session(session, note="lamp bleef aan")
+    rendered = result.render()
+    logged = next(event for event in result.data["events"] if event["type"] == "log")
+    changed = next(
+        event for event in result.data["events"] if event["type"] == "state_changed"
+    )
+    expected = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc).astimezone().isoformat(
+        timespec="seconds"
+    )
+    assert logged["time_source"] == "gateway"
+    assert logged["local_time"] == expected
+    assert logged["dialect_id"] == "input.kessel-lo.button_event"
+    assert logged["dialect_name"] == "Kessel-Lo"
+    assert changed["time_source"] == "received"
+    assert re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}",
+        changed["local_time"],
+    )
+    assert result.data["notes"][0]["time_source"] == "received"
+    assert "local_time" in result.data["notes"][0]
+    for segment in legacy_segments():
+        assert f".{segment}." not in rendered

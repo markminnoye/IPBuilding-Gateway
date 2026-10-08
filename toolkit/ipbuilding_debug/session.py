@@ -134,6 +134,8 @@ class GatewaySession:
         self.tried: list[dict[str, Any]] = []
         self.mdns_loopback: list[str] = []
         self.log_level_info: dict[str, Any] | None = None
+        self._switch_probe_value: bool | None = None
+        self._switch_probe_done = False
         self.last_error = ""
         self._resolved = False
         self._resolve_lock = asyncio.Lock()
@@ -477,6 +479,29 @@ class GatewaySession:
             "reverts_in_seconds": remaining,
         }
 
+    async def probe_remote_debugging(self, timeout: float = 2) -> bool | None:
+        """Whether live debug calls are accepted.
+
+        ``False`` when the gateway answers ``remote_debugging_disabled``.
+        ``True`` when a log subscription is accepted. ``None`` when there is
+        no answer. The result is remembered for this session.
+        """
+        if self._switch_probe_done:
+            return self._switch_probe_value
+        await self.ensure_started()
+        if not await self._wait_until_socket(timeout):
+            return None
+        since = self.buffer.latest_seq
+        if not await self._send({"type": "subscribe_logs", "min_level": "info"}):
+            return None
+        found = await self.buffer.wait_until(_switch_probe_reply, timeout, since)
+        if found is None:
+            return None
+        accepted = found.event.get("type") == "logs_subscribed"
+        self._switch_probe_done = True
+        self._switch_probe_value = accepted
+        return accepted
+
     async def ensure_log_subscription(self, min_level: str, timeout: float = 3) -> int | None:
         """Send ``subscribe_logs`` and return the buffer cursor just before it."""
         cursor = self.buffer.latest_seq
@@ -671,7 +696,10 @@ class GatewaySession:
         caps = status.get("capabilities")
         if not isinstance(caps, list):
             return
-        if "log_stream" in caps:
+        # Log lines stop when the switch is off. Button and state events do not
+        # use this subscription; they keep arriving on the normal stream.
+        remote = status.get("remote_debugging")
+        if "log_stream" in caps and remote is not False:
             await self._send(
                 {"type": "subscribe_logs", "min_level": self.log_level.lower()}
             )
@@ -701,6 +729,15 @@ _LOG_LEVEL_ERRORS = frozenset(
         "invalid_ttl",
     }
 )
+
+
+def _switch_probe_reply(event: dict[str, Any]) -> bool:
+    if event.get("type") == "logs_subscribed":
+        return True
+    return (
+        event.get("type") == "error"
+        and event.get("error") == "remote_debugging_disabled"
+    )
 
 
 def _log_level_reply(event: dict[str, Any]) -> bool:

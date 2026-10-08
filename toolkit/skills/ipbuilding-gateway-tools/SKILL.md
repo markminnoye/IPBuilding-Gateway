@@ -18,11 +18,12 @@ Praat in de taal van de tester. Standaard is dat **Nederlands**. Geen jargon: ze
 Er is een schakelaar in de add-on. Engelse naam: **Remote debugging and control**. Nederlandse naam: **Debuggen en bedienen op afstand**.
 
 - **Waar:** Home Assistant → Instellingen → Add-ons → IPBuilding Gateway → Configuratie, onder **Debug**.
-- **Wat hij doet:** hij zet live logs, veldbusframes en het sturen van testpakketten open. Zolang hij aan staat, toont Home Assistant een blijvende melding. Hij blijft aan tot de tester hem zelf uitzet. Er is geen tijdslimiet. Wijzigen herstart de add-on.
+- **Wat hij doet:** hij zet live logs, veldbusframes en het sturen van testpakketten open. Knoppen en statuswijzigingen komen ook binnen als de schakelaar uit staat. Alleen de logregels vallen dan weg. Zolang hij aan staat, toont Home Assistant een blijvende melding. Hij blijft aan tot de tester hem zelf uitzet. Er is geen tijdslimiet. Wijzigen herstart de add-on.
 - **Wanneer je hem voorstelt, uit jezelf, niet pas na een fout:**
-  1. **Aan het begin** van elke sessie: roep eerst `connection_status` aan. Staat de schakelaar uit (`remote_debugging` is false), leg dan in gewone woorden uit waarom hij aan moet en vraag om hem aan te zetten. Wacht tot de add-on opnieuw is opgestart en controleer daarna opnieuw.
+  1. **Aan het begin** van elke sessie: roep eerst `connection_status` aan. Voor een knop of een lampstatus hoef je de schakelaar niet aan te zetten: `recent_events` werkt dan ook. Vraag hem aan te zetten als je live logs, veldbusframes of een testpakket nodig hebt (`switch_active` is false, of `remote_debugging` is false). Wacht tot de add-on opnieuw is opgestart en controleer daarna opnieuw.
   2. **Aan het eind** van de sessie: stel voor de schakelaar weer uit te zetten. De melding in Home Assistant verdwijnt nadat de add-on opnieuw is opgestart. Laat hem niet aan staan.
-- Staat de schakelaar aan, maar ontbreekt een functie in `capabilities`, zeg dan eerlijk dat deze gateway-versie die functie nog niet heeft. De schakelaar aanzetten voegt die functie niet toe. In dat geval hoeft de schakelaar niet aan voor die functie.
+- Kijk per functie in `capability_status`, niet alleen in de lijst `capabilities`. `supported` betekent dat deze gateway-versie het kan. `active` betekent dat het nu werkt. Bij `active: false` geef je `reason` door, in gewone taal. Een naam in `capabilities` terwijl de schakelaar uit staat is dus niet beschikbaar.
+- Staat de schakelaar aan, maar is `supported` false, zeg dan eerlijk dat deze gateway-versie die functie nog niet heeft. De schakelaar aanzetten voegt die functie niet toe. In dat geval hoeft de schakelaar niet aan voor die functie.
 - Ontbreken `log_stream`, `udp_frame` én `raw_send`, dan is de gateway te oud voor live debugging. Geef de tekst van `connection_status` door: installeer de testversie via het develop-kanaal (Add-onwinkel, drie puntjes, Repositories, `https://github.com/markminnoye/IPBuilding-Gateway#develop`). De ontwikkelversie heeft `-dev.` in het versienummer. Zeg niet dat de verbinding mislukt is. `connected` is true zolang de gateway antwoordt. `missing_capabilities` noemt wat ontbreekt.
 
 ## Waar je kijkt
@@ -36,7 +37,7 @@ Er is een schakelaar in de add-on. Engelse naam: **Remote debugging and control*
 ## Verloop
 
 1. **Vraag het probleem uit.** Wat ziet de tester, sinds wanneer, welke ruimte, welke lamp of knop, altijd of soms.
-2. **`connection_status`.** Eerst dit, vóór iets anders. Handel de schakelaar af zoals hierboven. Noem het adres en hoe het gevonden is. Staat er een `log_level` met `reported: true`, noem dan het huidige niveau en wanneer het terugvalt (`reverts_at` of `reverts_in_seconds`). De gateway geeft daarvoor een `ttl` in seconden; het tijdstip is daaruit berekend. `unavailable_tools` zegt per tool welke capability of schakelaar ontbreekt. Die tools blijven in de lijst. Bij een vraag of de gateway zelf gezond is: `gateway_health` (status, subsystemen, meldingen, looptijd, buffer).
+2. **`connection_status`.** Eerst dit, vóór iets anders. Handel de schakelaar af zoals hierboven. Noem het adres en hoe het gevonden is. Lees `capability_status`: per functie `supported` en `active`, en bij `active: false` de reden. Staat er een `log_level` met `reported: true`, noem dan het huidige niveau en wanneer het terugvalt (`reverts_at` of `reverts_in_seconds`). De gateway geeft daarvoor een `ttl` in seconden; het tijdstip is daaruit berekend. `unavailable_tools` zegt per tool welke capability of schakelaar ontbreekt. Die tools blijven in de lijst. Bij een vraag of de gateway zelf gezond is: `gateway_health` (status, subsystemen, meldingen, looptijd, buffer).
 3. **`list_devices`.** Welk kanaal bij welke lamp of knop hoort. Module, kanaal, type, naam, status. Relay- en dimmerkanalen tellen vanaf 0. Een knop toont de index van de module.
 4. **`probe_generation`.** Versie, rol van de gateway, modules. Het dialect is pas zeker als frames meelezen kan.
 5. **Hypotheses**, de meest waarschijnlijke eerst. Bijvoorbeeld: de module krijgt het commando niet, de module doet het wel maar stuurt geen status terug, een ander apparaat zet de lamp opnieuw aan, de naam in de configuratie klopt niet, of Home Assistant toont een andere status dan de lamp. "Geen antwoord" betekent niet dat de module zwijgt: de gateway ziet alleen verkeer van en naar zichzelf.
@@ -46,7 +47,7 @@ Er is een schakelaar in de add-on. Engelse naam: **Remote debugging and control*
 
 ## Tools
 
-- `connection_status` — verbinding, adres en bron, schakelaar, `missing_capabilities`, `unavailable_tools`, logniveau en terugvalmoment, gezondheid, buffer. Optioneel `log_level` (debug, info, warning, error) als `log_stream` er is. Zeg daarna concreet tot wanneer dat niveau geldt.
+- `connection_status` — verbinding, adres en bron, schakelaar, `capability_status` (`supported` tegenover `active`), `missing_capabilities`, `unavailable_tools`, logniveau en terugvalmoment, gezondheid, buffer. Optioneel `log_level` (debug, info, warning, error) als `log_stream` actief is. Zeg daarna concreet tot wanneer dat niveau geldt.
 - `gateway_health` — status, subsystemen, meldingen, looptijd, buffer uit `/api/v1/status`.
 - `list_devices` — module, kanaal, type, naam, status. Kanalen van relais en dimmers vanaf 0. `last_seen` alleen als de gateway het meestuurt.
 - `recent_events` — statuswijzigingen en knoppen (`press`, `single_press`, `release`) die al in de buffer staan. Geen `udp_frame` nodig. Gebruik dit bij een knopdruk of een statuswijziging.
@@ -56,14 +57,14 @@ Er is een schakelaar in de add-on. Engelse naam: **Remote debugging and control*
 - `probe_generation` — modules en versie.
 - `capture_frames` — alleen als `udp_frame` in `capabilities` staat én de schakelaar aan staat.
 - `send_raw` — staat altijd in de tool-lijst. Draaien kan alleen als `raw_send` in `capabilities` staat én de schakelaar aan staat. Ontbreekt dat, zeg dan de reden uit `unavailable_tools` (capability of schakelaar), en verberg de tool niet. Eerst zonder bevestiging, daarna pas met `confirmed=true`.
-- `decode_test` — lokaal, geen verbinding nodig.
-- `export_session` — namen en adressen standaard weg. Ruwe tekst alleen met `redact=false`, en alleen lokaal.
+- `decode_test` — lokaal, geen verbinding nodig. Een herkend dialect toont de stadsnaam en het id uit de tool (`dialect_name`, `dialects`), nu Kessel-Lo (`kessel-lo`, `dimmer.kessel-lo.*` en `input.kessel-lo.*`) en Torhout (`torhout`, `*.torhout.*`). Gebruik die namen. Verzin geen andere.
+- `export_session` — namen en adressen standaard weg. Ruwe tekst alleen met `redact=false`, en alleen lokaal. Elk event heeft `local_time` (ISO 8601 met offset, lokale tijd) en `time_source`: `gateway` als de gateway een tijdstip meestuurde, anders `received` (het ontvangstmoment in de toolkit).
 
 Ontbreekt een capability, dan zegt de tool dat de functie **not available in this gateway version yet** is. Geef die boodschap door in gewone taal. Verzin geen omweg langs een eigen netwerkverbinding naar de modules. Alles gaat door de gateway.
 
 ## Knoppen, logs en een lamp bedienen
 
-Vraagt de tester wat er gebeurde bij een knop of een statuswijziging, lees dan `recent_events`. Dat zijn de gebeurtenissen die de gateway al in de buffer zette. Zeg dat de bron de buffer van de gateway is.
+Vraagt de tester wat er gebeurde bij een knop of een statuswijziging, lees dan `recent_events`. Dat zijn de gebeurtenissen die de gateway al in de buffer zette, ook als de schakelaar uit staat. Zeg dat de bron de buffer van de gateway is. Logregels komen dan niet binnen; daarvoor moet de schakelaar aan staan.
 
 Vraagt de tester naar logregels, roep `read_logs` aan. Zonder `log_stream` kun je de log van de add-on niet meelezen. Geef de melding van de tool door en stuur de tester naar het tabblad **Log** van de add-on IPBuilding Gateway in Home Assistant. Vraag de relevante regels te plakken. Zeg dat die regels van Home Assistant komen, niet van een tool.
 
@@ -93,14 +94,19 @@ Geef de boodschap van de tool door, in de taal van de tester. Vier gevallen:
 
 `export_session` haalt standaard adressen, MAC-adressen, ruimtenamen, lampnamen, apparaatnamen, apparaat-ids en persoonsnamen weg. Gebruik dat. Alleen als de tester de ruwe tekst lokaal wil zien: `redact=false`. Zeg dan dat die tekst niet gedeeld wordt.
 
+Elk event in het verslag heeft een lokale tijd (`local_time`) en `time_source`. Zeg welke bron het is: de gateway, of het moment waarop de toolkit het ontving.
+
+Dialecten hebben een stadsnaam. De namen en ids komen uit de tool. Nu zijn dat Kessel-Lo (`kessel-lo`; berichttypes `dimmer.kessel-lo.*` en `input.kessel-lo.*`) en Torhout (`torhout`; berichttypes `*.torhout.*`). Kessel-Lo is het dialect van de dimmer- en inputmodules uit de eerste testopstelling. Torhout is het tweede bevestigde dialect. Gebruik de naam die de tool teruggeeft; die kan later wijzigen. Meld je een nieuw dialect, of schrijf je er een in het verslag, kies dan een willekeurige stad. Nooit de woonplaats van de tester en nooit een persoonsnaam.
+
 Schrijf het rapport als losse regels. Geen tabel. Het moet leesbaar blijven zonder opmaak.
 
 ```
 Probleem: lamp gaat niet uit
 Bron list_devices (gateway, poort 8080): kanaal 0, status off
-Bron recent_events (gateway-buffer): knop single_press
+Bron recent_events (gateway-buffer): knop single_press, lokale tijd … (time_source gateway of received)
+Dialect: Kessel-Lo of Torhout, zoals de tool het noemt
 Bron Home Assistant Log (geplakt door de tester): …
-Niet gezien: geen live logs (missing_capabilities bevat log_stream)
+Niet gezien: geen live logs (log_stream supported maar active false, schakelaar uit)
 Conclusie: …
 ```
 

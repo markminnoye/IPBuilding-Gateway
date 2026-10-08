@@ -12,11 +12,11 @@ Je krijgt één bestand: `ipbuilding-gateway-tools.mcpb`.
 
 ## Nieuwere testversie
 
-Elke testversie heeft een eigen nummer: `0.1.0-rc.1`, daarna `0.1.0-rc.2`, `0.1.0-rc.3`, `0.1.0-rc.4`, enzovoort. Dat nummer staat in de naam van het bestand. Staat IPBuilding Gateway Tools er al, dan toont Claude Desktop **Update** in plaats van **Install**. Zo zie je welke build je hebt.
+Elke testversie heeft een eigen nummer: `0.1.0-rc.1`, daarna `0.1.0-rc.2`, `0.1.0-rc.3`, `0.1.0-rc.4`, `0.1.0-rc.5`, enzovoort. Dat nummer staat in de naam van het bestand. Staat IPBuilding Gateway Tools er al, dan toont Claude Desktop **Update** in plaats van **Install**. Zo zie je welke build je hebt.
 
 ## Schakelaar in Home Assistant
 
-IPBuilding Gateway Tools kan pas meekijken als een schakelaar aan staat.
+Live logs en testpakketten werken pas als een schakelaar aan staat. Een knopdruk en een lamp die van status verandert zie je ook als die schakelaar uit staat.
 
 1. Open Home Assistant.
 2. Ga naar **Instellingen → Add-ons → IPBuilding Gateway → Configuratie**.
@@ -61,9 +61,11 @@ De add-on draait, maar deze versie kan nog niet live meekijken. Installeer de te
 
 Hij kan opvragen welk kanaal bij welke lamp hoort. Kanalen van een relais of dimmer tellen vanaf 0. Hij kan kijken of de gateway gezond is, een scan naar nieuwe modules starten (hij vraagt eerst), en één lamp schakelen of dimmen (hij vraagt eerst). Een antwoord dat het commando is aangekomen betekent niet dat de module heeft geantwoord. Kijk of de lamp echt veranderde.
 
-Een knopdruk of een lamp die van status verandert kan hij teruglezen uit wat de gateway al heeft doorgegeven. Kan de gateway logs meesturen, dan leest de assistent die. Namen en adressen haalt hij daar standaard uit. Kan deze versie dat niet, dan vraagt hij je het tabblad **Log** van IPBuilding Gateway te openen en de relevante regels te plakken. Zet hij het logniveau tijdelijk hoger, dan zegt hij tot wanneer dat geldt. Daarna valt het vanzelf terug.
+Een knopdruk of een lamp die van status verandert kan hij teruglezen uit wat de gateway al heeft doorgegeven, ook als de schakelaar uit staat. Alleen de live logregels vallen dan weg. Kan de gateway logs meesturen en staat de schakelaar aan, dan leest de assistent die. Namen en adressen haalt hij daar standaard uit. Kan deze versie dat niet, dan vraagt hij je het tabblad **Log** van IPBuilding Gateway te openen en de relevante regels te plakken. Zet hij het logniveau tijdelijk hoger, dan zegt hij tot wanneer dat geldt. Daarna valt het vanzelf terug.
 
-Een verslag haalt adressen, apparaatnamen en ruimtenamen standaard weg. Alleen als je de ruwe tekst lokaal wil zien, kan de assistent die tonen. Deel die ruwe tekst niet.
+Een verslag haalt adressen, apparaatnamen en ruimtenamen standaard weg. De tijden daarin zijn lokale tijd. Alleen als je de ruwe tekst lokaal wil zien, kan de assistent die tonen. Deel die ruwe tekst niet.
+
+Twee soorten modules hebben een stadsnaam: Kessel-Lo en Torhout. Een nieuwe soort krijgt een willekeurige stad, nooit jouw woonplaats en nooit jouw naam.
 
 ## Als je klaar bent
 

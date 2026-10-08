@@ -21,7 +21,7 @@ The gateway address is a user setting (`gateway_address` in the bundle, the same
 
 | Tool | This version | Waits on |
 | --- | --- | --- |
-| `connection_status` | Works against `/api/v1/status` and the local buffer. Reports `connected`, `missing_capabilities`, `unavailable_tools` (which capability or switch blocks `read_logs`, `capture_frames`, and `send_raw`), the host, and how it was found (`mdns`, `mdns_hostname`, `config_default`, or `manual`). A loopback address from mDNS is skipped; the mDNS hostname is tried next, then the bundle address. Shows the current log level and when it falls back, once the gateway has reported a `ttl` | — |
+| `connection_status` | Works against `/api/v1/status` and the local buffer. Reports `connected`, `capability_status` (`supported` for the gateway version, `active` for working now, with a plain-language `reason` when `active` is false), `missing_capabilities`, `unavailable_tools`, the host, and how it was found (`mdns`, `mdns_hostname`, `config_default`, or `manual`). A loopback address from mDNS is skipped; the mDNS hostname is tried next, then the bundle address. Shows the current log level and when it falls back, once the gateway has reported a `ttl`. If the status omits the switch, one log subscription is used as a probe | — |
 | `gateway_health` | Status, subsystems, issues, uptime, buffer from `/api/v1/status` | — |
 | `list_devices` | Module, channel, type, name, state from `/modules` and `/devices`. Relay and dimmer channels count from 0. Shows `last_seen` when the gateway sends it | — |
 | `recent_events` | Buffered `state_changed` and `button_event` (press, single_press, release). No `udp_frame` required | — |
@@ -29,12 +29,14 @@ The gateway address is a user setting (`gateway_address` in the bundle, the same
 | `discover` | `POST /api/v1/discover` only after `confirmed=true`, then the inventory diff | — |
 | `device_command` | `POST /api/v1/devices/{id}/command` only after `confirmed=true`. Warns that `ok: true` does not mean the module answered | — |
 | `probe_generation` | Works against `/status`, `/modules`, `/devices` | — |
-| `decode_test` | Local, uses `gateway/payloads` | — |
-| `export_session` | Local notes and buffered events. Redacts addresses and names unless `redact=false` | Live logs appear in the export once `log_stream` exists |
+| `decode_test` | Local, uses `gateway/payloads`, then shows the current dialect city name. Kessel-Lo (`kessel-lo`) and Torhout (`torhout`) are defined in `ipbuilding_debug/dialect.py` | — |
+| `export_session` | Local notes and buffered events. Each event gets `local_time` (ISO 8601 with offset) and `time_source` (`gateway` or `received`). Redacts addresses and names unless `redact=false` | Live logs appear in the export once `log_stream` is active |
 | `capture_frames` | Subscribes when `udp_frame` is advertised | Gateway `udp_frame` |
 | `send_raw` | Posts when `raw_send` is advertised, and only after `confirmed=true` | Gateway raw send |
 
-If a name is missing from `/status.capabilities`, the tool returns a not-available message instead of failing. Planned names: `log_stream`, `udp_frame`, `raw_send`.
+If a name is missing from `/status.capabilities`, the tool returns a not-available message instead of failing. Planned names: `log_stream`, `udp_frame`, `raw_send`. A listed name with the switch off is `supported` and not `active`. Button and state events still arrive while the switch is off; log lines do not.
+
+Dialect ids and display names are `Dialect` values in `ipbuilding_debug/dialect.py`. An older gateway id is rewritten there and is not repeated in docs or tool output. A new dialect from another tester gets a random city, never a home town and never a personal name.
 
 `connection_status` also tells the tester when **Remote debugging and control** is off (`remote_debugging: false`, or error code `remote_debugging_disabled`).
 

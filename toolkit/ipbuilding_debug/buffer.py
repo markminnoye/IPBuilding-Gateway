@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections import deque
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Callable
 
 # Tools must not block a desktop client longer than this.
@@ -24,6 +25,7 @@ def clamp_timeout(seconds: float) -> float:
 class BufferEntry:
     seq: int
     event: dict[str, Any]
+    received_at: datetime
 
 
 class RingBuffer:
@@ -51,7 +53,9 @@ class RingBuffer:
             if len(self._items) >= self.maxlen:
                 self._items.popleft()
                 self.dropped += 1
-            self._items.append(BufferEntry(self._seq, event))
+            self._items.append(
+                BufferEntry(self._seq, event, datetime.now().astimezone())
+            )
             self._cond.notify_all()
             return self._seq
 
@@ -72,6 +76,9 @@ class RingBuffer:
 
     def snapshot(self) -> list[dict[str, Any]]:
         return [item.event for item in self._items]
+
+    def entries(self) -> list[BufferEntry]:
+        return list(self._items)
 
     async def wait_until(
         self,

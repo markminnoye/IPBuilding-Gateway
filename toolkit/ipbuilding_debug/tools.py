@@ -11,6 +11,7 @@ from urllib.parse import quote
 
 from ipbuilding_debug.buffer import clamp_timeout
 from ipbuilding_debug.decode import decode_frame, parse_frame
+from ipbuilding_debug.dialect import present_decode, present_event
 from ipbuilding_debug.errors import (
     KIND_NOT_AVAILABLE,
     KIND_NO_ADDRESS,
@@ -100,13 +101,153 @@ def _from_error(error: ClassifiedError, **extra: Any) -> ToolResult:
     return ToolResult(error.message, data)
 
 
+REASON_UNSUPPORTED = "Deze gateway-versie kan dit nog niet."
+REASON_SWITCH_OFF = (
+    "De schakelaar 'Remote debugging and control' staat uit. "
+    "Dit werkt pas als die aan staat."
+)
+REASON_SWITCH_OFF_LOGS = (
+    "De schakelaar 'Remote debugging and control' staat uit. "
+    "Logregels komen dan niet binnen. Knoppen en statuswijzigingen blijven wel binnenkomen."
+)
+REASON_UNKNOWN = "De gateway meldt niet of dit nu werkt."
+REASON_UNREACHABLE = "De gateway is niet bereikbaar, dus dit is niet te controleren."
+
+# A timestamp the gateway put on the event itself. Device fields such as
+# last_seen describe the module, not the moment this event was emitted.
+_GATEWAY_TIME_KEYS = ("ts", "timestamp", "time")
+
+
 def _capabilities(status: dict[str, Any] | None) -> list[str]:
+    return [
+        name
+        for name, record in _capability_records(status).items()
+        if record.get("supported", True)
+    ]
+
+
+def _capability_records(status: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    """What ``/status.capabilities`` actually says, per name.
+
+    A string means the version supports it. An object may also carry
+    ``supported`` and ``active`` when the gateway sends them.
+    """
     if not isinstance(status, dict):
-        return []
+        return {}
     caps = status.get("capabilities")
     if not isinstance(caps, list):
-        return []
-    return [str(item) for item in caps]
+        return {}
+    records: dict[str, dict[str, Any]] = {}
+    for item in caps:
+        if isinstance(item, str) and item:
+            records[item] = {"supported": True}
+            continue
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name") or item.get("id")
+        if not isinstance(name, str) or not name:
+            continue
+        record: dict[str, Any] = {"supported": True}
+        if isinstance(item.get("supported"), bool):
+            record["supported"] = item["supported"]
+        if isinstance(item.get("active"), bool):
+            record["active"] = item["active"]
+        if isinstance(item.get("reason"), str) and item["reason"].strip():
+            record["reason"] = item["reason"].strip()
+        records[name] = record
+    return records
+
+
+def _feature_rows(
+    status: dict[str, Any] | None,
+    *,
+    remote: bool | None,
+    probed: bool | None,
+    reachable: bool,
+) -> list[dict[str, Any]]:
+    """``supported`` is the gateway version. ``active`` means it works now."""
+    records = _capability_records(status)
+    rows: list[dict[str, Any]] = []
+    for name in PLANNED_CAPABILITIES:
+        record = records.get(name, {})
+        supported = bool(record.get("supported", False))
+        if not reachable:
+            rows.append(
+                {
+                    "name": name,
+                    "supported": False,
+                    "active": False,
+                    "reason": REASON_UNREACHABLE,
+                }
+            )
+            continue
+        if not supported:
+            rows.append(
+                {
+                    "name": name,
+                    "supported": False,
+                    "active": False,
+                    "reason": REASON_UNSUPPORTED,
+                }
+            )
+            continue
+        if isinstance(record.get("active"), bool):
+            active = bool(record["active"])
+            reason = str(record.get("reason") or "")
+            if not active and not reason:
+                reason = _inactive_reason(name)
+            rows.append(
+                {
+                    "name": name,
+                    "supported": True,
+                    "active": active,
+                    "reason": reason if not active else "",
+                }
+            )
+            continue
+        if remote is True or probed is True:
+            rows.append({"name": name, "supported": True, "active": True, "reason": ""})
+            continue
+        if remote is False or probed is False:
+            rows.append(
+                {
+                    "name": name,
+                    "supported": True,
+                    "active": False,
+                    "reason": _inactive_reason(name),
+                }
+            )
+            continue
+        rows.append(
+            {
+                "name": name,
+                "supported": True,
+                "active": False,
+                "reason": REASON_UNKNOWN,
+            }
+        )
+    return rows
+
+
+def _inactive_reason(name: str) -> str:
+    if name == "log_stream":
+        return REASON_SWITCH_OFF_LOGS
+    return REASON_SWITCH_OFF
+
+
+def _needs_switch_probe(status: dict[str, Any] | None, remote: bool | None) -> bool:
+    """Probe only when a supported feature has no reported on/off state."""
+    if isinstance(remote, bool):
+        return False
+    records = _capability_records(status)
+    for name in PLANNED_CAPABILITIES:
+        record = records.get(name)
+        if not record or not record.get("supported", False):
+            continue
+        if isinstance(record.get("active"), bool):
+            continue
+        return True
+    return False
 
 
 async def connection_status(
@@ -132,6 +273,9 @@ async def connection_status(
                 "connection": session.state,
                 "buffer": _buffer_summary(session),
                 "missing_capabilities": list(PLANNED_CAPABILITIES),
+                "capability_status": _feature_rows(
+                    None, remote=None, probed=None, reachable=False
+                ),
                 "unavailable_tools": blocked,
                 "log_level": session.log_level_status(),
                 **where,
@@ -149,15 +293,30 @@ async def connection_status(
     remote = status.get("remote_debugging") if isinstance(status, dict) else None
     if not isinstance(remote, bool):
         remote = None
-    caps = _capabilities(status if isinstance(status, dict) else None)
-    missing = [name for name in PLANNED_CAPABILITIES if name not in caps]
-    message, kind = _connected_message(remote=remote, capabilities=caps, missing=missing)
+    status_dict = status if isinstance(status, dict) else None
+    probed: bool | None = None
+    if _needs_switch_probe(status_dict, remote):
+        probed = await session.probe_remote_debugging()
+    effective = remote if isinstance(remote, bool) else probed
+    caps = _capabilities(status_dict)
+    features = _feature_rows(
+        status_dict, remote=remote, probed=probed, reachable=True
+    )
+    missing = [row["name"] for row in features if not row["supported"]]
+    message, kind = _connected_message(
+        remote=effective, capabilities=caps, missing=missing
+    )
     # The gateway answered. ``ok`` stays false only when the debug switch
     # itself is off, not merely because a capability is absent.
-    ok = remote is not False
+    ok = effective is not False
     log_note = ""
     if log_level:
-        gated = gate_feature(status if isinstance(status, dict) else None, "log_stream")
+        gated = gate_feature(status_dict, "log_stream")
+        if gated is None and effective is False:
+            gated = gate_feature(
+                {"remote_debugging": False, "capabilities": caps},
+                "log_stream",
+            )
         if gated is None:
             outcome = await session.request_log_level(log_level)
             if outcome == "rate_limited":
@@ -186,7 +345,7 @@ async def connection_status(
                 log_note = "Logniveau gevraagd."
         else:
             log_note = gated.message
-    blocked = unavailable_tools(caps, remote)
+    blocked = unavailable_tools(caps, effective)
     note = _unavailable_note(blocked)
     if note and message not in (MSG_REMOTE_DEBUGGING_OFF, MSG_LOG_LEVEL_RATE_LIMITED):
         message = f"{message} {note}"
@@ -201,6 +360,8 @@ async def connection_status(
             "remote_debugging": remote,
             "capabilities": caps,
             "missing_capabilities": missing,
+            "capability_status": features,
+            "switch_active": effective,
             "hub_role": (status or {}).get("hub_role"),
             "health": _health_view(status if isinstance(status, dict) else None),
             "buffer": _buffer_summary(session),
@@ -342,7 +503,7 @@ async def recent_events(
     limit = max(1, min(int(limit), 200))
     wanted = set(BUFFER_EVENT_TYPES)
     events = [
-        event
+        present_event(event)
         for event in session.buffer.snapshot()
         if event.get("type") in wanted
     ][-limit:]
@@ -757,13 +918,55 @@ def decode_test(payload: str) -> ToolResult:
             "Dit is geen frame dat ik kan lezen. Plak hex of een korte ASCII-tekst.",
             {"ok": False, "kind": KIND_OTHER, "matched": False, "matches": []},
         )
-    decoded = decode_frame(data)
+    decoded = present_decode(decode_frame(data))
     if decoded["matched"]:
         names = ", ".join(item["decoder"] for item in decoded["matches"])
         message = f"Het frame past bij: {names}."
+        cities = [
+            str(item.get("name"))
+            for item in decoded.get("dialects") or []
+            if item.get("name")
+        ]
+        if cities:
+            message = f"{message} Dialect: {', '.join(cities)}."
     else:
         message = "Geen enkele decoder herkent dit frame."
     return ToolResult(message, {"ok": True, "kind": "decode", **decoded})
+
+
+def _parse_gateway_time(event: dict[str, Any]) -> datetime | None:
+    for key in _GATEWAY_TIME_KEYS:
+        parsed = _parse_log_ts(event.get(key))
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _format_local(moment: datetime) -> str:
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone().isoformat(timespec="seconds")
+
+
+def _stamp_event(event: dict[str, Any], received_at: datetime) -> dict[str, Any]:
+    """Local ISO time with offset, plus whether the clock was the gateway's."""
+    item = present_event(event)
+    gateway_time = _parse_gateway_time(item)
+    if gateway_time is not None:
+        item["local_time"] = _format_local(gateway_time)
+        item["time_source"] = "gateway"
+    else:
+        item["local_time"] = _format_local(received_at)
+        item["time_source"] = "received"
+    return item
+
+
+def _stamp_note(note: dict[str, Any]) -> dict[str, Any]:
+    item = dict(note)
+    parsed = _parse_log_ts(item.get("at"))
+    item["local_time"] = _format_local(parsed or datetime.now().astimezone())
+    item["time_source"] = "received"
+    return item
 
 
 async def export_session(
@@ -776,11 +979,11 @@ async def export_session(
     """Bundle the session. Names and addresses are removed unless redact is false."""
     if note or marker:
         await session.annotate(note or marker, marker=marker)
-    events = session.buffer.snapshot()
-    interesting = [
-        event
-        for event in events
-        if event.get("type") in {
+    exported = [
+        _stamp_event(entry.event, entry.received_at)
+        for entry in session.buffer.entries()
+        if entry.event.get("type")
+        in {
             "gap",
             "note",
             "udp_frame",
@@ -803,9 +1006,9 @@ async def export_session(
             "connection": session.state,
             "address": session.host,
         },
-        "notes": list(session.notes),
-        "gaps": [event for event in events if event.get("type") == "gap"],
-        "events": interesting[-500:],
+        "notes": [_stamp_note(note) for note in session.notes],
+        "gaps": [event for event in exported if event.get("type") == "gap"],
+        "events": exported[-500:],
         "buffer": _buffer_summary(session),
     }
     if redact:
