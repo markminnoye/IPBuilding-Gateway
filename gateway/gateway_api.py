@@ -45,6 +45,12 @@ from gateway.device_config import (
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.discovery import fetch_module_backup_channels, resolve_module_model
 from gateway.capabilities import CAPABILITIES
+from gateway.reachability import (
+    ReachabilityTracker,
+    confirmation_ms,
+    empty_reachability,
+    reported_fields,
+)
 from gateway.log_stream import LogStream, LogStreamError, baseline_from_config
 from gateway.udp_frames import UdpFrameHub
 from gateway.remote_debug import (
@@ -155,6 +161,26 @@ def _resolve_entity_id(
 # ---------------------------------------------------------------------------
 # GatewayAPI
 # ---------------------------------------------------------------------------
+
+
+@dataclass
+class CommandResult:
+    """Outcome of one northbound command.
+
+    ``ok`` means the gateway accepted and sent the command. ``module_confirmed``
+    is whether a field-bus reply arrived inside the reply window. No reply is
+    not an error. Iterating yields ``(ok, error)`` for existing callers.
+    """
+
+    ok: bool
+    error: str | None = None
+    module_confirmed: bool = False
+    confirm_ms: int | None = None
+    reported: dict[str, Any] | None = None
+
+    def __iter__(self) -> Any:
+        yield self.ok
+        yield self.error
 
 
 class GatewayAPI:
@@ -443,9 +469,17 @@ class GatewayAPI:
             log.warning("WS command missing id or action: %s", data)
             return
 
-        ok, error = await self._execute_command(entity_id, action, value)
+        result = await self._execute_command(entity_id, action, value)
         await ws.send_json(
-            {"type": "command_result", "id": entity_id, "ok": ok, "error": error}
+            {
+                "type": "command_result",
+                "id": entity_id,
+                "ok": result.ok,
+                "error": result.error,
+                "module_confirmed": result.module_confirmed,
+                "confirm_ms": result.confirm_ms,
+                "reported": result.reported,
+            }
         )
 
     async def _handle_log_ws(self, ws: WebSocketResponse, data: dict[str, Any]) -> None:
@@ -732,9 +766,18 @@ class GatewayAPI:
         if not action:
             raise ApiError(400, "missing_action", "Body must contain 'action'")
 
-        ok, error = await self._execute_command(device_id, action, value)
-        if ok:
-            return web.json_response({"ok": True, "schema_version": 2})
+        result = await self._execute_command(device_id, action, value)
+        if result.ok:
+            return web.json_response(
+                {
+                    "ok": True,
+                    "schema_version": 2,
+                    "module_confirmed": result.module_confirmed,
+                    "confirm_ms": result.confirm_ms,
+                    "reported": result.reported,
+                }
+            )
+        error = result.error
         # Map internal error strings to typed codes so the client can act.
         code = "command_failed"
         status = 422
@@ -997,11 +1040,13 @@ class GatewayAPI:
 
     async def _execute_command(
         self, entity_id: str, action: str, value: Any
-    ) -> tuple[bool, str | None]:
+    ) -> CommandResult:
         """Resolve entity_id, encode and send the UDP command, wait for reply."""
         parsed = _resolve_entity_id(entity_id, self._cfg.installation)
         if parsed is None:
-            return False, f"unknown or invalid entity_id: {entity_id}"
+            return CommandResult(
+                False, f"unknown or invalid entity_id: {entity_id}"
+            )
         module_ip, dtype, channel = parsed
 
         # Refuse commands for inactive channels so a manually-enabled HA entity
@@ -1012,7 +1057,7 @@ class GatewayAPI:
             if mc is not None:
                 ch_cfg = next((c for c in mc.channels if c.ch == channel), None)
                 if ch_cfg is not None and not ch_cfg.active:
-                    return False, "channel inactive"
+                    return CommandResult(False, "channel inactive")
 
         # Encode the command
         # ``awaits_reply`` is shared across relay and dimmer branches so the
@@ -1031,7 +1076,7 @@ class GatewayAPI:
             elif action == "TOGGLE":
                 cmd = RelayCommand(channel=channel, action=RelayAction.TOGGLE)
             else:
-                return False, f"unsupported relay action: {action}"
+                return CommandResult(False, f"unsupported relay action: {action}")
             payload = encode_relay_command(cmd)
         elif dtype == DeviceType.DIMMER:
             if action == "DIM":
@@ -1048,7 +1093,7 @@ class GatewayAPI:
             elif action == "DIM_STOP":
                 payload = encode_dim_stop(channel)
             else:
-                return False, f"unsupported dimmer action: {action}"
+                return CommandResult(False, f"unsupported dimmer action: {action}")
             # DIM_START produces no reply on the wire — the dimmer just begins
             # ramping. TOGGLE/DIM_STOP reply with I0154<ch><VV> (as DIM does),
             # so the channel-less reply still needs to land on the right key.
@@ -1057,7 +1102,7 @@ class GatewayAPI:
             else:
                 self._registry.track_dimmer_channel(module_ip, channel)
         else:
-            return False, f"unsupported device type: {dtype.value}"
+            return CommandResult(False, f"unsupported device type: {dtype.value}")
 
         # Send and wait for reply
         try:
@@ -1067,10 +1112,13 @@ class GatewayAPI:
                 action,
                 format_payload(payload),
             )
-            await self._bus.send_command(module_ip, payload)
+            sent = time.monotonic()
+            await self._bus.send_command(
+                module_ip, payload, expect_reply=awaits_reply
+            )
             if not awaits_reply:
-                # DIM_START — fire-and-forget; no reply to correlate.
-                return True, None
+                # DIM_START — fire-and-forget; no status reply on the wire.
+                return CommandResult(True)
             reply = await self._bus.correlate_reply(
                 module_ip=module_ip,
                 after_ts=self._bus.last_send_ts,
@@ -1080,19 +1128,28 @@ class GatewayAPI:
                 log.warning(
                     "command %s on %s timed out (no reply)", action, entity_id
                 )
-            else:
-                data = getattr(reply, "data", None)
-                if isinstance(data, bytes):
-                    log.debug(
-                        "RX %s command %s %s",
-                        module_ip,
-                        action,
-                        format_payload(data),
-                    )
-            return True, None
+                tracker = getattr(self._bus, "reachability", None)
+                if isinstance(tracker, ReachabilityTracker):
+                    tracker.note_timeout(module_ip, time.monotonic())
+                return CommandResult(True, module_confirmed=False)
+            data = getattr(reply, "data", None)
+            if isinstance(data, bytes):
+                log.debug(
+                    "RX %s command %s %s",
+                    module_ip,
+                    action,
+                    format_payload(data),
+                )
+            elapsed = confirmation_ms(sent, reply)
+            return CommandResult(
+                True,
+                module_confirmed=elapsed is not None,
+                confirm_ms=elapsed,
+                reported=reported_fields(data) if isinstance(data, bytes) else None,
+            )
         except Exception as exc:
             log.exception("command %s on %s failed: %s", action, entity_id, exc)
-            return False, str(exc)
+            return CommandResult(False, str(exc))
 
     # -------------------------------------------------------------------------
     # Registry callbacks → broadcast
@@ -1401,6 +1458,11 @@ class GatewayAPI:
                 entry["last_seen"] = mc.last_seen
             if mc.last_seen_source:
                 entry["last_seen_source"] = mc.last_seen_source
+            tracker = getattr(self._bus, "reachability", None)
+            if isinstance(tracker, ReachabilityTracker):
+                entry["reachability"] = tracker.view(mc.ip)
+            else:
+                entry["reachability"] = empty_reachability()
             # Merge cached metadata
             if meta is not None:
                 entry["network"] = meta.network

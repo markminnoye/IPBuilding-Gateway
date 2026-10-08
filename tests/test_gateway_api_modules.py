@@ -592,7 +592,7 @@ class TestDimmerDownstreamCommands:
         assert ok is True
         assert error is None
         api._bus.send_command.assert_called_once_with(
-            "10.10.1.40", b"T1991000"
+            "10.10.1.40", b"T1991000", expect_reply=True,
         )
 
     @pytest.mark.asyncio
@@ -616,7 +616,7 @@ class TestDimmerDownstreamCommands:
         assert ok is True
         assert error is None
         api._bus.send_command.assert_called_once_with(
-            "10.10.1.40", b"D0001003"
+            "10.10.1.40", b"D0001003", expect_reply=False,
         )
         api._bus.correlate_reply.assert_not_called()
 
@@ -645,7 +645,7 @@ class TestDimmerDownstreamCommands:
         assert ok is True
         assert error is None
         api._bus.send_command.assert_called_once_with(
-            "10.10.1.40", b"D0001000"
+            "10.10.1.40", b"D0001000", expect_reply=True,
         )
         api._bus.correlate_reply.assert_called_once()
 

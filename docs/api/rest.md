@@ -130,6 +130,36 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `fetched_at` | string | ISO 8601 timestamp of last getSysSet fetch |
 | `last_seen` | string | ISO 8601 timestamp of most recent ARP or UDP activity (runtime-only, not in `devices.json`) |
 | `last_seen_source` | string | How `last_seen` was last updated: `arp`, `udp`, or `http` (runtime-only) |
+| `reachability` | object | Reply timing for this module. Always present. See the fields below. |
+
+`reachability` is filled from field-bus traffic the gateway already sends and receives (keepalive and commands). It is not written to `devices.json`. `last_seen` stays the ARP/HTTP contact time; `reachability.last_reply_at` is the last inbound UDP packet from that module.
+
+```json
+"reachability": {
+  "last_reply_at": "2026-10-08T12:00:00+00:00",
+  "last_reply_ms": 18,
+  "avg_reply_ms": 22,
+  "missed_replies": 1
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `last_reply_at` | string or null | ISO 8601 UTC time of the last inbound UDP packet from this module. `null` until one arrives. |
+| `last_reply_ms` | integer or null | Milliseconds from the latest unanswered send to the reply that landed inside the reply window. `null` when no reply has been paired yet. |
+| `avg_reply_ms` | integer or null | Rounded mean of the last 20 paired response times. `null` when there is no sample. |
+| `missed_replies` | integer | Sends whose reply window closed with no reply. A newer send inside the window replaces the pending one and is not a miss. |
+
+The same object is on `GET /api/v1/modules/{module_id}` and on each module in the WebSocket `snapshot`. A module that has not answered yet:
+
+```json
+"reachability": {
+  "last_reply_at": null,
+  "last_reply_ms": null,
+  "avg_reply_ms": null,
+  "missed_replies": 0
+}
+```
 
 ---
 
@@ -152,7 +182,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 
 **Request body:** `{}`
 
-**Response 200:** full `{ "modules": [...] }` with refreshed data.
+**Response 200:** full `{ "modules": [...] }` with refreshed data. Each module includes `reachability`.
 
 ---
 
@@ -377,10 +407,41 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) re
 | `TOGGLE` | Relay | -- |
 | `DIM` | Dimmer | `0-100` (0 = off) |
 
-**Response 200:**
+**Response 200:** the gateway accepted and sent the command. A missing field-bus reply is still `ok: true`. It is not an error.
+
 ```json
-{"ok": true}
+{
+  "ok": true,
+  "schema_version": 2,
+  "module_confirmed": true,
+  "confirm_ms": 42,
+  "reported": {"state": "on"}
+}
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | `true` when the command was sent. `false` is not used on this status; failures use 4xx below. |
+| `schema_version` | integer | `2`. |
+| `module_confirmed` | boolean | `true` when a reply from that module arrived inside the reply window (`reply_timeout_ms`, default 500) and the reply has a timestamp. `false` when no reply arrived. |
+| `confirm_ms` | integer or null | Milliseconds from the send to that reply. `null` when `module_confirmed` is false. |
+| `reported` | object or null | State taken from the reply. A relay status contributes `state` (`on`, `off`, or `unknown`). A dimmer status contributes `level_percent`. `null` when the reply is missing or is not a known status. A confirmed reply can still have `reported: null`. |
+
+No reply inside the window:
+
+```json
+{
+  "ok": true,
+  "schema_version": 2,
+  "module_confirmed": false,
+  "confirm_ms": null,
+  "reported": null
+}
+```
+
+`DIM_START` does not wait for a status reply. Its 200 body is `module_confirmed: false`, `confirm_ms: null`, `reported: null`, and the send is not counted as a missed reply.
+
+The WebSocket `command_result` frame carries the same three fields. See [websocket.md](websocket.md).
 
 **Response 400** (missing action):
 ```json
