@@ -1,13 +1,13 @@
 ---
-name: ipbuilding-debug
+name: ipbuilding-gateway-tools
 description: >
   Onderzoek een onbekend probleem in de eigen IPBuilding-installatie van de
-  tester via de lokale debug-toolkit. Gebruik dit zodra iemand een lamp, knop
+  tester via IPBuilding Gateway Tools. Gebruik dit zodra iemand een lamp, knop
   of module wil laten nakijken. Praat met de tester in zijn taal, standaard
   Nederlands, zonder jargon.
 ---
 
-# IPBuilding debugsessie
+# IPBuilding Gateway Tools
 
 Je onderzoekt samen met de tester een probleem in **zijn** installatie. Jij ziet alleen wat de toolkit teruggeeft. De tester ziet de lampen en de knoppen. Vraag hem wat hij fysiek ziet.
 

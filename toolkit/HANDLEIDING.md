@@ -1,22 +1,22 @@
-# IPBuilding debug-toolkit
+# IPBuilding Gateway Tools
 
 Deze gids is voor iemand die thuis de IPBuilding Gateway in Home Assistant gebruikt.
 
-Je krijgt één bestand: `ipbuilding-debug-toolkit.mcpb`.
+Je krijgt één bestand: `ipbuilding-gateway-tools.mcpb`.
 
 ## Installeren in Claude Desktop
 
-1. Dubbelklik op het bestand. Claude Desktop gaat open en vraagt of je de toolkit wil installeren. Bevestig dat.
+1. Dubbelklik op het bestand. Claude Desktop gaat open en vraagt of je IPBuilding Gateway Tools wil installeren. Bevestig dat.
 2. Lukt dubbelklikken niet, open dan Claude Desktop, ga naar **Instellingen → Extensies** en kies het bestand.
 3. Vul het **gateway-adres** in. Meestal is dat `homeassistant.local`. Zonder `http://` en zonder poort. Dit is het adres van Home Assistant in je thuisnetwerk, niet een adres van een losse module.
 
 ## Nieuwere testversie
 
-Elke testversie heeft een eigen nummer: `0.1.0-rc.1`, daarna `0.1.0-rc.2`, enzovoort. Dat nummer staat in de naam van het bestand. Staat de toolkit er al, dan toont Claude Desktop **Update** in plaats van **Install**. Zo zie je welke build je hebt.
+Elke testversie heeft een eigen nummer: `0.1.0-rc.1`, daarna `0.1.0-rc.2`, enzovoort. Dat nummer staat in de naam van het bestand. Staat IPBuilding Gateway Tools er al, dan toont Claude Desktop **Update** in plaats van **Install**. Zo zie je welke build je hebt.
 
 ## Schakelaar in Home Assistant
 
-De toolkit kan pas meekijken als een schakelaar aan staat.
+IPBuilding Gateway Tools kan pas meekijken als een schakelaar aan staat.
 
 1. Open Home Assistant.
 2. Ga naar **Instellingen → Add-ons → IPBuilding Gateway → Configuratie**.
@@ -28,7 +28,7 @@ De toolkit kan pas meekijken als een schakelaar aan staat.
 
 ## Eerste vraag
 
-Open een chat met de toolkit erbij en typ, in je eigen woorden, bijvoorbeeld:
+Open een chat met IPBuilding Gateway Tools erbij en typ, in je eigen woorden, bijvoorbeeld:
 
 > Een lamp gaat niet uit. Kun je meekijken wat er gebeurt?
 

@@ -1,19 +1,19 @@
-# IPBuilding debug toolkit
+# IPBuilding Gateway Tools
 
 Local helper for a tester who runs the IPBuilding Gateway add-on at home. It is a stdio MCP server, a Claude Desktop bundle (`.mcpb`), and a Claude Code plugin. Testers install the bundle and follow [HANDLEIDING.md](HANDLEIDING.md). They do not need Git or a terminal.
 
-The toolkit only talks to the gateway REST and WebSocket API on port 8080. It never opens its own field-bus socket.
+IPBuilding Gateway Tools only talks to the gateway REST and WebSocket API on port 8080. It never opens its own field-bus socket.
 
 ## Layout
 
 | Path | Role |
 | --- | --- |
 | `ipbuilding_debug/` | MCP server |
-| `skills/ipbuilding-debug/SKILL.md` | Session guidance, also sent as the server instructions |
+| `skills/ipbuilding-gateway-tools/SKILL.md` | Session guidance, also sent as the server instructions |
 | `HANDLEIDING.md` | Plain-language install guide |
 | `.claude-plugin/`, `.mcp.json` | Claude Code plugin |
 | `scripts/build.py` | One build used locally and in CI |
-| `VERSION` | Version. A release tag `toolkit-vX.Y.Z` must match this file |
+| `VERSION` | Version. A release tag `gateway-tools-vX.Y.Z` must match this file |
 
 The gateway address is a user setting (`gateway_address` in the bundle, the same key in the Claude Code plugin). It is passed as `IPBUILDING_GATEWAY_ADDRESS`. Nothing in this folder hardcodes an address.
 
@@ -49,7 +49,7 @@ The WebSocket stays up for the life of the MCP process, reconnects with backoff 
 python3 toolkit/scripts/build.py
 ```
 
-The script stages a bundle, copies the decoders it needs, and runs `mcpb validate` and `mcpb pack`. CI does the same on every pull request. A tag `toolkit-vX.Y.Z` whose number matches `VERSION` attaches the `.mcpb` to a GitHub release.
+The script stages a bundle, copies the decoders it needs, and runs `mcpb validate` and `mcpb pack`. CI does the same on every pull request. A tag `gateway-tools-vX.Y.Z` whose number matches `VERSION` attaches the `.mcpb` to a GitHub release. The workflow artifact is `ipbuilding-gateway-tools`. The packed file is `ipbuilding-gateway-tools-<version>.mcpb`.
 
 Each test bundle uses the next `0.1.0-rc.N` (`rc.1`, `rc.2`, …) in `toolkit/VERSION`. The same string goes in `.claude-plugin/plugin.json`, `pyproject.toml`, and the `.mcpb` manifest. Raise N by one for every new test build so Claude Desktop offers Update instead of Install, and so the builds stay distinct. Do not reuse a number.
 

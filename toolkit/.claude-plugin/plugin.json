@@ -1,7 +1,7 @@
 {
-  "name": "ipbuilding-debug",
-  "displayName": "IPBuilding debug",
-  "version": "0.1.0-rc.1",
+  "name": "ipbuilding-gateway-tools",
+  "displayName": "IPBuilding Gateway Tools",
+  "version": "0.1.0-rc.2",
   "description": "Onderzoek een probleem in je IPBuilding-installatie via de gateway-add-on.",
   "author": {
     "name": "Sonic Rocket"

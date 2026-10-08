@@ -1,14 +1,14 @@
-# Checks the debug toolkit on every pull request.
-# A tag toolkit-vX.Y.Z (matching toolkit/VERSION) also publishes the .mcpb
+# Checks IPBuilding Gateway Tools on every pull request.
+# A tag gateway-tools-vX.Y.Z (matching toolkit/VERSION) also publishes the .mcpb
 # on a GitHub release. Add-on tags stay vX.Y.Z and are not handled here.
 
-name: Debug toolkit
+name: IPBuilding Gateway Tools
 
 on:
   pull_request:
   push:
     tags:
-      - "toolkit-v*.*.*"
+      - "gateway-tools-v*.*.*"
 
 jobs:
   build:
@@ -38,13 +38,13 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ipbuilding-debug-toolkit
+          name: ipbuilding-gateway-tools
           path: toolkit/dist/*.mcpb
           if-no-files-found: error
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/toolkit-v')
+    if: startsWith(github.ref, 'refs/tags/gateway-tools-v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -53,10 +53,10 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: ipbuilding-debug-toolkit
+          name: ipbuilding-gateway-tools
           path: dist
 
-      - name: Publish the bundle on the toolkit release
+      - name: Publish the bundle on the gateway-tools release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.mcpb

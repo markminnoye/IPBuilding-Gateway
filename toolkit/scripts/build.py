@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the IPBuilding debug toolkit .mcpb.
+"""Build the IPBuilding Gateway Tools .mcpb.
 
 Used locally and from GitHub Actions. Stages a self-contained bundle, then
 runs ``mcpb validate`` and ``mcpb pack``.
@@ -52,8 +52,8 @@ def resolve_version() -> str:
     """VERSION is the source of truth. A toolkit tag must match it."""
     version = file_version()
     tag = os.environ.get("GITHUB_REF_NAME", "")
-    if tag.startswith("toolkit-v"):
-        tagged = tag.removeprefix("toolkit-v")
+    if tag.startswith("gateway-tools-v"):
+        tagged = tag.removeprefix("gateway-tools-v")
         if tagged != version:
             raise SystemExit(
                 f"tag {tag} does not match toolkit/VERSION ({version}). "
@@ -130,8 +130,8 @@ def _write_pyproject(dest: Path, version: str) -> None:
 def _write_manifest(dest: Path, version: str) -> None:
     manifest = {
         "manifest_version": "0.4",
-        "name": "ipbuilding-debug-toolkit",
-        "display_name": "IPBuilding debug",
+        "name": "ipbuilding-gateway-tools",
+        "display_name": "IPBuilding Gateway Tools",
         "version": version,
         "description": "Meekijken en testen via de IPBuilding Gateway in je thuisnetwerk.",
         "long_description": (TOOLKIT / "HANDLEIDING.md").read_text(encoding="utf-8"),
@@ -202,7 +202,7 @@ def _write_manifest(dest: Path, version: str) -> None:
                 "description": "Notities en de sessie bundelen.",
             },
         ],
-        "keywords": ["ipbuilding", "home-assistant", "debug"],
+        "keywords": ["ipbuilding", "home-assistant", "gateway"],
     }
     (dest / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
@@ -212,7 +212,7 @@ def _write_manifest(dest: Path, version: str) -> None:
 
 def pack(staging: Path, version: str) -> Path:
     DIST.mkdir(parents=True, exist_ok=True)
-    output = DIST / f"ipbuilding-debug-toolkit-{version}.mcpb"
+    output = DIST / f"ipbuilding-gateway-tools-{version}.mcpb"
     if output.exists():
         output.unlink()
     subprocess.run(["mcpb", "validate", str(staging / "manifest.json")], check=True)
@@ -223,7 +223,7 @@ def pack(staging: Path, version: str) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Build the debug toolkit .mcpb")
+    parser = argparse.ArgumentParser(description="Build the IPBuilding Gateway Tools .mcpb")
     parser.add_argument(
         "--stage-only",
         action="store_true",

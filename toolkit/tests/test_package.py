@@ -56,7 +56,7 @@ def test_versions_match() -> None:
 
 
 def test_skill_mentions_the_switch_up_front_and_at_the_end() -> None:
-    text = (TOOLKIT / "skills" / "ipbuilding-debug" / "SKILL.md").read_text(encoding="utf-8")
+    text = (TOOLKIT / "skills" / "ipbuilding-gateway-tools" / "SKILL.md").read_text(encoding="utf-8")
     assert "Remote debugging and control" in text
     assert "Debuggen en bedienen op afstand" in text
     assert "Instellingen" in text
@@ -81,6 +81,9 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
     assert "0.1.0-rc.1" in text
     assert "Update" in text
     assert "Install" in text
+    assert "IPBuilding Gateway Tools" in text
+    assert "ipbuilding-gateway-tools.mcpb" in text
+    assert "debug" not in text.lower().replace("remote debugging and control", "").replace("debuggen en bedienen op afstand", "").replace("onder **debug**", "")
     lowered = text.lower()
     for banned in ("git ", "terminal", "pip ", "ssh ", "npm "):
         assert banned not in lowered
@@ -90,6 +93,10 @@ def test_staged_manifest_asks_for_the_gateway_address(tmp_path: Path) -> None:
     staged = stage(file_version(), dest=tmp_path / "bundle")
     manifest = json.loads((staged / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["version"] == file_version()
+    assert manifest["name"] == "ipbuilding-gateway-tools"
+    assert manifest["display_name"] == "IPBuilding Gateway Tools"
+    assert "debug" not in manifest["name"]
+    assert "debug" not in manifest["display_name"].lower()
     assert manifest["server"]["type"] == "uv"
     setting = manifest["user_config"]["gateway_address"]
     assert setting["required"] is True

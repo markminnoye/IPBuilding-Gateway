@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "ipbuilding-debug": {
+    "ipbuilding-gateway-tools": {
       "command": "uv",
       "args": [
         "run",

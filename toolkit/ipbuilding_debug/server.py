@@ -25,7 +25,7 @@ log = logging.getLogger("ipbuilding_debug")
 
 
 def skill_text() -> str:
-    path = Path(__file__).resolve().parents[1] / "skills" / "ipbuilding-debug" / "SKILL.md"
+    path = Path(__file__).resolve().parents[1] / "skills" / "ipbuilding-gateway-tools" / "SKILL.md"
     if path.is_file():
         return path.read_text(encoding="utf-8")
     return (
@@ -47,7 +47,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
             await gateway.stop()
 
     mcp = MCPServer(
-        "ipbuilding-debug",
+        "ipbuilding-gateway-tools",
         instructions=skill_text(),
         version=__version__,
         lifespan=lifespan,
