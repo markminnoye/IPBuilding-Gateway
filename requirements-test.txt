@@ -1,0 +1,9 @@
+-r requirements-gateway.txt
+# aioresponses 0.7.9 builds ClientResponse itself and does not pass
+# stream_writer, which aiohttp 3.14 requires. Keep the test environment
+# below that line so tests/test_discover_from_ipbox.py can run.
+# The add-on image still installs requirements-gateway.txt.
+aiohttp>=3.9.0,<3.14
+aioresponses==0.7.9
+pytest
+pytest-asyncio

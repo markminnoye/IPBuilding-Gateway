@@ -393,7 +393,7 @@ class TestDiscoveryOrchestratorForcedDiscovery:
         loaded = json.loads(devices_file.read_text(encoding="utf-8"))
         assert len(loaded["modules"]) == 1
         assert loaded["modules"][0]["mac"] == "00:24:77:52:ac:be"
-        assert loaded["modules"][0]["active"] is False
+        assert "active" not in loaded["modules"][0]
 
     @pytest.mark.asyncio
     async def test_run_forced_discovery_merges_by_ip_when_mac_empty(self, tmp_path: Path):
@@ -543,7 +543,7 @@ class TestDiscoveryOrchestratorInitSweep:
         loaded = json.loads(devices_file.read_text(encoding="utf-8"))
         assert len(loaded["modules"]) == 1
         assert loaded["modules"][0]["mac"] == "00:24:77:52:ac:be"
-        assert loaded["modules"][0]["active"] is False
+        assert "active" not in loaded["modules"][0]
         broadcast.assert_called_once()
         assert broadcast.call_args[0][0]["type"] == "device_added"
 

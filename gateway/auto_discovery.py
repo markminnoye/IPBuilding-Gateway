@@ -2,7 +2,8 @@
 
 Coordinates three discovery paths:
 1. **Init-sweep**  — on first start if devices.json is empty, run ARP-sweep to
-   populate the installation with ``active: false`` entries.
+   populate the installation. A new module entry has no module-level
+   ``active`` flag; that flag lives on channels and pushbuttons.
 2. **Passive ARP monitor** — periodically reads the kernel ARP table; emits
    ``device_added`` when a new OUI-00:24:77 MAC appears, ``device_removed``
    after N missed polls, and ``device_ip_changed`` when a known MAC relocates.
@@ -456,8 +457,8 @@ class DiscoveryOrchestrator:
         """Run ARP-sweep + HTTP identify and return result summary.
 
         Returns ``{"ok", "added", "changed", "removed", "duration_ms"}``.
-        Writes new modules to devices.json (active:false), updates firmware
-        on existing modules.
+        Writes new modules to devices.json without a module-level active
+        flag, and backfills MAC and firmware on existing modules.
         """
         import time
         start = time.monotonic()
@@ -493,7 +494,6 @@ class DiscoveryOrchestrator:
         # First: preserve existing modules; backfill SKU / wire identity where missing.
         if installation:
             for mc in installation.modules:
-                d = mc.to_dict()
                 # Runtime-only fields (last_seen, last_seen_source) are
                 # intentionally NOT written to devices.json. Update them on
                 # the in-memory object so the WS-emit and ``_apply_gateway_status``
@@ -506,34 +506,37 @@ class DiscoveryOrchestrator:
                 # carry an empty ``model`` and an IP-based ``name``. Replace
                 # those with the canonical SKU so the companion shows a
                 # stable "Apparaat-info" title across installs.
-                resolved_model = resolve_module_model(d.get("model", ""), d.get("type", ""))
-                if resolved_model and not d.get("model"):
-                    d["model"] = resolved_model
-                    d["name"] = resolved_model
-                elif resolved_model and d.get("name") == d.get("ip"):
-                    d["name"] = resolved_model
+                resolved_model = resolve_module_model(mc.model, mc.type.value)
+                if resolved_model and not mc.model:
+                    mc.model = resolved_model
+                    mc.name = resolved_model
+                elif resolved_model and mc.name == mc.ip:
+                    mc.name = resolved_model
 
                 dm = _match_discovered_for_module(mc, disc_by_mac, disc_by_ip)
                 if dm is not None:
                     matched_disc_ips.add(dm.ip)
                     if dm.mac:
                         matched_disc_macs.add(dm.mac)
-                    # IPA / legacy imports often have ``mac: ""``. Match by IP
-                    # and backfill wire identity without replacing operator
-                    # channel/button config.
+                    # Legacy imports often have an empty MAC. Match by IP and
+                    # backfill wire identity without replacing operator
+                    # channel or button config. Apply the new values on the
+                    # module before serializing: a later to_dict() would
+                    # otherwise drop them.
                     if not mc.mac and dm.mac:
-                        d["mac"] = dm.mac
+                        mc.mac = dm.mac
                     if dm.ip != mc.ip:
-                        d["ip"] = dm.ip
+                        old_ip = mc.ip
+                        mc.ip = dm.ip
                         self._emit({
                             "type": "device_ip_changed",
                             "mac": dm.mac or mc.mac,
-                            "old_ip": mc.ip,
+                            "old_ip": old_ip,
                             "new_ip": dm.ip,
                         })
                     if dm.firmware and dm.firmware != mc.firmware:
                         old_firmware = mc.firmware
-                        d["firmware"] = dm.firmware
+                        mc.firmware = dm.firmware
                         self._emit({
                             "type": "device_firmware_changed",
                             "mac": dm.mac or mc.mac,
@@ -548,8 +551,8 @@ class DiscoveryOrchestrator:
 
                     if dm.channels:
                         sync_channels_from_wire(mc, dm.channels)
-                        d = mc.to_dict()
 
+                d = mc.to_dict()
                 modules_to_write.append(d)
 
         # Add newly discovered modules (not merged into an existing entry)
