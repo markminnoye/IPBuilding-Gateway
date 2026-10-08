@@ -96,7 +96,7 @@ configuration:
         name: Log level
         description: debug, info, warning, or error. debug also logs field-bus TX/RX (keepalives, commands, unmatched replies).
   debug:
-    name: Remote access
+    name: Debug
     description: Temporarily allow remote access to track down problems. Off by default.
     fields:
       remote_debugging_and_control:

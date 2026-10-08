@@ -96,7 +96,7 @@ configuration:
         name: Logniveau
         description: debug, info, warning of error. debug logt ook veldbus TX/RX (keepalives, commando’s, unmatched replies).
   debug:
-    name: Toegang op afstand
+    name: Debug
     description: Geef tijdelijk toegang op afstand om problemen op te sporen. Standaard uit.
     fields:
       remote_debugging_and_control:
