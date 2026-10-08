@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dimmer on-demand status poll — ``I{ch}000000`` (Jan Nolf / IPBuilding 03.07).
+"""Dimmer on-demand status poll — ``I{ch}000000`` (Torhout / IPBuilding 03.07).
 
 Sends per-channel 8-byte queries to an IP0300PoE and prints ``I0154…`` replies.
 

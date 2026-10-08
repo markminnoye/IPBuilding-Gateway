@@ -294,13 +294,13 @@ lost. Distinguish from module discovery via `semantic_type: "button"`.
   "active": true,
   "channel": null,
   "type_hex": "2d",
-  "dialect_id": "input.lab.button_event"
+  "dialect_id": "input.kessel-lo.button_event"
 }
 ```
 
 `id` is the canonical 8-hex hardware id (same form as `button_event.id`).
-`type_hex` is the wire type byte; `dialect_id` is `input.lab.button_event`,
-`input.nolf.button_event`, or `input.unknown.button_event`.
+`type_hex` is the wire type byte; `dialect_id` is `input.kessel-lo.button_event`,
+`input.torhout.button_event`, or `input.unknown.button_event`.
 
 ### `device_removed` -- module not seen for N polls
 
@@ -464,10 +464,10 @@ Reply: `{"type": "udp_frames_subscribed"}`. After that, each payload this gatewa
   "dst_port": 1001,
   "hex": "533030303031303030",
   "decoded": {
-    "dialect_id": "relay.nolf.command_reply",
+    "dialect_id": "relay.torhout.command_reply",
     "family": "relay_command_reply"
   },
-  "dialect_id": "relay.nolf.command_reply"
+  "dialect_id": "relay.torhout.command_reply"
 }
 ```
 
