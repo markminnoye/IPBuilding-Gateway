@@ -6,4 +6,4 @@ Append a name only when that feature is implemented. Planned follow-ups
 
 from __future__ import annotations
 
-CAPABILITIES: tuple[str, ...] = ("log_stream", "udp_frame")
+CAPABILITIES: tuple[str, ...] = ("log_stream", "udp_frame", "log_history")

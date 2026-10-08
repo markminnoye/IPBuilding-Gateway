@@ -5,6 +5,10 @@ A logging.Handler pushes each line onto the asyncio loop with
 only to WebSocket clients that subscribed. A slow client gets
 ``log_dropped``; it never blocks the loop or other clients.
 
+The handler also keeps a memory ring of the last ``BUFFER_SIZE`` lines
+and the last ``BUFFER_MAX_AGE_S`` seconds, and only while it is
+attached. Nothing is written to disk. ``detach`` drops the ring.
+
 Temporary log levels are memory-only. They are not written to add-on
 options or the environment. The most verbose active request wins, and
 the root logger is never set quieter than the level from configuration.
@@ -23,6 +27,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 BUFFER_SIZE = 500
+BUFFER_MAX_AGE_S = 300.0
 QUEUE_SIZE = 100
 MAX_TTL_S = 3600
 RATE_LIMIT = 10
@@ -121,6 +126,38 @@ def _parse_ttl(value: object, max_ttl_s: int) -> int:
     return value
 
 
+def _parse_since(value: object) -> datetime:
+    """ISO 8601 cutoff. ``Z`` and offsets are accepted; naive values are UTC."""
+    if not isinstance(value, str) or not value.strip():
+        raise LogStreamError(
+            "invalid_since",
+            "since must be an ISO 8601 timestamp, for example 2026-10-08T12:00:00.000Z.",
+        )
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        raise LogStreamError(
+            "invalid_since",
+            "since must be an ISO 8601 timestamp, for example 2026-10-08T12:00:00.000Z.",
+        ) from None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _entry_time(entry: dict[str, Any]) -> datetime | None:
+    ts = entry.get("ts")
+    if not isinstance(ts, str):
+        return None
+    try:
+        return _parse_since(ts)
+    except LogStreamError:
+        return None
+
+
 @dataclass
 class _Subscriber:
     ws: Any
@@ -179,6 +216,7 @@ class LogStream:
         baseline_level: int = logging.INFO,
         *,
         buffer_size: int = BUFFER_SIZE,
+        max_age_s: float = BUFFER_MAX_AGE_S,
         queue_size: int = QUEUE_SIZE,
         max_ttl_s: int = MAX_TTL_S,
         rate_limit: int = RATE_LIMIT,
@@ -187,6 +225,7 @@ class LogStream:
     ) -> None:
         self._baseline = baseline_level
         self._buffer: deque[dict[str, Any]] = deque(maxlen=buffer_size)
+        self._max_age_s = max_age_s
         self._queue_size = queue_size
         self._max_ttl_s = max_ttl_s
         self._rate_limit = rate_limit
@@ -225,6 +264,7 @@ class LogStream:
             root.setLevel(self._saved_level)
             self._saved_level = None
         self._loop = None
+        self._buffer.clear()
 
     def offer(self, entry: dict[str, Any]) -> None:
         """Schedule ``entry`` on the loop. Called from any thread."""
@@ -237,7 +277,10 @@ class LogStream:
             return
 
     def _on_entry(self, entry: dict[str, Any]) -> None:
+        if self._handler is None:
+            return
         self._buffer.append(entry)
+        self._prune()
         level_no = _level_no(entry["level"])
         for sub in self._subs.values():
             if level_no < sub.min_level:
@@ -247,12 +290,42 @@ class LogStream:
             except asyncio.QueueFull:
                 sub.dropped += 1
 
-    async def subscribe(self, ws: Any, min_level: object = None) -> None:
-        """Replay the buffer, then live lines at ``min_level`` (default info)."""
+    def history(
+        self, min_level: object = None, since: object = None,
+    ) -> dict[str, Any]:
+        """Lines still in the ring, filtered by level and ``since``.
+
+        ``since`` is an ISO 8601 timestamp. Lines at that time and later
+        are returned. Omitted ``since`` returns everything the ring still
+        holds. ``min_level`` defaults to info.
+        """
         if min_level is None:
             level = logging.INFO
         else:
             level = _parse_level(min_level)
+        cutoff = None if since is None else _parse_since(since)
+        self._prune()
+        lines: list[dict[str, Any]] = []
+        for entry in self._buffer:
+            if _level_no(entry["level"]) < level:
+                continue
+            if cutoff is not None:
+                when = _entry_time(entry)
+                if when is None or when < cutoff:
+                    continue
+            lines.append(dict(entry))
+        return {
+            "min_level": _level_name(level),
+            "since": since,
+            "lines": lines,
+        }
+
+    async def subscribe(
+        self, ws: Any, min_level: object = None, since: object = None,
+    ) -> None:
+        """Replay the filtered ring, then live lines at ``min_level``."""
+        snapshot = self.history(min_level, since)
+        level = _parse_level(snapshot["min_level"])
         self.attach()
         key = id(ws)
         old = self._subs.pop(key, None)
@@ -264,11 +337,7 @@ class LogStream:
             queue=asyncio.Queue(self._queue_size),
         )
         self._subs[key] = sub
-        replay = [
-            entry
-            for entry in self._buffer
-            if _level_no(entry["level"]) >= level
-        ]
+        replay = snapshot["lines"]
         for entry in replay:
             if not await self._try_send(ws, entry):
                 self._subs.pop(key, None)
@@ -277,7 +346,8 @@ class LogStream:
             ws,
             {
                 "type": "logs_subscribed",
-                "min_level": _level_name(level),
+                "min_level": snapshot["min_level"],
+                "since": since,
                 "buffered": len(replay),
             },
         ):
@@ -399,6 +469,15 @@ class LogStream:
                     return
         except asyncio.CancelledError:
             return
+
+    def _prune(self) -> None:
+        """Drop lines older than the time bound. The deque already caps the count."""
+        cutoff = time.time() - self._max_age_s
+        while self._buffer:
+            when = _entry_time(self._buffer[0])
+            if when is not None and when.timestamp() >= cutoff:
+                break
+            self._buffer.popleft()
 
     async def _try_send(self, ws: Any, payload: dict[str, Any]) -> bool:
         if getattr(ws, "closed", False):

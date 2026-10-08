@@ -17,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The develop add-on is listed in Home Assistant as **IPBuilding Gateway (develop)**. The release keeps the name **IPBuilding Gateway**.
 
 ### Added
+- **Log history.** While **Remote control (for debugging)** is on, the gateway keeps the last 500 lines and the last 5 minutes in memory. `GET /api/v1/debug/logs` and `subscribe_logs` take `since` and `min_level`. Nothing is written to disk. With the option off the ring is empty and the call is refused. `GET /api/v1/status` lists capability `log_history`.
 - **Remote control (for debugging)** in the add-on configuration, off by default. It stays on until you turn it off. While it is on, Home Assistant keeps a notification that anyone on your network can read field-bus traffic and send raw packets through this gateway.
 - **Live logs** while that option is on. A subscribed client receives recent lines and then new ones. The log level can be raised for a limited time (debug shows field-bus traffic) and returns on its own. It is not saved in the add-on configuration. With the option off, those calls are refused.
 - **Live field-bus frames** while that option is on. A subscribed client sees each payload this gateway sends or receives. With the option off, that subscription is refused.

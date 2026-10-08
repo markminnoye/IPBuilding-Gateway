@@ -975,6 +975,91 @@
       ]
     },
     {
+      "name": "Logs",
+      "description": "Recent gateway log lines kept in memory while Remote control (for debugging) is on. The ring is capped at 500 lines and 5 minutes. It is not written to disk.",
+      "item": [
+        {
+          "name": "Read recent logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/debug/logs?since=2026-10-08T12:00:00.000Z&min_level=warning",
+              "host": [
+                "{{gateway_host}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "debug",
+                "logs"
+              ],
+              "query": [
+                {
+                  "key": "since",
+                  "value": "2026-10-08T12:00:00.000Z",
+                  "description": "ISO 8601 cutoff. Lines at this time and later are returned."
+                },
+                {
+                  "key": "min_level",
+                  "value": "warning",
+                  "description": "debug, info, warning, or error. Default info."
+                }
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
+            },
+            "description": "Return log lines kept in memory while Remote control (for debugging) is on. The ring holds at most 500 lines and the last 5 minutes. since is an ISO 8601 timestamp; for the last 60 seconds send the current UTC time minus 60 seconds. min_level filters the lines (debug, info, warning, error; default info). The call is refused with remote_debugging_disabled when that option is off. Nothing is read from disk. See docs/api/rest.md.\n"
+          },
+          "response": [
+            {
+              "name": "200 — lines since the cutoff",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/debug/logs?since=2026-10-08T12:00:00.000Z&min_level=warning",
+                  "host": [
+                    "{{gateway_host}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "debug",
+                    "logs"
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"ok\": true,\n  \"schema_version\": 2,\n  \"min_level\": \"warning\",\n  \"since\": \"2026-10-08T12:00:00.000Z\",\n  \"lines\": [\n    {\n      \"type\": \"log\",\n      \"ts\": \"2026-10-08T12:00:10.000Z\",\n      \"level\": \"warning\",\n      \"logger\": \"gateway.udp_bus\",\n      \"message\": \"command timed out (no reply)\"\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Discovery",
       "description": "Runtime auto-discovery. The gateway normally uses a passive ARP monitor to track new, changed, and removed modules on the field bus. This folder exposes a single synchronous trigger that forces a full sweep on demand \u2014 useful from operator dashboards, scripted provisioning flows, or after physical reconfiguration. The forced sweep ignores the `passive_arp_monitor` and `auto_discover_on_start` toggles and is always available.\n\nSee [`docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md`](https://github.com/markminnoye/IPBuilding-Gateway/blob/main/docs/superpowers/specs/2026-06-04-runtime-auto-discovery-design.md) for the full write policy and design rationale.\n",
       "item": [
