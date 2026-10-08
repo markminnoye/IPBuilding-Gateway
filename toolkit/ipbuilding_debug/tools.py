@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass, field
 from typing import Any
@@ -13,6 +14,7 @@ from ipbuilding_debug.errors import (
     KIND_NO_ADDRESS,
     KIND_OTHER,
     KIND_UNREACHABLE,
+    MSG_LOG_LEVEL_RATE_LIMITED,
     MSG_REMOTE_DEBUGGING_OFF,
     PLANNED_CAPABILITIES,
     ClassifiedError,
@@ -76,23 +78,45 @@ async def connection_status(
         remote = None
     caps = _capabilities(status if isinstance(status, dict) else None)
     message = msg_connected(remote_debugging=remote, capabilities=caps)
+    kind = "remote_debugging_off" if remote is False else "connected"
+    ok = remote is True
     log_note = ""
     if log_level:
         gated = gate_feature(status if isinstance(status, dict) else None, "log_stream")
         if gated is None:
-            applied = await session.request_log_level(log_level)
-            log_note = (
-                "Logniveau gevraagd."
-                if applied
-                else "Logniveau nog niet doorgegeven; de live-verbinding staat nog niet."
-            )
+            outcome = await session.request_log_level(log_level)
+            if outcome == "rate_limited":
+                message = MSG_LOG_LEVEL_RATE_LIMITED
+                log_note = MSG_LOG_LEVEL_RATE_LIMITED
+                kind = "log_level_rate_limited"
+                ok = False
+            elif outcome == "disabled":
+                message = MSG_REMOTE_DEBUGGING_OFF
+                log_note = MSG_REMOTE_DEBUGGING_OFF
+                kind = "remote_debugging_off"
+                ok = False
+            elif outcome == "rejected":
+                log_note = (
+                    "De gateway nam het logniveau niet aan. "
+                    "Gebruik debug, info, warning of error."
+                )
+            elif outcome == "not_connected":
+                log_note = (
+                    "Logniveau nog niet doorgegeven; de live-verbinding staat nog niet."
+                )
+            elif outcome == "applied":
+                log_note = (
+                    "Logniveau gevraagd. Het geldt tijdelijk en wordt niet opgeslagen."
+                )
+            else:
+                log_note = "Logniveau gevraagd."
         else:
             log_note = gated.message
     return ToolResult(
         message,
         {
-            "ok": remote is True,
-            "kind": "remote_debugging_off" if remote is False else "connected",
+            "ok": ok,
+            "kind": kind,
             "connection": session.state,
             "version": (status or {}).get("version"),
             "remote_debugging": remote,
@@ -180,23 +204,24 @@ async def capture_frames(
     seconds = clamp_timeout(seconds if seconds > 0 else 0.1)
     limit = max(1, min(int(limit), 200))
     direction = (direction or "both").lower()
-    await session.request_frames()
-    if not await session.wait_until_connected(min(3.0, seconds)):
+    # Cursor is taken before subscribe, so a frame that is the reply to that
+    # subscribe is inside the window. The wait below is only the upper bound.
+    since = await session.ensure_udp_subscription(timeout=3)
+    if since is None:
         return ToolResult(
             "De gateway antwoordt, maar de live-verbinding staat nog niet. "
             "Probeer het zo meteen opnieuw.",
             {"ok": False, "kind": "connecting", "frames": []},
         )
-    since = session.buffer.latest_seq
-    await _sleep_for(seconds)
-    frames = []
-    for entry in session.buffer.since(since, types={"udp_frame"}):
-        event = entry.event
-        if not _frame_matches(event, direction=direction, module=module, pattern=pattern):
-            continue
-        frames.append(_with_local_decode(event))
-        if len(frames) >= limit:
-            break
+    frames = await _collect_frames(
+        session,
+        since,
+        seconds=seconds,
+        direction=direction,
+        module=module,
+        pattern=pattern,
+        limit=limit,
+    )
     if not frames:
         message = (
             "Er kwamen geen passende frames binnen in deze periode. "
@@ -475,7 +500,44 @@ def _with_local_decode(event: dict[str, Any]) -> dict[str, Any]:
     return item
 
 
-async def _sleep_for(seconds: float) -> None:
-    import asyncio
+async def _collect_frames(
+    session: GatewaySession,
+    since: int,
+    *,
+    seconds: float,
+    direction: str,
+    module: str,
+    pattern: str,
+    limit: int,
+) -> list[dict[str, Any]]:
+    """Frames after ``since``, until ``limit`` matches or ``seconds`` elapses."""
 
-    await asyncio.sleep(seconds)
+    def matching(event: dict[str, Any]) -> bool:
+        return event.get("type") == "udp_frame" and _frame_matches(
+            event, direction=direction, module=module, pattern=pattern
+        )
+
+    def gathered() -> list[dict[str, Any]]:
+        found: list[dict[str, Any]] = []
+        for entry in session.buffer.since(since, types={"udp_frame"}):
+            if not matching(entry.event):
+                continue
+            found.append(_with_local_decode(entry.event))
+            if len(found) >= limit:
+                break
+        return found
+
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + seconds
+    watched = since
+    while True:
+        frames = gathered()
+        if len(frames) >= limit:
+            return frames
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            return frames
+        nxt = await session.buffer.wait_until(matching, remaining, watched)
+        if nxt is None:
+            return gathered()
+        watched = nxt.seq

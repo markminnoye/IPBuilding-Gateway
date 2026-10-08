@@ -44,6 +44,8 @@ class FakeGateway:
         self.replies: list[dict[str, Any]] = [
             {"hex": "5330303030", "from": "module", "port": 1001}
         ]
+        self.frame_on_subscribe: dict[str, Any] | None = None
+        self.log_level_reply: dict[str, Any] | None = None
         self.connects = 0
         self.port = 0
         self._sockets: list[web.WebSocketResponse] = []
@@ -124,7 +126,15 @@ class FakeGateway:
         try:
             async for msg in ws:
                 if msg.type == web.WSMsgType.TEXT:
-                    self.received.append(json.loads(msg.data))
+                    data = json.loads(msg.data)
+                    self.received.append(data)
+                    reply = None
+                    if data.get("type") == "subscribe_udp_frames":
+                        reply = self.frame_on_subscribe
+                    elif data.get("type") == "set_log_level":
+                        reply = self.log_level_reply
+                    if reply is not None:
+                        await ws.send_json(reply)
                 elif msg.type in (web.WSMsgType.ERROR, web.WSMsgType.CLOSE):
                     break
         finally:

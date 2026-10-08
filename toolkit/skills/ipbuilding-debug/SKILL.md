@@ -61,6 +61,7 @@ Geef de boodschap van de tool door, in de taal van de tester. Vier gevallen:
 - **Add-on draait, schakelaar uit.** De gateway zegt `remote_debugging_disabled`, of `/status.remote_debugging` is false. Wijs de weg naar de schakelaar.
 - **Deze versie kan het nog niet.** Capability ontbreekt.
 - **Iets anders.** Vraag of de add-on nog draait en bewaar de melding.
+- **Logniveau te vaak gewijzigd.** De gateway zegt `log_level_rate_limited` (hoogstens 10 wijzigingen per minuut). Vraag de tester even te wachten.
 
 ## Rapport
 

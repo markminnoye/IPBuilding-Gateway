@@ -12,6 +12,7 @@ from typing import Any
 KIND_UNREACHABLE = "unreachable"
 KIND_REMOTE_DEBUGGING_OFF = "remote_debugging_off"
 KIND_NOT_AVAILABLE = "not_available"
+KIND_LOG_LEVEL_RATE_LIMITED = "log_level_rate_limited"
 KIND_OTHER = "other"
 KIND_NO_ADDRESS = "no_address"
 
@@ -64,6 +65,12 @@ MSG_NOT_AVAILABLE = (
     "(not available in this gateway version yet)."
 )
 
+MSG_LOG_LEVEL_RATE_LIMITED = (
+    "Het logniveau is te vaak gewijzigd. "
+    "De gateway laat hoogstens 10 wijzigingen per minuut toe. "
+    "Wacht even en probeer het opnieuw."
+)
+
 _CAPABILITY_LABELS = {
     "log_stream": "Live logs meelezen",
     "udp_frame": "Veldbusframes meelezen",
@@ -73,6 +80,7 @@ _CAPABILITY_LABELS = {
 PLANNED_CAPABILITIES = ("log_stream", "udp_frame", "raw_send")
 
 REMOTE_DEBUGGING_DISABLED = "remote_debugging_disabled"
+LOG_LEVEL_RATE_LIMITED = "log_level_rate_limited"
 
 
 def msg_not_available(capability: str) -> str:
@@ -151,8 +159,18 @@ def is_remote_debugging_disabled(body: Any) -> bool:
     return REMOTE_DEBUGGING_DISABLED in _error_codes(body)
 
 
+def is_log_level_rate_limited(body: Any) -> bool:
+    return LOG_LEVEL_RATE_LIMITED in _error_codes(body)
+
+
 def classify_http(status: int, body: Any) -> ClassifiedError:
     """Classify a non-success HTTP response from the gateway."""
+    if is_log_level_rate_limited(body):
+        return ClassifiedError(
+            KIND_LOG_LEVEL_RATE_LIMITED,
+            MSG_LOG_LEVEL_RATE_LIMITED,
+            LOG_LEVEL_RATE_LIMITED,
+        )
     if is_remote_debugging_disabled(body):
         return ClassifiedError(
             KIND_REMOTE_DEBUGGING_OFF,

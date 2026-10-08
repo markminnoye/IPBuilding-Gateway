@@ -44,6 +44,9 @@ De add-on draait, maar deze versie kan dat onderdeel nog niet. Je hoeft dan niet
 **"Er ging iets mis bij het praten met de gateway."**
 Kijk of de add-on nog draait. Blijft de melding, bewaar de tekst en geef die door aan wie de gateway voor je onderhoudt.
 
+**"Het logniveau is te vaak gewijzigd."**
+Wacht een minuut. De gateway laat hoogstens 10 wijzigingen per minuut toe.
+
 ## Als je klaar bent
 
 Zet **Remote debugging and control** / **Debuggen en bedienen op afstand** weer uit. De add-on start opnieuw en de melding in Home Assistant verdwijnt.

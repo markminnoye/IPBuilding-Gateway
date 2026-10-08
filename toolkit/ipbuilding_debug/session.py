@@ -107,6 +107,7 @@ class GatewaySession:
         self._stopped = asyncio.Event()
         self._send_lock = asyncio.Lock()
         self._session_up = False
+        self._up = asyncio.Event()
         self._gap_from: str | None = None
 
     @classmethod
@@ -248,19 +249,67 @@ class GatewaySession:
         await self.buffer.append({"type": "note", **item})
         return item
 
-    async def request_frames(self) -> None:
+    async def ensure_udp_subscription(self, timeout: float) -> int | None:
+        """Send ``subscribe_udp_frames`` and return the buffer cursor just before it.
+
+        Frames caused by this subscription have a higher sequence than the
+        returned cursor. ``None`` means the subscribe was not sent in time.
+        """
+        cursor = self.buffer.latest_seq
         self.want_frames = True
         await self.ensure_started()
-        await self._resubscribe()
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + clamp_timeout(timeout)
+        while True:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                return None
+            if not await self._wait_until_socket(remaining):
+                return None
+            if await self._send({"type": "subscribe_udp_frames"}):
+                return cursor
+            self._up.clear()
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                return None
+            try:
+                await asyncio.wait_for(self._up.wait(), timeout=remaining)
+            except asyncio.TimeoutError:
+                return None
 
-    async def request_log_level(self, level: str, *, ttl_s: int = 900) -> bool:
-        """Ask the gateway to raise its log level. False when the socket is down."""
-        self.log_level = level.upper()
-        sent_sub = await self._send({"type": "subscribe_logs", "min_level": self.log_level})
-        sent_level = await self._send(
-            {"type": "set_log_level", "level": self.log_level, "ttl": ttl_s}
-        )
-        return sent_sub or sent_level
+    async def request_log_level(self, level: str, *, ttl_s: int = 900) -> str:
+        """Ask the gateway to change its log level.
+
+        Returns ``applied``, ``sent`` (no reply yet), ``not_connected``,
+        ``rate_limited``, ``disabled``, or ``rejected``.
+        """
+        self.log_level = (level or "").strip().upper() or "INFO"
+        try:
+            ttl = int(ttl_s)
+        except (TypeError, ValueError):
+            ttl = 900
+        ttl = max(1, min(ttl, 3600))
+        await self.ensure_started()
+        if not await self._wait_until_socket(3):
+            return "not_connected"
+        since = self.buffer.latest_seq
+        await self._send({"type": "subscribe_logs", "min_level": self.log_level})
+        if not await self._send(
+            {"type": "set_log_level", "level": self.log_level, "ttl": ttl}
+        ):
+            return "not_connected"
+        found = await self.buffer.wait_until(_log_level_reply, 3, since)
+        if found is None:
+            return "sent"
+        event = found.event
+        if event.get("type") == "log_level":
+            return "applied"
+        code = event.get("error")
+        if code == "log_level_rate_limited":
+            return "rate_limited"
+        if code == "remote_debugging_disabled":
+            return "disabled"
+        return "rejected"
 
     async def wait_until_connected(self, timeout: float) -> bool:
         timeout = clamp_timeout(timeout)
@@ -273,6 +322,33 @@ class GatewaySession:
                 return True
             await asyncio.sleep(0.02)
         return self.state == "connected" and self._session_up
+
+    def _socket_ready(self) -> bool:
+        ws = self._ws
+        return self._session_up and ws is not None and not ws.closed
+
+    async def _wait_until_socket(self, timeout: float) -> bool:
+        """Wait until a snapshot has been applied on an open socket."""
+        timeout = clamp_timeout(timeout)
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        while True:
+            if self._stopped.is_set():
+                return False
+            if self._socket_ready():
+                return True
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                return False
+            # Drop a stale signal, then re-check so a snapshot that landed
+            # in between is not lost.
+            self._up.clear()
+            if self._socket_ready():
+                return True
+            try:
+                await asyncio.wait_for(self._up.wait(), timeout=remaining)
+            except asyncio.TimeoutError:
+                return self._socket_ready()
 
     def gap_events(self) -> list[dict[str, Any]]:
         return [event for event in self.buffer.snapshot() if event.get("type") == "gap"]
@@ -333,6 +409,7 @@ class GatewaySession:
         if self._session_up and self._gap_from is None:
             self._gap_from = utc_now()
         self._session_up = False
+        self._up.clear()
         if self.state != "stopped":
             self.state = "disconnected"
 
@@ -384,6 +461,7 @@ class GatewaySession:
             self._apply_status(status)
         self._session_up = True
         self.state = "connected"
+        self._up.set()
         await self.buffer.append(payload)
         await self._resubscribe()
 
@@ -417,6 +495,23 @@ class GatewaySession:
                 log.info("websocket send failed (%s)", type(exc).__name__)
                 return False
         return True
+
+
+_LOG_LEVEL_ERRORS = frozenset(
+    {
+        "log_level_rate_limited",
+        "remote_debugging_disabled",
+        "invalid_log_level",
+        "invalid_ttl",
+    }
+)
+
+
+def _log_level_reply(event: dict[str, Any]) -> bool:
+    kind = event.get("type")
+    if kind == "log_level":
+        return True
+    return kind == "error" and event.get("error") in _LOG_LEVEL_ERRORS
 
 
 async def _read_json(response: aiohttp.ClientResponse) -> Any:

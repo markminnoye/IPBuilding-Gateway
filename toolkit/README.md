@@ -36,7 +36,7 @@ If a name is missing from `/status.capabilities`, the tool returns a not-availab
 
 The client already speaks this. Adjust the client in the same change if the gateway picks different names.
 
-- WebSocket client → gateway, only when `log_stream` is listed: `{"type":"subscribe_logs","min_level":"INFO"}` and `{"type":"set_log_level","level":"DEBUG","ttl":900}`.
+- WebSocket client → gateway, only when `log_stream` is listed: `{"type":"subscribe_logs","min_level":"INFO"}` and `{"type":"set_log_level","level":"DEBUG","ttl":900}`. More than 10 level changes in 60 seconds come back as `{"type":"error","error":"log_level_rate_limited"}`. The tool then tells the tester to wait a minute.
 - WebSocket client → gateway, only when `udp_frame` is listed and a capture is running: `{"type":"subscribe_udp_frames"}`.
 - Gateway → client frames: `{"type":"udp_frame","direction":"tx","hex":"...","src":"...","dst":"...","port":1001}`.
 - Raw send: `POST /api/v1/debug/raw-send` with `target`, `port`, `payload_hex`, `window_ms`. Refusal body: `{"error":"remote_debugging_disabled"}`.

@@ -7,10 +7,12 @@ import socket
 import pytest
 
 from ipbuilding_debug.errors import (
+    KIND_LOG_LEVEL_RATE_LIMITED,
     KIND_NOT_AVAILABLE,
     KIND_OTHER,
     KIND_REMOTE_DEBUGGING_OFF,
     KIND_UNREACHABLE,
+    MSG_LOG_LEVEL_RATE_LIMITED,
     MSG_NOT_AVAILABLE,
     MSG_REMOTE_DEBUGGING_OFF,
     MSG_UNREACHABLE,
@@ -59,6 +61,18 @@ def test_disabled_error_code_is_the_switch(body: dict) -> None:
     classified = classify_http(403, body)
     assert classified.kind == KIND_REMOTE_DEBUGGING_OFF
     assert classified.message == MSG_REMOTE_DEBUGGING_OFF
+
+
+def test_log_level_rate_limit_asks_the_tester_to_wait() -> None:
+    body = {
+        "error": "log_level_rate_limited",
+        "message": "Too many log level changes. Wait and try again.",
+    }
+    classified = classify_http(429, body)
+    assert classified.kind == KIND_LOG_LEVEL_RATE_LIMITED
+    assert classified.message == MSG_LOG_LEVEL_RATE_LIMITED
+    assert "10" in classified.message
+    assert "minuut" in classified.message
 
 
 def test_transport_failures_are_unreachable() -> None:

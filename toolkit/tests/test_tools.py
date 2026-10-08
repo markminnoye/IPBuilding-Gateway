@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import socket
 
 import pytest
 
 from ipbuilding_debug.errors import (
+    MSG_LOG_LEVEL_RATE_LIMITED,
     MSG_REMOTE_DEBUGGING_OFF,
     MSG_UNREACHABLE,
     NOT_AVAILABLE_PHRASE,
@@ -128,35 +128,63 @@ async def test_capture_frames_switch_off_when_feature_exists() -> None:
 @pytest.mark.asyncio
 async def test_capture_frames_subscribes_and_returns_a_frame() -> None:
     gateway = FakeGateway(remote_debugging=True, capabilities=["udp_frame"])
+    gateway.frame_on_subscribe = {
+        "type": "udp_frame",
+        "direction": "rx",
+        "hex": "5330303030",
+        "src": "module",
+        "dst": "gateway",
+        "port": 1001,
+    }
     await gateway.start()
     session = GatewaySession(f"127.0.0.1:{gateway.port}", backoff_start=0.05)
-
-    async def push_after_subscribe() -> None:
-        for _ in range(100):
-            if any(item.get("type") == "subscribe_udp_frames" for item in gateway.received):
-                await gateway.push(
-                    {
-                        "type": "udp_frame",
-                        "direction": "rx",
-                        "hex": "5330303030",
-                        "src": "module",
-                        "dst": "gateway",
-                        "port": 1001,
-                    }
-                )
-                return
-            await asyncio.sleep(0.02)
-
-    pusher = asyncio.create_task(push_after_subscribe())
     try:
-        result = await capture_frames(session, seconds=1, direction="rx")
+        await session.ensure_started()
+        assert await session.wait_until_connected(3)
+        # A frame from before this capture must stay outside the window.
+        await session.buffer.append(
+            {
+                "type": "udp_frame",
+                "direction": "rx",
+                "hex": "00",
+                "src": "old",
+                "dst": "gateway",
+                "port": 1001,
+            }
+        )
+        result = await capture_frames(session, seconds=5, direction="rx", limit=1)
     finally:
-        pusher.cancel()
         await session.stop()
         await gateway.stop()
     assert result.data["ok"] is True
     assert len(result.data["frames"]) == 1
+    assert result.data["frames"][0]["hex"] == "5330303030"
     assert result.data["frames"][0]["local_decode"]["matched"] is True
+    assert any(item.get("type") == "subscribe_udp_frames" for item in gateway.received)
+
+
+@pytest.mark.asyncio
+async def test_log_level_rate_limit_is_explained() -> None:
+    gateway = FakeGateway(remote_debugging=True, capabilities=["log_stream"])
+    gateway.log_level_reply = {
+        "type": "error",
+        "error": "log_level_rate_limited",
+        "message": "Too many log level changes. Wait and try again.",
+    }
+    await gateway.start()
+    session = GatewaySession(f"127.0.0.1:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await connection_status(session, log_level="debug")
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert result.message == MSG_LOG_LEVEL_RATE_LIMITED
+    assert result.data["kind"] == "log_level_rate_limited"
+    assert result.data["ok"] is False
+    sent = [item for item in gateway.received if item.get("type") == "set_log_level"]
+    assert sent
+    assert sent[-1]["level"] == "DEBUG"
+    assert sent[-1]["ttl"] == 900
 
 
 @pytest.mark.asyncio
