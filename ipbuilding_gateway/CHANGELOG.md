@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- The settings group that holds **Remote control (for debugging)** is titled **Remote access** (Nederlands: **Toegang op afstand**). The group key and the switch texts are unchanged.
 - The add-on option is named **Remote control (for debugging)** (Nederlands: **Bediening op afstand (voor debuggen)**). The option key is unchanged. The Home Assistant notification follows the Home Assistant language.
 - Field-bus dialect ids use city names. The reference generation is `kessel-lo`. The older generation is `torhout`. `udp_frame` events carry that same `dialect_id`.
 
