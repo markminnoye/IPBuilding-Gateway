@@ -68,6 +68,7 @@ _SENSITIVE_KEYS = {
     "gr",
     "host",
     "id",
+    "instance_id",
     "ip",
     "mac",
     "module_id",
@@ -75,8 +76,10 @@ _SENSITIVE_KEYS = {
     "module_name",
     "name",
     "room",
+    "service_name",
     "src",
     "target",
+    "uuid",
 }
 
 _PLACEHOLDER = {
@@ -87,6 +90,7 @@ _PLACEHOLDER = {
     "gr": "[naam]",
     "host": "[adres]",
     "id": "[id]",
+    "instance_id": "[id]",
     "ip": "[adres]",
     "mac": "[mac]",
     "module_id": "[id]",
@@ -94,9 +98,19 @@ _PLACEHOLDER = {
     "module_name": "[naam]",
     "name": "[naam]",
     "room": "[naam]",
+    "service_name": "[id]",
     "src": "[adres]",
     "target": "[id]",
+    "uuid": "[id]",
 }
+
+# Keyed values in log lines. A bare UUID stays, so the random installation id
+# in the frontmatter is left alone. The lookbehind keeps ``installatie_id`` intact.
+_IDENTITY_KV = re.compile(
+    r"(?i)(?<![A-Za-z0-9_])(instance_id|uuid|service_name)(?![A-Za-z0-9_])"
+    r"(\s*[:=]\s*)"
+    r'(?:"[^"]*"|\'[^\']*\'|\S+)'
+)
 
 # Short names and rooms are redacted only from these fields, as whole words.
 _NAME_KEYS = {"descr", "gr", "module_name", "name", "room"}
@@ -235,7 +249,8 @@ def redact_text(
     case-insensitive and whole-word; the mask text comes from the inventory
     spelling. Without masks, those names become ``[naam]``.
     """
-    cleaned = _IPV6_RUN.sub(_ipv6_or_keep, text)
+    cleaned = _IDENTITY_KV.sub(r"\1\2[id]", text)
+    cleaned = _IPV6_RUN.sub(_ipv6_or_keep, cleaned)
     cleaned = _IPV4.sub("[adres]", cleaned)
     cleaned = _MAC_COLON.sub("[mac]", cleaned)
     cleaned = _MAC_DASH.sub("[mac]", cleaned)
@@ -371,9 +386,15 @@ def _fully_removed(token: str, hosts: set[str]) -> str | None:
 
 
 def _apply_spans(text: str, spans: list[tuple[int, int, str, int]]) -> str:
-    """Apply non-overlapping spans. Longer matches win; masks beat ``[naam]``."""
+    """Apply non-overlapping spans.
+
+    A name mask always wins over ``[naam]``, even when the ``[naam]`` token is
+    longer and would otherwise swallow the name. Within one kind, the longer
+    match wins.
+    """
     chosen: list[tuple[int, int, str]] = []
-    for start, end, replacement, rank in sorted(spans, key=lambda item: (-(item[1] - item[0]), item[3], item[0])):
+    ordered = sorted(spans, key=lambda item: (item[3], -(item[1] - item[0]), item[0]))
+    for start, end, replacement, _rank in ordered:
         if any(not (end <= have or start >= stop) for have, stop, _ in chosen):
             continue
         chosen.append((start, end, replacement))

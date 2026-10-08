@@ -19,7 +19,7 @@ from ipbuilding_debug.privacy import (
     privacy_notice,
 )
 from ipbuilding_debug.redact import mask_stem, name_masks, redact_text
-from ipbuilding_debug.report import parse_mailto, report_send_enabled
+from ipbuilding_debug.report import APPENDIX_LOG_LIMIT, parse_mailto, report_send_enabled
 from ipbuilding_debug.server import build_server
 from ipbuilding_debug.session import GatewaySession
 from ipbuilding_debug.tools import (
@@ -108,7 +108,9 @@ async def test_export_report_splits_evidence_and_redacts_free_text() -> None:
     )
     hidden = await export_session(session, note=note)
     report = hidden.data["report"]
-    assert report.startswith(FEEDBACK_WARNING)
+    assert report.startswith("---")
+    assert FEEDBACK_WARNING in report
+    assert report.index("---") < report.index(FEEDBACK_WARNING)
     for heading in (
         "1. Samenvatting",
         "2. Omgeving",
@@ -180,7 +182,9 @@ async def test_send_report_waits_for_confirmation_and_never_sends(
     assert parsed["address"] == "intake@example.invalid"
     assert parsed["subject"].startswith(f"[DEBUG] {installation_id()} | lamp uit | ")
     assert re.search(r"\d{4}-\d{2}-\d{2}T", parsed["subject"])
-    assert parsed["body"].startswith(FEEDBACK_WARNING)
+    assert parsed["body"].startswith("---")
+    assert FEEDBACK_WARNING in parsed["body"]
+    assert parsed["body"].index("---") < parsed["body"].index(FEEDBACK_WARNING)
     for key in (
         "Samenvatting:",
         "Omgeving:",
@@ -465,10 +469,174 @@ async def test_report_times_are_local_and_the_template_is_complete() -> None:
         "7. Bijlage",
     ):
         assert heading in report
-    assert report.splitlines()[0] == FEEDBACK_WARNING
-    assert report.splitlines()[2] == "---"
+    assert report.splitlines()[0] == "---"
+    assert FEEDBACK_WARNING in report
+    assert report.index("---") < report.index(FEEDBACK_WARNING)
     assert "installatie_id:" in result.data["frontmatter"]
     assert result.message.startswith(report)
+
+
+@pytest.mark.asyncio
+async def test_report_masks_a_name_that_a_longer_token_would_swallow() -> None:
+    session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
+    session.devices = {
+        "dev-1": {
+            "id": "relay Traphal extra",
+            "name": "Traphal",
+            "room": "Keuken",
+            "device_type": "relay",
+        }
+    }
+    await session.buffer.append(
+        {
+            "type": "log",
+            "ts": "2026-07-02T03:04:05Z",
+            "level": "info",
+            "logger": "gw",
+            "message": "relay Traphal extra in Keuken",
+        }
+    )
+    hidden = await export_session(session, note="Traphal bleef uit")
+    report = hidden.data["report"]
+    assert "Txxxxxx" in report
+    assert "Kxxxxx" in report
+    assert "Traphal" not in report
+    assert "Keuken" not in report
+    assert "[naam]" not in report
+    logged = next(event for event in hidden.data["events"] if event.get("type") == "log")
+    assert logged["message"] == "relay Txxxxxx extra in Kxxxxx"
+
+
+@pytest.mark.asyncio
+async def test_report_times_in_the_appendix_are_local() -> None:
+    previous = os.environ.get("TZ")
+    os.environ["TZ"] = "Europe/Brussels"
+    time.tzset()
+    try:
+        session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
+        await session.buffer.append(
+            {
+                "type": "log",
+                "ts": "2026-07-02T03:04:05.123Z",
+                "level": "info",
+                "logger": "gw",
+                "message": (
+                    "van 2026-07-02T03:04:05.123Z "
+                    "tot 2026-07-02T03:04:06.123456+00:00 "
+                    "en 2026-07-02 03:04:07Z"
+                ),
+            }
+        )
+        result = await export_session(session, note="lamp bleef aan")
+    finally:
+        if previous is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = previous
+        time.tzset()
+    report = result.data["report"]
+    appendix = report.split("7. Bijlage", 1)[1]
+    for stamp in (
+        "2026-07-02T05:04:05+02:00",
+        "2026-07-02T05:04:06+02:00",
+        "2026-07-02T05:04:07+02:00",
+    ):
+        assert stamp in appendix
+    assert not re.search(r"\d{2}:\d{2}:\d{2}(?:[.,]\d+)?Z", report)
+    assert "+00:00" not in report
+    logged = next(event for event in result.data["events"] if event.get("type") == "log")
+    assert logged["ts"] == "2026-07-02T05:04:05+02:00"
+    assert not str(logged["ts"]).endswith("Z")
+
+
+@pytest.mark.asyncio
+async def test_report_keeps_frames_and_caps_duplicate_logs() -> None:
+    session = GatewaySession("192.0.2.40:9", backoff_start=30, backoff_max=30)
+    await session.buffer.append(
+        {
+            "type": "udp_frame",
+            "direction": "rx",
+            "hex": "I0154110",
+            "src": "192.0.2.40",
+            "dst": "192.0.2.1",
+        }
+    )
+    total = APPENDIX_LOG_LIMIT + 40
+    for index in range(total):
+        await session.buffer.append(
+            {
+                "type": "log",
+                "ts": "2026-07-02T03:04:05Z",
+                "level": "info",
+                "logger": "gw",
+                "message": f"regel-{index:03d}",
+            }
+        )
+    await session.buffer.append(
+        {
+            "type": "log",
+            "ts": "2026-07-02T03:05:05Z",
+            "level": "info",
+            "logger": "gw",
+            "message": f"regel-{total - 1:03d}",
+        }
+    )
+    result = await export_session(session, note="knop bleef hangen")
+    report = result.data["report"]
+    confirmed = report.split("Bevestigd", 1)[1].split("Vermoeden", 1)[0]
+    tested = report.split("3. Wat getest werd", 1)[1].split("4. Bevindingen", 1)[0]
+    suspected = report.split("Vermoeden", 1)[1].split("5. Open vragen", 1)[0]
+    appendix = report.split("7. Bijlage", 1)[1]
+    assert "I0154110" in confirmed
+    assert "I0154110" in appendix
+    assert "kessel-lo" in confirmed
+    assert "kessel-lo" in result.data["frontmatter"]
+    assert "dialects: []" not in result.data["frontmatter"]
+    newest = f"regel-{total - 1:03d}"
+    assert report.count(newest) == 1
+    assert newest in appendix
+    assert newest not in tested
+    assert newest not in suspected
+    assert "regel-000" not in report
+    assert "192.0.2.40" not in report
+    assert len(report) < 20_000
+
+
+@pytest.mark.asyncio
+async def test_report_redacts_instance_uuid_and_service_name() -> None:
+    instance = "11111111-2222-4333-8444-555555555555"
+    service_uuid = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+    service = "ipbgw-11111111._ipbgw._tcp.local."
+    session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
+    session.devices = {
+        "dev-1": {"id": "dev-1", "name": "Traphal", "room": "Keuken", "device_type": "relay"}
+    }
+    await session.buffer.append(
+        {
+            "type": "log",
+            "ts": "2026-07-02T03:04:05Z",
+            "level": "info",
+            "logger": "gw",
+            "instance_id": instance,
+            "uuid": service_uuid,
+            "service_name": service,
+            "message": (
+                f"Starting HA discovery  instance_id={instance}  "
+                f"uuid={service_uuid}  service_name={service}  room Traphal"
+            ),
+        }
+    )
+    hidden = await export_session(session, note="Traphal")
+    report = hidden.data["report"]
+    blob = hidden.render()
+    for secret in (instance, service_uuid, service, "11111111", "Traphal"):
+        assert secret not in report
+        assert secret not in blob
+    assert "Txxxxxx" in report
+    assert "[naam]" not in report
+    stored = installation_id()
+    assert stored in report
+    assert f"installatie_id: {stored}" in report.split("1. Samenvatting", 1)[0]
 
 
 def test_skill_describes_the_report_and_the_backlog() -> None:

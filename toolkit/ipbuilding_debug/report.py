@@ -18,9 +18,9 @@ from ipbuilding_debug.version import __version__
 
 _BODY_LIMIT = 250_000
 _CONFIRMED_TYPES = {"udp_frame"}
+_LOG_TYPES = {"log", "log_dropped"}
+# Suspected findings come from the buffer, not from the raw log dump.
 _SUSPECTED_TYPES = {
-    "log",
-    "log_dropped",
     "state_changed",
     "button_event",
     "device_added",
@@ -28,6 +28,8 @@ _SUSPECTED_TYPES = {
     "device_ip_changed",
     "device_firmware_changed",
 }
+# A pasted mail stays small: one copy of the newest log lines. Frames stay.
+APPENDIX_LOG_LIMIT = 80
 
 
 _SEND_OFF = {"0", "false", "no", "off"}
@@ -55,9 +57,9 @@ def render_report(body: dict[str, Any]) -> tuple[str, str]:
     frontmatter = _frontmatter(body, sections["dialects"])
     report = "\n".join(
         [
-            FEEDBACK_WARNING,
-            "",
             frontmatter,
+            "",
+            FEEDBACK_WARNING,
             "",
             "1. Samenvatting",
             sections["samenvatting"],
@@ -89,8 +91,8 @@ def render_report(body: dict[str, Any]) -> tuple[str, str]:
 
 
 def email_body(report_sections: dict[str, str], frontmatter: str) -> str:
-    """One ``Sleutel: waarde`` line per section, then the machine-readable block."""
-    lines = [FEEDBACK_WARNING, ""]
+    """Machine-readable block first, then one ``Sleutel: waarde`` line per section."""
+    lines = [frontmatter, "", FEEDBACK_WARNING, ""]
     for key in (
         "Samenvatting",
         "Omgeving",
@@ -103,7 +105,7 @@ def email_body(report_sections: dict[str, str], frontmatter: str) -> str:
     ):
         value = " ".join(report_sections[key].split())
         lines.append(f"{key}: {value}")
-    lines.extend(["", frontmatter, ""])
+    lines.append("")
     text = "\n".join(lines)
     if len(text) <= _BODY_LIMIT:
         return text
@@ -182,12 +184,74 @@ def parse_mailto(link: str) -> dict[str, str]:
     return fields
 
 
+def limit_export_events(events: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], str]:
+    """Keep frames, the newest unique log lines, and other events. Preserve order.
+
+    Log lines are kept once (first occurrence). The appendix then shows only
+    the last ``APPENDIX_LOG_LIMIT`` of those. Frames are not pushed out by logs.
+    """
+    frames: list[dict[str, Any]] = []
+    logs: list[dict[str, Any]] = []
+    rest: list[dict[str, Any]] = []
+    for event in events:
+        kind = event.get("type")
+        if kind in _CONFIRMED_TYPES:
+            frames.append(event)
+        elif kind in _LOG_TYPES:
+            logs.append(event)
+        else:
+            rest.append(event)
+    unique_logs, duplicate_logs = _unique_logs(logs)
+    shown_logs = unique_logs[-APPENDIX_LOG_LIMIT:]
+    dropped_logs = len(unique_logs) - len(shown_logs)
+    keep = {id(item) for item in frames + shown_logs + rest}
+    kept = [event for event in events if id(event) in keep]
+    note = _appendix_note(duplicate_logs, dropped_logs)
+    return kept, note
+
+
+def _unique_logs(logs: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    """First occurrence of each log line, in the original order."""
+    seen: set[tuple[str, str]] = set()
+    kept: list[dict[str, Any]] = []
+    omitted = 0
+    for event in logs:
+        key = (
+            str(event.get("level") or ""),
+            str(event.get("message") or event.get("text") or ""),
+        )
+        if key in seen:
+            omitted += 1
+            continue
+        seen.add(key)
+        kept.append(event)
+    return kept, omitted
+
+
+def _appendix_note(duplicate_logs: int, dropped_logs: int) -> str:
+    if duplicate_logs <= 0 and dropped_logs <= 0:
+        return ""
+    parts = ["Ingekort:"]
+    if duplicate_logs > 0:
+        parts.append("dubbele logregels zijn één keer gehouden.")
+    if dropped_logs > 0:
+        parts.append(f"De bijlage toont de laatste {APPENDIX_LOG_LIMIT} logregels.")
+    return " ".join(parts)
+
+
 def _sections(body: dict[str, Any]) -> dict[str, Any]:
     notes = [item for item in body.get("notes") or [] if isinstance(item, dict)]
     events = [item for item in body.get("events") or [] if isinstance(item, dict)]
-    confirmed = [_event_line(item) for item in events if item.get("type") in _CONFIRMED_TYPES]
-    suspected = [_event_line(item) for item in events if item.get("type") in _SUSPECTED_TYPES]
-    gaps = [item for item in events if item.get("type") == "gap"]
+    frames = [item for item in events if item.get("type") in _CONFIRMED_TYPES]
+    logs = [item for item in events if item.get("type") in _LOG_TYPES]
+    others = [
+        item
+        for item in events
+        if item.get("type") not in _CONFIRMED_TYPES and item.get("type") not in _LOG_TYPES
+    ]
+    confirmed = [_event_line(item) for item in frames]
+    suspected = [_event_line(item) for item in others if item.get("type") in _SUSPECTED_TYPES]
+    gaps = [item for item in others if item.get("type") == "gap"]
     note_lines = [_note_line(item) for item in notes]
     words = " ".join(str(item.get("text") or "").strip() for item in notes).strip()
     if words:
@@ -201,17 +265,34 @@ def _sections(body: dict[str, Any]) -> dict[str, Any]:
             "De tester heeft nog geen probleem in een notitie gezet. "
             "Een oorzaak staat onder Bevindingen alleen als een frame die bevestigt."
         )
+    tested = note_lines + [_event_line(item) for item in others]
+    appendix = _appendix_lines(body, logs, frames)
     return {
         "samenvatting": summary,
         "omgeving": _environment(body),
-        "getest": "\n".join(note_lines + [_event_line(item) for item in events]) or "Geen stappen genoteerd.",
+        "getest": "\n".join(tested) or "Geen stappen genoteerd.",
         "bevestigd": "\n".join(confirmed) or "Geen frame dat dit bevestigt.",
         "vermoeden": "\n".join(suspected) or "Geen vermoeden uit de buffer.",
         "open": _open_questions(gaps),
         "feedback": "—",
-        "bijlage": "\n".join(_event_line(item) for item in events) or "Geen gebeurtenissen.",
+        "bijlage": "\n".join(appendix) or "Geen gebeurtenissen.",
         "dialects": _dialects(events),
     }
+
+
+def _appendix_lines(
+    body: dict[str, Any],
+    logs: list[dict[str, Any]],
+    frames: list[dict[str, Any]],
+) -> list[str]:
+    """Log lines once, then captured frames. The cap note comes first."""
+    lines: list[str] = []
+    note = body.get("appendix_note")
+    if isinstance(note, str) and note.strip():
+        lines.append(note.strip())
+    lines.extend(_event_line(item) for item in logs)
+    lines.extend(_event_line(item) for item in frames)
+    return lines
 
 
 def _environment(body: dict[str, Any]) -> str:
@@ -275,7 +356,10 @@ def _event_line(event: dict[str, Any]) -> str:
     when = str(event.get("local_time") or "")
     kind = str(event.get("type") or "gebeurtenis")
     detail = event.get("message") or event.get("action") or event.get("state") or event.get("hex") or ""
-    return f"{when} {kind} {detail}".strip()
+    line = f"{when} {kind} {detail}".strip()
+    if event.get("type") == "udp_frame" and event.get("dialect_id"):
+        line = f"{line} dialect {event['dialect_id']}"
+    return line
 
 
 def _note_line(note: dict[str, Any]) -> str:
@@ -302,6 +386,9 @@ def _dialects(events: list[Any]) -> list[str]:
         raw = event.get("dialect_id")
         if isinstance(raw, str) and raw and raw not in found:
             found.append(raw)
+        for item in event.get("dialect_ids") or []:
+            if isinstance(item, str) and item and item not in found:
+                found.append(item)
         decode = event.get("local_decode")
         if isinstance(decode, dict):
             for item in decode.get("dialects") or []:

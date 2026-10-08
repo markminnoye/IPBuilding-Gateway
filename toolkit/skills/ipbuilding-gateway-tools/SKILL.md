@@ -107,8 +107,8 @@ Dialecten hebben een stadsnaam. De namen en ids komen uit de tool. Nu zijn dat K
 4. Bevindingen — `Bevestigd` (frames) en `Vermoeden` (alleen de buffer) strikt apart, met het bewijs.
 5. Open vragen.
 6. Feedback over de tool.
-7. Bijlage — ruwe events en frames, gefilterd.
+7. Bijlage — ruwe events en frames, gefilterd. Logregels staan alleen hier, elk één keer, de laatste 80. Frames staan ook onder Bevestigd.
 
-Boven het rapport staat: "Zet geen namen, adressen, wachtwoorden of codes in je feedback."
+Het rapport begint met het YAML-blok, vóór elke andere tekst. Direct daarna staat: "Zet geen namen, adressen, wachtwoorden of codes in je feedback." Elke tijd in het rapport is lokale tijd met een offset. Een tijd met Z of +00:00 wordt omgezet. `instance_id`, `uuid` en `service_name` in logregels gaan eruit, net als adressen. Het installatie-id in het YAML-blok blijft staan.
 
 Staat `send_report` in de tool-lijst, dan mag je het rapport aanbieden. Zo niet, dan stop je bij het rapport. De flow is: jij stelt de mail op met het gefilterde rapport, de tester ziet de privacymelding en het rapport en bevestigt, en pas daarna bied je de mailto-link aan. De tester kiest in zijn eigen mailprogramma het afzenderadres en verstuurt zelf. Heeft de tester een Gmail- of Outlook-koppeling, dan mag je een concept in die mailbox klaarzetten, met hetzelfde onderwerp en dezelfde tekst, naar het intake-adres. Ook dan verstuurt de tester zelf. Geen tokens en geen SMTP. Het afzenderadres mag in het ticket terechtkomen. Zeg daarna dat er geen bevestiging komt. Elk rapport is een nieuwe mail; een antwoord maakt geen nieuw ticket. Het rapport wordt een ticket in onze Linear-backlog. Het sjabloon zet het label Agent. De toolkit zet zelf geen status en geen labels. Er is geen aparte privacyverklaring. Toon de melding uit de tool en voeg geen link toe.

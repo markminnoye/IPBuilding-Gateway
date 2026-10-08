@@ -13,7 +13,7 @@ from urllib.parse import quote
 
 from ipbuilding_debug.buffer import clamp_timeout
 from ipbuilding_debug.decode import decode_frame, parse_frame
-from ipbuilding_debug.dialect import present_decode, present_event
+from ipbuilding_debug.dialect import dialect_name, present_decode, present_dialect_id, present_event
 from ipbuilding_debug.errors import (
     KIND_NOT_AVAILABLE,
     KIND_NO_ADDRESS,
@@ -48,6 +48,7 @@ from ipbuilding_debug.report import (
     disabled_message,
     email_body,
     intake_address,
+    limit_export_events,
     mailto_link,
     preview_message,
     render_report,
@@ -1069,7 +1070,11 @@ def _parse_gateway_time(event: dict[str, Any]) -> datetime | None:
     return None
 
 
-_UTC_STAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z")
+# UTC in log text: a T or a space, a fraction with '.' or ',', then Z or +00:00.
+_UTC_STAMP = re.compile(
+    r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:[Zz]|[+\-]00:?00)"
+)
+_TIME_FIELDS = ("ts", "timestamp", "time", "at", "from", "to")
 
 
 def _format_local(moment: datetime) -> str:
@@ -1080,7 +1085,7 @@ def _format_local(moment: datetime) -> str:
 
 
 def _localise_utc_text(text: str) -> str:
-    """Rewrite gateway `Z` timestamps in a report to local time with an offset."""
+    """Rewrite UTC timestamps in a report to local time with a numeric offset."""
 
     def replace(match: re.Match[str]) -> str:
         parsed = _parse_log_ts(match.group(0))
@@ -1089,6 +1094,21 @@ def _localise_utc_text(text: str) -> str:
         return _format_local(parsed)
 
     return _UTC_STAMP.sub(replace, text)
+
+
+def _localise_time_fields(item: dict[str, Any]) -> None:
+    """Convert UTC clock fields on one event. Local offsets are left as they are."""
+    for key in _TIME_FIELDS:
+        raw = item.get(key)
+        if not isinstance(raw, str) or _UTC_STAMP.fullmatch(raw.strip()) is None:
+            continue
+        parsed = _parse_log_ts(raw)
+        if parsed is not None:
+            item[key] = _format_local(parsed)
+    for key in ("message", "text"):
+        raw = item.get(key)
+        if isinstance(raw, str) and _UTC_STAMP.search(raw):
+            item[key] = _localise_utc_text(raw)
 
 
 def _stamp_event(event: dict[str, Any], received_at: datetime) -> dict[str, Any]:
@@ -1101,6 +1121,9 @@ def _stamp_event(event: dict[str, Any], received_at: datetime) -> dict[str, Any]
     else:
         item["local_time"] = _format_local(received_at)
         item["time_source"] = "received"
+    _localise_time_fields(item)
+    if item.get("type") == "udp_frame":
+        _remember_frame_dialects(item)
     return item
 
 
@@ -1109,6 +1132,7 @@ def _stamp_note(note: dict[str, Any]) -> dict[str, Any]:
     parsed = _parse_log_ts(item.get("at"))
     item["local_time"] = _format_local(parsed or datetime.now().astimezone())
     item["time_source"] = "received"
+    _localise_time_fields(item)
     return item
 
 
@@ -1133,11 +1157,12 @@ async def export_session(
     else:
         sharing = RAW_LOCAL_WARNING
     report, frontmatter = render_report(body)
-    report = _localise_utc_text(report)
     if redact:
         # Second pass: headings, feedback, and every other line of the report.
         report = redact_text(report, tokens, hosts, masks)
         frontmatter = redact_text(frontmatter, tokens, hosts, masks)
+    report = _localise_utc_text(report)
+    frontmatter = _localise_utc_text(frontmatter)
     message = f"{report}\n{sharing}"
     return ToolResult(
         message,
@@ -1595,12 +1620,48 @@ _EXPORT_TYPES = {
 }
 
 
+def _remember_frame_dialects(item: dict[str, Any]) -> None:
+    """Copy dialect ids from a local decode onto the frame. Not the raw decode.
+
+    The decode can carry module addresses. The report only needs the dialect id,
+    so confirmed frames and the frontmatter can name it.
+    """
+    decoded = _with_local_decode(item).get("local_decode")
+    if not isinstance(decoded, dict):
+        return
+    found: list[str] = []
+    for dialect in decoded.get("dialects") or []:
+        if isinstance(dialect, dict) and isinstance(dialect.get("id"), str) and dialect["id"]:
+            found.append(dialect["id"])
+    for match in decoded.get("matches") or []:
+        if not isinstance(match, dict):
+            continue
+        fields = match.get("fields")
+        if not isinstance(fields, dict):
+            continue
+        raw = fields.get("dialect_id")
+        if isinstance(raw, str) and raw and raw not in found:
+            found.append(present_dialect_id(raw))
+    if not found:
+        return
+    item["dialect_ids"] = found
+    if not item.get("dialect_id"):
+        item["dialect_id"] = found[0]
+    shown = present_dialect_id(str(item.get("dialect_id") or ""))
+    if shown:
+        item["dialect_id"] = shown
+        name = dialect_name(shown)
+        if name:
+            item["dialect_name"] = name
+
+
 def _export_body(session: GatewaySession) -> dict[str, Any]:
     exported = [
         _stamp_event(entry.event, entry.received_at)
         for entry in session.buffer.entries()
         if entry.event.get("type") in _EXPORT_TYPES
     ]
+    kept, note = limit_export_events(exported)
     status = session.status or {}
     return {
         "gateway": {
@@ -1616,8 +1677,9 @@ def _export_body(session: GatewaySession) -> dict[str, Any]:
         "installatie_id": installation_id(),
         "modules": _export_modules(session),
         "notes": [_stamp_note(note) for note in session.notes],
-        "gaps": [event for event in exported if event.get("type") == "gap"],
-        "events": exported[-500:],
+        "gaps": [event for event in kept if event.get("type") == "gap"],
+        "events": kept,
+        "appendix_note": note,
         "buffer": _buffer_summary(session),
     }
 
@@ -1800,7 +1862,11 @@ def _log_rank(level: str) -> int:
 def _parse_log_ts(value: object) -> datetime | None:
     if not isinstance(value, str) or not value:
         return None
-    text = value.replace("Z", "+00:00")
+    text = value.strip().replace("Z", "+00:00").replace("z", "+00:00")
+    if len(text) >= 11 and text[10] == " ":
+        text = text[:10] + "T" + text[11:]
+    if "T" in text:
+        text = text.replace(",", ".", 1)
     try:
         parsed = datetime.fromisoformat(text)
     except ValueError:
