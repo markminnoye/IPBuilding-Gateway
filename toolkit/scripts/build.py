@@ -43,6 +43,23 @@ COPY_NAMES = (
     ".mcpbignore",
 )
 
+# Shown in the desktop extension list. Keep it short and non-technical.
+# The install steps stay in HANDLEIDING.md.
+LONG_DESCRIPTION = (
+    "IPBuilding Gateway Tools laat een assistent meekijken in je eigen installatie.\n"
+    "\n"
+    "De tool praat met de IPBuilding Gateway-add-on in je eigen netwerk. "
+    "Hij kan zien welke lamp of knop bij welk kanaal hoort, of de gateway bereikbaar is, "
+    "en wat er gebeurt als je een knop indrukt of een lamp verandert. "
+    "In de add-on zet je daarvoor een schakelaar aan, en na afloop weer uit.\n"
+    "\n"
+    "Persoonsgegevens worden standaard weggefilterd, "
+    "zoals adressen en namen van lampen en ruimtes. "
+    "Een ruwe weergave is alleen voor jezelf.\n"
+    "\n"
+    "Hoe je de bundel installeert, staat in de handleiding bij dit bestand."
+)
+
 
 def file_version() -> str:
     return (TOOLKIT / "VERSION").read_text(encoding="utf-8").strip()
@@ -138,7 +155,7 @@ def _write_manifest(dest: Path, version: str) -> None:
         # Legacy single-asset field. Clients use this when `icons` is omitted.
         "icon": "icon.png",
         "description": "Meekijken en testen via de IPBuilding Gateway in je thuisnetwerk.",
-        "long_description": (TOOLKIT / "HANDLEIDING.md").read_text(encoding="utf-8"),
+        "long_description": LONG_DESCRIPTION,
         "author": {"name": "Sonic Rocket"},
         "license": "MIT",
         "repository": {

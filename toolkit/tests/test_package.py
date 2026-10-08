@@ -124,6 +124,15 @@ def test_staged_manifest_asks_for_the_gateway_address(tmp_path: Path) -> None:
         "export_session",
     ]
     assert (staged / "gateway" / "payloads" / "relay.py").is_file()
+    description = manifest["long_description"]
+    assert len(description) <= 800
+    lowered = description.lower()
+    assert "ipbuilding gateway-add-on" in lowered
+    assert "eigen netwerk" in lowered
+    assert "persoonsgegevens" in lowered
+    assert "weggefilterd" in lowered
+    for technical in ("websocket", "capability", "udp", "payload", "mdns"):
+        assert technical not in lowered
     assert manifest["icon"] == "icon.png"
     icon = staged / "icon.png"
     addon_icon = TOOLKIT.parent / "ipbuilding_gateway" / "icon.png"
