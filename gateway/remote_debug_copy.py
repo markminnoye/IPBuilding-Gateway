@@ -7,8 +7,8 @@ name. ``ipbuilding_gateway/translations`` must match; a test checks it.
 from __future__ import annotations
 
 TOOL_NAME = {
-    "en": "IPBuilding debug-toolkit",
-    "nl": "IPBuilding debug-toolkit",
+    "en": "IPBuilding Gateway Tools",
+    "nl": "IPBuilding Gateway Tools",
 }
 
 OPTION_NAME = {

@@ -102,7 +102,7 @@ configuration:
       remote_debugging_and_control:
         name: Remote control (for debugging)
         description: >-
-          Allows the IPBuilding debug-toolkit to read live logs and field-bus
+          Allows the IPBuilding Gateway Tools to read live logs and field-bus
           traffic and to send commands to your modules remotely, so problems
           can be diagnosed. Only turn this on during a debug session. It stays
           on until you turn it off.

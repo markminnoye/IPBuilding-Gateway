@@ -102,7 +102,7 @@ configuration:
       remote_debugging_and_control:
         name: Bediening op afstand (voor debuggen)
         description: >-
-          Laat de IPBuilding debug-toolkit live logs en veldbusverkeer lezen en
+          Laat de IPBuilding Gateway Tools live logs en veldbusverkeer lezen en
           op afstand commando's naar je modules sturen, zodat problemen
           opgespoord kunnen worden. Zet dit alleen aan tijdens een debugsessie.
           Het blijft aan tot je het zelf uitzet.
