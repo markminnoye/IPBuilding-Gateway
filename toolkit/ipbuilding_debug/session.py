@@ -30,6 +30,7 @@ log.addHandler(logging.NullHandler())
 BACKOFF_START_S = 1.0
 BACKOFF_MAX_S = 30.0
 DEFAULT_PORT = 8080
+DEFAULT_GATEWAY_ADDRESS = "homeassistant.local"
 
 Sleeper = Callable[[float], Awaitable[None]]
 
@@ -58,11 +59,19 @@ def parse_gateway_address(raw: str | None, *, default_port: int = DEFAULT_PORT) 
 
 
 def address_from_env() -> str:
-    return (
+    """Gateway host from the bundle setting, or ``homeassistant.local`` when empty.
+
+    Claude Desktop can leave an optional field blank even when the manifest
+    has a default, so an empty value is the usual address.
+    """
+    raw = (
         os.environ.get("IPBUILDING_GATEWAY_ADDRESS")
         or os.environ.get("IPBUILDING_GATEWAY")
         or ""
     ).strip()
+    if not raw or raw.startswith("${"):
+        return DEFAULT_GATEWAY_ADDRESS
+    return raw
 
 
 class GatewaySession:

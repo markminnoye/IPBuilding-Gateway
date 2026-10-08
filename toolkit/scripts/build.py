@@ -170,9 +170,12 @@ def _write_manifest(dest: Path, version: str) -> None:
                 "title": "Gateway-adres",
                 "description": (
                     "Adres van de IPBuilding Gateway, zonder http:// en zonder poort. "
-                    "Meestal homeassistant.local."
+                    "Laat leeg voor homeassistant.local."
                 ),
-                "required": True,
+                # required defaults to false in the MCPB spec. A required string
+                # shows `default` as a grey placeholder and Claude Desktop will
+                # not enable Save until the field is edited.
+                "required": False,
                 "default": "homeassistant.local",
             }
         },

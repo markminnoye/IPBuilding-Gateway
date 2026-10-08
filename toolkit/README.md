@@ -15,7 +15,7 @@ IPBuilding Gateway Tools only talks to the gateway REST and WebSocket API on por
 | `scripts/build.py` | One build used locally and in CI |
 | `VERSION` | Version. A release tag `gateway-tools-vX.Y.Z` must match this file |
 
-The gateway address is a user setting (`gateway_address` in the bundle, the same key in the Claude Code plugin). It is passed as `IPBUILDING_GATEWAY_ADDRESS`. Nothing in this folder hardcodes an address.
+The gateway address is a user setting (`gateway_address` in the bundle, the same key in the Claude Code plugin). It is optional. The manifest default is `homeassistant.local`, and the server uses that host when the setting is empty. It is passed as `IPBUILDING_GATEWAY_ADDRESS`.
 
 ## Tools
 

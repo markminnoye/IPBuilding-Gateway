@@ -8,7 +8,7 @@ Je krijgt één bestand: `ipbuilding-gateway-tools.mcpb`.
 
 1. Dubbelklik op het bestand. Claude Desktop gaat open en vraagt of je IPBuilding Gateway Tools wil installeren. Bevestig dat.
 2. Lukt dubbelklikken niet, open dan Claude Desktop, ga naar **Instellingen → Extensies** en kies het bestand.
-3. Vul het **gateway-adres** in. Meestal is dat `homeassistant.local`. Zonder `http://` en zonder poort. Dit is het adres van Home Assistant in je thuisnetwerk, niet een adres van een losse module.
+3. Het gateway-adres staat al op `homeassistant.local`. Gebruik je dat adres, druk dan meteen op **Save**. Alleen als Home Assistant een ander adres heeft, verander je het veld. Zonder `http://` en zonder poort. Dit is het adres van Home Assistant in je thuisnetwerk, niet een adres van een losse module.
 
 ## Nieuwere testversie
 

@@ -11,9 +11,9 @@
     "gateway_address": {
       "type": "string",
       "title": "Gateway-adres",
-      "description": "Adres van de IPBuilding Gateway in je thuisnetwerk, zonder http:// en zonder poort. Meestal homeassistant.local.",
+      "description": "Adres van de IPBuilding Gateway in je thuisnetwerk, zonder http:// en zonder poort. Laat leeg voor homeassistant.local.",
       "default": "homeassistant.local",
-      "required": true
+      "required": false
     }
   }
 }

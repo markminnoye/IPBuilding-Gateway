@@ -53,6 +53,10 @@ def test_toolkit_sources_have_no_private_addresses() -> None:
 def test_versions_match() -> None:
     versions_agree()
     assert re.fullmatch(r"0\.1\.0-rc\.[1-9]\d*", file_version())
+    plugin = json.loads((TOOLKIT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    setting = plugin["userConfig"]["gateway_address"]
+    assert setting["required"] is False
+    assert setting["default"] == "homeassistant.local"
 
 
 def test_skill_mentions_the_switch_up_front_and_at_the_end() -> None:
@@ -99,7 +103,7 @@ def test_staged_manifest_asks_for_the_gateway_address(tmp_path: Path) -> None:
     assert "debug" not in manifest["display_name"].lower()
     assert manifest["server"]["type"] == "uv"
     setting = manifest["user_config"]["gateway_address"]
-    assert setting["required"] is True
+    assert setting["required"] is False
     assert setting["default"] == "homeassistant.local"
     env = manifest["server"]["mcp_config"]["env"]["IPBUILDING_GATEWAY_ADDRESS"]
     assert env == "${user_config.gateway_address}"

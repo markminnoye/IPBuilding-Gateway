@@ -9,8 +9,25 @@ import sys
 import pytest
 
 from ipbuilding_debug.buffer import RingBuffer, clamp_timeout
-from ipbuilding_debug.session import GatewaySession, next_backoff
+from ipbuilding_debug.session import (
+    DEFAULT_GATEWAY_ADDRESS,
+    GatewaySession,
+    address_from_env,
+    next_backoff,
+)
 from fake_gateway import FakeGateway
+
+
+def test_empty_gateway_address_uses_homeassistant_local(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("IPBUILDING_GATEWAY_ADDRESS", raising=False)
+    monkeypatch.delenv("IPBUILDING_GATEWAY", raising=False)
+    assert address_from_env() == DEFAULT_GATEWAY_ADDRESS
+    monkeypatch.setenv("IPBUILDING_GATEWAY_ADDRESS", "   ")
+    assert address_from_env() == "homeassistant.local"
+    monkeypatch.setenv("IPBUILDING_GATEWAY_ADDRESS", "${user_config.gateway_address}")
+    assert address_from_env() == "homeassistant.local"
+    monkeypatch.setenv("IPBUILDING_GATEWAY_ADDRESS", "hub.local")
+    assert address_from_env() == "hub.local"
 
 
 def test_backoff_grows_from_one_second_to_thirty() -> None:
