@@ -6,10 +6,9 @@
 #   version_override:  optional X.Y.Z-dev.N written into config.yaml before
 #                      the image is tagged. Empty for release builds.
 #                      Never publishes :latest when this is set.
-#                      A dev override also sets the develop add-on name.
-#                      A release build (no override, not the develop branch)
-#                      forces the stable name in the checkout. That checkout
-#                      is not committed.
+#                      A dev override also sets the develop add-on name
+#                      in this checkout. Release builds publish the name
+#                      already stored in config.yaml.
 # Pushes from the develop branch may only publish an X.Y.Z-dev.N tag.
 #
 # Prerequisites:
@@ -61,10 +60,6 @@ jobs:
       - name: Use the develop add-on name
         if: inputs.version_override != ''
         run: python3 scripts/addon_channel.py develop
-
-      - name: Use the stable add-on name
-        if: inputs.version_override == '' && github.ref_name != 'develop'
-        run: python3 scripts/addon_channel.py stable
 
       - name: Prepare build context (pre-build copy for monorepo)
         run: ./${{ inputs.app }}/prepare-build.sh
@@ -132,10 +127,6 @@ jobs:
       - name: Use the develop add-on name
         if: inputs.version_override != ''
         run: python3 scripts/addon_channel.py develop
-
-      - name: Use the stable add-on name
-        if: inputs.version_override == '' && github.ref_name != 'develop'
-        run: python3 scripts/addon_channel.py stable
 
       - name: Prepare build context
         run: ./${{ inputs.app }}/prepare-build.sh

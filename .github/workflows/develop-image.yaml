@@ -5,9 +5,10 @@
 #   2. Builds and pushes ghcr.io/markminnoye/ipbuilding-gateway:X.Y.Z-dev.N.
 #   3. Commits that version, and the name "IPBuilding Gateway (develop)",
 #      back to develop so Home Assistant offers an update and a distinct
-#      store entry. The source on the branch keeps the stable name until
-#      this job runs. A merge to main can copy the develop name for one
-#      commit; stable-addon-name.yaml puts "IPBuilding Gateway" back.
+#      store entry. A merge to main can copy that name, the same way it
+#      can copy the dev version. The release edit of config.yaml puts
+#      "IPBuilding Gateway" back together with the release version.
+#      This workflow never commits to main.
 #
 # It never publishes :latest and never publishes a plain release tag.
 # Release tags stay on builder.yaml (v*.*.* only). The version-bump commit

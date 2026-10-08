@@ -15,7 +15,7 @@ from scripts.addon_channel import (
 
 _REPO = Path(__file__).resolve().parent.parent
 _CONFIG = _REPO / "ipbuilding_gateway" / "config.yaml"
-_STABLE_WORKFLOW = _REPO / ".github" / "workflows" / "stable-addon-name.yaml"
+_RELEASE_RULE = _REPO / ".cursor" / "rules" / "release-process.mdc"
 
 
 def _config(path: Path) -> None:
@@ -84,12 +84,13 @@ def test_about_pages_use_the_shared_description() -> None:
         assert DESCRIPTION in text.split("## ", 1)[0]
 
 
-def test_main_push_restores_the_stable_name() -> None:
-    workflow = _STABLE_WORKFLOW.read_text(encoding="utf-8")
-    trigger = workflow.split("jobs:", 1)[0]
-    assert "branches:" in trigger
-    assert "- main" in trigger
-    assert "develop" not in trigger.split("on:", 1)[1]
-    assert "scripts/addon_channel.py stable" in workflow
-    assert "[skip ci]" in workflow
-    assert "ipbuilding_gateway/config.yaml" in workflow
+def test_release_edit_restores_the_stable_name_with_the_version() -> None:
+    """The release version is a hand edit of config.yaml, not a main workflow."""
+    rule = _RELEASE_RULE.read_text(encoding="utf-8")
+    version_step = rule.split("3. Bump `version:`", 1)[1].split("\n4. Commit:", 1)[0]
+    assert "name" in version_step
+    assert "panel_title" in version_step
+    assert STABLE_NAME in version_step
+    assert "addon_channel.py stable" in version_step
+    workflows = _REPO / ".github" / "workflows"
+    assert not (workflows / "stable-addon-name.yaml").exists()

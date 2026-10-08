@@ -3,9 +3,12 @@
 
 Home Assistant shows ``name`` and ``panel_title`` from
 ``ipbuilding_gateway/config.yaml`` on the git branch it tracks. The
-develop image job writes "IPBuilding Gateway (develop)" onto develop.
-A push to main writes "IPBuilding Gateway" back, and a release image
-build does the same in its checkout before the image labels are read.
+develop image job writes "IPBuilding Gateway (develop)" onto develop,
+in the same commit as the dev version. It does not commit to main.
+
+A merge of develop can copy that name, the same way it can copy the
+dev version. The release edit of this file puts "IPBuilding Gateway"
+back (``stable``) together with the release version.
 
 The description is the same on both channels and is not rewritten here.
 """

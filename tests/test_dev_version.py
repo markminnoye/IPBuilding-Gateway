@@ -115,8 +115,7 @@ def test_workflows_publish_dev_tags_only_from_develop() -> None:
     assert "github.ref_name == 'develop'" in build_app
     assert "scripts/dev_version.py check" in build_app
     assert "scripts/addon_channel.py develop" in build_app
-    assert "scripts/addon_channel.py stable" in build_app
-    assert "github.ref_name != 'develop'" in build_app
+    assert "scripts/addon_channel.py stable" not in build_app
 
     builder = _BUILDER.read_text(encoding="utf-8")
     assert 'tags:\n      - "v*.*.*"' in builder
