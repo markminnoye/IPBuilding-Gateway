@@ -22,6 +22,7 @@ from gateway.ha_discovery import (
     HaDiscoveryConfig,
     _build_txt_properties,
     _load_or_create_instance_id,
+    _pick_ipv4_from_network_info,
     _pick_publish_ip,
     _running_as_hass_addon,
 )
@@ -124,7 +125,88 @@ def test_pick_publish_ip_explicit(monkeypatch):
 
 def test_pick_publish_ip_addon(monkeypatch):
     monkeypatch.setenv("SUPERVISOR_TOKEN", "x")
-    assert _pick_publish_ip("0.0.0.0") == "127.0.0.1"
+    # Wildcard bind in add-on mode is resolved later from Supervisor.
+    assert _pick_publish_ip("0.0.0.0") is None
+
+
+def _supervisor_network(interfaces: list[dict]) -> dict:
+    return {"result": "ok", "data": {"interfaces": interfaces}}
+
+
+def test_network_info_prefers_primary_lan_address():
+    payload = _supervisor_network(
+        [
+            {
+                "interface": "eth1",
+                "primary": False,
+                "enabled": True,
+                "connected": True,
+                "ipv4": {
+                    "address": ["192.0.2.20/24"],
+                    "gateway": "192.0.2.1",
+                },
+            },
+            {
+                "interface": "eth0",
+                "primary": True,
+                "enabled": True,
+                "connected": True,
+                "ipv4": {"address": ["192.0.2.10/24"], "gateway": None},
+            },
+            {
+                "interface": "docker0",
+                "primary": False,
+                "enabled": True,
+                "connected": True,
+                "ipv4": {"address": ["192.0.2.30/24"]},
+            },
+            {
+                "interface": "lo",
+                "primary": False,
+                "enabled": True,
+                "connected": True,
+                "ipv4": {"address": ["127.0.0.1/8"]},
+            },
+        ]
+    )
+    assert _pick_ipv4_from_network_info(payload) == "192.0.2.10"
+
+
+def test_network_info_skips_loopback_on_primary():
+    payload = _supervisor_network(
+        [
+            {
+                "interface": "eth0",
+                "primary": True,
+                "enabled": True,
+                "connected": True,
+                "ipv4": {"address": ["127.0.0.1/8"]},
+            },
+            {
+                "interface": "eth1",
+                "primary": False,
+                "enabled": True,
+                "connected": True,
+                "ipv4": {"address": ["192.0.2.20/24"], "gateway": "192.0.2.1"},
+            },
+        ]
+    )
+    assert _pick_ipv4_from_network_info(payload) == "192.0.2.20"
+
+
+def test_network_info_legacy_dict_shape():
+    payload = {
+        "data": {
+            "interfaces": {
+                "eth0": {
+                    "ip_address": "192.0.2.10/24",
+                    "gateway": "192.0.2.1",
+                    "primary": True,
+                }
+            }
+        }
+    }
+    assert _pick_ipv4_from_network_info(payload) == "192.0.2.10"
 
 
 def test_pick_publish_ip_standalone(monkeypatch):
@@ -286,6 +368,165 @@ def test_zeroconf_server_label_within_rfc_limit(monkeypatch):
     )
     # And it must not include the (long) raw instance id verbatim.
     assert "a" * 32 not in label
+
+
+def _fake_zeroconf(monkeypatch):
+    fake_aiozc = MagicMock()
+    fake_aiozc.async_register_service = AsyncMock(return_value=None)
+    fake_aiozc.async_unregister_service = AsyncMock(return_value=None)
+    fake_aiozc.async_close = AsyncMock(return_value=None)
+    fake_aiozc_class = MagicMock(return_value=fake_aiozc)
+    monkeypatch.setattr("gateway.ha_discovery.AsyncZeroconf", fake_aiozc_class)
+    return fake_aiozc_class
+
+
+class _HassioResponse:
+    status = 200
+
+    async def json(self):
+        return {"data": {"uuid": "disc"}}
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_args):
+        return False
+
+
+class _HassioHttp:
+    def __init__(self) -> None:
+        self.body = None
+
+    def post(self, _url, json=None, timeout=None):
+        self.body = json
+        return _HassioResponse()
+
+    async def close(self):
+        return None
+
+
+@pytest.mark.asyncio
+async def test_addon_zeroconf_announces_lan_address(tmp_path: Path, monkeypatch):
+    """Add-on mode publishes the Supervisor primary address, not loopback."""
+    monkeypatch.setenv("SUPERVISOR_TOKEN", "token")
+    route_called = {"yes": False}
+
+    async def fetch():
+        return _supervisor_network(
+            [
+                {
+                    "interface": "eth0",
+                    "primary": True,
+                    "enabled": True,
+                    "connected": True,
+                    "ipv4": {"address": ["192.0.2.10/24"], "gateway": "192.0.2.1"},
+                }
+            ]
+        )
+
+    def route():
+        route_called["yes"] = True
+        return "192.0.2.99"
+
+    monkeypatch.setattr("gateway.ha_discovery._fetch_supervisor_network_info", fetch)
+    monkeypatch.setattr("gateway.ha_discovery._default_route_ipv4", route)
+    zeroconf_cls = _fake_zeroconf(monkeypatch)
+
+    cfg = HaDiscoveryConfig(
+        enabled=True,
+        zeroconf_enabled=True,
+        hassio_enabled=False,
+        data_dir=str(tmp_path),
+        api_host="0.0.0.0",
+        api_port=8080,
+    )
+    adv = HaDiscoveryAdvertiser(cfg, instance_id="abc12345deadbeef")
+    await adv.start()
+
+    assert route_called["yes"] is False
+    assert adv.base_url == "http://192.0.2.10:8080"
+    assert adv.txt_properties["host"] == "192.0.2.10"
+    assert adv.txt_properties["homeassistant_addon"] == "true"
+    assert adv._service_info is not None
+    assert socket.inet_aton("192.0.2.10") in adv._service_info.addresses
+    assert zeroconf_cls.return_value.async_register_service.await_count == 1
+
+    http = _HassioHttp()
+    adv._http = http
+    await adv._hassio_announce_once()
+    assert http.body["config"]["host"] == "127.0.0.1"
+    assert http.body["config"]["port"] == 8080
+    await adv.stop()
+
+
+@pytest.mark.asyncio
+async def test_addon_zeroconf_skipped_when_no_lan_address(
+    tmp_path: Path, monkeypatch, caplog
+):
+    """No Supervisor address and no default route: do not announce loopback."""
+    monkeypatch.setenv("SUPERVISOR_TOKEN", "token")
+
+    async def fetch():
+        return _supervisor_network(
+            [
+                {
+                    "interface": "lo",
+                    "primary": True,
+                    "enabled": True,
+                    "connected": True,
+                    "ipv4": {"address": ["127.0.0.1/8"]},
+                }
+            ]
+        )
+
+    monkeypatch.setattr("gateway.ha_discovery._fetch_supervisor_network_info", fetch)
+    monkeypatch.setattr("gateway.ha_discovery._default_route_ipv4", lambda: None)
+    zeroconf_cls = _fake_zeroconf(monkeypatch)
+
+    cfg = HaDiscoveryConfig(
+        enabled=True,
+        zeroconf_enabled=True,
+        hassio_enabled=False,
+        data_dir=str(tmp_path),
+        api_host="0.0.0.0",
+        api_port=8080,
+    )
+    adv = HaDiscoveryAdvertiser(cfg, instance_id="abc12345deadbeef")
+    with caplog.at_level("WARNING"):
+        await adv.start()
+
+    assert adv._publish_ip is None
+    assert adv._service_info is None
+    assert zeroconf_cls.call_count == 0
+    assert "Zeroconf announcement skipped" in caplog.text
+    assert "127.0.0.1" in caplog.text
+    await adv.stop()
+
+
+@pytest.mark.asyncio
+async def test_addon_zeroconf_falls_back_to_default_route(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("SUPERVISOR_TOKEN", "token")
+
+    async def fetch():
+        return None
+
+    monkeypatch.setattr("gateway.ha_discovery._fetch_supervisor_network_info", fetch)
+    monkeypatch.setattr("gateway.ha_discovery._default_route_ipv4", lambda: "192.0.2.20")
+    _fake_zeroconf(monkeypatch)
+
+    cfg = HaDiscoveryConfig(
+        enabled=True,
+        zeroconf_enabled=True,
+        hassio_enabled=False,
+        data_dir=str(tmp_path),
+        api_host="0.0.0.0",
+        api_port=8080,
+    )
+    adv = HaDiscoveryAdvertiser(cfg, instance_id="abc12345deadbeef")
+    await adv.start()
+    assert adv.base_url == "http://192.0.2.20:8080"
+    assert socket.inet_aton("192.0.2.20") in adv._service_info.addresses
+    await adv.stop()
 
 
 def test_zeroconf_service_instance_name_under_63_bytes(monkeypatch):
