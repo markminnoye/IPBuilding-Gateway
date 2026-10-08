@@ -7,9 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - The add-on option is named **Remote control (for debugging)** (Nederlands: **Bediening op afstand (voor debuggen)**). The option key is unchanged. The Home Assistant notification follows the Home Assistant language.
+- Field-bus dialect ids use city names. The reference generation is `kessel-lo`. The older generation is `torhout`. `udp_frame` events carry that same `dialect_id`.
 
 ### Fixed
 - In add-on mode the gateway announces its LAN address over mDNS, so a computer on the network can connect. It does not announce the loopback address. Discovery for Home Assistant on the same machine is unchanged.
+
+### Changed
+- The add-on description is "Open IPBuilding field-bus gateway, replaces proprietary IPBox".
+- The develop add-on is listed in Home Assistant as **IPBuilding Gateway (develop)**. The release keeps the name **IPBuilding Gateway**.
 
 ### Added
 - **Remote control (for debugging)** in the add-on configuration, off by default. It stays on until you turn it off. While it is on, Home Assistant keeps a notification that anyone on your network can read field-bus traffic and send raw packets through this gateway.

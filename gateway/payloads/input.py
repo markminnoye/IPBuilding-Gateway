@@ -1,7 +1,7 @@
 """IP1100 input module UDP/1001 payloads.
 
 Confirmed: hub poll I0000; idle reply I\\x02<family>…E (13 or 14 bytes).
-Button event: B<type>…E (13 bytes) — lab type 0x2d, Nolf type 0x01.
+Button event: B<type>…E (13 bytes) — reference type 0x2d, older generation type 0x01.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from typing import Any
 
 from gateway.button_id import canonical_button_id
 from gateway.models import InputEvent
+from gateway.payloads.dialects import KESSEL_LO, TORHOUT
 
 _INPUT_POLL_RE = re.compile(rb"^I0000$")
 _INPUT_REPLY_RE = re.compile(
@@ -23,12 +24,12 @@ _INPUT_EVENT_RE = re.compile(
 )
 
 _BUTTON_TYPE_DIALECT = {
-    0x2D: "input.lab.button_event",
-    0x01: "input.nolf.button_event",
+    0x2D: KESSEL_LO.message_type("input", "button_event"),
+    0x01: TORHOUT.message_type("input", "button_event"),
 }
 _IDLE_FAMILY_DIALECT = {
-    0x52: "input.lab.idle_reply",  # 'R'
-    0x28: "input.nolf.idle_reply",
+    0x52: KESSEL_LO.message_type("input", "idle_reply"),  # 'R'
+    0x28: TORHOUT.message_type("input", "idle_reply"),
 }
 
 UNKNOWN_BUTTON_DIALECT = "input.unknown.button_event"

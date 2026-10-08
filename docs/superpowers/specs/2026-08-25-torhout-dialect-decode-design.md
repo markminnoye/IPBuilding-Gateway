@@ -1,25 +1,25 @@
-# Nolf dialect decode (gateway 1.6.5)
+# Torhout dialect decode (gateway 1.6.5)
 
 **Date:** 2026-08-25  
 **Status:** approved for implementation  
-**Repos:** IPBuilding Gateway (Python add-on only). ESP32 port is a follow-up after Jan’s field validation.  
-**Context:** Nolf 2026-08-24 — relay command-echo undecoded; dimmer family `15` undecoded; HA status lags physical lights
+**Repos:** IPBuilding Gateway (Python add-on only). ESP32 port is a follow-up after field validation.  
+**Context:** Torhout 2026-08-24 — relay command-echo undecoded; dimmer family `15` undecoded; HA status lags physical lights
 
 ## Problem
 
-On Jan Nolf’s older modules the **commands work**, but Home Assistant status does not follow:
+On older Torhout modules the **commands work**, but Home Assistant status does not follow:
 
-- Relay `.30` answers `S`/`C` with a **command echo** (`C060000000`), not the lab status frame `I0000{ch}{state}`. Undecoded → no `STATE` update after a toggle.
-- Dimmer `.42` answers status poll / keepalive with family **`15`** (`I0115184`, idle `I0115000`) instead of lab family `54`. Undecoded → poll timeout → brightness stays Unknown.
+- Relay `.30` answers `S`/`C` with a **command echo** (`C060000000`), not the Kessel-Lo status frame `I0000{ch}{state}`. Undecoded → no `STATE` update after a toggle.
+- Dimmer `.42` answers status poll / keepalive with family **`15`** (`I0115184`, idle `I0115000`) instead of Kessel-Lo family `54`. Undecoded → poll timeout → brightness stays Unknown.
 - Dimmer `.42` also **echoes the command bytes** (`S1231030` → `S1231030`) and does **not** send a status frame. The payload already decoded as `dimmer_command`; the registry ignored it.
 
-Core principle: **an echo from a module confirms the commanded stand**. Channel and level come from the echo itself, not from a guessed state quartet. The 20 s actuator poll (working on Nolf since 1.6.4) corrects an echo that was not physically executed.
+Core principle: **an echo from a module confirms the commanded stand**. Channel and level come from the echo itself, not from a guessed state quartet. The 20 s actuator poll (working on Torhout since 1.6.4) corrects an echo that was not physically executed.
 
 ```mermaid
 flowchart LR
-  relayEcho["relay .30: C060000000"] --> relayDec["relay.nolf.command_reply<br/>state from prefix"]
-  dimEcho["dimmer .42: S1231030"] --> dimDec["dimmer.nolf.command_echo<br/>ch+level from command"]
-  dimPoll["dimmer .42: I0115184"] --> dimStat["dimmer.nolf.status_reply<br/>family 15"]
+  relayEcho["relay .30: C060000000"] --> relayDec["relay.torhout.command_reply<br/>state from prefix"]
+  dimEcho["dimmer .42: S1231030"] --> dimDec["dimmer.torhout.command_echo<br/>ch+level from command"]
+  dimPoll["dimmer .42: I0115184"] --> dimStat["dimmer.torhout.status_reply<br/>family 15"]
   dimIdle["dimmer .42: I0115000"] --> idle["idle sentinel<br/>no state overwrite"]
   relayDec --> reg["device_registry STATE"]
   dimDec --> reg
@@ -43,7 +43,7 @@ That is a **second cause**: gateway state and HA entity can diverge (companion /
 
 ## Goals
 
-1. Relay Nolf command-echo → `STATE` immediately (`S`/`C`; `T` no state change).
+1. Relay Torhout command-echo → `STATE` immediately (`S`/`C`; `T` no state change).
 2. Dimmer family-`15` poll reply → brightness/off seed (no false timeout).
 3. Family-`15` idle `I0115000` does not overwrite channel state.
 4. Dimmer command-echo from a dimmer IP is a state source (`S1231030` → ch1 23%).
@@ -53,7 +53,7 @@ That is a **second cause**: gateway state and HA entity can diverge (companion /
 
 ## Non-goals
 
-- Mapping `input.nolf.binary`.
+- Mapping `input.torhout.binary`.
 - Companion code changes (verify WS `state` only).
 - ESP32 payload port in this release.
 - Forcing `hub_role=master` in config.
@@ -78,7 +78,7 @@ Return shape:
 
 ```python
 {
-    "dialect_id": "relay.nolf.command_reply",
+    "dialect_id": "relay.torhout.command_reply",
     "family": "relay_command_reply",
     "action": "on" | "off" | "toggle",
     "channel": 6,
@@ -90,23 +90,23 @@ Return shape:
 ```
 
 On successful decode: one INFO line  
-`decoded relay.nolf.command_reply from 10.10.1.30: C060000000 (ch6 → off)`.
+`decoded relay.torhout.command_reply from 10.10.1.30: C060000000 (ch6 → off)`.
 
 No wiring change: the log already proves the registry sees the packet (`undecoded RX from 10.10.1.30: C060000000`).
 
 ### D0.2 — `99` = 100% (option 1)
 
-Same as lab. Ground truth: [2026-05-17_dimmer_I0154xxx_full_decode.md](../../../resources_and_docs/evidence/2026-05-17_dimmer_I0154xxx_full_decode.md) rule 71 (`099` = ch0 + `99` = 100%). No evidence that Nolf diverges. Supporting: poll reported ch1 = 84%, after which Jan dimmed exactly that channel to 23% / 47% / off.
+Same as Kessel-Lo. Ground truth: [2026-05-17_dimmer_I0154xxx_full_decode.md](../../../resources_and_docs/evidence/2026-05-17_dimmer_I0154xxx_full_decode.md) rule 71 (`099` = ch0 + `99` = 100%). No evidence that Torhout diverges. Supporting: a poll of 84% on one channel was later followed by 23% and 47% on that same channel.
 
 ### D0.2b — Family-`15` idle sentinel `000` (new)
 
 `I0115000` is an **idle sentinel** for family `15` (like `999` for family `54`): no channel/level, **no state overwrite**.
 
-Rationale: the directed poll reported ch0 = `099` (100%) while the keepalive seconds later said `000`, with no command in between. A global `000` sentinel would break valid lab status `I0154000` (ch0 off after `C0…`). Idle is therefore **strictly family-scoped**: `999` only for family `54`, `000` only for family `15`.
+Rationale: the directed poll reported ch0 = `099` (100%) while the keepalive seconds later said `000`, with no command in between. A global `000` sentinel would break valid Kessel-Lo status `I0154000` (ch0 off after `C0…`). Idle is therefore **strictly family-scoped**: `999` only for family `54`, `000` only for family `15`.
 
 Jan confirms with a glance at the Zithoek lamp (ch0) during keepalive.
 
-`dialect_id`: `dimmer.nolf.idle_keepalive`; `family`: `dimmer_poll`; `action`: `idle`.
+`dialect_id`: `dimmer.torhout.idle_keepalive`; `family`: `dimmer_poll`; `action`: `idle`.
 
 ### D0.3 — No `udp_bus` change (A confirmed)
 
@@ -127,21 +127,21 @@ Gateway add-on **1.6.5**. Embedded ESP32 port is a follow-up **after** Jan’s f
 
 ## Dimmer decode
 
-1. Generalise `_DIMMER_REPLY_RE` to `^I01(?P<family>54|15)(?P<value_code>\d{3})$` with `dialect_id` per family (`dimmer.lab.status_reply` / `dimmer.nolf.status_reply`). `{ccc}` = `{ch}{vv}` as lab.
+1. Generalise `_DIMMER_REPLY_RE` to `^I01(?P<family>54|15)(?P<value_code>\d{3})$` with `dialect_id` per family (`dimmer.kessel-lo.status_reply` / `dimmer.torhout.status_reply`). `{ccc}` = `{ch}{vv}` as Kessel-Lo.
 2. Idle sentinel family-scoped (D0.2b).
 3. **Decoder bugfix:** `dimmer_command` with prefix `C` yields `level_percent: 0`. Today it is 100 because `encode_dim_off` sends placeholder `C{ch}991030` and `99` is translated independently of the prefix. `value_code` stays `"99"` in the result. Once the echo is a state source this is behavioural, not cosmetic: an OFF would otherwise land as 100% in HA.
-4. In `_handle_dimmer`: family `dimmer_command` from a dimmer IP is a state source (`dialect_id: dimmer.nolf.command_echo`) — `S1231030` → ch1 23%, `C1991030` → ch1 0%. Lab dimmers still reply `I0154…`, so they are unaffected.
+4. In `_handle_dimmer`: family `dimmer_command` from a dimmer IP is a state source (`dialect_id: dimmer.torhout.command_echo`) — `S1231030` → ch1 23%, `C1991030` → ch1 0%. Kessel-Lo dimmers still reply `I0154…`, so they are unaffected.
 
 ## REST-shim blast radius
 
 [`gateway/rest_shim.py`](../../../gateway/rest_shim.py) returns the parsed reply verbatim (`"reply": reply_parsed`). After the C-prefix fix, `level_percent` of an OFF reply changes from **100 to 0**. Correcter, but a visible API change — call it out in the add-on CHANGELOG.
 
-## Tests (golden vectors from the Nolf log)
+## Tests (golden vectors from the Torhout log)
 
 Out of scope for this spec’s implementation todos; required for the release:
 
-- Relay: `C060000000` → ch6/off, `state_code == ""`; `P000000000` stays `relay_reply_candidate`; `T11001000` documented as p2p frame kept off this path by routing; lab `I000060115` / `I000050015` unchanged.
-- Dimmer: `I0115184` → ch1/84%, `I0115099` → ch0/100%, `I0115300` → ch3/0%, `I0115000` → idle without channel; lab `I0154130` / `I0154199` / `I0154999` unchanged; `C1991030` → ch1/0%.
+- Relay: `C060000000` → ch6/off, `state_code == ""`; `P000000000` stays `relay_reply_candidate`; `T11001000` documented as p2p frame kept off this path by routing; Kessel-Lo `I000060115` / `I000050015` unchanged.
+- Dimmer: `I0115184` → ch1/84%, `I0115099` → ch0/100%, `I0115300` → ch3/0%, `I0115000` → idle without channel; Kessel-Lo `I0154130` / `I0154199` / `I0154999` unchanged; `C1991030` → ch1/0%.
 - Registry: relay echo updates state and preserves `state_code`; echo-as-first-packet leaves `state_code == ""` without warning; dimmer echo sets level including OFF → 0%; `I0115000` does not overwrite an existing level.
 - State poll: simulated `I0000000` → `I0115099` seeds ch0 without timeout.
 
@@ -160,5 +160,5 @@ Canonical checklist: [2026-08-24_jan_nolf_field_test.md §8](../../../resources_
 
 - Dialect registry: [veldbus_dialect_registry.md](../../../resources_and_docs/reference/veldbus_dialect_registry.md)
 - Evidence: [2026-08-24_jan_nolf_field_test.md](../../../resources_and_docs/evidence/2026-08-24_jan_nolf_field_test.md)
-- Sprint plan (superseded D0.1 default): [2026-08-24-nolf-dialect-sprint-plan.md](../plans/2026-08-24-nolf-dialect-sprint-plan.md)
-- Lab dimmer decode: [2026-05-17_dimmer_I0154xxx_full_decode.md](../../../resources_and_docs/evidence/2026-05-17_dimmer_I0154xxx_full_decode.md)
+- Sprint plan (superseded D0.1 default): [2026-08-24-torhout-dialect-sprint-plan.md](../plans/2026-08-24-torhout-dialect-sprint-plan.md)
+- Kessel-Lo dimmer decode: [2026-05-17_dimmer_I0154xxx_full_decode.md](../../../resources_and_docs/evidence/2026-05-17_dimmer_I0154xxx_full_decode.md)

@@ -1,7 +1,7 @@
 name: IPBuilding Gateway
-version: "1.8.0-dev.3"
+version: "1.8.0-dev.5"
 slug: ipbuilding_gateway
-description: Open IPBuilding field-bus gateway (UDP/1001) — replaces proprietary IPBox hub
+description: Open IPBuilding field-bus gateway, replaces proprietary IPBox
 url: https://github.com/markminnoye/IPBuilding-Gateway
 startup: application
 init: false

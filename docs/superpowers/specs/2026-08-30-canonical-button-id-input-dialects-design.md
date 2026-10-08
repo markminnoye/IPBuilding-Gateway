@@ -3,20 +3,20 @@
 **Date:** 2026-08-30
 **Status:** approved
 **Repos:** IPBuilding Gateway (add-on **1.7.0**) + `ha-ipbuilding-gateway` (companion **≥ 1.9.0**)
-**Context:** Nolf 2026-08-29 debug log — 1.6.7 fixed relay/dimmer status, buttons still `undecoded RX from 10.10.1.55`
-**Predecessor:** [`2026-08-25-nolf-dialect-decode-design.md`](2026-08-25-nolf-dialect-decode-design.md) listed *"Mapping `input.nolf.binary`"* as an explicit non-goal. This spec does that mapping, and adds a second defect found while doing it.
+**Context:** Torhout 2026-08-29 debug log — 1.6.7 fixed relay/dimmer status, buttons still `undecoded RX from 10.10.1.55`
+**Predecessor:** [`2026-08-25-torhout-dialect-decode-design.md`](2026-08-25-torhout-dialect-decode-design.md) listed *"Mapping `input.torhout.binary`"* as an explicit non-goal. This spec does that mapping, and adds a second defect found while doing it.
 
 ---
 
 ## 1. Problem
 
-Jan Nolf's pushbuttons do not reach Home Assistant. Two **independent** defects sit in series; fixing either one alone leaves the buttons dead.
+Torhout pushbuttons do not reach Home Assistant. Two **independent** defects sit in series; fixing either one alone leaves the buttons dead.
 
 ### Defect 1 — the wire decoder rejects the frame
 
 `_INPUT_EVENT_RE` in `gateway/payloads/input.py` hard-requires `0x2d` at offset 1. Jan's IP040x interfaces send `0x01`. The frame is otherwise byte-for-byte the lab layout. Byte offsets are 0-based throughout this spec, so offset 0 is `B` (`0x42`).
 
-| | lab (works) | Nolf (rejected) |
+| | lab (works) | Torhout (rejected) |
 |---|---|---|
 | Frame | `42 2d 2f8185190000df 03 01 00 45` | `42 01 dac46c100000c3 01 01 00 45` |
 | Offset 1 (type) | `0x2d` | `0x01` |
@@ -25,7 +25,7 @@ Jan Nolf's pushbuttons do not reach Home Assistant. Two **independent** defects 
 
 The idle reply is rejected for the same class of reason — a differing family byte:
 
-| | lab | Nolf |
+| | lab | Torhout |
 |---|---|---|
 | Frame | `I \x02 R <3 status> <7×00> E` | `49 02 28 00×9 45` |
 | Family byte | `0x52` (`R`) | `0x28` |
@@ -103,7 +103,7 @@ This is **not** a lossy intersection chosen for convenience — it is the manufa
 | Dataset | Buttons | Unique canonical ids | Collisions |
 |---|---|---|---|
 | lab `devices.json` (14-hex) | 32 | 32 | none |
-| Nolf `devices.json` (10-hex) | 60 | 60 | none |
+| Torhout `devices.json` (10-hex) | 60 | 60 | none |
 | Combined | 92 | 92 | none |
 
 Byte 2 carries little entropy (6 distinct values per dataset — it is partly a model/batch code), but bytes 0, 1 and 6 vary freely and no collision occurs across all 92 known buttons.
@@ -156,12 +156,12 @@ _INPUT_REPLY_RE = re.compile(
 )
 
 _BUTTON_TYPE_DIALECT = {
-    0x2D: "input.lab.button_event",
-    0x01: "input.nolf.button_event",
+    0x2D: "input.kessel-lo.button_event",
+    0x01: "input.torhout.button_event",
 }
 ```
 
-The reply regex covers both the 14-byte lab frame (`family` = `0x52`, 7 trailing zeros) and the 13-byte Nolf frame (`family` = `0x28`, 6 trailing zeros).
+The reply regex covers both the 14-byte lab frame (`family` = `0x52`, 7 trailing zeros) and the 13-byte Torhout frame (`family` = `0x28`, 6 trailing zeros).
 
 `decode_input_payload()` returns for a button event:
 
@@ -186,7 +186,7 @@ A detector on the IP1100 does functionally no more than a pushbutton: same `B…
 | Type byte | Origin | Handling |
 |---|---|---|
 | `0x2d` | IP040x lab, also the `getButtons` prefix | `button_event` → HA |
-| `0x01` | IP040x Nolf, older generation | `button_event` → HA |
+| `0x01` | IP040x Torhout, older generation | `button_event` → HA |
 | any other | unknown: detector, or a third generation | `button_event` → HA, plus the net below |
 
 Unknown hardware therefore works on first press. The risk is not that it works but that it works **silently under the wrong label**, and that is answered with visibility rather than by blocking the route (§4). Promoting a byte to a known dialect is afterwards one line in `_BUTTON_TYPE_DIALECT`.
@@ -282,17 +282,17 @@ The gateway-first row is the one real hazard, and it is handled with documentati
 | Installation | Before | After |
 |---|---|---|
 | Lab (14-hex config, working buttons) | works | works, ids shorten, entity_ids and automations unchanged |
-| Nolf (10-hex config, dead buttons) | 60 entities that never fire | same 60 entities, now matched on press |
+| Torhout (10-hex config, dead buttons) | 60 entities that never fire | same 60 entities, now matched on press |
 | Fresh install | — | canonical from the first write |
 
-Note for Nolf specifically: because his configured ids will match after migration, `pushbutton_by_id()` succeeds, learn-on-press is skipped, and he gets **no** "new button" notification. His buttons simply start working under the names already in his config.
+Note for Torhout specifically: because his configured ids will match after migration, `pushbutton_by_id()` succeeds, learn-on-press is skipped, and he gets **no** "new button" notification. His buttons simply start working under the names already in his config.
 
 ---
 
 ## 8. Non-goals
 
 - **Detector entities as a distinct HA platform.** Detectors arrive as `event` entities via the button path. A dedicated platform needs `getDetectors` evidence we do not have.
-- **Decoding the `F`-frame** seen in the earlier Nolf log while the IPBox was master. It gets a warning (§4), not a decoder.
+- **Decoding the `F`-frame** seen in the earlier Torhout log while the IPBox was master. It gets a warning (§4), not a decoder.
 - **Autonomy provisioning.** The IPA `targets` are parsed correctly and exposed, but the gateway still does not write EEPROM autonomy (Fase 8) and button→action logic stays in Home Assistant.
 - **Resolving how the IPA encodes a second function.** The parser reads one target per record and stops there; it neither claims nor denies that `func2` appears elsewhere in the file.
 - **ESP32 payload port.** Follow-up after Jan's field validation, per the A4 manual-sync decision.
@@ -306,7 +306,7 @@ Note for Nolf specifically: because his configured ids will match after migratio
 |---|---|
 | `gateway/ipa_parser.py` docstring | the record layout is wrong today; replace with §1 |
 | `resources_and_docs/IPBUILDING_KNOWLEDGE.md` §12.3–12.5 | add the verified IPA record layout — it is an RE finding, currently documented nowhere |
-| `resources_and_docs/reference/veldbus_dialect_registry.md` | replace the `input.nolf.binary` placeholder with the three button dialects and the two idle-reply families |
+| `resources_and_docs/reference/veldbus_dialect_registry.md` | replace the `input.torhout.binary` placeholder with the three button dialects and the two idle-reply families |
 | `docs/api/websocket.md` | `type_hex` and `dialect_id` on `device_added` |
 | `resources_and_docs/RE_STATE.md` | the input wire is no longer lab-only; two type bytes and two idle-reply families confirmed |
 | `ipbuilding_gateway/CHANGELOG.md` | breaking: button ids are 8 hex; old config ids skipped until `scripts/migrate_button_ids.py`; **companion ≥ 1.9.0 required** |
@@ -321,10 +321,10 @@ Note for Nolf specifically: because his configured ids will match after migratio
 | Area | Case |
 |---|---|
 | `canonical_button_id` | all four lengths; the 4 confirmed wire↔IPA pairs; non-hex → `None`; odd length → `None`; uppercase and whitespace |
-| Button decode | Nolf `4201dac46c100000c301010045` → press, `id_hex` `dac46cc3`, dialect `input.nolf.button_event` |
-| Button decode | lab `422d2f8185190000df03010045` → press, `id_hex` `2f8185df`, dialect `input.lab.button_event` |
+| Button decode | Torhout `4201dac46c100000c301010045` → press, `id_hex` `dac46cc3`, dialect `input.torhout.button_event` |
+| Button decode | lab `422d2f8185190000df03010045` → press, `id_hex` `2f8185df`, dialect `input.kessel-lo.button_event` |
 | Button decode | synthetic unknown type → routed, dialect `input.unknown.button_event`, warning fired once over repeated presses |
-| Idle reply | Nolf 13-byte `49022800000000000000000045` and lab 14-byte, both decode; family byte exposed |
+| Idle reply | Torhout 13-byte `49022800000000000000000045` and lab 14-byte, both decode; family byte exposed |
 | Regression | `_INPUT_EVENT_RE` still rejects a bad edge byte and a wrong length |
 | IPA parser | sample file → 33 buttons; all ids canonical; octets `{30,32,42}`; channels in range; the 3 previously-mismatched ids now resolve |
 | IPA parser | malformed record skipped with a warning, parse continues |

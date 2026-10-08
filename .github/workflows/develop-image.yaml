@@ -3,7 +3,12 @@
 # On every push to develop this workflow:
 #   1. Derives X.Y.Z-dev.N from config.yaml (1.7.0 → 1.8.0-dev.<run>).
 #   2. Builds and pushes ghcr.io/markminnoye/ipbuilding-gateway:X.Y.Z-dev.N.
-#   3. Commits that version back to develop so Home Assistant offers an update.
+#   3. Commits that version, and the name "IPBuilding Gateway (develop)",
+#      back to develop so Home Assistant offers an update and a distinct
+#      store entry. A merge to main can copy that name, the same way it
+#      can copy the dev version. The release edit of config.yaml puts
+#      "IPBuilding Gateway" back together with the release version.
+#      This workflow never commits to main.
 #
 # It never publishes :latest and never publishes a plain release tag.
 # Release tags stay on builder.yaml (v*.*.* only). The version-bump commit
@@ -78,6 +83,7 @@ jobs:
             python3 scripts/dev_version.py write \
               --version "$DEV_VERSION" \
               --no-downgrade
+            python3 scripts/addon_channel.py develop
             if git diff --quiet -- ipbuilding_gateway/config.yaml; then
               echo "develop already has this dev version or a newer one"
               return 1

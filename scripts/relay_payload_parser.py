@@ -2,7 +2,7 @@
 """Parse IPBuilding relay UDP payload ASCII according to proto-map v0.3.
 
 Status (`I<module><channel><state>`): first two digits of the state quartet are
-on/off (`01xx` = ON, `00xx` = OFF). Lab captures use `0100`/`0000`; older Nolf
+on/off (`01xx` = ON, `00xx` = OFF). Lab captures use `0100`/`0000`; older Torhout
 IP0200 modules also report `0115`/`0015` on status-poll (keep in sync with
 `gateway.payloads.relay.relay_state_from_code`).
 

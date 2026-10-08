@@ -9,6 +9,7 @@ from gateway.device_registry import (
 )
 from gateway.types import DeviceType
 from gateway.udp_bus import UDPPacket
+from gateway.payloads.dialects import KESSEL_LO, TORHOUT
 
 
 def _make_pkt(src_ip: str, data: bytes) -> UDPPacket:
@@ -89,7 +90,7 @@ class TestRelayState:
         assert len(reg.all_relay_states()) == 0
 
 
-class TestNolfRelayCommandReply:
+class TestTorhoutRelayCommandReply:
     def test_echo_updates_state_and_preserves_state_code(self):
         reg = _registry_with_modules()
         key = DeviceKey(DeviceType.RELAY, "10.10.1.30", 6)
@@ -107,17 +108,18 @@ class TestNolfRelayCommandReply:
         assert changes[0][2].state == "off"
         assert changes[0][2].state_code == "0115"
 
-    def test_echo_logs_nolf_command_reply(self, caplog):
+    def test_echo_logs_torhout_command_reply(self, caplog):
         import logging
 
         reg = _registry_with_modules()
         caplog.set_level(logging.INFO, logger="gateway.device_registry")
         reg.handle_packet(_make_pkt("10.10.1.30", b"C060000000"))
-        assert any(
-            "decoded relay.nolf.command_reply from 10.10.1.30: C060000000 (ch6 → off)"
-            in r.message
-            for r in caplog.records
+        expected = (
+            "decoded "
+            + TORHOUT.message_type("relay", "command_reply")
+            + " from 10.10.1.30: C060000000 (ch6 → off)"
         )
+        assert any(expected in r.message for r in caplog.records)
 
     def test_echo_first_packet_empty_state_code_no_warning(self, caplog):
         import logging
@@ -233,7 +235,7 @@ class TestDimmerState:
         assert changes[1][2].level_percent == 100
 
 
-class TestNolfDimmerCommandEcho:
+class TestTorhoutDimmerCommandEcho:
     def test_set_echo_updates_level(self):
         reg = _registry_with_modules()
         changes: list[tuple] = []
@@ -256,7 +258,7 @@ class TestNolfDimmerCommandEcho:
         assert state is not None
         assert state.level_percent == 0
 
-    def test_nolf_idle_keepalive_does_not_overwrite_level(self):
+    def test_torhout_idle_keepalive_does_not_overwrite_level(self):
         reg = _registry_with_modules()
         changes: list[tuple] = []
         reg.on_state_changed(lambda k, old, new: changes.append((k, old, new)))
@@ -280,7 +282,7 @@ class TestDimmerFamilyDetection:
         reg.handle_packet(_make_pkt("10.10.1.40", b"I0154130"))
         assert reg.get_dimmer_family("10.10.1.40") == "54"
 
-    def test_nolf_status_reply_marks_family_15(self):
+    def test_torhout_status_reply_marks_family_15(self):
         reg = _registry_with_modules()
         reg.handle_packet(_make_pkt("10.10.1.40", b"I0115184"))
         assert reg.get_dimmer_family("10.10.1.40") == "15"
@@ -292,7 +294,7 @@ class TestDimmerFamilyDetection:
         assert reg.get_dimmer_family("10.10.1.40") == "15"
 
     def test_command_echo_marks_family_15(self):
-        """Only Nolf-generation modules echo the command back."""
+        """Only Torhout-generation modules echo the command back."""
         reg = _registry_with_modules()
         reg.handle_packet(_make_pkt("10.10.1.40", b"S1231030"))
         assert reg.get_dimmer_family("10.10.1.40") == "15"
@@ -322,9 +324,9 @@ class TestInputEvents:
         assert len(events) == 1
         assert events[0][1].action == "press"
         assert events[0][1].id_hex == "41424347"
-        assert events[0][1].dialect_id == "input.lab.button_event"
+        assert events[0][1].dialect_id == KESSEL_LO.message_type("input", "button_event")
 
-    def test_nolf_button_press_canonical_id(self):
+    def test_torhout_button_press_canonical_id(self):
         reg = _registry_with_modules()
         events: list[tuple[DeviceKey, ButtonEvent]] = []
         reg.on_button_event(lambda key, evt: events.append((key, evt)))
@@ -332,7 +334,7 @@ class TestInputEvents:
         reg.handle_packet(_make_pkt("10.10.1.50", raw))
         assert events[0][1].action == "press"
         assert events[0][1].id_hex == "dac46cc3"
-        assert events[0][1].dialect_id == "input.nolf.button_event"
+        assert events[0][1].dialect_id == TORHOUT.message_type("input", "button_event")
 
     def test_unknown_type_routes_and_warns_once(self, caplog):
         import logging

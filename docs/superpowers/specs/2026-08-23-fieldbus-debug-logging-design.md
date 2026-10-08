@@ -3,7 +3,7 @@
 **Date:** 2026-08-23  
 **Status:** approved for implementation  
 **Repos:** IPBuilding Gateway (add-on)  
-**Context:** Nolf 2026-08-08 — relay `0015`/`0115` map to HA unknown; dimmer `.42` status poll times out (reply vs silence indistinguishable)
+**Context:** Torhout 2026-08-08 — relay `0015`/`0115` map to HA unknown; dimmer `.42` status poll times out (reply vs silence indistinguishable)
 
 ## Problem
 
@@ -46,7 +46,7 @@ No extra toggle. Existing add-on option only:
 
 ## Keepalives on debug (yes)
 
-Actuator poll is every ~20 s (`P0000` / `I9900`). On Nolf (3 relays + 1 dimmer) that is ~12 actuator echoes/min — fine for a debug session.
+Actuator poll is every ~20 s (`P0000` / `I9900`). On Torhout (3 relays + 1 dimmer) that is ~12 actuator echoes/min — fine for a debug session.
 
 **Why log them:** for `.42` the open question is whether the module answers at all. Status poll currently only logs timeout. If keepalive echoes from `.42` arrive (`I9900` / `I0154999`), the module is alive and `I{ch}000000` is the wrong format. If keepalive is also silent: other dialect or bus conflict with IPBox.
 

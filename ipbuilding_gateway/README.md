@@ -1,6 +1,6 @@
 # IPBuilding Gateway
 
-Open field-bus hub for IPBuilding relays, dimmers, and buttons via **UDP/1001**.
+Open IPBuilding field-bus gateway, replaces proprietary IPBox.
 
 > **No Home Assistant entities without the companion.**  
 > This add-on only runs the gateway service. Lights, switches, sensors, and
