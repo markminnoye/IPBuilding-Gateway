@@ -505,11 +505,131 @@ async def test_device_command_previews_then_warns_ok_is_not_a_reply() -> None:
         await gateway.stop()
     assert sent.data["sent"] is True
     assert sent.data["ok"] is True
+    assert sent.data["confirmation_available"] is False
+    assert sent.data["module_confirmed"] is None
     assert COMMAND_WARNING in sent.message
-    assert "ook als de module niet antwoordt" in sent.message
+    assert "niet beschikbaar in deze gatewayversie" in sent.message
     assert gateway.command_calls == [
         {"device_id": "device-a", "action": "OFF"}
     ]
+
+
+@pytest.mark.asyncio
+async def test_device_command_reports_module_confirmation_when_present() -> None:
+    gateway = FakeGateway(remote_debugging=True, capabilities=["log_stream"])
+    gateway.command_body = {
+        "ok": True,
+        "schema_version": 2,
+        "module_confirmed": True,
+        "confirm_ms": 42,
+        "reported": {"state": "on"},
+    }
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        sent = await device_command(
+            session, device_id="device-a", action="ON", confirmed=True
+        )
+        gateway.command_body = {
+            "ok": True,
+            "module_confirmed": False,
+            "confirm_ms": None,
+            "reported": None,
+        }
+        missed = await device_command(
+            session, device_id="device-a", action="OFF", confirmed=True
+        )
+        gateway.command_body = {
+            "ok": True,
+            "module_confirmed": False,
+            "confirm_ms": None,
+            "reported": None,
+        }
+        started = await device_command(
+            session, device_id="device-a", action="DIM_START", confirmed=True
+        )
+        gateway.command_body = {
+            "ok": True,
+            "module_confirmed": "yes",
+            "confirm_ms": True,
+            "reported": "on",
+        }
+        odd = await device_command(
+            session, device_id="device-a", action="ON", confirmed=True
+        )
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert sent.data["confirmation_available"] is True
+    assert sent.data["module_confirmed"] is True
+    assert sent.data["confirm_ms"] == 42
+    assert sent.data["reported"] == {"state": "on"}
+    assert "42 ms" in sent.message
+    assert "status on" in sent.message
+    assert missed.data["module_confirmed"] is False
+    assert missed.data["confirm_ms"] is None
+    assert "niet geantwoord" in missed.message
+    assert "wacht niet" in started.message
+    assert odd.data["module_confirmed"] is False
+    assert odd.data["confirm_ms"] is None
+    assert odd.data["reported"] is None
+
+
+@pytest.mark.asyncio
+async def test_list_devices_shows_reachability_or_says_this_version_lacks_it() -> None:
+    gateway = FakeGateway(remote_debugging=False, capabilities=[])
+    gateway.modules = [
+        {
+            "id": "module-a",
+            "type": "relay",
+            "name": "relay-a",
+            "reachability": {
+                "last_reply_at": "2026-10-08T12:00:00+00:00",
+                "last_reply_ms": 18,
+                "avg_reply_ms": 22,
+                "missed_replies": 1,
+            },
+        },
+        {
+            "id": "module-b",
+            "type": "dimmer",
+            "name": "dimmer-b",
+            "reachability": {
+                "last_reply_at": None,
+                "last_reply_ms": None,
+                "avg_reply_ms": None,
+                "missed_replies": 0,
+            },
+        },
+        {"id": "module-c", "type": "input", "name": "input-c", "reachability": "kapot"},
+    ]
+    gateway.devices = [
+        {
+            "id": "device-a",
+            "module_id": "module-a",
+            "channel": 0,
+            "device_type": "relay",
+            "name": "lamp-a",
+            "state": "off",
+        }
+    ]
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await list_devices(session)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    rows = {row["id"]: row for row in result.data["modules"]}
+    assert rows["module-a"]["reachability"]["last_reply_ms"] == 18
+    assert rows["module-a"]["reachability"]["avg_reply_ms"] == 22
+    assert rows["module-a"]["reachability"]["missed_replies"] == 1
+    assert "18 ms" in result.message
+    assert rows["module-b"]["reachability"]["last_reply_at"] is None
+    assert "nog geen antwoord gemeten" in rows["module-b"]["reachability_sentence"]
+    assert rows["module-c"]["reachability"] is None
+    assert "niet beschikbaar in deze gatewayversie" in rows["module-c"]["reachability_note"]
+    assert "module_reachability" not in (result.data.get("capabilities") or [])
 
 
 @pytest.mark.asyncio

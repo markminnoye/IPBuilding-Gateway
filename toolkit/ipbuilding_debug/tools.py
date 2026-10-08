@@ -20,6 +20,7 @@ from ipbuilding_debug.errors import (
     MSG_GATEWAY_TOO_OLD,
     MSG_LOGS_USE_ADDON_TAB,
     MSG_LOG_LEVEL_RATE_LIMITED,
+    MSG_NOT_IN_THIS_GATEWAY_VERSION,
     MSG_REMOTE_DEBUGGING_OFF,
     SWITCH_NAME,
     PLANNED_CAPABILITIES,
@@ -477,7 +478,15 @@ async def list_devices(session: GatewaySession) -> ToolResult:
     lines = [_device_line(row) for row in rows]
     if not lines:
         lines.append("De gateway heeft geen kanalen teruggegeven.")
+    module_rows = [_module_reachability(module) for module in modules]
+    timing = " ".join(
+        str(row.get("reachability_sentence") or "")
+        for row in module_rows
+        if row.get("reachability_sentence")
+    )
     message = " ".join(lines) + " " + CHANNEL_NUMBERING
+    if timing:
+        message = f"{message} {timing}"
     return ToolResult(
         message,
         {
@@ -485,7 +494,7 @@ async def list_devices(session: GatewaySession) -> ToolResult:
             "kind": "devices",
             "channel_numbering": CHANNEL_NUMBERING,
             "devices": rows,
-            "modules": [_module_reachability(module) for module in modules],
+            "modules": module_rows,
             "modules_error": modules_error.message if modules_error else "",
             "devices_error": devices_error.message if devices_error else "",
         },
@@ -737,8 +746,9 @@ async def device_command(
     if call_error is not None:
         return _from_error(call_error, **preview)
     gateway_ok = isinstance(body, dict) and body.get("ok") is True
+    confirmation = _command_confirmation(body, action_name)
     return ToolResult(
-        COMMAND_WARNING,
+        confirmation["message"],
         {
             "ok": gateway_ok,
             "kind": "command",
@@ -746,7 +756,11 @@ async def device_command(
             "device_id": device_id,
             "action": action_name,
             "value": value,
-            "warning": COMMAND_WARNING,
+            "module_confirmed": confirmation["module_confirmed"],
+            "confirm_ms": confirmation["confirm_ms"],
+            "reported": confirmation["reported"],
+            "confirmation_available": confirmation["available"],
+            "warning": confirmation["message"],
             "gateway": body if isinstance(body, dict) else {},
         },
     )
@@ -1169,7 +1183,126 @@ def _module_reachability(module: dict[str, Any]) -> dict[str, Any]:
         entry["last_seen_note"] = "de gateway meldt geen last_seen voor deze module"
     if "last_seen_source" in module:
         entry["last_seen_source"] = module["last_seen_source"]
+    timing = _reply_timing(module)
+    entry["reachability"] = timing["reachability"]
+    entry["reachability_sentence"] = timing["sentence"]
+    if timing["note"]:
+        entry["reachability_note"] = timing["note"]
     return entry
+
+
+def _optional_ms(value: Any) -> int | None:
+    """A non-negative integer from the gateway. Booleans are not milliseconds."""
+    if type(value) is int and value >= 0:
+        return value
+    return None
+
+
+def _reply_timing(module: dict[str, Any]) -> dict[str, Any]:
+    """Per-module reply timing. Present fields mean this gateway supports it."""
+    raw = module.get("reachability")
+    if "reachability" not in module or not isinstance(raw, dict):
+        note = f"Bereikbaarheid is {MSG_NOT_IN_THIS_GATEWAY_VERSION}."
+        return {"reachability": None, "note": note, "sentence": note}
+    last_reply_at = raw.get("last_reply_at")
+    if not isinstance(last_reply_at, str) or not last_reply_at.strip():
+        last_reply_at = None
+    else:
+        last_reply_at = last_reply_at.strip()
+    missed = raw.get("missed_replies")
+    if type(missed) is not int or missed < 0:
+        missed = None
+    parsed = {
+        "last_reply_at": last_reply_at,
+        "last_reply_ms": _optional_ms(raw.get("last_reply_ms")),
+        "avg_reply_ms": _optional_ms(raw.get("avg_reply_ms")),
+        "missed_replies": missed,
+    }
+    return {
+        "reachability": parsed,
+        "note": "",
+        "sentence": _reachability_sentence(module, parsed),
+    }
+
+
+def _reachability_sentence(module: dict[str, Any], parsed: dict[str, Any]) -> str:
+    name = module.get("name") or module.get("id") or "deze module"
+    quiet = (
+        parsed["last_reply_at"] is None
+        and parsed["last_reply_ms"] is None
+        and parsed["avg_reply_ms"] is None
+        and parsed["missed_replies"] in (0, None)
+    )
+    if quiet:
+        return f"{name}: nog geen antwoord gemeten."
+    bits: list[str] = []
+    last_ms = parsed["last_reply_ms"]
+    last_at = parsed["last_reply_at"]
+    if last_ms is not None and last_at:
+        bits.append(f"laatste antwoord {last_ms} ms om {last_at}")
+    elif last_ms is not None:
+        bits.append(f"laatste antwoord {last_ms} ms")
+    elif last_at:
+        bits.append(f"laatste antwoord om {last_at}")
+    if parsed["avg_reply_ms"] is not None:
+        bits.append(f"gemiddeld {parsed['avg_reply_ms']} ms")
+    if parsed["missed_replies"] is not None:
+        bits.append(f"{parsed['missed_replies']} keer geen antwoord")
+    return f"{name}: " + ", ".join(bits) + "."
+
+
+def _reported_sentence(reported: Any) -> str:
+    if not isinstance(reported, dict):
+        return ""
+    bits: list[str] = []
+    state = reported.get("state")
+    if isinstance(state, str) and state.strip():
+        bits.append(f"status {state.strip()}")
+    level = reported.get("level_percent")
+    if type(level) is int:
+        bits.append(f"niveau {level}%")
+    if not bits:
+        return ""
+    return " De module meldt " + " en ".join(bits) + "."
+
+
+def _command_confirmation(body: Any, action: str) -> dict[str, Any]:
+    """Read module_confirmed from a command body. Missing fields are an older gateway."""
+    if not isinstance(body, dict) or "module_confirmed" not in body:
+        message = (
+            f"{COMMAND_WARNING} "
+            f"Of de module dat bevestigde is {MSG_NOT_IN_THIS_GATEWAY_VERSION}."
+        )
+        return {
+            "available": False,
+            "module_confirmed": None,
+            "confirm_ms": None,
+            "reported": None,
+            "message": message,
+        }
+    confirmed = body.get("module_confirmed") is True
+    confirm_ms = _optional_ms(body.get("confirm_ms"))
+    reported = body.get("reported") if isinstance(body.get("reported"), dict) else None
+    if action == "DIM_START" and not confirmed:
+        message = (
+            "DIM_START is verstuurd. Die actie wacht niet op een antwoord, "
+            "dus de module bevestigt niets."
+        )
+    elif confirmed:
+        when = f" in {confirm_ms} ms" if confirm_ms is not None else ""
+        message = f"De module heeft geantwoord{when}.{_reported_sentence(reported)}"
+    else:
+        message = (
+            "De gateway heeft het commando verstuurd. "
+            "De module heeft niet geantwoord."
+        )
+    return {
+        "available": True,
+        "module_confirmed": confirmed,
+        "confirm_ms": confirm_ms if confirmed else None,
+        "reported": reported,
+        "message": message,
+    }
 
 
 async def _inventory(

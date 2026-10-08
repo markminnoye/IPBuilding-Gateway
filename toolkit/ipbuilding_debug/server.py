@@ -140,7 +140,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
 
         action is ON, OFF, PULSE, TOGGLE, DIM, DIM_START, or DIM_STOP. DIM needs value 0-100.
         First call with confirmed=false. Only send after an explicit yes and confirmed=true.
-        ok true means the gateway sent the command, not that the module answered.
+        ok true means the gateway sent the command. module_confirmed and confirm_ms say whether the module replied. If those fields are absent, this gateway version does not report them.
         """
         return (
             await device_command(

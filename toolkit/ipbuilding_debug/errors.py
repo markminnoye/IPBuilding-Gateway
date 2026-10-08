@@ -19,6 +19,10 @@ KIND_NO_ADDRESS = "no_address"
 # Exact phrase the assistant must be able to quote when a feature is absent.
 NOT_AVAILABLE_PHRASE = "not available in this gateway version yet"
 
+# Older gateways omit command confirmation and per-module reachability.
+# Support is the presence of those fields, not a capability name.
+MSG_NOT_IN_THIS_GATEWAY_VERSION = "niet beschikbaar in deze gatewayversie"
+
 SWITCH_NAME = "Remote control (for debugging)"
 SWITCH_NAME_NL = "Bediening op afstand (voor debuggen)"
 SWITCH_WHERE = (
