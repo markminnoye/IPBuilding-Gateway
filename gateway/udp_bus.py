@@ -70,6 +70,7 @@ class UDPPacket:
     dst_ip: str
     dst_port: int
     monotonic_ts: float
+    ignore_state: bool = False
 
 
 class UDPBus:
@@ -89,6 +90,7 @@ class UDPBus:
         self.reachability = ReachabilityTracker(
             timeout_s=self.config.reply_timeout_ms / 1000.0,
         )
+        self._status_hold_until: dict[str, float] = {}
 
     def add_listener(self, cb: ReplyCallback) -> None:
         """Register a callback invoked for every inbound packet."""
@@ -148,8 +150,27 @@ class UDPBus:
             ),
         )
 
+    def hold_status(self, module_ip: str, until_monotonic: float) -> None:
+        """Pause polls and status updates for ``module_ip`` until ``until_monotonic``."""
+        current = self._status_hold_until.get(module_ip, 0.0)
+        if until_monotonic > current:
+            self._status_hold_until[module_ip] = until_monotonic
+
+    def release_hold(self, module_ip: str) -> None:
+        self._status_hold_until.pop(module_ip, None)
+
+    def status_held(self, module_ip: str, now: float | None = None) -> bool:
+        until = self._status_hold_until.get(module_ip)
+        if until is None:
+            return False
+        if (time.monotonic() if now is None else now) >= until:
+            self._status_hold_until.pop(module_ip, None)
+            return False
+        return True
+
     def _notify_listeners(self, pkt: UDPPacket) -> None:
         self._recent_packets.append(pkt)
+        pkt.ignore_state = bool(pkt.src_ip) and self.status_held(pkt.src_ip)
         if pkt.src_ip:
             self.reachability.note_reply(pkt.src_ip, pkt.monotonic_ts)
         for cb in self._listeners:
@@ -258,6 +279,8 @@ class UDPBus:
                     continue
                 if module_type == "input" and not self.config.claims_input_modules:
                     continue
+                if self.status_held(mc.ip, now):
+                    continue
                 poll_payload = _MODULE_POLL.get(module_type)
                 if not poll_payload:
                     continue
@@ -270,6 +293,8 @@ class UDPBus:
                 if module_type not in due_types:
                     continue
                 if module_type == "input" and not self.config.claims_input_modules:
+                    continue
+                if self.status_held(module_ip, now):
                     continue
                 poll_payload = _MODULE_POLL.get(module_type)
                 if not poll_payload:
@@ -412,6 +437,67 @@ class UDPBus:
                     logged=logged_unmatched,
                 )
             return None
+        finally:
+            self.remove_listener(collect)
+
+    async def collect_replies(
+        self,
+        *,
+        module_ip: str,
+        after_ts: float,
+        timeout_ms: int,
+        limit: int,
+    ) -> tuple[list[UDPPacket], bool]:
+        """Replies from ``module_ip`` after ``after_ts``, capped at ``limit``.
+
+        Same match as :meth:`correlate_reply` (source and timestamp), but every
+        reply in the window is kept. The second value is true when a further
+        reply was dropped because of ``limit``.
+        """
+        if limit <= 0:
+            return [], False
+        found: list[UDPPacket] = []
+        truncated = False
+        wait_queue: asyncio.Queue[UDPPacket] = asyncio.Queue(maxsize=_CORRELATE_QUEUE_MAX)
+
+        def collect(pkt: UDPPacket) -> None:
+            try:
+                wait_queue.put_nowait(pkt)
+            except asyncio.QueueFull:
+                with contextlib.suppress(asyncio.QueueEmpty):
+                    wait_queue.get_nowait()
+                with contextlib.suppress(asyncio.QueueFull):
+                    wait_queue.put_nowait(pkt)
+
+        def take(pkt: UDPPacket) -> bool:
+            nonlocal truncated
+            if not self._match_reply(
+                pkt, module_ip=module_ip, after_ts=after_ts, predicate=None
+            ):
+                return False
+            if len(found) >= limit:
+                truncated = True
+                return True
+            found.append(pkt)
+            return False
+
+        self.add_listener(collect)
+        try:
+            for pkt in self._recent_packets:
+                if take(pkt):
+                    return found, truncated
+            deadline = time.monotonic() + max(0, timeout_ms) / 1000.0
+            while time.monotonic() < deadline:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                try:
+                    pkt = await asyncio.wait_for(wait_queue.get(), timeout=remaining)
+                except asyncio.TimeoutError:
+                    break
+                if take(pkt):
+                    return found, truncated
+            return found, truncated
         finally:
             self.remove_listener(collect)
 

@@ -25,6 +25,7 @@ EXPECTED_ROUTES: set[tuple[str, str]] = {
     # instead of the generic {{device_id}} — both should be accepted as
     # the same logical route.
     ("POST", "/api/{apiVersion}/devices/{default_device_id}/command"),
+    ("POST", "/api/{apiVersion}/debug/raw-send"),
     ("POST", "/api/{apiVersion}/discover"),
     ("POST", "/api/{apiVersion}/provision/autonomy"),
 }
@@ -44,6 +45,7 @@ POST_ROUTES_WITH_BODY: set[str] = {
     # Commands folder uses {default_device_id} — accepted as equivalent.
     "/api/{apiVersion}/devices/{default_device_id}/command",
     "/api/{apiVersion}/devices/{device_id}/command",
+    "/api/{apiVersion}/debug/raw-send",
     "/api/{apiVersion}/provision/autonomy",
 }
 

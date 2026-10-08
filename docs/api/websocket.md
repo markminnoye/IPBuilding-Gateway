@@ -126,12 +126,12 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
     },
     "issues": [],
     "remote_debugging": false,
-    "capabilities": ["log_stream", "udp_frame"]
+    "capabilities": ["log_stream", "udp_frame", "raw_send"]
   }
 }
 ```
 
-`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream` and `udp_frame`). `remote_debugging` is the add-on option **Remote control (for debugging)**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing. Each module in `snapshot.modules` includes a `reachability` object; see [rest.md](rest.md).
+`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream`, `udp_frame`, and `raw_send`). `remote_debugging` is the add-on option **Remote control (for debugging)**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing. Each module in `snapshot.modules` includes a `reachability` object; see [rest.md](rest.md).
 
 ### `gateway_status` -- aggregate health update
 
@@ -161,7 +161,7 @@ Pushed when aggregate `status` or the set of open `issues[].id` changes. Same fi
     }
   ],
   "remote_debugging": false,
-  "capabilities": ["log_stream", "udp_frame"]
+  "capabilities": ["log_stream", "udp_frame", "raw_send"]
 }
 ```
 
@@ -363,7 +363,7 @@ Emitted after a forced sweep (`POST /api/v1/discover` or WS `discover` message) 
 
 ### Remote debugging gate
 
-`subscribe_logs`, `unsubscribe_logs`, `set_log_level`, `subscribe_udp_frames`, and `unsubscribe_udp_frames` are remote-debugging features. When `remote_debugging` is false they do nothing and the gateway replies:
+`subscribe_logs`, `unsubscribe_logs`, `set_log_level`, `subscribe_udp_frames`, `unsubscribe_udp_frames`, and `raw_send` are remote-debugging features. When `remote_debugging` is false they do nothing and the gateway replies:
 
 ```json
 {
@@ -373,7 +373,7 @@ Emitted after a forced sweep (`POST /api/v1/discover` or WS `discover` message) 
 }
 ```
 
-`error` is the stable code. `message` is English and names the add-on option in English (**Remote control (for debugging)**) and Dutch (**Bediening op afstand (voor debuggen)**), plus where to turn it on. REST `POST /api/v1/debug/log-level` uses the same code and sentence with HTTP 403. A later raw-send message will use this same refusal. `GET /api/v1/status` and this snapshot stay available either way.
+`error` is the stable code. `message` is English and names the add-on option in English (**Remote control (for debugging)**) and Dutch (**Bediening op afstand (voor debuggen)**), plus where to turn it on. REST `POST /api/v1/debug/log-level` and `POST /api/v1/debug/raw-send` use the same code and sentence with HTTP 403. `GET /api/v1/status` and this snapshot stay available either way.
 
 Other unknown message types are still ignored. The Home Assistant companion does not send these messages, so it does not receive `log` events.
 
@@ -488,6 +488,18 @@ A client that falls behind gets:
 ```
 
 Reply: `{"type": "udp_frames_unsubscribed"}`.
+
+### `raw_send` -- one payload and its reply window
+
+Same body as `POST /api/v1/debug/raw-send`. See [rest.md](rest.md).
+
+```json
+{"type": "raw_send", "module_ip": "192.0.2.10", "payload_hex": "5030303030", "window_ms": 2000}
+```
+
+Reply: `{"type": "raw_send_result", "ok": true, "schema_version": 2, "sent_hex": "5030303030", "module_ip": "192.0.2.10", "port": 1001, "window_ms": 2000, "replies": [], "truncated": false}`.
+
+Errors use `{"type": "error", "error": "<code>", "message": "..."}`. While remote debugging is off, `error` is `remote_debugging_disabled`.
 
 ### `discover` -- force discovery sweep
 
