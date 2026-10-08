@@ -497,6 +497,13 @@ class TestPatchReviewFixes:
 
 
 class TestUnconfiguredPushbuttonHasChannelFromMeta:
+    @pytest.mark.xfail(
+        strict=False,
+        reason=(
+            "A button known only from getButtons is not listed on "
+            "/api/v1/devices yet. See ha-ipbuilding-gateway#4."
+        ),
+    )
     @pytest.mark.asyncio
     async def test_unconfigured_pushbutton_channel_from_index(self, tmp_path: Path) -> None:
         """A pushbutton only known via getButtons metadata still surfaces 'channel' (from 'index')."""

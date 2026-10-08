@@ -166,23 +166,19 @@ See [`resources_and_docs/evidence/2026-06-03_arp_discover_spike.md`](resources_a
 | `GATEWAY_LOG_LEVEL` | `INFO` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `GATEWAY_DEVICES_FILE` | `./devices.json` | Path to installation config; if set, `field_modules` is derived from it and env IP overrides are ignored |
 | `GATEWAY_SIMULATED` | off | `1` / `true` — no real UDP socket; in-process reply simulation for dev/tests |
-| `GATEWAY_FORCE_DISCOVER_ON_START` | off | `1` / `true` — run forced (merge) discovery at startup. Preserves names/rooms/active flags, updates IP/firmware, adds new modules as `active:false`. |
+| `GATEWAY_FORCE_DISCOVER_ON_START` | off | `1` / `true` — run forced (merge) discovery at startup. Preserves names and rooms, updates IP/firmware/MAC, and adds new modules without a module-level active flag. |
 
 ## Tests
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r requirements-gateway.txt pytest pytest-asyncio
+.venv/bin/pip install -r requirements-test.txt
 PYTHONPATH=. .venv/bin/python -m pytest tests/ -v
 ```
 
+`requirements-test.txt` pins `aioresponses` and caps `aiohttp` below 3.14 so `tests/test_discover_from_ipbox.py` can mock the IPBox migrate script. The add-on image keeps `requirements-gateway.txt`.
+
 Relevant suites: `test_udp_bus.py`, `test_device_registry.py`, `test_rest_shim.py`, `test_bus_registry_integration.py`, `test_rest_api.py` (alias compatibility), `test_installation.py`, `test_discover_from_ipbox.py`, `test_discovery.py`.
-
-Also install `aioresponses` for the discover test:
-
-```bash
-.venv/bin/pip install aioresponses
-```
 
 ## Run locally
 
