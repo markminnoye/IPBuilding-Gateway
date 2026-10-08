@@ -52,7 +52,7 @@ Die schakelaar staat bij de add-on die je gebruikt (de gewone of de ontwikkelver
 
 Bij de gewone release is dat **Instellingen → Add-ons → IPBuilding Gateway → Configuratie**.
 
-Open de groep **Toegang op afstand** (Engels: **Remote access**). De schakelaar heet **Bediening op afstand (voor debuggen)**. In het Engels heet dezelfde schakelaar **Remote control (for debugging)**.
+Open de groep **Debug**. De schakelaar heet **Bediening op afstand (voor debuggen)**. In het Engels heet dezelfde schakelaar **Remote control (for debugging)**.
 
 Zet hem alleen aan als je een probleem onderzoekt. Hij laat een hulpprogramma op je netwerk de gateway-logs live meelezen, het logniveau een tijdje hoger zetten, en de veldbusberichten zien die deze gateway zelf verstuurt en ontvangt. Zonder deze schakelaar weigert de gateway dat.
 

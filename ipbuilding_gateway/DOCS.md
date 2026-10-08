@@ -155,7 +155,7 @@ Uitgebreide uitleg staat ook in de Configuration-UI (translations) en in de add-
 
 ### Remote control (for debugging)
 
-Optie **`debug.remote_debugging_and_control`** (Configuration → **Remote access** / **Toegang op afstand**). De schakelaar heet **Remote control (for debugging)**, in het Nederlands **Bediening op afstand (voor debuggen)**. Standaard **uit**.
+Optie **`debug.remote_debugging_and_control`** (Configuration → **Debug**). De schakelaar heet **Remote control (for debugging)**, in het Nederlands **Bediening op afstand (voor debuggen)**. Standaard **uit**.
 
 Zet je hem aan, dan herstart de add-on en blijft hij aan tot je hem zelf weer uitzet. Er is geen tijdslimiet. Home Assistant toont dan een blijvende melding in de taal van Home Assistant (Nederlands als die taal met `nl` begint, anders Engels):
 
