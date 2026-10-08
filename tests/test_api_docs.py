@@ -26,6 +26,7 @@ EXPECTED_ROUTES: set[tuple[str, str]] = {
     # the same logical route.
     ("POST", "/api/{apiVersion}/devices/{default_device_id}/command"),
     ("POST", "/api/{apiVersion}/discover"),
+    ("GET", "/api/{apiVersion}/debug/logs"),
     ("POST", "/api/{apiVersion}/provision/autonomy"),
 }
 

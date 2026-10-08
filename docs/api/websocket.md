@@ -126,12 +126,12 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
     },
     "issues": [],
     "remote_debugging": false,
-    "capabilities": ["log_stream", "udp_frame"]
+    "capabilities": ["log_stream", "udp_frame", "log_history"]
   }
 }
 ```
 
-`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream` and `udp_frame`). `remote_debugging` is the add-on option **Remote control (for debugging)**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing.
+`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream`, `udp_frame`, and `log_history`). `log_history` is the in-memory log ring. `remote_debugging` is the add-on option **Remote control (for debugging)**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing.
 
 ### `gateway_status` -- aggregate health update
 
@@ -161,7 +161,7 @@ Pushed when aggregate `status` or the set of open `issues[].id` changes. Same fi
     }
   ],
   "remote_debugging": false,
-  "capabilities": ["log_stream", "udp_frame"]
+  "capabilities": ["log_stream", "udp_frame", "log_history"]
 }
 ```
 
@@ -380,14 +380,20 @@ Other unknown message types are still ignored. The Home Assistant companion does
 ### `subscribe_logs` -- live gateway log
 
 ```json
-{"type": "subscribe_logs", "min_level": "info"}
+{"type": "subscribe_logs", "min_level": "warning", "since": "2026-10-08T12:00:00.000Z"}
 ```
 
-`min_level` is optional (`debug`, `info`, `warning`, `error`; default `info`). The gateway first replays the last lines it kept (up to 500, already filtered to `min_level`), then sends:
+`min_level` is optional (`debug`, `info`, `warning`, `error`; default `info`). `since` is an optional ISO 8601 timestamp, the same shape as `log.ts`. The replay includes lines at that time and later. Omit `since` to replay everything the ring still holds.
+
+The ring keeps at most 500 lines and the last 5 minutes, and only while **Remote control (for debugging)** is on. It is not written to disk. A restart, or turning the option off, leaves it empty. The same query is `GET /api/v1/debug/logs` (capability `log_history`). For the last 60 seconds, set `since` to the current UTC time minus 60 seconds.
+
+The gateway first replays the matching lines, then sends:
 
 ```json
-{"type": "logs_subscribed", "min_level": "info", "buffered": 12}
+{"type": "logs_subscribed", "min_level": "warning", "since": "2026-10-08T12:00:00.000Z", "buffered": 12}
 ```
+
+`since` is `null` when the request omitted it. `buffered` is the number of replayed lines. Live lines after this frame still follow `min_level` only; `since` does not hide new lines.
 
 Live lines follow, only to this subscriber:
 

@@ -260,6 +260,7 @@ class GatewayAPI:
         self._app.router.add_post(
             "/api/v1/debug/log-level", self._post_debug_log_level
         )
+        self._app.router.add_get("/api/v1/debug/logs", self._get_debug_logs)
 
         # Register registry callbacks
         self._state_cb = self._registry.on_state_changed(self._on_state_changed)
@@ -460,7 +461,9 @@ class GatewayAPI:
         msg_type = data.get("type")
         try:
             if msg_type == "subscribe_logs":
-                await self._log_stream.subscribe(ws, data.get("min_level"))
+                await self._log_stream.subscribe(
+                    ws, data.get("min_level"), data.get("since"),
+                )
             elif msg_type == "unsubscribe_logs":
                 await self._log_stream.unsubscribe(ws)
             elif msg_type == "set_log_level":
@@ -974,6 +977,30 @@ class GatewayAPI:
         except LogStreamError as exc:
             raise ApiError(exc.status, exc.code, exc.message) from None
         return web.json_response(result)
+
+    async def _get_debug_logs(self, request: web.Request) -> web.Response:
+        """GET /api/v1/debug/logs — recent lines from the memory ring.
+
+        Refused while remote debugging is off. ``since`` is an ISO 8601
+        timestamp; ``min_level`` defaults to info. Nothing is read from disk.
+        """
+        if not self._remote_debugging_enabled():
+            raise ApiError(
+                REMOTE_DEBUGGING_DISABLED_STATUS,
+                REMOTE_DEBUGGING_DISABLED,
+                REMOTE_DEBUGGING_DISABLED_MESSAGE,
+            )
+        since = request.query.get("since")
+        min_level = request.query.get("min_level")
+        if isinstance(since, str) and not since.strip():
+            since = None
+        if isinstance(min_level, str) and not min_level.strip():
+            min_level = None
+        try:
+            result = self._log_stream.history(min_level, since)
+        except LogStreamError as exc:
+            raise ApiError(exc.status, exc.code, exc.message) from None
+        return web.json_response({"ok": True, "schema_version": 2, **result})
 
     async def _post_discover(self, request: web.Request) -> web.Response:
         """POST /api/v1/discover — run forced discovery (ARP-sweep + HTTP identify).
