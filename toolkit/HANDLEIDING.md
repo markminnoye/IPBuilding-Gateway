@@ -42,7 +42,7 @@ Je mag gewoon in je eigen woorden vragen. Claude vraagt altijd eerst bevestiging
 *Een probleem uitzoeken*
 - "Het licht in de living gaat soms niet uit. Help me uitzoeken waarom."
 - "Een knop in de gang reageert niet altijd. Wat zie je gebeuren als ik druk?"
-- "Sinds gisteren doet een dimmer raar. Kijk wat er misgaat."
+- "Een dimmer doet raar. Kijk mee terwijl ik hem bedien."
 
 *Feedback geven*
 - "Maak een rapport van deze sessie, zonder adressen of namen erin."
