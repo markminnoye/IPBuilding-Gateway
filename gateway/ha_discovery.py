@@ -6,20 +6,25 @@ Registers the gateway on the local network so the
 
 Two parallel channels are used (the Music Assistant pattern):
 
-1. **Zeroconf / mDNS** — broadcasts ``_ipbuilding-gateway._tcp.local.``
-   on the LAN. Works for standalone Docker / Pi deployments.
+1. **Zeroconf / mDNS** — broadcasts ``_ipbgw._tcp.local.`` on the LAN.
+   In add-on mode the announced address is the host's LAN address, never
+   loopback. Other computers (and the companion, which also listens for
+   this record) can then open the API. ``host_network`` means that LAN
+   address is the same listener as the add-on.
 2. **Home Assistant Supervisor** — ``POST http://supervisor/discovery``
-   with ``service: ha_ipbuilding_gateway``. Works on HA OS / Supervised
-   where the add-on runs alongside Home Assistant.
+   with ``service: ha_ipbuilding_gateway``. The payload host stays
+   ``127.0.0.1`` so the companion on this Home Assistant machine keeps
+   its existing local connection.
 
-When running as a Supervisor add-on, the Zeroconf TXT record carries
-``homeassistant_addon=true`` so the companion can deduplicate the two
-flows (``async_step_zeroconf`` aborts with ``already_discovered_addon``).
+The Zeroconf TXT record still carries ``homeassistant_addon=true`` when
+the gateway runs as an add-on. The companion uses that flag as metadata;
+it connects to the address in the mDNS record.
 """
 
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import logging
 import os
@@ -122,26 +127,181 @@ def _load_or_create_instance_id(data_dir: str) -> str:
     return new_id
 
 
-def _pick_publish_ip(api_host: str) -> str:
-    """Choose a sensible IPv4 address to advertise in ``base_url``.
+# Documentation address used only as a UDP route probe. The kernel picks
+# the source address of the default route; no packet is sent.
+_ROUTE_PROBE_IPV4 = "192.0.2.1"
+_SUPERVISOR_NETWORK_INFO = "http://supervisor/network/info"
 
-    Prefers an explicit LAN address when bound to ``0.0.0.0`` (use a
-    UDP-connect trick that does not actually send packets); falls back
-    to ``127.0.0.1`` for the Supervisor / localhost case.
+
+def _is_publishable_ipv4(value: str) -> bool:
+    """True when ``value`` is an IPv4 address another LAN host can open.
+
+    Loopback, unspecified, multicast, and link-local addresses are refused.
+    Private and documentation ranges stay allowed: those are LAN addresses.
+    """
+    try:
+        addr = ipaddress.IPv4Address(value)
+    except (ipaddress.AddressValueError, ValueError):
+        return False
+    return not (
+        addr.is_loopback
+        or addr.is_unspecified
+        or addr.is_multicast
+        or addr.is_link_local
+    )
+
+
+def _default_route_ipv4() -> str | None:
+    """IPv4 address of the interface that owns the default route."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect((_ROUTE_PROBE_IPV4, 80))
+            ip = sock.getsockname()[0]
+    except OSError:
+        return None
+    if _is_publishable_ipv4(ip):
+        return ip
+    return None
+
+
+def _pick_publish_ip(api_host: str) -> str | None:
+    """Choose an IPv4 address to advertise, without talking to Supervisor.
+
+    An explicit bind address is used as-is. Add-on mode with a wildcard
+    bind returns ``None`` so startup can ask Supervisor for the host LAN
+    address. Standalone mode uses the default-route address and, if that
+    fails, loopback (there is no Supervisor API to ask).
     """
     if api_host not in ("", "0.0.0.0", "::"):
         return api_host
 
     if _running_as_hass_addon():
-        # Add-on: companion connects via host_network / 127.0.0.1.
-        return "127.0.0.1"
+        return None
 
+    return _default_route_ipv4() or "127.0.0.1"
+
+
+def _ipv4_hosts(raw: object) -> list[str]:
+    """Publishable IPv4 hosts from a string, a CIDR, or a list of those."""
+    items: list[object]
+    if isinstance(raw, str):
+        items = [raw]
+    elif isinstance(raw, list):
+        items = list(raw)
+    else:
+        return []
+    hosts: list[str] = []
+    for item in items:
+        host = str(item).split("/", 1)[0].strip()
+        if _is_publishable_ipv4(host):
+            hosts.append(host)
+    return hosts
+
+
+def _addresses_from_interface(iface: dict[str, Any]) -> list[str]:
+    """IPv4 hosts on one Supervisor interface record.
+
+    Accepts the current list shape (``ipv4.address``) and the older
+    ``ip_address`` field.
+    """
+    hosts: list[str] = []
+    ipv4 = iface.get("ipv4")
+    if isinstance(ipv4, dict):
+        hosts.extend(_ipv4_hosts(ipv4.get("address")))
+    hosts.extend(_ipv4_hosts(iface.get("ip_address")))
+    return hosts
+
+
+def _skip_interface(name: str) -> bool:
+    lowered = name.lower()
+    if lowered in {"lo", "loopback"}:
+        return True
+    return lowered.startswith(("docker", "veth", "hassio", "br-"))
+
+
+def _interface_has_gateway(iface: dict[str, Any]) -> bool:
+    ipv4 = iface.get("ipv4")
+    if isinstance(ipv4, dict) and ipv4.get("gateway"):
+        return True
+    return bool(iface.get("gateway"))
+
+
+def _normalize_interfaces(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
+    if not isinstance(data, dict):
+        return []
+    interfaces = data.get("interfaces")
+    if isinstance(interfaces, list):
+        return [item for item in interfaces if isinstance(item, dict)]
+    if isinstance(interfaces, dict):
+        normalized: list[dict[str, Any]] = []
+        for name, info in interfaces.items():
+            if not isinstance(info, dict):
+                continue
+            item = dict(info)
+            item.setdefault("interface", name)
+            normalized.append(item)
+        return normalized
+    return []
+
+
+def _pick_ipv4_from_network_info(payload: dict[str, Any]) -> str | None:
+    """Host LAN address from a Supervisor ``/network/info`` body.
+
+    Prefers the primary interface, then an interface that has a gateway,
+    then any other connected interface. Docker, hassio, and loopback
+    interfaces are ignored, and so is ``127.0.0.1``.
+    """
+    usable: list[dict[str, Any]] = []
+    for iface in _normalize_interfaces(payload):
+        name = str(iface.get("interface") or "")
+        if _skip_interface(name):
+            continue
+        if iface.get("enabled") is False or iface.get("connected") is False:
+            continue
+        if not _addresses_from_interface(iface):
+            continue
+        usable.append(iface)
+
+    groups = (
+        [iface for iface in usable if iface.get("primary") is True],
+        [iface for iface in usable if _interface_has_gateway(iface)],
+        usable,
+    )
+    for group in groups:
+        for iface in group:
+            hosts = _addresses_from_interface(iface)
+            if hosts:
+                return hosts[0]
+    return None
+
+
+async def _fetch_supervisor_network_info() -> dict[str, Any] | None:
+    """GET Supervisor ``/network/info``. ``None`` when it cannot be read."""
+    token = os.environ.get("SUPERVISOR_TOKEN")
+    if not token:
+        return None
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.connect(("8.8.8.8", 80))
-            return sock.getsockname()[0]
-    except OSError:
-        return "127.0.0.1"
+        async with aiohttp.ClientSession(
+            headers={"Authorization": f"Bearer {token}"}
+        ) as http:
+            async with http.get(
+                _SUPERVISOR_NETWORK_INFO,
+                timeout=aiohttp.ClientTimeout(total=5),
+            ) as resp:
+                if resp.status != 200:
+                    log.warning(
+                        "Supervisor /network/info failed: HTTP %s", resp.status
+                    )
+                    return None
+                payload = await resp.json()
+    except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as exc:
+        log.warning("Supervisor /network/info error: %s", exc)
+        return None
+    if not isinstance(payload, dict):
+        log.warning("Supervisor /network/info returned an unexpected body")
+        return None
+    return payload
 
 
 def _parse_host_port(base_url: str) -> tuple[str, str]:
@@ -223,7 +383,13 @@ class HaDiscoveryAdvertiser:
         self._instance_id = instance_id or _load_or_create_instance_id(config.data_dir)
         self._is_addon = _running_as_hass_addon()
         self._publish_ip = _pick_publish_ip(config.api_host)
-        self._base_url = f"http://{self._publish_ip}:{config.api_port}"
+        if self._is_addon and not _is_publishable_ipv4(self._publish_ip or ""):
+            # Resolved in start() from Supervisor /network/info. Never keep
+            # a loopback placeholder that could be announced on the LAN.
+            self._publish_ip = None
+        self._base_url = (
+            f"http://{self._publish_ip}:{config.api_port}" if self._publish_ip else ""
+        )
 
         self._aiozc: AsyncZeroconf | None = None
         self._service_info: AsyncServiceInfo | None = None
@@ -268,10 +434,17 @@ class HaDiscoveryAdvertiser:
             log.info("HA discovery disabled (GATEWAY_HA_DISCOVERY_ENABLED=0)")
             return
 
+        if (
+            self._cfg.zeroconf_enabled
+            and self._is_addon
+            and not _is_publishable_ipv4(self._publish_ip or "")
+        ):
+            await self._resolve_addon_publish_ip()
+
         log.info(
             "Starting HA discovery  instance_id=%s  base_url=%s  addon=%s",
             self._instance_id,
-            self._base_url,
+            self._base_url or "(not announced)",
             self._is_addon,
         )
 
@@ -322,7 +495,36 @@ class HaDiscoveryAdvertiser:
     # Zeroconf
     # ------------------------------------------------------------------
 
+    async def _resolve_addon_publish_ip(self) -> None:
+        """Set the add-on mDNS address from Supervisor, then the default route.
+
+        When neither source yields a LAN address, leave the advertiser
+        without a publish address so Zeroconf is not registered.
+        """
+        payload = await _fetch_supervisor_network_info()
+        ip = _pick_ipv4_from_network_info(payload) if payload else None
+        source = "supervisor"
+        if ip is None:
+            ip = _default_route_ipv4()
+            source = "default route"
+        if ip is None:
+            self._publish_ip = None
+            self._base_url = ""
+            log.warning(
+                "Zeroconf announcement skipped: no LAN IPv4 address in "
+                "add-on mode. Refusing to publish 127.0.0.1. Supervisor "
+                "/network/info and the default route both failed."
+            )
+            return
+        self._publish_ip = ip
+        self._base_url = f"http://{ip}:{self._cfg.api_port}"
+        log.info("Add-on Zeroconf address from %s: %s", source, ip)
+
     async def _start_zeroconf(self) -> None:
+        if self._is_addon and not _is_publishable_ipv4(self._publish_ip or ""):
+            return
+        if not self._publish_ip:
+            return
         # Use dual-stack mDNS (IPv4 + IPv6) so the broadcast reaches both
         # legacy IPv4-only clients (older HA instances, some
         # Bonjour implementations) and modern IPv6 stacks. Forcing
@@ -404,6 +606,9 @@ class HaDiscoveryAdvertiser:
         payload = {
             "service": "ha_ipbuilding_gateway",
             "config": {
+                # Local discovery for the companion on this Home Assistant
+                # host. host_network makes 127.0.0.1 reach the add-on.
+                # The LAN address is announced only via Zeroconf.
                 "host": "127.0.0.1",
                 "port": self._cfg.api_port,
                 "instance_id": self._instance_id,
