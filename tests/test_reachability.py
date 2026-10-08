@@ -1,8 +1,7 @@
-"""Module reply timing and the reachability check.
+"""Module reply timing from traffic the bus already sends.
 
 New examples use the documentation range 192.0.2.0/24 and a locally
-administered MAC. Timing is taken from packets the bus already sends;
-the poll schedule is not moved.
+administered MAC. Timing is taken from packets the bus already sends.
 """
 
 from __future__ import annotations
@@ -14,7 +13,7 @@ import pytest
 
 from gateway.config import GatewayConfig
 from gateway.device_registry import DeviceRegistry
-from gateway.gateway_api import ApiError, GatewayAPI
+from gateway.gateway_api import GatewayAPI
 from gateway.installation import InstallationConfig
 from gateway.reachability import (
     ReachabilityTracker,
@@ -304,80 +303,3 @@ def test_module_list_includes_reachability() -> None:
 
     plain = _api(MagicMock(), _installation())
     assert plain._build_module_list()[0]["reachability"]["missed_replies"] == 0
-
-
-@pytest.mark.asyncio
-async def test_reachability_check_classifies_and_leaves_poll_schedule(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    bus = MagicMock()
-    bus.last_send_ts = 1000.0
-    bus._next_poll_ts = {"192.0.2.10": 99.0}
-    bus.reachability = ReachabilityTracker(timeout_s=0.5)
-    sent: list[tuple[str, bytes]] = []
-
-    async def send(module_ip: str, payload: bytes, *args: object, **kwargs: object) -> None:
-        sent.append((module_ip, payload))
-
-    async def correlate(*, module_ip: str, after_ts: float, timeout_ms: int) -> UDPPacket | None:
-        if module_ip == "192.0.2.10":
-            return _packet(module_ip, b"P000000000", 1000.040)
-        if module_ip == "192.0.2.20":
-            return _packet(module_ip, b"I0154999", 1000.250)
-        return None
-
-    bus.send_command = send
-    bus.correlate_reply = correlate
-    api = _api(bus, _installation())
-    api._cfg.claims_input_modules = False
-    monkeypatch.setattr("gateway.gateway_api.time.monotonic", lambda: 1000.0)
-
-    response = await api._post_modules_reachability(_Request())  # type: ignore[arg-type]
-    body = json.loads(response.text)
-    by_id = {item["id"]: item for item in body["modules"]}
-    assert body["ok"] is True
-    assert body["schema_version"] == 2
-    assert by_id["02:00:00:00:00:01"] == {
-        "id": "02:00:00:00:00:01",
-        "reachability": "ok",
-        "reply_ms": 40,
-    }
-    assert by_id["02:00:00:00:00:02"]["reachability"] == "slow"
-    assert by_id["02:00:00:00:00:02"]["reply_ms"] == 250
-    assert by_id["02:00:00:00:00:03"] == {
-        "id": "02:00:00:00:00:03",
-        "reachability": "none",
-        "reply_ms": None,
-    }
-    assert sent == [
-        ("192.0.2.10", b"P0000"),
-        ("192.0.2.20", b"I9900"),
-    ]
-    assert bus._next_poll_ts == {"192.0.2.10": 99.0}
-
-
-@pytest.mark.asyncio
-async def test_reachability_check_is_rate_limited() -> None:
-    api = _api(MagicMock(), _installation())
-    first = await api._post_modules_reachability(_Request())  # type: ignore[arg-type]
-    assert first.status == 200
-    with pytest.raises(ApiError) as caught:
-        await api._post_modules_reachability(_Request())  # type: ignore[arg-type]
-    assert caught.value.status == 429
-    assert caught.value.code == "reachability_rate_limited"
-
-
-@pytest.mark.asyncio
-async def test_reachability_check_without_installation() -> None:
-    api = _api(MagicMock(), None)
-    with pytest.raises(ApiError) as caught:
-        await api._post_modules_reachability(_Request())  # type: ignore[arg-type]
-    assert caught.value.status == 500
-    assert caught.value.code == "no_installation"
-
-
-@pytest.mark.asyncio
-async def test_status_advertises_module_reachability() -> None:
-    api = _api(MagicMock(), _installation())
-    body = json.loads((await api._get_status(MagicMock())).text)
-    assert "module_reachability" in body["capabilities"]

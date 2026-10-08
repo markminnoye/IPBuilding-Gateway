@@ -23,7 +23,7 @@ def _devices(tmp_path: Path) -> Path:
 
 def test_remote_debugging_defaults_off() -> None:
     assert GatewayConfig().remote_debugging is False
-    assert CAPABILITIES == ("log_stream", "udp_frame", "module_reachability")
+    assert CAPABILITIES == ("log_stream", "udp_frame")
 
 
 def test_from_env_remote_debugging(
@@ -60,13 +60,13 @@ async def test_status_and_snapshot_include_toolkit_fields() -> None:
     response = await api._get_status(MagicMock())
     body = json.loads(response.text)
     assert body["remote_debugging"] is True
-    assert body["capabilities"] == ["log_stream", "udp_frame", "module_reachability"]
+    assert body["capabilities"] == ["log_stream", "udp_frame"]
     assert "version" in body
 
     snap = api._build_snapshot()
     gateway_status = snap["gateway_status"]
     assert gateway_status["remote_debugging"] is True
-    assert gateway_status["capabilities"] == ["log_stream", "udp_frame", "module_reachability"]
+    assert gateway_status["capabilities"] == ["log_stream", "udp_frame"]
     assert "actions" not in gateway_status
 
     off = _api(False)

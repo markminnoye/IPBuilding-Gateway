@@ -36,14 +36,11 @@ For `type=input` modules, the cache also includes `buttons[]` fetched via `getBu
 | GET | `/api/v1/modules` | All modules with cached metadata |
 | GET | `/api/v1/modules/{module_id}` | Single module by MAC |
 | POST | `/api/v1/modules/refresh` | Re-fetch getSysSet/getButtons (all modules) |
-| POST | `/api/v1/modules/reachability` | One rate-limited keepalive per module; returns `ok`, `slow`, or `none` |
 | POST | `/api/v1/modules/{module_id}/refresh` | Re-fetch one module by MAC |
 
 ## Reply timing
 
-`GET /api/v1/modules` adds a `reachability` object on every module: `last_reply_at`, `last_reply_ms`, `avg_reply_ms`, and `missed_replies`. Those values come from replies the module already sends. They are not stored in `devices.json`.
-
-`POST /api/v1/modules/reachability` sends one keepalive to each module and waits only for that check. It does not change the poll schedule. A second call within 10 seconds returns `429` `reachability_rate_limited`. The gateway advertises this with capability `module_reachability` on `GET /api/v1/status`.
+`GET /api/v1/modules` adds a `reachability` object on every module: `last_reply_at`, `last_reply_ms`, `avg_reply_ms`, and `missed_replies`. Those values come from replies the module already sends. They are not stored in `devices.json`. The same object is on each module in the WebSocket snapshot.
 
 See [`rest.md`](rest.md) for the field list and the command fields `module_confirmed`, `confirm_ms`, and `reported`.
 

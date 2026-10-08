@@ -9,5 +9,4 @@ from __future__ import annotations
 CAPABILITIES: tuple[str, ...] = (
     "log_stream",
     "udp_frame",
-    "module_reachability",
 )

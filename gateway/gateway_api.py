@@ -47,7 +47,6 @@ from gateway.discovery import fetch_module_backup_channels, resolve_module_model
 from gateway.capabilities import CAPABILITIES
 from gateway.reachability import (
     ReachabilityTracker,
-    SLOW_REPLY_MS,
     confirmation_ms,
     empty_reachability,
     reported_fields,
@@ -78,7 +77,7 @@ from gateway.payloads import (
     encode_relay_command,
 )
 from gateway.models import RelayAction, RelayCommand, DimmerCommand
-from gateway.udp_bus import UDPBus, format_payload, poll_payload_for
+from gateway.udp_bus import UDPBus, format_payload
 from gateway.webui import INDEX_HTML
 
 log = logging.getLogger(__name__)
@@ -224,9 +223,6 @@ class GatewayAPI:
         self._button_state: dict[str, _ButtonState] = {}
         # Hardware ids currently being persisted by learn-on-press (dedupe).
         self._learning_button_ids: set[str] = set()
-        # One active reachability sweep at a time, and not more often than this.
-        self._reachability_not_before = 0.0
-        self._reachability_interval_s = 10.0
         lock_timeout_s = (
             config.discovery.lock_timeout_s if config.discovery else 15.0
         )
@@ -285,9 +281,6 @@ class GatewayAPI:
             "/api/v1/modules/{module_id}/refresh", self._post_module_refresh
         )
         self._app.router.add_post("/api/v1/modules/refresh", self._post_modules_refresh)
-        self._app.router.add_post(
-            "/api/v1/modules/reachability", self._post_modules_reachability
-        )
         # Runtime auto-discovery
         self._app.router.add_post("/api/v1/discover", self._post_discover)
         self._app.router.add_post(
@@ -1044,64 +1037,6 @@ class GatewayAPI:
     # -------------------------------------------------------------------------
     # Command execution
     # -------------------------------------------------------------------------
-
-    async def _probe_module(self, mc: Any) -> dict[str, Any]:
-        """One keepalive and a short wait. Does not move the poll schedule."""
-        module_id = northbound_module_id(mc.mac, mc.ip)
-        payload = poll_payload_for(mc.type.value)
-        if payload is None or (
-            mc.type.value == "input" and not self._cfg.claims_input_modules
-        ):
-            return {"id": module_id, "reachability": "none", "reply_ms": None}
-        sent = time.monotonic()
-        try:
-            await self._bus.send_command(mc.ip, payload)
-            reply = await self._bus.correlate_reply(
-                module_ip=mc.ip,
-                after_ts=getattr(self._bus, "last_send_ts", sent) or sent,
-                timeout_ms=self._cfg.reply_timeout_ms,
-            )
-        except Exception:
-            log.warning("Reachability probe failed for %s", module_id, exc_info=True)
-            reply = None
-        elapsed = confirmation_ms(sent, reply) if reply is not None else None
-        if elapsed is None:
-            tracker = getattr(self._bus, "reachability", None)
-            if isinstance(tracker, ReachabilityTracker):
-                tracker.note_timeout(mc.ip, time.monotonic())
-        return {
-            "id": module_id,
-            "reachability": (
-                "none"
-                if elapsed is None
-                else ("slow" if elapsed > SLOW_REPLY_MS else "ok")
-            ),
-            "reply_ms": elapsed,
-        }
-
-    async def _post_modules_reachability(self, request: web.Request) -> web.Response:
-        """POST /api/v1/modules/reachability — one rate-limited poll per module.
-
-        Uses the same keepalive the poll loop already sends. It does not
-        change poll timers. At most one sweep every 10 seconds.
-        """
-        installation = self._cfg.installation
-        if installation is None:
-            raise ApiError(500, "no_installation", "No installation loaded")
-        now = time.monotonic()
-        if now < self._reachability_not_before:
-            raise ApiError(
-                429,
-                "reachability_rate_limited",
-                "Reachability check is rate limited. Wait and try again.",
-            )
-        self._reachability_not_before = now + self._reachability_interval_s
-        modules = await asyncio.gather(
-            *(self._probe_module(mc) for mc in installation.modules)
-        )
-        return web.json_response(
-            {"ok": True, "schema_version": 2, "modules": list(modules)}
-        )
 
     async def _execute_command(
         self, entity_id: str, action: str, value: Any

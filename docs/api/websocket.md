@@ -126,12 +126,12 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
     },
     "issues": [],
     "remote_debugging": false,
-    "capabilities": ["log_stream", "udp_frame", "module_reachability"]
+    "capabilities": ["log_stream", "udp_frame"]
   }
 }
 ```
 
-`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream`, `udp_frame`, and `module_reachability`). `module_reachability` is command confirmation and per-module reply timing; it does not depend on the remote-control option. `remote_debugging` is the add-on option **Remote control (for debugging)**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing. Each module in `snapshot.modules` includes a `reachability` object; see [rest.md](rest.md).
+`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream` and `udp_frame`). `remote_debugging` is the add-on option **Remote control (for debugging)**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing. Each module in `snapshot.modules` includes a `reachability` object; see [rest.md](rest.md).
 
 ### `gateway_status` -- aggregate health update
 
@@ -161,7 +161,7 @@ Pushed when aggregate `status` or the set of open `issues[].id` changes. Same fi
     }
   ],
   "remote_debugging": false,
-  "capabilities": ["log_stream", "udp_frame", "module_reachability"]
+  "capabilities": ["log_stream", "udp_frame"]
 }
 ```
 

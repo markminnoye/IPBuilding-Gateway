@@ -106,7 +106,7 @@ async def test_udp_frames_refused_when_remote_debugging_is_off() -> None:
     bus.add_frame_listener.assert_not_called()
     status = json.loads((await api._get_status(MagicMock())).text)
     assert status["remote_debugging"] is False
-    assert status["capabilities"] == ["log_stream", "udp_frame", "module_reachability"]
+    assert status["capabilities"] == ["log_stream", "udp_frame"]
 
 
 @pytest.mark.asyncio

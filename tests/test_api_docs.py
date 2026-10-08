@@ -19,7 +19,6 @@ EXPECTED_ROUTES: set[tuple[str, str]] = {
     ("GET", "/api/{apiVersion}/modules"),
     ("GET", "/api/{apiVersion}/modules/{module_id}"),
     ("POST", "/api/{apiVersion}/modules/refresh"),
-    ("POST", "/api/{apiVersion}/modules/reachability"),
     ("GET", "/api/{apiVersion}/devices"),
     ("GET", "/api/{apiVersion}/devices/{device_id}"),
     # Commands folder uses {{default_device_id}} (collection-level default)
@@ -42,7 +41,6 @@ V21_SCHEMA_SUFFIX = "v2.1.0/collection.json"
 
 POST_ROUTES_WITH_BODY: set[str] = {
     "/api/{apiVersion}/modules/refresh",
-    "/api/{apiVersion}/modules/reachability",
     # Commands folder uses {default_device_id} — accepted as equivalent.
     "/api/{apiVersion}/devices/{default_device_id}/command",
     "/api/{apiVersion}/devices/{device_id}/command",

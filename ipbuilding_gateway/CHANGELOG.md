@@ -17,7 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The develop add-on is listed in Home Assistant as **IPBuilding Gateway (develop)**. The release keeps the name **IPBuilding Gateway**.
 
 ### Added
-- **Module reachability.** A command response includes `module_confirmed` and `confirm_ms` next to `ok`. No field-bus reply is still success. Each module on `/api/v1/modules` reports when it last answered and how fast. `POST /api/v1/modules/reachability` runs one rate-limited keepalive per module without moving the poll schedule. `GET /api/v1/status` lists capability `module_reachability`.
+- **Module reachability.** A command response includes `module_confirmed`, `confirm_ms`, and `reported` next to `ok`. No field-bus reply is still success. Each module on `/api/v1/modules` and in the WebSocket snapshot reports when it last answered and how fast.
 - **Remote control (for debugging)** in the add-on configuration, off by default. It stays on until you turn it off. While it is on, Home Assistant keeps a notification that anyone on your network can read field-bus traffic and send raw packets through this gateway.
 - **Live logs** while that option is on. A subscribed client receives recent lines and then new ones. The log level can be raised for a limited time (debug shows field-bus traffic) and returns on its own. It is not saved in the add-on configuration. With the option off, those calls are refused.
 - **Live field-bus frames** while that option is on. A subscribed client sees each payload this gateway sends or receives. With the option off, that subscription is refused.
