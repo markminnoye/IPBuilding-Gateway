@@ -60,7 +60,7 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   "multi_press": false,
   "multi_press_window_ms": 350,
   "remote_debugging": false,
-  "capabilities": ["log_stream", "udp_frame"],
+  "capabilities": ["log_stream", "udp_frame", "module_reachability"],
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
     "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" }
@@ -78,7 +78,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `multi_press` | boolean | Global double/triple-press classification for all wall buttons (add-on option). When `false`, short release emits `single_press` immediately. |
 | `multi_press_window_ms` | integer | Inter-click window in ms when `multi_press` is enabled (default 350). |
 | `remote_debugging` | boolean | Add-on option **Remote control (for debugging)**. `false` until a user turns it on in the add-on configuration. It stays on until they turn it off. While it is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Check this field before calling a remote-debugging route. |
-| `capabilities` | list of strings | Features this gateway build actually implements. `log_stream` is live logs over WebSocket. `udp_frame` is live field-bus frames over WebSocket (`subscribe_udp_frames`). A later build may add `raw_send`. The list stays present when `remote_debugging` is `false`, so a client can tell “this build has the feature” from “the option is off”. Unknown extra fields are safe for older clients. |
+| `capabilities` | list of strings | Features this gateway build actually implements. `log_stream` is live logs over WebSocket. `udp_frame` is live field-bus frames over WebSocket (`subscribe_udp_frames`). `module_reachability` is command confirmation and per-module reply timing (see below); it does not depend on `remote_debugging`. A later build may add `raw_send`. The list stays present when `remote_debugging` is `false`, so a client can tell “this build has the feature” from “the option is off”. Unknown extra fields are safe for older clients. |
 
 ---
 
@@ -130,6 +130,36 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `fetched_at` | string | ISO 8601 timestamp of last getSysSet fetch |
 | `last_seen` | string | ISO 8601 timestamp of most recent ARP or UDP activity (runtime-only, not in `devices.json`) |
 | `last_seen_source` | string | How `last_seen` was last updated: `arp`, `udp`, or `http` (runtime-only) |
+| `reachability` | object | Reply timing for this module. Always present. See the fields below. |
+
+`reachability` is filled from field-bus traffic the gateway already sends and receives (keepalive and commands). It is not written to `devices.json`. `last_seen` stays the ARP/HTTP contact time; `reachability.last_reply_at` is the last inbound UDP packet from that module.
+
+```json
+"reachability": {
+  "last_reply_at": "2026-10-08T12:00:00+00:00",
+  "last_reply_ms": 18,
+  "avg_reply_ms": 22,
+  "missed_replies": 1
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `last_reply_at` | string or null | ISO 8601 UTC time of the last inbound UDP packet from this module. `null` until one arrives. |
+| `last_reply_ms` | integer or null | Milliseconds from the latest unanswered send to the reply that landed inside the reply window. `null` when no reply has been paired yet. |
+| `avg_reply_ms` | integer or null | Rounded mean of the last 20 paired response times. `null` when there is no sample. |
+| `missed_replies` | integer | Sends whose reply window closed with no reply. A newer send inside the window replaces the pending one and is not a miss. |
+
+The same object is on `GET /api/v1/modules/{module_id}` and on each module in the WebSocket `snapshot`. A module that has not answered yet:
+
+```json
+"reachability": {
+  "last_reply_at": null,
+  "last_reply_ms": null,
+  "avg_reply_ms": null,
+  "missed_replies": 0
+}
+```
 
 ---
 
@@ -152,7 +182,52 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 
 **Request body:** `{}`
 
-**Response 200:** full `{ "modules": [...] }` with refreshed data.
+**Response 200:** full `{ "modules": [...] }` with refreshed data. Each module includes `reachability`.
+
+---
+
+## POST /api/v1/modules/reachability
+
+**Description:** Ask every configured module for one keepalive reply and report how fast it answered. The gateway sends the same poll payload the poll loop already uses (`P0000` for a relay, `I9900` for a dimmer, `I0000` for an input). It does not move poll timers. Probes run together. At most one sweep is accepted every 10 seconds.
+
+Input modules are not probed when this gateway does not claim them (`buttons_via_ha` is false). Those modules are returned as `none` and nothing is sent to them.
+
+Requires capability `module_reachability` on `GET /api/v1/status`. The route is available while `remote_debugging` is false.
+
+**Request body:** `{}` (ignored).
+
+**Response 200:**
+
+```json
+{
+  "ok": true,
+  "schema_version": 2,
+  "modules": [
+    {"id": "02:00:00:00:00:01", "reachability": "ok", "reply_ms": 40},
+    {"id": "02:00:00:00:00:02", "reachability": "slow", "reply_ms": 250},
+    {"id": "02:00:00:00:00:03", "reachability": "none", "reply_ms": null}
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Northbound module id: MAC when known, otherwise the module IP. |
+| `reachability` | string | `ok` when the reply arrived within 200 ms, `slow` when it arrived later but still inside the reply window, `none` when there was no reply, the type is unknown, or an input module was not claimed. |
+| `reply_ms` | integer or null | Milliseconds from the probe send to that reply. `null` when `reachability` is `none`. |
+
+A missing reply is not an error. The HTTP status stays 200 and that module is `none`.
+
+**Response 429** — another sweep was requested before 10 seconds had passed:
+
+```json
+{
+  "error": "reachability_rate_limited",
+  "message": "Reachability check is rate limited. Wait and try again."
+}
+```
+
+**Response 500** — no installation is loaded (`no_installation`). That response does not consume the 10-second window.
 
 ---
 
@@ -377,10 +452,41 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) re
 | `TOGGLE` | Relay | -- |
 | `DIM` | Dimmer | `0-100` (0 = off) |
 
-**Response 200:**
+**Response 200:** the gateway accepted and sent the command. A missing field-bus reply is still `ok: true`. It is not an error.
+
 ```json
-{"ok": true}
+{
+  "ok": true,
+  "schema_version": 2,
+  "module_confirmed": true,
+  "confirm_ms": 42,
+  "reported": {"state": "on"}
+}
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | `true` when the command was sent. `false` is not used on this status; failures use 4xx below. |
+| `schema_version` | integer | `2`. |
+| `module_confirmed` | boolean | `true` when a reply from that module arrived inside the reply window (`reply_timeout_ms`, default 500) and the reply has a timestamp. `false` when no reply arrived. |
+| `confirm_ms` | integer or null | Milliseconds from the send to that reply. `null` when `module_confirmed` is false. |
+| `reported` | object or null | State taken from the reply. A relay status contributes `state` (`on`, `off`, or `unknown`). A dimmer status contributes `level_percent`. `null` when the reply is missing or is not a known status. A confirmed reply can still have `reported: null`. |
+
+No reply inside the window:
+
+```json
+{
+  "ok": true,
+  "schema_version": 2,
+  "module_confirmed": false,
+  "confirm_ms": null,
+  "reported": null
+}
+```
+
+`DIM_START` does not wait for a status reply. Its 200 body is `module_confirmed: false`, `confirm_ms: null`, `reported: null`, and the send is not counted as a missed reply.
+
+The WebSocket `command_result` frame carries the same three fields. See [websocket.md](websocket.md).
 
 **Response 400** (missing action):
 ```json

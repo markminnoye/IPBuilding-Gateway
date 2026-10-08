@@ -126,12 +126,12 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
     },
     "issues": [],
     "remote_debugging": false,
-    "capabilities": ["log_stream", "udp_frame"]
+    "capabilities": ["log_stream", "udp_frame", "module_reachability"]
   }
 }
 ```
 
-`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream` and `udp_frame`). `remote_debugging` is the add-on option **Remote control (for debugging)**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing.
+`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream`, `udp_frame`, and `module_reachability`). `module_reachability` is command confirmation and per-module reply timing; it does not depend on the remote-control option. `remote_debugging` is the add-on option **Remote control (for debugging)**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing. Each module in `snapshot.modules` includes a `reachability` object; see [rest.md](rest.md).
 
 ### `gateway_status` -- aggregate health update
 
@@ -161,7 +161,7 @@ Pushed when aggregate `status` or the set of open `issues[].id` changes. Same fi
     }
   ],
   "remote_debugging": false,
-  "capabilities": ["log_stream", "udp_frame"]
+  "capabilities": ["log_stream", "udp_frame", "module_reachability"]
 }
 ```
 
@@ -519,9 +519,12 @@ The gateway responds with a `discovery_completed` event (see below).
 
 ### `command_result`
 
+`ok` means the gateway sent the command. `module_confirmed` is whether a field-bus reply arrived inside the reply window. No reply is still `ok: true` with `module_confirmed: false`. `confirm_ms` is the milliseconds until that reply, or `null`. `reported` is the decoded `state` and/or `level_percent`, or `null`. `DIM_START` does not wait, so `module_confirmed` is false and `confirm_ms` is null.
+
 ```json
-{"type": "command_result", "id": "10.10.1.30-0", "ok": true, "error": null}
-{"type": "command_result", "id": "10.10.1.30-0", "ok": false, "error": "unknown device_id: 10.10.1.99-0"}
+{"type": "command_result", "id": "192.0.2.10-0", "ok": true, "error": null, "module_confirmed": true, "confirm_ms": 42, "reported": {"state": "on"}}
+{"type": "command_result", "id": "192.0.2.10-0", "ok": true, "error": null, "module_confirmed": false, "confirm_ms": null, "reported": null}
+{"type": "command_result", "id": "192.0.2.99-0", "ok": false, "error": "unknown or invalid entity_id: 192.0.2.99-0", "module_confirmed": false, "confirm_ms": null, "reported": null}
 ```
 
 ---

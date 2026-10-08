@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import AsyncIterator, Callable
 
 from gateway.config import GatewayConfig
+from gateway.reachability import ReachabilityTracker
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +51,11 @@ _MODULE_POLL: dict[str, bytes] = {
     "input": _POLL_INPUT,
 }
 
+
+def poll_payload_for(module_type: str) -> bytes | None:
+    """Steady-state poll payload for a module type, or None when unknown."""
+    return _MODULE_POLL.get(module_type)
+
 # Bound correlate_reply buffering during command waits (drop oldest on overflow).
 _CORRELATE_QUEUE_MAX = 64
 # Recent inbound packets for correlate_reply after synchronous send_command.
@@ -80,6 +86,9 @@ class UDPBus:
         self._poll_task: asyncio.Task[None] | None = None
         self._next_poll_ts: dict[str, float] = {}
         self.last_send_ts: float = 0.0  # monotonic ts of last send_command
+        self.reachability = ReachabilityTracker(
+            timeout_s=self.config.reply_timeout_ms / 1000.0,
+        )
 
     def add_listener(self, cb: ReplyCallback) -> None:
         """Register a callback invoked for every inbound packet."""
@@ -141,6 +150,8 @@ class UDPBus:
 
     def _notify_listeners(self, pkt: UDPPacket) -> None:
         self._recent_packets.append(pkt)
+        if pkt.src_ip:
+            self.reachability.note_reply(pkt.src_ip, pkt.monotonic_ts)
         for cb in self._listeners:
             try:
                 cb(pkt)
@@ -286,10 +297,19 @@ class UDPBus:
     def register_simulated_reply(self, command: bytes, reply: bytes) -> None:
         self._simulated_replies[command] = reply
 
-    async def send_command(self, module_ip: str, payload: bytes, port: int | None = None) -> None:
+    async def send_command(
+        self,
+        module_ip: str,
+        payload: bytes,
+        port: int | None = None,
+        *,
+        expect_reply: bool = True,
+    ) -> None:
         dst_port = port or self.config.hub_port
         if self.config.simulated_mode:
             self.last_send_ts = time.monotonic()
+            if expect_reply:
+                self.reachability.note_send(module_ip, self.last_send_ts)
             self._emit_tx(module_ip, payload, dst_port)
             reply = self._simulated_replies.get(payload)
             if reply:
@@ -307,6 +327,8 @@ class UDPBus:
             raise RuntimeError("UDPBus not started")
         self._transport.sendto(payload, (module_ip, dst_port))
         self.last_send_ts = time.monotonic()
+        if expect_reply:
+            self.reachability.note_send(module_ip, self.last_send_ts)
         self._emit_tx(module_ip, payload, dst_port)
 
     async def listen_for_replies(self) -> AsyncIterator[UDPPacket]:

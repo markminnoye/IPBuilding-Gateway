@@ -287,6 +287,81 @@
               "body": "{\n  \"modules\": [\n    {\n      \"id\": \"00:24:77:52:ac:be\",\n      \"ip\": \"10.10.1.30\",\n      \"name\": \"IP0200PoE\",\n      \"model\": \"IP0200PoE\",\n      \"type\": \"relay\",\n      \"firmware\": \"5.1\",\n      \"mac\": \"00:24:77:52:ac:be\",\n      \"network\": {\n        \"dhcp\": \"0\",\n        \"ip\": \"10.10.1.30\",\n        \"subnet\": \"255.255.255.0\",\n        \"gateway\": \"10.10.1.1\"\n      },\n      \"button\": \"0\",\n      \"allow\": \"\",\n      \"fetched_at\": \"2026-06-04T20:16:42Z\",\n      \"last_seen\": \"2026-06-04T20:16:42Z\",\n      \"last_seen_source\": \"http\"\n    }\n  ]\n}"
             }
           ]
+        },
+        {
+          "name": "Check module reachability",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/reachability",
+              "host": [
+                "{{gateway_host}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "modules",
+                "reachability"
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
+            },
+            "description": "Send one keepalive to each configured module and report whether it answered. This does not move the normal poll timers. At most one sweep is accepted every 10 seconds; a sooner call returns 429 reachability_rate_limited. Each module is ok (reply within 200 ms), slow, or none (no reply). Input modules that this gateway does not claim are returned as none and are not probed. The gateway advertises the feature as capability module_reachability on GET /api/v1/status. See docs/api/rest.md.\n"
+          },
+          "response": [
+            {
+              "name": "200 — ok, slow, and no reply",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/modules/reachability",
+                  "host": [
+                    "{{gateway_host}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "modules",
+                    "reachability"
+                  ],
+                  "protocol": "http",
+                  "port": "{{gateway_port}}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"ok\": true,\n  \"schema_version\": 2,\n  \"modules\": [\n    {\"id\": \"02:00:00:00:00:01\", \"reachability\": \"ok\", \"reply_ms\": 40},\n    {\"id\": \"02:00:00:00:00:02\", \"reachability\": \"slow\", \"reply_ms\": 250},\n    {\"id\": \"02:00:00:00:00:03\", \"reachability\": \"none\", \"reply_ms\": null}\n  ]\n}"
+            }
+          ]
         }
       ]
     },

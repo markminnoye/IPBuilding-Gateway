@@ -132,7 +132,7 @@ async def test_refuses_log_calls_when_remote_debugging_is_off() -> None:
 
         status = json.loads((await api._get_status(MagicMock())).text)
         assert status["remote_debugging"] is False
-        assert status["capabilities"] == ["log_stream", "udp_frame"]
+        assert status["capabilities"] == ["log_stream", "udp_frame", "module_reachability"]
         assert root.level == logging.INFO
     finally:
         api._log_stream.detach()
