@@ -1,6 +1,6 @@
 [project]
 name = "ipbuilding-gateway-tools"
-version = "0.1.0-rc.2"
+version = "0.1.0-rc.3"
 description = "Local tools for the IPBuilding Gateway add-on."
 requires-python = ">=3.11"
 dependencies = [

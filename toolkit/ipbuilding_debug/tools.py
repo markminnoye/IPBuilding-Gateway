@@ -1,4 +1,4 @@
-"""The six v1 tools. Each returns a message a tester can act on."""
+"""Toolkit tools. Each returns a message a tester can act on."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import asyncio
 import json
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import quote
 
 from ipbuilding_debug.buffer import clamp_timeout
 from ipbuilding_debug.decode import decode_frame, parse_frame
@@ -14,6 +15,7 @@ from ipbuilding_debug.errors import (
     KIND_NO_ADDRESS,
     KIND_OTHER,
     KIND_UNREACHABLE,
+    MSG_GATEWAY_TOO_OLD,
     MSG_LOG_LEVEL_RATE_LIMITED,
     MSG_REMOTE_DEBUGGING_OFF,
     PLANNED_CAPABILITIES,
@@ -22,13 +24,50 @@ from ipbuilding_debug.errors import (
     msg_connected,
     msg_not_available,
 )
+from ipbuilding_debug.redact import redact_payload
 from ipbuilding_debug.session import GatewaySession
 
 RAW_SEND_PATH = "/api/v1/debug/raw-send"
 SHARING_WARNING = (
-    "Dit is voor deze sessie. Haal adressen, namen van mensen en namen van "
-    "ruimtes weg voor je het ergens openbaar deelt."
+    "Namen, adressen en apparaat-ids zijn weggehaald. "
+    "Deel dit verslag pas nadat je het zelf hebt nagelezen."
 )
+RAW_LOCAL_WARNING = (
+    "Ruwe sessie, alleen om lokaal te kijken. "
+    "Er staan adressen en namen in. Deel deze tekst niet."
+)
+
+# Relay and dimmer ``channel`` is the wire digit (0-7). Buttons keep the
+# module's own index and are not renumbered.
+CHANNEL_NUMBERING = (
+    "Relay- en dimmerkanalen tellen vanaf 0: het eerste kanaal is 0, "
+    "hetzelfde cijfer als op de veldbus (0 tot en met 7). "
+    "Een knop toont de index die de module zelf meldt; dat nummer wordt niet omgenummerd."
+)
+
+COMMAND_WARNING = (
+    "De gateway geeft ok: true zodra het commando is verstuurd, "
+    "ook als de module niet antwoordt. "
+    "Dat bewijst niet dat de lamp veranderde. "
+    "Kijk fysiek, of later via frames. Er is geen ruw pakket verstuurd."
+)
+
+DEVICE_ACTIONS = ("ON", "OFF", "PULSE", "TOGGLE", "DIM", "DIM_START", "DIM_STOP")
+
+BUFFER_EVENT_TYPES = (
+    "state_changed",
+    "button_event",
+    "device_added",
+    "device_removed",
+    "device_ip_changed",
+    "device_firmware_changed",
+)
+
+_ADDRESS_LABELS = {
+    "config_default": "standaardadres uit de bundel (homeassistant.local)",
+    "manual": "handmatig ingevuld",
+    "mdns": "gevonden via mDNS",
+}
 
 
 @dataclass
@@ -61,25 +100,37 @@ async def connection_status(
     *,
     log_level: str | None = None,
 ) -> ToolResult:
-    """Reachability, the debug switch, capabilities, and the local buffer."""
+    """Reachability, health, capabilities, and where the address came from."""
     error = await session.refresh_status()
     status = session.status if error is None else None
+    where = _endpoint(session)
     if error is not None and error.kind in (KIND_UNREACHABLE, KIND_NO_ADDRESS):
         return _from_error(
             error,
+            connected=False,
             connection=session.state,
             buffer=_buffer_summary(session),
+            missing_capabilities=list(PLANNED_CAPABILITIES),
+            **where,
         )
     if error is not None and status is None:
-        return _from_error(error, connection=session.state, buffer=_buffer_summary(session))
+        return _from_error(
+            error,
+            connected=False,
+            connection=session.state,
+            buffer=_buffer_summary(session),
+            **where,
+        )
 
     remote = status.get("remote_debugging") if isinstance(status, dict) else None
     if not isinstance(remote, bool):
         remote = None
     caps = _capabilities(status if isinstance(status, dict) else None)
-    message = msg_connected(remote_debugging=remote, capabilities=caps)
-    kind = "remote_debugging_off" if remote is False else "connected"
-    ok = remote is True
+    missing = [name for name in PLANNED_CAPABILITIES if name not in caps]
+    message, kind = _connected_message(remote=remote, capabilities=caps, missing=missing)
+    # The gateway answered. ``ok`` stays false only when the debug switch
+    # itself is off, not merely because a capability is absent.
+    ok = remote is not False
     log_note = ""
     if log_level:
         gated = gate_feature(status if isinstance(status, dict) else None, "log_stream")
@@ -116,17 +167,48 @@ async def connection_status(
         message,
         {
             "ok": ok,
+            "connected": True,
             "kind": kind,
             "connection": session.state,
             "version": (status or {}).get("version"),
             "remote_debugging": remote,
             "capabilities": caps,
-            "missing_capabilities": [
-                name for name in PLANNED_CAPABILITIES if name not in caps
-            ],
+            "missing_capabilities": missing,
             "hub_role": (status or {}).get("hub_role"),
+            "health": _health_view(status if isinstance(status, dict) else None),
             "buffer": _buffer_summary(session),
             "log_level_note": log_note,
+            **where,
+        },
+    )
+
+
+async def gateway_health(session: GatewaySession) -> ToolResult:
+    """Health, subsystems, issues, uptime, and the local buffer from /status."""
+    error = await session.refresh_status()
+    if error is not None and error.kind in (KIND_UNREACHABLE, KIND_NO_ADDRESS):
+        return _from_error(error, connected=False, **_endpoint(session))
+    if error is not None and session.status is None:
+        return _from_error(error, connected=False, **_endpoint(session))
+    status = session.status or {}
+    health = _health_view(status)
+    issues = health.get("issues") if isinstance(health.get("issues"), list) else []
+    uptime = health.get("uptime_seconds")
+    uptime_text = f" Looptijd {uptime} seconden." if isinstance(uptime, int) else ""
+    state = health.get("status") or "onbekend"
+    message = (
+        f"Gateway-status: {state}.{uptime_text} "
+        f"{len(issues)} openstaande melding(en)."
+    )
+    return ToolResult(
+        message,
+        {
+            "ok": True,
+            "connected": True,
+            "kind": "health",
+            "health": health,
+            "buffer": _buffer_summary(session),
+            **_endpoint(session),
         },
     )
 
@@ -180,6 +262,229 @@ async def probe_generation(session: GatewaySession) -> ToolResult:
             "devices_by_type": _count_by(devices, "device_type"),
             "modules_error": modules_error.message if modules_error else "",
             "devices_error": devices_error.message if devices_error else "",
+        },
+    )
+
+
+async def list_devices(session: GatewaySession) -> ToolResult:
+    """Channel inventory from GET /modules and GET /devices."""
+    error = await session.refresh_status()
+    if error is not None and error.kind in (KIND_UNREACHABLE, KIND_NO_ADDRESS):
+        return _from_error(error, connected=False)
+    modules_body, modules_error = await session.get_json("/api/v1/modules")
+    devices_body, devices_error = await session.get_json(
+        "/api/v1/devices?include_inactive=true"
+    )
+    if modules_error is not None and modules_error.kind == KIND_UNREACHABLE:
+        return _from_error(modules_error)
+    if devices_error is not None and devices_error.kind == KIND_UNREACHABLE:
+        return _from_error(devices_error)
+    modules = _list_of(modules_body, "modules")
+    devices = _list_of(devices_body, "devices")
+    by_module = {str(module.get("id")): module for module in modules if module.get("id")}
+    rows = [_device_row(device, by_module) for device in devices]
+    lines = [_device_line(row) for row in rows]
+    if not lines:
+        lines.append("De gateway heeft geen kanalen teruggegeven.")
+    message = " ".join(lines) + " " + CHANNEL_NUMBERING
+    return ToolResult(
+        message,
+        {
+            "ok": True,
+            "kind": "devices",
+            "channel_numbering": CHANNEL_NUMBERING,
+            "devices": rows,
+            "modules": [_module_reachability(module) for module in modules],
+            "modules_error": modules_error.message if modules_error else "",
+            "devices_error": devices_error.message if devices_error else "",
+        },
+    )
+
+
+async def recent_events(
+    session: GatewaySession,
+    *,
+    limit: int = 50,
+) -> ToolResult:
+    """State changes and button events already in the local buffer.
+
+    Works without ``udp_frame``. Does not read the add-on log.
+    """
+    limit = max(1, min(int(limit), 200))
+    wanted = set(BUFFER_EVENT_TYPES)
+    events = [
+        event
+        for event in session.buffer.snapshot()
+        if event.get("type") in wanted
+    ][-limit:]
+    presses = [
+        event
+        for event in events
+        if event.get("type") == "button_event"
+    ]
+    changes = [event for event in events if event.get("type") == "state_changed"]
+    if not events:
+        message = (
+            "De buffer heeft nog geen statuswijzigingen of knopgebeurtenissen. "
+            "Druk op de knop of verander een lamp, en lees daarna opnieuw."
+        )
+    else:
+        message = (
+            f"{len(changes)} statuswijziging(en) en {len(presses)} knopgebeurtenis(sen) "
+            "in de buffer (state_changed, button_event: press, single_press, release "
+            "en wat de gateway verder stuurde)."
+        )
+    return ToolResult(
+        message,
+        {
+            "ok": True,
+            "kind": "events",
+            "events": events,
+            "buffer": _buffer_summary(session),
+        },
+    )
+
+
+async def discover(session: GatewaySession, *, confirmed: bool = False) -> ToolResult:
+    """POST /api/v1/discover after an explicit yes, then diff the inventory."""
+    before_modules, before_devices, fetch_error = await _inventory(session)
+    if fetch_error is not None:
+        return _from_error(fetch_error, sent=False)
+    preview = {
+        "ok": False,
+        "kind": "confirmation_required",
+        "sent": False,
+        "before": _inventory_counts(before_modules, before_devices),
+    }
+    if not confirmed:
+        return ToolResult(
+            (
+                "Nog niet gestart. Dit vraagt de gateway om te scannen "
+                "(POST /api/v1/discover). Nieuwe modules kunnen in de lijst komen. "
+                f"Nu: {len(before_modules)} module(s), {len(before_devices)} apparaat/apparaten. "
+                "Vraag de tester expliciet of de scan mag. "
+                "Roep discover daarna opnieuw aan met confirmed=true."
+            ),
+            preview,
+        )
+    body, call_error = await session.post_json(
+        "/api/v1/discover",
+        {},
+        timeout=120,
+    )
+    if call_error is not None:
+        return _from_error(call_error, **preview)
+    after_modules, after_devices, after_error = await _inventory(session)
+    if after_error is not None:
+        return _from_error(after_error, sent=True, gateway=body if isinstance(body, dict) else {})
+    diff = _inventory_diff(before_modules, before_devices, after_modules, after_devices)
+    gateway_result = body if isinstance(body, dict) else {}
+    message = (
+        "Scan uitgevoerd. "
+        f"Modules {len(before_modules)} naar {len(after_modules)}. "
+        f"Apparaten {len(before_devices)} naar {len(after_devices)}. "
+        + _diff_sentence(diff)
+    )
+    return ToolResult(
+        message,
+        {
+            "ok": True,
+            "kind": "discover",
+            "sent": True,
+            "before": _inventory_counts(before_modules, before_devices),
+            "after": _inventory_counts(after_modules, after_devices),
+            "diff": diff,
+            "gateway": {
+                key: gateway_result.get(key)
+                for key in (
+                    "ok",
+                    "added",
+                    "changed",
+                    "firmware_changed",
+                    "removed",
+                    "skipped_unidentified",
+                    "duration_ms",
+                    "schema_version",
+                )
+                if key in gateway_result
+            },
+        },
+    )
+
+
+async def device_command(
+    session: GatewaySession,
+    *,
+    device_id: str,
+    action: str,
+    value: int | None = None,
+    confirmed: bool = False,
+) -> ToolResult:
+    """Switch or dim one device via POST /devices/{id}/command."""
+    device_id = (device_id or "").strip()
+    action_name = (action or "").strip().upper()
+    if not device_id:
+        return ToolResult(
+            "Er is geen apparaat opgegeven. Gebruik het id uit list_devices.",
+            {"ok": False, "kind": KIND_OTHER, "sent": False},
+        )
+    if action_name not in DEVICE_ACTIONS:
+        return ToolResult(
+            "Onbekende actie. Gebruik ON, OFF, PULSE, TOGGLE, DIM, DIM_START of DIM_STOP.",
+            {"ok": False, "kind": KIND_OTHER, "sent": False, "action": action_name},
+        )
+    if action_name == "DIM" and value is None:
+        return ToolResult(
+            "DIM heeft een waarde nodig van 0 tot en met 100. Nog niet verstuurd.",
+            {"ok": False, "kind": "confirmation_required", "sent": False, "action": action_name},
+        )
+    if value is not None:
+        value = int(value)
+        if action_name == "DIM" and not 0 <= value <= 100:
+            return ToolResult(
+                "DIM-waarde moet tussen 0 en 100 liggen. Nog niet verstuurd.",
+                {"ok": False, "kind": KIND_OTHER, "sent": False, "action": action_name},
+            )
+    preview = {
+        "ok": False,
+        "kind": "confirmation_required",
+        "sent": False,
+        "device_id": device_id,
+        "action": action_name,
+        "value": value,
+    }
+    if not confirmed:
+        level = f" naar {value}" if value is not None else ""
+        return ToolResult(
+            (
+                f"Nog niet verstuurd. Dit zet apparaat {device_id} op {action_name}{level} "
+                "via het gewone commando van de gateway. "
+                "Een lamp kan aan, uit of anders van helderheid gaan. "
+                "Vraag de tester expliciet of dit mag. "
+                "Roep device_command daarna opnieuw aan met confirmed=true. "
+                + COMMAND_WARNING
+            ),
+            preview,
+        )
+    path = f"/api/v1/devices/{quote(device_id, safe='')}/command"
+    payload: dict[str, Any] = {"action": action_name}
+    if value is not None:
+        payload["value"] = value
+    body, call_error = await session.post_json(path, payload)
+    if call_error is not None:
+        return _from_error(call_error, **preview)
+    gateway_ok = isinstance(body, dict) and body.get("ok") is True
+    return ToolResult(
+        COMMAND_WARNING,
+        {
+            "ok": gateway_ok,
+            "kind": "command",
+            "sent": True,
+            "device_id": device_id,
+            "action": action_name,
+            "value": value,
+            "warning": COMMAND_WARNING,
+            "gateway": body if isinstance(body, dict) else {},
         },
     )
 
@@ -365,39 +670,230 @@ async def export_session(
     *,
     note: str = "",
     marker: str = "",
+    redact: bool = True,
 ) -> ToolResult:
-    """Bundle notes, gap markers, and captured events for the session report."""
+    """Bundle the session. Names and addresses are removed unless redact is false."""
     if note or marker:
         await session.annotate(note or marker, marker=marker)
     events = session.buffer.snapshot()
     interesting = [
         event
         for event in events
-        if event.get("type") in {"gap", "note", "udp_frame", "log", "log_dropped", "state_changed", "button_event"}
+        if event.get("type") in {
+            "gap",
+            "note",
+            "udp_frame",
+            "log",
+            "log_dropped",
+            "state_changed",
+            "button_event",
+            "device_added",
+            "device_removed",
+            "device_ip_changed",
+            "device_firmware_changed",
+        }
     ]
     status = session.status or {}
-    message = (
-        "Sessie gebundeld. "
-        + SHARING_WARNING
-    )
+    body: dict[str, Any] = {
+        "gateway": {
+            "version": status.get("version"),
+            "remote_debugging": status.get("remote_debugging"),
+            "capabilities": _capabilities(status),
+            "connection": session.state,
+            "address": session.host,
+        },
+        "notes": list(session.notes),
+        "gaps": [event for event in events if event.get("type") == "gap"],
+        "events": interesting[-500:],
+        "buffer": _buffer_summary(session),
+    }
+    if redact:
+        body = redact_payload(body)
+        message = "Sessie gebundeld. " + SHARING_WARNING
+        sharing = SHARING_WARNING
+    else:
+        message = RAW_LOCAL_WARNING
+        sharing = RAW_LOCAL_WARNING
     return ToolResult(
         message,
         {
             "ok": True,
             "kind": "export",
-            "sharing": SHARING_WARNING,
-            "gateway": {
-                "version": status.get("version"),
-                "remote_debugging": status.get("remote_debugging"),
-                "capabilities": _capabilities(status),
-                "connection": session.state,
-            },
-            "notes": list(session.notes),
-            "gaps": [event for event in events if event.get("type") == "gap"],
-            "events": interesting[-500:],
-            "buffer": _buffer_summary(session),
+            "redacted": redact,
+            "sharing": sharing,
+            **body,
         },
     )
+
+
+def _endpoint(session: GatewaySession) -> dict[str, Any]:
+    return {
+        "address": session.host,
+        "port": session.port,
+        "address_source": session.address_source,
+        "address_source_label": _ADDRESS_LABELS.get(
+            session.address_source, session.address_source
+        ),
+    }
+
+
+def _connected_message(
+    *,
+    remote: bool | None,
+    capabilities: list[str],
+    missing: list[str],
+) -> tuple[str, str]:
+    if remote is False:
+        return MSG_REMOTE_DEBUGGING_OFF, "remote_debugging_off"
+    if missing and len(missing) == len(PLANNED_CAPABILITIES):
+        return MSG_GATEWAY_TOO_OLD, "missing_capabilities"
+    if remote is None:
+        return msg_connected(remote_debugging=None, capabilities=capabilities), "connected"
+    return msg_connected(remote_debugging=remote, capabilities=capabilities), "connected"
+
+
+def _health_view(status: dict[str, Any] | None) -> dict[str, Any]:
+    """Fields GET /api/v1/status actually carries. Absent keys stay absent."""
+    if not isinstance(status, dict):
+        return {}
+    view: dict[str, Any] = {}
+    for key in ("status", "uptime_seconds", "updated_at", "subsystems", "issues", "version"):
+        if key in status:
+            view[key] = status[key]
+    return view
+
+
+def _device_row(device: dict[str, Any], modules: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    module_id = device.get("module_id")
+    module = modules.get(str(module_id), {}) if module_id else {}
+    row: dict[str, Any] = {
+        "id": device.get("id"),
+        "module_id": module_id,
+        "module_name": module.get("name"),
+        "module_type": module.get("type"),
+        "channel": device.get("channel"),
+        "device_type": device.get("device_type"),
+        "name": device.get("name"),
+        "state": device.get("state") if "state" in device else None,
+        "active": device.get("active"),
+    }
+    if "level" in device:
+        row["level"] = device["level"]
+    if "semantic_type" in device:
+        row["semantic_type"] = device["semantic_type"]
+    if "last_seen" in module:
+        row["last_seen"] = module["last_seen"]
+    else:
+        row["last_seen"] = None
+    if "last_seen_source" in module:
+        row["last_seen_source"] = module["last_seen_source"]
+    if "state" not in device:
+        row["state_note"] = "geen status; knoppen geven alleen gebeurtenissen"
+    return row
+
+
+def _device_line(row: dict[str, Any]) -> str:
+    state = row["state"] if row.get("state") is not None else "geen status"
+    seen = ""
+    if row.get("last_seen"):
+        source = row.get("last_seen_source") or "onbekend"
+        seen = f" last_seen {row['last_seen']} ({source})"
+    elif row.get("last_seen") is None:
+        seen = " last_seen niet gemeld"
+    return (
+        f"{row.get('module_name') or row.get('module_id') or 'module'} "
+        f"kanaal {row.get('channel')} "
+        f"{row.get('device_type') or 'onbekend'} "
+        f"{row.get('name') or row.get('id') or 'zonder naam'} "
+        f"status {state}{seen}."
+    )
+
+
+def _module_reachability(module: dict[str, Any]) -> dict[str, Any]:
+    entry: dict[str, Any] = {
+        "id": module.get("id"),
+        "type": module.get("type"),
+        "model": module.get("model"),
+        "name": module.get("name"),
+    }
+    if "firmware" in module:
+        entry["firmware"] = module["firmware"]
+    if "last_seen" in module:
+        entry["last_seen"] = module["last_seen"]
+    else:
+        entry["last_seen"] = None
+        entry["last_seen_note"] = "de gateway meldt geen last_seen voor deze module"
+    if "last_seen_source" in module:
+        entry["last_seen_source"] = module["last_seen_source"]
+    return entry
+
+
+async def _inventory(
+    session: GatewaySession,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], ClassifiedError | None]:
+    modules_body, modules_error = await session.get_json("/api/v1/modules")
+    if modules_error is not None and modules_error.kind == KIND_UNREACHABLE:
+        return [], [], modules_error
+    devices_body, devices_error = await session.get_json("/api/v1/devices?include_inactive=true")
+    if devices_error is not None and devices_error.kind == KIND_UNREACHABLE:
+        return [], [], devices_error
+    error = modules_error or devices_error
+    return _list_of(modules_body, "modules"), _list_of(devices_body, "devices"), error
+
+
+def _ids(items: list[dict[str, Any]]) -> list[str]:
+    return [str(item.get("id")) for item in items if item.get("id")]
+
+
+def _inventory_counts(
+    modules: list[dict[str, Any]], devices: list[dict[str, Any]]
+) -> dict[str, Any]:
+    return {
+        "modules": len(modules),
+        "devices": len(devices),
+        "module_ids": _ids(modules),
+        "device_ids": _ids(devices),
+    }
+
+
+def _inventory_diff(
+    before_modules: list[dict[str, Any]],
+    before_devices: list[dict[str, Any]],
+    after_modules: list[dict[str, Any]],
+    after_devices: list[dict[str, Any]],
+) -> dict[str, list[str]]:
+    def added(before: list[str], after: list[str]) -> list[str]:
+        known = set(before)
+        return [item for item in after if item not in known]
+
+    def removed(before: list[str], after: list[str]) -> list[str]:
+        kept = set(after)
+        return [item for item in before if item not in kept]
+
+    before_m, after_m = _ids(before_modules), _ids(after_modules)
+    before_d, after_d = _ids(before_devices), _ids(after_devices)
+    return {
+        "modules_added": added(before_m, after_m),
+        "modules_removed": removed(before_m, after_m),
+        "devices_added": added(before_d, after_d),
+        "devices_removed": removed(before_d, after_d),
+    }
+
+
+def _diff_sentence(diff: dict[str, list[str]]) -> str:
+    parts = []
+    for label, key in (
+        ("nieuwe modules", "modules_added"),
+        ("verdwenen modules", "modules_removed"),
+        ("nieuwe apparaten", "devices_added"),
+        ("verdwenen apparaten", "devices_removed"),
+    ):
+        values = diff.get(key) or []
+        if values:
+            parts.append(f"{label}: {', '.join(values)}")
+    if not parts:
+        return "Geen verschil in de lijst."
+    return " ".join(parts) + "."
 
 
 def _buffer_summary(session: GatewaySession) -> dict[str, Any]:

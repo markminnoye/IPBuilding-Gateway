@@ -46,20 +46,34 @@ class FakeGateway:
         ]
         self.frame_on_subscribe: dict[str, Any] | None = None
         self.log_level_reply: dict[str, Any] | None = None
+        self.omit_toolkit_fields = False
+        self.discover_calls: list[dict[str, Any]] = []
+        self.command_calls: list[dict[str, Any]] = []
+        self.command_status = 200
+        self.command_body: dict[str, Any] = {"ok": True, "schema_version": 2}
         self.connects = 0
         self.port = 0
         self._sockets: list[web.WebSocketResponse] = []
         self._runner: web.AppRunner | None = None
 
     def status_body(self) -> dict[str, Any]:
-        return {
+        body: dict[str, Any] = {
             "status": "ok",
             "version": self.version,
-            "remote_debugging": self.remote_debugging,
-            "capabilities": list(self.capabilities),
+            "uptime_seconds": 12,
+            "subsystems": {
+                "installation": "ok",
+                "module_metadata": "ok",
+                "discovery": "ok",
+            },
+            "issues": [],
             "hub_role": self.hub_role,
             "input_mode_label": "Slave",
         }
+        if not self.omit_toolkit_fields:
+            body["remote_debugging"] = self.remote_debugging
+            body["capabilities"] = list(self.capabilities)
+        return body
 
     def snapshot_for(self, connect_index: int) -> dict[str, Any]:
         devices = self.devices if connect_index == 1 else self.devices_after_reconnect
@@ -75,6 +89,8 @@ class FakeGateway:
         app.router.add_get("/api/v1/status", self._status)
         app.router.add_get("/api/v1/modules", self._modules)
         app.router.add_get("/api/v1/devices", self._devices)
+        app.router.add_post("/api/v1/discover", self._discover)
+        app.router.add_post("/api/v1/devices/{device_id}/command", self._command)
         app.router.add_post("/api/v1/debug/raw-send", self._raw)
         app.router.add_get("/ws", self._ws)
         self._runner = web.AppRunner(app)
@@ -103,6 +119,50 @@ class FakeGateway:
 
     async def _devices(self, _request: web.Request) -> web.Response:
         return web.json_response({"devices": self.devices})
+
+    async def _discover(self, request: web.Request) -> web.Response:
+        body = await request.json()
+        self.discover_calls.append(body if isinstance(body, dict) else {})
+        self.modules.append(
+            {
+                "id": "module-b",
+                "type": "dimmer",
+                "model": "IP0300PoE",
+                "firmware": "1",
+                "name": "dimmer-b",
+            }
+        )
+        self.devices.append(
+            {
+                "id": "device-b",
+                "module_id": "module-b",
+                "channel": 0,
+                "device_type": "dimmer",
+                "name": "lamp-b",
+                "state": "off",
+            }
+        )
+        return web.json_response(
+            {
+                "ok": True,
+                "added": [{"mac": "module-b"}],
+                "changed": [],
+                "firmware_changed": [],
+                "removed": [],
+                "skipped_unidentified": [],
+                "duration_ms": 1,
+                "schema_version": 2,
+            }
+        )
+
+    async def _command(self, request: web.Request) -> web.Response:
+        body = await request.json()
+        self.command_calls.append(
+            {"device_id": request.match_info["device_id"], **body}
+        )
+        if self.command_status >= 400:
+            return web.json_response(self.command_body, status=self.command_status)
+        return web.json_response(self.command_body)
 
     async def _raw(self, request: web.Request) -> web.Response:
         body = await request.json()

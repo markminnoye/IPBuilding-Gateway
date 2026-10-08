@@ -7,6 +7,7 @@ import socket
 import pytest
 
 from ipbuilding_debug.errors import (
+    MSG_GATEWAY_TOO_OLD,
     MSG_LOG_LEVEL_RATE_LIMITED,
     MSG_REMOTE_DEBUGGING_OFF,
     MSG_UNREACHABLE,
@@ -14,11 +15,18 @@ from ipbuilding_debug.errors import (
 )
 from ipbuilding_debug.session import GatewaySession
 from ipbuilding_debug.tools import (
+    CHANNEL_NUMBERING,
+    COMMAND_WARNING,
     capture_frames,
     connection_status,
     decode_test,
+    device_command,
+    discover,
     export_session,
+    gateway_health,
+    list_devices,
     probe_generation,
+    recent_events,
     send_raw,
 )
 from fake_gateway import FakeGateway
@@ -302,4 +310,227 @@ async def test_export_session_includes_note_and_gap() -> None:
     assert result.data["notes"][0]["text"] == "lamp bleef aan"
     assert result.data["notes"][0]["marker"] == "hypothese-1"
     assert result.data["gaps"]
-    assert "ruimtes" in result.data["sharing"]
+    assert result.data["redacted"] is True
+    assert "adressen" in result.data["sharing"]
+
+
+def _dotted(*parts: int) -> str:
+    return ".".join(str(part) for part in parts)
+
+
+def _mac() -> str:
+    return ":".join(["ab"] * 6)
+
+
+@pytest.mark.asyncio
+async def test_old_gateway_is_connected_with_missing_capabilities() -> None:
+    gateway = FakeGateway()
+    gateway.omit_toolkit_fields = True
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await connection_status(session)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert result.data["connected"] is True
+    assert result.data["ok"] is True
+    assert result.data["missing_capabilities"] == ["log_stream", "udp_frame", "raw_send"]
+    assert "te oud voor live debugging" in result.message
+    assert "develop-kanaal" in result.message
+    assert result.message == MSG_GATEWAY_TOO_OLD
+    assert result.data["address_source"] == "manual"
+    assert result.data["port"] == gateway.port
+    assert result.data["health"]["status"] == "ok"
+    assert result.data["health"]["uptime_seconds"] == 12
+
+
+@pytest.mark.asyncio
+async def test_gateway_health_reads_status_fields() -> None:
+    gateway = FakeGateway(remote_debugging=False, capabilities=[])
+
+    def status_body() -> dict:
+        body = FakeGateway.status_body(gateway)
+        body["issues"] = [
+            {
+                "id": "installation.missing",
+                "level": "error",
+                "code": "installation.missing",
+                "message": "geen installatie",
+            }
+        ]
+        return body
+
+    gateway.status_body = status_body  # type: ignore[method-assign]
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await gateway_health(session)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert result.data["health"]["subsystems"]["discovery"] == "ok"
+    assert result.data["health"]["issues"][0]["code"] == "installation.missing"
+    assert "buffer" in result.data
+
+
+@pytest.mark.asyncio
+async def test_list_devices_maps_channels_from_zero_and_last_seen() -> None:
+    gateway = FakeGateway(remote_debugging=False, capabilities=[])
+    gateway.modules = [
+        {
+            "id": "module-a",
+            "type": "relay",
+            "model": "IP0200PoE",
+            "firmware": "1",
+            "name": "relay-a",
+            "last_seen": "2026-01-01T00:00:00+00:00",
+            "last_seen_source": "udp",
+        },
+        {
+            "id": "module-c",
+            "type": "input",
+            "model": "IP1100PoE",
+            "name": "input-c",
+        },
+    ]
+    gateway.devices = [
+        {
+            "id": "device-a",
+            "module_id": "module-a",
+            "channel": 0,
+            "name": "lamp-a",
+            "room": "room-a",
+            "device_type": "relay",
+            "state": "off",
+            "active": True,
+        },
+        {
+            "id": "button-a",
+            "module_id": "module-c",
+            "channel": 1,
+            "name": "button-a",
+            "device_type": "input",
+            "semantic_type": "button",
+            "active": True,
+        },
+    ]
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await list_devices(session)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert result.data["channel_numbering"] == CHANNEL_NUMBERING
+    assert "vanaf 0" in result.message
+    relay = result.data["devices"][0]
+    assert relay["channel"] == 0
+    assert relay["device_type"] == "relay"
+    assert relay["state"] == "off"
+    assert relay["last_seen_source"] == "udp"
+    button = result.data["devices"][1]
+    assert button["state"] is None
+    assert "geen status" in button["state_note"]
+    unseen = result.data["modules"][1]
+    assert unseen["last_seen"] is None
+    assert "last_seen" in unseen["last_seen_note"]
+
+
+@pytest.mark.asyncio
+async def test_recent_events_reads_buffer_without_frames() -> None:
+    session = GatewaySession("localhost:9", backoff_start=30, backoff_max=30)
+    await session.buffer.append(
+        {"type": "state_changed", "id": "device-a", "state": "on"}
+    )
+    await session.buffer.append(
+        {"type": "button_event", "id": "button-a", "action": "single_press"}
+    )
+    await session.buffer.append({"type": "udp_frame", "hex": "00"})
+    result = await recent_events(session)
+    kinds = [event["type"] for event in result.data["events"]]
+    assert kinds == ["state_changed", "button_event"]
+    assert result.data["events"][1]["action"] == "single_press"
+
+
+@pytest.mark.asyncio
+async def test_discover_waits_for_confirmation_then_diffs() -> None:
+    gateway = FakeGateway(remote_debugging=False, capabilities=[])
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        preview = await discover(session, confirmed=False)
+        assert preview.data["sent"] is False
+        assert gateway.discover_calls == []
+        done = await discover(session, confirmed=True)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert done.data["sent"] is True
+    assert done.data["diff"]["modules_added"] == ["module-b"]
+    assert "device-b" in done.data["diff"]["devices_added"]
+    assert done.data["gateway"]["added"] == [{"mac": "module-b"}]
+    assert len(gateway.discover_calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_device_command_previews_then_warns_ok_is_not_a_reply() -> None:
+    gateway = FakeGateway(remote_debugging=False, capabilities=[])
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        preview = await device_command(
+            session, device_id="device-a", action="on", confirmed=False
+        )
+        assert preview.data["sent"] is False
+        assert gateway.command_calls == []
+        assert "confirmed=true" in preview.message
+        missing = await device_command(
+            session, device_id="device-a", action="DIM", confirmed=True
+        )
+        assert missing.data["sent"] is False
+        sent = await device_command(
+            session, device_id="device-a", action="off", confirmed=True
+        )
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert sent.data["sent"] is True
+    assert sent.data["ok"] is True
+    assert COMMAND_WARNING in sent.message
+    assert "ook als de module niet antwoordt" in sent.message
+    assert gateway.command_calls == [
+        {"device_id": "device-a", "action": "OFF"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_export_redacts_by_default_and_can_show_raw_locally() -> None:
+    host = _dotted(198, 51, 100, 24)
+    mac = _mac()
+    session = GatewaySession("localhost:9", backoff_start=30, backoff_max=30)
+    await session.buffer.append(
+        {
+            "type": "state_changed",
+            "id": "device-a",
+            "name": "lamp-a",
+            "room": "room-a",
+            "module_ip": host,
+            "mac": mac,
+            "state": "on",
+        }
+    )
+    hidden = await export_session(session, note=f"zag {host} in room-a")
+    blob = hidden.render()
+    assert hidden.data["redacted"] is True
+    assert host not in blob
+    assert mac not in blob
+    assert "lamp-a" not in blob
+    assert "room-a" not in blob
+    assert "device-a" not in blob
+    raw = await export_session(session, redact=False)
+    raw_blob = raw.render()
+    assert raw.data["redacted"] is False
+    assert host in raw_blob
+    assert "lamp-a" in raw_blob
+    assert "Deel deze tekst niet" in raw.message

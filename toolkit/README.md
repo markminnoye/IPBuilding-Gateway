@@ -21,10 +21,15 @@ The gateway address is a user setting (`gateway_address` in the bundle, the same
 
 | Tool | This version | Waits on |
 | --- | --- | --- |
-| `connection_status` | Works against `/api/v1/status` and the local buffer | — |
+| `connection_status` | Works against `/api/v1/status` and the local buffer. Reports `connected`, `missing_capabilities`, the host, and whether that host was the bundle default or typed in | — |
+| `gateway_health` | Status, subsystems, issues, uptime, buffer from `/api/v1/status` | — |
+| `list_devices` | Module, channel, type, name, state from `/modules` and `/devices`. Relay and dimmer channels count from 0. Shows `last_seen` when the gateway sends it | — |
+| `recent_events` | Buffered `state_changed` and `button_event` (press, single_press, release). No `udp_frame` required | — |
+| `discover` | `POST /api/v1/discover` only after `confirmed=true`, then the inventory diff | — |
+| `device_command` | `POST /api/v1/devices/{id}/command` only after `confirmed=true`. Warns that `ok: true` does not mean the module answered | — |
 | `probe_generation` | Works against `/status`, `/modules`, `/devices` | — |
 | `decode_test` | Local, uses `gateway/payloads` | — |
-| `export_session` | Local notes, gap markers, buffered events | Live logs appear in the export once `log_stream` exists |
+| `export_session` | Local notes and buffered events. Redacts addresses and names unless `redact=false` | Live logs appear in the export once `log_stream` exists |
 | `capture_frames` | Subscribes when `udp_frame` is advertised | Gateway `udp_frame` |
 | `send_raw` | Posts when `raw_send` is advertised, and only after `confirmed=true` | Gateway raw send |
 

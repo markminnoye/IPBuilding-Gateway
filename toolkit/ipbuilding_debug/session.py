@@ -58,11 +58,11 @@ def parse_gateway_address(raw: str | None, *, default_port: int = DEFAULT_PORT) 
     return host, port
 
 
-def address_from_env() -> str:
-    """Gateway host from the bundle setting, or ``homeassistant.local`` when empty.
+def resolve_gateway_address() -> tuple[str, str]:
+    """Host plus how it was chosen: ``config_default`` or ``manual``.
 
-    Claude Desktop can leave an optional field blank even when the manifest
-    has a default, so an empty value is the usual address.
+    An empty setting, or a placeholder Claude Desktop did not substitute,
+    uses ``homeassistant.local``. This build does not search mDNS.
     """
     raw = (
         os.environ.get("IPBUILDING_GATEWAY_ADDRESS")
@@ -70,8 +70,13 @@ def address_from_env() -> str:
         or ""
     ).strip()
     if not raw or raw.startswith("${"):
-        return DEFAULT_GATEWAY_ADDRESS
-    return raw
+        return DEFAULT_GATEWAY_ADDRESS, "config_default"
+    return raw, "manual"
+
+
+def address_from_env() -> str:
+    """Gateway host from the bundle setting, or ``homeassistant.local`` when empty."""
+    return resolve_gateway_address()[0]
 
 
 class GatewaySession:
@@ -86,8 +91,10 @@ class GatewaySession:
         backoff_max: float = BACKOFF_MAX_S,
         sleeper: Sleeper | None = None,
         log_level: str = "INFO",
+        address_source: str = "manual",
     ) -> None:
         self.address = (address or "").strip()
+        self.address_source = address_source or "manual"
         self.host = ""
         self.port = DEFAULT_PORT
         self.address_error = ""
@@ -121,7 +128,8 @@ class GatewaySession:
 
     @classmethod
     def from_env(cls) -> GatewaySession:
-        return cls(address_from_env())
+        address, source = resolve_gateway_address()
+        return cls(address, address_source=source)
 
     @property
     def base_http(self) -> str:

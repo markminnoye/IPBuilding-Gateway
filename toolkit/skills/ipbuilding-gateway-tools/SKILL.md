@@ -23,29 +23,52 @@ Er is een schakelaar in de add-on. Engelse naam: **Remote debugging and control*
   1. **Aan het begin** van elke sessie: roep eerst `connection_status` aan. Staat de schakelaar uit (`remote_debugging` is false), leg dan in gewone woorden uit waarom hij aan moet en vraag om hem aan te zetten. Wacht tot de add-on opnieuw is opgestart en controleer daarna opnieuw.
   2. **Aan het eind** van de sessie: stel voor de schakelaar weer uit te zetten. De melding in Home Assistant verdwijnt nadat de add-on opnieuw is opgestart. Laat hem niet aan staan.
 - Staat de schakelaar aan, maar ontbreekt een functie in `capabilities`, zeg dan eerlijk dat deze gateway-versie die functie nog niet heeft. De schakelaar aanzetten voegt die functie niet toe. In dat geval hoeft de schakelaar niet aan voor die functie.
+- Ontbreken `log_stream`, `udp_frame` én `raw_send`, dan is de gateway te oud voor live debugging. Geef de tekst van `connection_status` door: installeer de testversie via het develop-kanaal (Add-onwinkel, drie puntjes, Repositories, `https://github.com/markminnoye/IPBuilding-Gateway#develop`). De ontwikkelversie heeft `-dev.` in het versienummer. Zeg niet dat de verbinding mislukt is. `connected` is true zolang de gateway antwoordt. `missing_capabilities` noemt wat ontbreekt.
+
+## Waar je kijkt
+
+- De gateway van deze add-on spreekt REST en WebSocket op poort 8080 van Home Assistant. De tools praten alleen daarmee.
+- Poort 30200 is IpbService op de oude IPBox. Dat is niet deze gateway. Noem die poort niet de gateway-API.
+- HTTP rechtstreeks op een module bestaat alleen bij nieuwere modules. Deze tools openen dat niet.
+- Gebruik eerst de tools. Home Assistant is een aanvulling (een entiteit, het tabblad Log). Zeg bij elk feit de bron: welke tool, of Home Assistant.
+- Deze bundel zoekt niet via mDNS. `address_source` is `config_default` (standaard `homeassistant.local`) of `manual` (handmatig ingevuld). Noem het adres en die bron uit `connection_status`.
 
 ## Verloop
 
 1. **Vraag het probleem uit.** Wat ziet de tester, sinds wanneer, welke ruimte, welke lamp of knop, altijd of soms.
-2. **`connection_status`.** Eerst dit, vóór iets anders. Handel de schakelaar af zoals hierboven.
-3. **`probe_generation`.** Versie, rol van de gateway, modules. Het dialect is pas zeker als frames meelezen kan.
-4. **Hypotheses**, de meest waarschijnlijke eerst. Bijvoorbeeld: de module krijgt het commando niet, de module doet het wel maar stuurt geen status terug, een ander apparaat zet de lamp opnieuw aan, de naam in de configuratie klopt niet, of Home Assistant toont een andere status dan de lamp. "Geen antwoord" betekent niet dat de module zwijgt: de gateway ziet alleen verkeer van en naar zichzelf.
-5. **Test één hypothese tegelijk.** Vraag de tester wat hij ziet ("brandt de lamp nu?"). Noteer bevestigd of uitgesloten.
-6. **Conclusie.** Oorzaak, of de kleinste set die nog overblijft, plus wat je gezien hebt.
-7. **`export_session`** met een korte notitie. Daarna: schakelaar weer uit.
+2. **`connection_status`.** Eerst dit, vóór iets anders. Handel de schakelaar af zoals hierboven. Noem het adres en hoe het gevonden is. Bij een vraag of de gateway zelf gezond is: `gateway_health` (status, subsystemen, meldingen, looptijd, buffer).
+3. **`list_devices`.** Welk kanaal bij welke lamp of knop hoort. Module, kanaal, type, naam, status. Relay- en dimmerkanalen tellen vanaf 0. Een knop toont de index van de module.
+4. **`probe_generation`.** Versie, rol van de gateway, modules. Het dialect is pas zeker als frames meelezen kan.
+5. **Hypotheses**, de meest waarschijnlijke eerst. Bijvoorbeeld: de module krijgt het commando niet, de module doet het wel maar stuurt geen status terug, een ander apparaat zet de lamp opnieuw aan, de naam in de configuratie klopt niet, of Home Assistant toont een andere status dan de lamp. "Geen antwoord" betekent niet dat de module zwijgt: de gateway ziet alleen verkeer van en naar zichzelf.
+6. **Test één hypothese tegelijk.** Vraag de tester wat hij ziet ("brandt de lamp nu?"). Noteer bevestigd of uitgesloten.
+7. **Conclusie.** Oorzaak, of de kleinste set die nog overblijft, plus wat je gezien hebt. Zeg per feit de bron.
+8. **`export_session`** met een korte notitie. Daarna: schakelaar weer uit.
 
 ## Tools
 
-| Tool | Nu |
-| --- | --- |
-| `connection_status` | Werkt. Verbinding, schakelaar, `capabilities`, buffer, gaten. |
-| `probe_generation` | Werkt via de bestaande gateway-API. |
-| `capture_frames` | Alleen als `udp_frame` in `capabilities` staat én de schakelaar aan staat. |
-| `send_raw` | Alleen als `raw_send` in `capabilities` staat én de schakelaar aan staat. Eerst zonder bevestiging, daarna pas met `confirmed=true`. |
-| `decode_test` | Lokaal, geen verbinding nodig. |
-| `export_session` | Lokaal. Bevat ook notities en markeringen. |
+- `connection_status` — verbinding, adres en bron, schakelaar, `missing_capabilities`, gezondheid, buffer.
+- `gateway_health` — status, subsystemen, meldingen, looptijd, buffer uit `/api/v1/status`.
+- `list_devices` — module, kanaal, type, naam, status. Kanalen van relais en dimmers vanaf 0. `last_seen` alleen als de gateway het meestuurt.
+- `recent_events` — statuswijzigingen en knoppen (`press`, `single_press`, `release`) die al in de buffer staan. Geen `udp_frame` nodig. Gebruik dit bij vragen over logs of een knopdruk.
+- `discover` — scan pas na een expliciet ja, met `confirmed=true`. Daarna het verschil in modules en apparaten.
+- `device_command` — één apparaat schakelen of dimmen via het gewone commando (ON, OFF, PULSE, TOGGLE, DIM, DIM_START, DIM_STOP). Eerst preview, daarna `confirmed=true`.
+- `probe_generation` — modules en versie.
+- `capture_frames` — alleen als `udp_frame` in `capabilities` staat én de schakelaar aan staat.
+- `send_raw` — alleen als `raw_send` in `capabilities` staat én de schakelaar aan staat. Eerst zonder bevestiging, daarna pas met `confirmed=true`.
+- `decode_test` — lokaal, geen verbinding nodig.
+- `export_session` — namen en adressen standaard weg. Ruwe tekst alleen met `redact=false`, en alleen lokaal.
 
 Ontbreekt een capability, dan zegt de tool dat de functie **not available in this gateway version yet** is. Geef die boodschap door in gewone taal. Verzin geen omweg langs een eigen netwerkverbinding naar de modules. Alles gaat door de gateway.
+
+## Knoppen, logs en een lamp bedienen
+
+Vraagt de tester wat er gebeurde bij een knop of een statuswijziging, lees dan `recent_events`. Dat zijn de gebeurtenissen die de gateway al in de buffer zette. Zeg dat de bron de buffer van de gateway is.
+
+Zonder `log_stream` kun je de log van de add-on niet meelezen. Stuur de tester naar het tabblad **Log** van de add-on IPBuilding Gateway in Home Assistant en vraag de relevante regels te plakken. Zeg dat die regels van Home Assistant komen, niet van een tool.
+
+`device_command` verstuurt niets zolang `confirmed` false is. Toon welk apparaat (uit `list_devices`) en welke actie. Vraag expliciet "zal ik dit doen?". Pas na een duidelijk ja roep je de tool opnieuw aan met `confirmed=true`. Geen ruwe pakketten. De gateway kan `ok: true` teruggeven ook als de module niet antwoordt. Dat bewijst niet dat de lamp veranderde. Vraag wat de tester fysiek ziet.
+
+`discover` start de scan niet zolang `confirmed` false is. Vraag eerst. Na `confirmed=true` vertel je het verschil: modules en apparaten ervoor en erna.
 
 ## Testpakketten
 
@@ -65,4 +88,17 @@ Geef de boodschap van de tool door, in de taal van de tester. Vier gevallen:
 
 ## Rapport
 
-Het exportbestand blijft bij de tester tot hij het wil delen. Voor je iets openbaar maakt: geen adressen, geen namen van mensen, geen namen van ruimtes. Laat de tester de tekst eerst zien. Er is in deze versie geen automatische publicatie.
+`export_session` haalt standaard adressen, MAC-adressen, ruimtenamen, lampnamen, apparaatnamen, apparaat-ids en persoonsnamen weg. Gebruik dat. Alleen als de tester de ruwe tekst lokaal wil zien: `redact=false`. Zeg dan dat die tekst niet gedeeld wordt.
+
+Schrijf het rapport als losse regels. Geen tabel. Het moet leesbaar blijven zonder opmaak.
+
+```
+Probleem: lamp gaat niet uit
+Bron list_devices (gateway, poort 8080): kanaal 0, status off
+Bron recent_events (gateway-buffer): knop single_press
+Bron Home Assistant Log (geplakt door de tester): …
+Niet gezien: geen live logs (missing_capabilities bevat log_stream)
+Conclusie: …
+```
+
+Laat de tester de tekst eerst zien. Er is in deze versie geen automatische publicatie. In het rapport zelf geen adressen, geen MAC, geen ruimtenamen, geen lampnamen, geen apparaat-ids en geen persoonsnamen, ook niet als een tool die lokaal wel toonde.

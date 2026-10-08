@@ -14,6 +14,7 @@ from ipbuilding_debug.session import (
     GatewaySession,
     address_from_env,
     next_backoff,
+    resolve_gateway_address,
 )
 from fake_gateway import FakeGateway
 
@@ -28,6 +29,10 @@ def test_empty_gateway_address_uses_homeassistant_local(monkeypatch: pytest.Monk
     assert address_from_env() == "homeassistant.local"
     monkeypatch.setenv("IPBUILDING_GATEWAY_ADDRESS", "hub.local")
     assert address_from_env() == "hub.local"
+    monkeypatch.delenv("IPBUILDING_GATEWAY_ADDRESS", raising=False)
+    assert resolve_gateway_address() == (DEFAULT_GATEWAY_ADDRESS, "config_default")
+    monkeypatch.setenv("IPBUILDING_GATEWAY_ADDRESS", "hub.local")
+    assert resolve_gateway_address() == ("hub.local", "manual")
 
 
 def test_backoff_grows_from_one_second_to_thirty() -> None:

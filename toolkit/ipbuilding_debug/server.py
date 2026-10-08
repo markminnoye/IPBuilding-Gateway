@@ -15,8 +15,13 @@ from ipbuilding_debug.tools import (
     capture_frames,
     connection_status,
     decode_test,
+    device_command,
+    discover,
     export_session,
+    gateway_health,
+    list_devices,
     probe_generation,
+    recent_events,
     send_raw,
 )
 from ipbuilding_debug.version import __version__
@@ -62,6 +67,62 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         """
         result = await connection_status(gateway, log_level=log_level)
         return result.render()
+
+    @mcp.tool(name="gateway_health")
+    async def gateway_health_tool() -> str:
+        """Read /api/v1/status health: status, subsystems, issues, uptime, and the local buffer.
+
+        Call this when the tester asks whether the gateway itself is healthy.
+        """
+        return (await gateway_health(gateway)).render()
+
+    @mcp.tool(name="list_devices")
+    async def list_devices_tool() -> str:
+        """Map each channel to its module, type, name, and state from the gateway inventory.
+
+        Relay and dimmer channels count from 0. Button channel is the module index, unchanged.
+        Includes last_seen and last_seen_source when the gateway sent them on /modules.
+        """
+        return (await list_devices(gateway)).render()
+
+    @mcp.tool(name="recent_events")
+    async def recent_events_tool(limit: int = 50) -> str:
+        """Read state changes and button events already in the buffer.
+
+        Use this for questions about button presses and state changes. It does not need udp_frame and it does not read the add-on log.
+        """
+        return (await recent_events(gateway, limit=limit)).render()
+
+    @mcp.tool(name="discover")
+    async def discover_tool(confirmed: bool = False) -> str:
+        """Ask the gateway to scan for modules, then show the inventory diff.
+
+        First call with confirmed=false and ask the tester. Only call again with confirmed=true after an explicit yes.
+        """
+        return (await discover(gateway, confirmed=confirmed)).render()
+
+    @mcp.tool(name="device_command")
+    async def device_command_tool(
+        device_id: str,
+        action: str,
+        value: int | None = None,
+        confirmed: bool = False,
+    ) -> str:
+        """Switch or dim one device through the gateway command the Home Assistant integration uses.
+
+        action is ON, OFF, PULSE, TOGGLE, DIM, DIM_START, or DIM_STOP. DIM needs value 0-100.
+        First call with confirmed=false. Only send after an explicit yes and confirmed=true.
+        ok true means the gateway sent the command, not that the module answered.
+        """
+        return (
+            await device_command(
+                gateway,
+                device_id=device_id,
+                action=action,
+                value=value,
+                confirmed=confirmed,
+            )
+        ).render()
 
     @mcp.tool(name="probe_generation")
     async def probe_generation_tool() -> str:
@@ -126,12 +187,16 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         return decode_test(payload).render()
 
     @mcp.tool(name="export_session")
-    async def export_session_tool(note: str = "", marker: str = "") -> str:
-        """Save a note or marker and export the session buffer for the report.
+    async def export_session_tool(
+        note: str = "",
+        marker: str = "",
+        redact: bool = True,
+    ) -> str:
+        """Export the session buffer for the report. Addresses and names are removed by default.
 
-        The export can contain installation details. Do not publish it until names, room names, and addresses are removed.
+        Pass redact=false only when the tester wants the raw text locally. Tell them not to share that raw text.
         """
-        result = await export_session(gateway, note=note, marker=marker)
+        result = await export_session(gateway, note=note, marker=marker, redact=redact)
         return result.render()
 
     return mcp

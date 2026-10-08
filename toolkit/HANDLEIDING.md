@@ -12,7 +12,7 @@ Je krijgt één bestand: `ipbuilding-gateway-tools.mcpb`.
 
 ## Nieuwere testversie
 
-Elke testversie heeft een eigen nummer: `0.1.0-rc.1`, daarna `0.1.0-rc.2`, enzovoort. Dat nummer staat in de naam van het bestand. Staat IPBuilding Gateway Tools er al, dan toont Claude Desktop **Update** in plaats van **Install**. Zo zie je welke build je hebt.
+Elke testversie heeft een eigen nummer: `0.1.0-rc.1`, daarna `0.1.0-rc.2`, `0.1.0-rc.3`, enzovoort. Dat nummer staat in de naam van het bestand. Staat IPBuilding Gateway Tools er al, dan toont Claude Desktop **Update** in plaats van **Install**. Zo zie je welke build je hebt.
 
 ## Schakelaar in Home Assistant
 
@@ -50,6 +50,17 @@ Kijk of de add-on nog draait. Blijft de melding, bewaar de tekst en geef die doo
 
 **"Het logniveau is te vaak gewijzigd."**
 Wacht een minuut. De gateway laat hoogstens 10 wijzigingen per minuut toe.
+
+**"te oud voor live meekijken"**
+De add-on draait, maar deze versie kan nog niet live meekijken. Installeer de testversie via het develop-kanaal: Add-onwinkel, rechtsboven de drie puntjes, Repositories, en het adres dat de assistent noemt. De ontwikkelversie heeft `-dev.` in het versienummer. De gewone release is een gewoon nummer zonder `-dev`. Draai niet twee gateways tegelijk.
+
+## Wat de assistent kan
+
+Hij kan opvragen welk kanaal bij welke lamp hoort. Kanalen van een relais of dimmer tellen vanaf 0. Hij kan kijken of de gateway gezond is, een scan naar nieuwe modules starten (hij vraagt eerst), en één lamp schakelen of dimmen (hij vraagt eerst). Een antwoord dat het commando is aangekomen betekent niet dat de module heeft geantwoord. Kijk of de lamp echt veranderde.
+
+Een knopdruk of een lamp die van status verandert kan hij teruglezen uit wat de gateway al heeft doorgegeven. De log van de add-on kan deze versie nog niet meesturen. Dan vraagt de assistent je het tabblad **Log** van IPBuilding Gateway te openen en de relevante regels te plakken.
+
+Een verslag haalt adressen, apparaatnamen en ruimtenamen standaard weg. Alleen als je de ruwe tekst lokaal wil zien, kan de assistent die tonen. Deel die ruwe tekst niet.
 
 ## Als je klaar bent
 

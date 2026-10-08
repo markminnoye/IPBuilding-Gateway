@@ -186,7 +186,27 @@ def _write_manifest(dest: Path, version: str) -> None:
         "tools": [
             {
                 "name": "connection_status",
-                "description": "Verbinding, schakelaar en mogelijkheden van deze gateway-versie.",
+                "description": "Verbinding, adres, gezondheid en ontbrekende mogelijkheden.",
+            },
+            {
+                "name": "gateway_health",
+                "description": "Status, subsystemen, meldingen, looptijd en buffer.",
+            },
+            {
+                "name": "list_devices",
+                "description": "Module, kanaal, type, naam en status. Kanalen tellen vanaf 0.",
+            },
+            {
+                "name": "recent_events",
+                "description": "Statuswijzigingen en knoppen uit de buffer.",
+            },
+            {
+                "name": "discover",
+                "description": "Scan starten nadat de tester het bevestigd heeft, daarna het verschil.",
+            },
+            {
+                "name": "device_command",
+                "description": "Eén apparaat schakelen of dimmen nadat de tester het bevestigd heeft.",
             },
             {
                 "name": "probe_generation",
@@ -206,7 +226,7 @@ def _write_manifest(dest: Path, version: str) -> None:
             },
             {
                 "name": "export_session",
-                "description": "Notities en de sessie bundelen.",
+                "description": "Sessie bundelen. Namen en adressen zijn standaard weggehaald.",
             },
         ],
         "keywords": ["ipbuilding", "home-assistant", "gateway"],

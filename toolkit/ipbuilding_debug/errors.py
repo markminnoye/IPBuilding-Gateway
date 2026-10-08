@@ -71,6 +71,19 @@ MSG_LOG_LEVEL_RATE_LIMITED = (
     "Wacht even en probeer het opnieuw."
 )
 
+# Quoted by the assistant when /status has none of the live-debug capabilities.
+# Wording follows docs/develop-addon.md (Add-on store, Repositories, -dev. version).
+MSG_GATEWAY_TOO_OLD = (
+    "De gateway is bereikbaar, maar deze gateway is te oud voor live debugging; "
+    "installeer de testversie via het develop-kanaal. "
+    "In Home Assistant: Instellingen, Add-ons, Add-onwinkel, "
+    "rechtsboven de drie puntjes, Repositories, en plak "
+    "https://github.com/markminnoye/IPBuilding-Gateway#develop. "
+    "Ververs de winkel. De ontwikkelversie heeft -dev. in het versienummer. "
+    "De gewone release is een gewoon nummer zonder -dev. "
+    "Draai niet twee gateways tegelijk."
+)
+
 _CAPABILITY_LABELS = {
     "log_stream": "Live logs meelezen",
     "udp_frame": "Veldbusframes meelezen",

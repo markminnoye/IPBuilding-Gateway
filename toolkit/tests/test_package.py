@@ -111,6 +111,11 @@ def test_staged_manifest_asks_for_the_gateway_address(tmp_path: Path) -> None:
     names = [tool["name"] for tool in manifest["tools"]]
     assert names == [
         "connection_status",
+        "gateway_health",
+        "list_devices",
+        "recent_events",
+        "discover",
+        "device_command",
         "probe_generation",
         "capture_frames",
         "send_raw",
