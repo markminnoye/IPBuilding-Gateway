@@ -45,6 +45,7 @@ from gateway.device_config import (
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.discovery import fetch_module_backup_channels, resolve_module_model
 from gateway.capabilities import CAPABILITIES
+from gateway.raw_send import RawSend, RawSendError, SendPolicy
 from gateway.reachability import (
     ReachabilityTracker,
     confirmation_ms,
@@ -232,6 +233,7 @@ class GatewayAPI:
         )
         self._udp_frames = UdpFrameHub()
         self._udp_frame_listener = False
+        self._raw_send = RawSend(bus, self._raw_send_policy)
 
     # -------------------------------------------------------------------------
     # Lifecycle
@@ -285,6 +287,9 @@ class GatewayAPI:
         self._app.router.add_post("/api/v1/discover", self._post_discover)
         self._app.router.add_post(
             "/api/v1/debug/log-level", self._post_debug_log_level
+        )
+        self._app.router.add_post(
+            "/api/v1/debug/raw-send", self._post_debug_raw_send
         )
 
         # Register registry callbacks
@@ -457,6 +462,9 @@ class GatewayAPI:
         if msg_type in ("subscribe_udp_frames", "unsubscribe_udp_frames"):
             await self._handle_udp_frame_ws(ws, data)
             return
+        if self._raw_send.accepts(msg_type):
+            await self._handle_raw_send_ws(ws, data)
+            return
         if msg_type != "command":
             log.debug("WS ignored non-command message type %r", msg_type)
             return
@@ -566,6 +574,37 @@ class GatewayAPI:
         body = self._health.snapshot()
         body.update(self._deployment_status_fields())
         return body
+
+    def _raw_send_policy(self) -> SendPolicy:
+        known: set[str] = set()
+        installation = getattr(self._cfg, "installation", None)
+        modules = getattr(installation, "modules", None) if installation is not None else None
+        if modules:
+            for mc in modules:
+                ip = getattr(mc, "ip", None)
+                if isinstance(ip, str) and ip:
+                    known.add(ip)
+        field_modules = getattr(self._cfg, "field_modules", None) or {}
+        if isinstance(field_modules, dict):
+            for ip in field_modules.values():
+                if isinstance(ip, str) and ip:
+                    known.add(ip)
+        discovery = getattr(self._cfg, "discovery", None)
+        subnet = getattr(discovery, "subnet", None) if discovery is not None else None
+        if not isinstance(subnet, str):
+            subnet = None
+        hub_port = getattr(self._cfg, "hub_port", 1001)
+        if isinstance(hub_port, bool) or not isinstance(hub_port, int):
+            hub_port = 1001
+        return SendPolicy(frozenset(known), subnet, hub_port)
+
+    async def _handle_raw_send_ws(
+        self, ws: WebSocketResponse, data: dict[str, Any]
+    ) -> None:
+        if not self._remote_debugging_enabled():
+            await ws.send_json(ws_remote_debugging_disabled())
+            return
+        await self._raw_send.handle_ws(ws, data)
 
     def _remote_debugging_enabled(self) -> bool:
         enabled = getattr(self._cfg, "remote_debugging", False)
@@ -1015,6 +1054,32 @@ class GatewayAPI:
                 body.get("level"), body.get("ttl")
             )
         except LogStreamError as exc:
+            raise ApiError(exc.status, exc.code, exc.message) from None
+        return web.json_response(result)
+
+    async def _post_debug_raw_send(self, request: web.Request) -> web.Response:
+        """POST /api/v1/debug/raw-send — one raw payload and its reply window.
+
+        Refused with ``remote_debugging_disabled`` while the add-on option
+        is off. Uses the gateway socket. Status updates for that module are
+        held until the window ends.
+        """
+        if not self._remote_debugging_enabled():
+            raise ApiError(
+                REMOTE_DEBUGGING_DISABLED_STATUS,
+                REMOTE_DEBUGGING_DISABLED,
+                REMOTE_DEBUGGING_DISABLED_MESSAGE,
+            )
+        try:
+            body = await request.json()
+        except Exception:
+            raise ApiError(400, "invalid_json", "Body must be valid JSON") from None
+        if not isinstance(body, dict):
+            raise ApiError(400, "invalid_json", "Body must be a JSON object")
+        client = request.remote if isinstance(request.remote, str) else "rest"
+        try:
+            result = await self._raw_send.send(body, client=client)
+        except RawSendError as exc:
             raise ApiError(exc.status, exc.code, exc.message) from None
         return web.json_response(result)
 

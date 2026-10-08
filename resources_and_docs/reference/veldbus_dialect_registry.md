@@ -36,6 +36,7 @@ Last updated: 2026-10-08
 | `relay.kessel-lo.state_code` | Kessel-Lo IP0200 | in status reply | `0100`=on, `0000`=off | ✅ `relay_state_from_code` | — | idem |
 | `relay.torhout.status_poll` | Torhout IP0200 (Diagnostic 03.03) | hub→relay poll | `I0500` (zelfde TX) | ✅ | ✅ | [2026-08-08](../evidence/2026-08-08_jan_nolf_restore_test.md) |
 | `relay.torhout.state_code` | Torhout IP0200 | in status reply | `0015`=off, `0115`=on (prefix `00`/`01`) | ✅ sinds gw **1.6.4** | — | [2026-08-24](../evidence/2026-08-24_jan_nolf_field_test.md) |
+| `relay.torhout.status_reply` | Torhout IP0200 | relay→hub | `I000060115`, `I000050015` | ✅ `dialect_id` | — | idem |
 | `relay.torhout.command_reply` | Torhout IP0200 | relay→hub na S/C | `C060000000` (9–10 tekens, state uit prefix) | ✅ sinds gw **1.6.5** | — | [2026-08-24](../evidence/2026-08-24_jan_nolf_field_test.md) §4 · [spec](../../docs/superpowers/specs/2026-08-25-torhout-dialect-decode-design.md) |
 | `dimmer.kessel-lo.hub_command` | IP0300PoE (Kessel-Lo) | hub→dimmer | `S110301030`, `C1991030` | ✅ | ✅ | [2026-05-14 dimmer timeline](../evidence/2026-05-14_dimmer_rest_udp_timeline_writeup.md) |
 | `dimmer.kessel-lo.status_reply` | Kessel-Lo IP0300 | dimmer→hub | `I0154110`, idle `I0154999` | ✅ family `54` | — | [2026-05-17](../evidence/2026-05-17_dimmer_I0154xxx_full_decode.md) |
@@ -86,6 +87,7 @@ Het grootste verschil tussen de Kessel-Lo- en de Torhout-modules zit niet in de 
 | Command reply RX (Kessel-Lo) | **`I0000{ch}{0100\|0000}`** na S/C (niet C-prefixed echo) |
 
 **Implementatie:** `decode_relay_payload()` — regex `_RELAY_CMD_RE`, `_RELAY_STATUS_RE`, `_RELAY_STATUS_SHORT_RE`.  
+**Dialect:** command TX krijgt `relay.kessel-lo.command`. Status `0100`/`0000` krijgt `relay.kessel-lo.status_reply`. Een ander quartet krijgt geen stad.  
 **State mapping:** `relay_state_from_code()` — exact `0100`/`0000` vroeger; sinds 1.6.4 ook prefix `01xx`/`00xx`.
 
 ### `relay.torhout.state_code` (Torhout IP0200, Diagnostic 03.03)
@@ -98,7 +100,7 @@ Het grootste verschil tussen de Kessel-Lo- en de Torhout-modules zit niet in de 
 | Dual encoding | Startup-poll: `0015`/`0115`; sommige kanalen ook `0100`/`0000` op poll |
 
 **Implementatie (1.6.4):** `relay_state_from_code()` — `state_code.startswith("00")` → off, `"01"` → on.  
-**Niet geïmplementeerd:** aparte dialect-id in code (alleen gedrag); overweeg expliciete `dialect_id` in decode-result voor logging.
+**Dialect:** status `0115`/`0015` krijgt `relay.torhout.status_reply`. `0100`/`0000` op dezelfde framevorm blijft Kessel-Lo (ook als een oudere module dat quartet op een poll gebruikt).
 
 ### `relay.torhout.command_reply` (Torhout IP0200 — **1.6.5**)
 

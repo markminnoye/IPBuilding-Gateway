@@ -60,7 +60,7 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   "multi_press": false,
   "multi_press_window_ms": 350,
   "remote_debugging": false,
-  "capabilities": ["log_stream", "udp_frame"],
+  "capabilities": ["log_stream", "udp_frame", "raw_send"],
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
     "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" }
@@ -78,7 +78,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `multi_press` | boolean | Global double/triple-press classification for all wall buttons (add-on option). When `false`, short release emits `single_press` immediately. |
 | `multi_press_window_ms` | integer | Inter-click window in ms when `multi_press` is enabled (default 350). |
 | `remote_debugging` | boolean | Add-on option **Remote control (for debugging)**. `false` until a user turns it on in the add-on configuration. It stays on until they turn it off. While it is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Check this field before calling a remote-debugging route. |
-| `capabilities` | list of strings | Features this gateway build actually implements. `log_stream` is live logs over WebSocket. `udp_frame` is live field-bus frames over WebSocket (`subscribe_udp_frames`). A later build may add `raw_send`. The list stays present when `remote_debugging` is `false`, so a client can tell “this build has the feature” from “the option is off”. Unknown extra fields are safe for older clients. |
+| `capabilities` | list of strings | Features this gateway build actually implements. `log_stream` is live logs over WebSocket. `udp_frame` is live field-bus frames over WebSocket (`subscribe_udp_frames`). `raw_send` is one raw payload plus the replies that arrive in a short window (`POST /api/v1/debug/raw-send` or WebSocket `raw_send`). The list stays present when `remote_debugging` is `false`, so a client can tell “this build has the feature” from “the option is off”. Unknown extra fields are safe for older clients. |
 
 ---
 
@@ -529,6 +529,73 @@ There is no login on port 8080. While **Remote control (for debugging)** is on, 
 **Response 400:** `invalid_json`, `invalid_log_level`, or `invalid_ttl`.
 
 **Response 429:** `log_level_rate_limited` — more than 10 level changes in 60 seconds from REST.
+
+---
+
+## POST /api/v1/debug/raw-send
+
+**Description:** Send one raw payload on the gateway’s field-bus socket and return every reply from that module inside a short window. Modules answer to a fixed port, so the toolkit does not open its own UDP socket. The field bus has no request id: the window is the correlation.
+
+While the window is open the gateway does not poll that module and does not apply replies from it to Home Assistant state. Other modules are unchanged. After the window, polling and normal commands work again.
+
+Requires **Remote control (for debugging)** (`debug.remote_debugging_and_control`). `GET /api/v1/status` lists capability `raw_send` whether the option is on or off.
+
+**Request body:**
+
+```json
+{
+  "module_ip": "192.0.2.10",
+  "port": 1001,
+  "payload_hex": "5030303030",
+  "window_ms": 2000
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `module_ip` | string | IPv4 address. Allowed when it is a configured module or a host in the discovery subnet (`/24`). Loopback, multicast, and broadcast are rejected. |
+| `port` | integer | Optional. Must be the field-bus port (1001). Omitted means that port. |
+| `payload_hex` | string | Even-length hex. 1 to 64 bytes. |
+| `window_ms` | integer | Optional. 1 to 3000. Default 2000. |
+
+**Response 200:**
+
+```json
+{
+  "ok": true,
+  "schema_version": 2,
+  "sent_hex": "5030303030",
+  "module_ip": "192.0.2.10",
+  "port": 1001,
+  "window_ms": 2000,
+  "replies": [
+    {"hex": "49303030303330313030", "delay_ms": 40}
+  ],
+  "truncated": false
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sent_hex` | string | Bytes that were sent. |
+| `replies` | array | Replies from `module_ip` with `monotonic` time at or after the send, up to 8. `delay_ms` is milliseconds from the send. `null` when the reply has no timestamp. |
+| `truncated` | boolean | `true` when another reply arrived after the 8th and was not included. The status hold still lasts the whole window. |
+
+No reply is still HTTP 200 with `replies: []`.
+
+**Response 403** — remote debugging is off. Same code and sentence as `POST /api/v1/debug/log-level`.
+
+**Response 400:** `invalid_json`, `invalid_payload`, `invalid_window`.
+
+**Response 422:** `target_not_allowed`, `invalid_target`, `invalid_port`, `payload_too_large`.
+
+**Response 429:** `raw_send_rate_limited` (5 sends per client and 10 sends in total, each per 60 seconds) or `raw_send_busy` (one send at a time).
+
+**Response 503:** `send_failed` — the socket could not send. The status hold is released.
+
+Every send, including a refused target, rate limit, or busy socket, is written to the gateway log: time, client, target, port, hex bytes, result, and reply count.
+
+WebSocket: `{"type": "raw_send", ...same fields...}` returns `{"type": "raw_send_result", ...same body...}`. While the option is off the frame is the shared `remote_debugging_disabled` error.
 
 ---
 

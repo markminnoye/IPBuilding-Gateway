@@ -175,6 +175,8 @@ class DeviceRegistry:
 
     def handle_packet(self, pkt: UDPPacket) -> None:
         """Parse a raw UDP packet and update state if applicable."""
+        if getattr(pkt, "ignore_state", False):
+            return
         src = pkt.src_ip
         dtype = self._module_ip_type.get(src)
         if dtype is None:
