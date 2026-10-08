@@ -31,7 +31,12 @@ from ipbuilding_debug.errors import (
     msg_mdns_loopback,
     msg_not_available,
 )
-from ipbuilding_debug.redact import collect_tokens, redact_payload, redact_text
+from ipbuilding_debug.redact import (
+    collect_tokens,
+    redact_payload,
+    redact_text,
+    session_hosts,
+)
 from ipbuilding_debug.session import GatewaySession
 
 RAW_SEND_PATH = "/api/v1/debug/raw-send"
@@ -1027,7 +1032,7 @@ async def export_session(
         "buffer": _buffer_summary(session),
     }
     if redact:
-        body = redact_payload(body)
+        body = redact_payload(body, hosts=session_hosts(session))
         message = "Sessie gebundeld. " + SHARING_WARNING
         sharing = SHARING_WARNING
     else:
@@ -1511,12 +1516,13 @@ def _redact_logs(
     session: GatewaySession, lines: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
     tokens = _inventory_tokens(session) | collect_tokens(lines)
+    hosts = session_hosts(session)
     cleaned: list[dict[str, Any]] = []
     for line in lines:
         item = dict(line)
         message = item.get("message")
         if isinstance(message, str):
-            item["message"] = redact_text(message, tokens)
+            item["message"] = redact_text(message, tokens, hosts)
         cleaned.append(item)
     return cleaned
 

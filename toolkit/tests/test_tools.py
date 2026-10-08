@@ -664,6 +664,205 @@ async def test_export_redacts_by_default_and_can_show_raw_locally() -> None:
     assert "Deel deze tekst niet" in raw.message
 
 
+@pytest.mark.asyncio
+async def test_export_redacts_ipv6_macs_hosts_and_short_names() -> None:
+    full_v6 = "2001:0db8:0000:0000:0000:0000:0000:0001"
+    short_v6 = "2001:db8::1"
+    embedded_v6 = "2001:db8::192.0.2.1"
+    mac_colon = "aa:bb:cc:dd:ee:ff"
+    mac_dash = "aa-bb-cc-dd-ee-ff"
+    mac_dot = "aabb.ccdd.eeff"
+    mac_bare = "aabbccddeeff"
+    longer_hex = "aabbccddeeff00"
+    session = GatewaySession("gwbox", backoff_start=30, backoff_max=30)
+    session.tried = [
+        {"host": "ipbgw.local", "port": 80, "source": "mdns", "result": "unreachable"}
+    ]
+    await session.buffer.append(
+        {
+            "type": "state_changed",
+            "id": "device-a",
+            "name": "wc",
+            "room": "ke",
+            "state": "on",
+        }
+    )
+    note = (
+        f"de wc in ke zag {full_v6} en {short_v6} en {embedded_v6} "
+        f"plus {mac_colon} {mac_dash} {mac_dot} {mac_bare} "
+        "via ipbgw.local en hub.example.test bij gwbox "
+        f"maar gwboxlamp en wczolder en wc-lamp en file.txt en {longer_hex} blijven"
+    )
+    hidden = await export_session(session, note=note)
+    blob = hidden.render()
+    assert hidden.data["redacted"] is True
+    for secret in (
+        full_v6,
+        short_v6,
+        embedded_v6,
+        "2001:db8",
+        "192.0.2.1",
+        mac_colon,
+        mac_dash,
+        mac_dot,
+        "ipbgw.local",
+        "hub.example.test",
+    ):
+        assert secret not in blob
+    assert re.search(r"(?<![0-9A-Fa-f])" + mac_bare + r"(?![0-9A-Fa-f])", blob) is None
+    assert re.search(r"(?<![A-Za-z0-9.-])gwbox(?![A-Za-z0-9.-])", blob) is None
+    assert re.search(r"(?<![A-Za-z0-9_-])wc(?![A-Za-z0-9_-])", blob) is None
+    assert re.search(r"(?<![A-Za-z0-9_-])ke(?![A-Za-z0-9_-])", blob) is None
+    assert "gwboxlamp" in blob
+    assert "wczolder" in blob
+    assert "wc-lamp" in blob
+    assert "file.txt" in blob
+    assert longer_hex in blob
+    states = [
+        event
+        for event in hidden.data["events"]
+        if event.get("type") == "state_changed"
+    ]
+    assert states[0]["state"] == "on"
+    assert states[0]["name"] == "[naam]"
+    assert states[0]["room"] == "[naam]"
+    rendered_note = hidden.data["notes"][0]["text"]
+    assert rendered_note.startswith("de [naam] in [naam] zag [adres]")
+    assert "[mac]" in rendered_note
+    assert "gwboxlamp" in rendered_note
+    raw = await export_session(session, redact=False)
+    raw_blob = raw.render()
+    assert raw.data["redacted"] is False
+    for secret in (full_v6, short_v6, mac_colon, mac_dash, mac_dot, mac_bare, "ipbgw.local", "gwbox"):
+        assert secret in raw_blob
+    assert "wc" in raw_blob
+
+
+@pytest.mark.asyncio
+async def test_read_logs_redacts_the_same_address_and_name_gaps() -> None:
+    from datetime import datetime, timezone
+
+    full_v6 = "2001:0db8:0000:0000:0000:0000:0000:0001"
+    short_v6 = "2001:db8::8a2e:370:7334"
+    mac_colon = "aa:bb:cc:dd:ee:ff"
+    mac_dash = "aa-bb-cc-dd-ee-ff"
+    mac_dot = "aabb.ccdd.eeff"
+    mac_bare = "aabbccddeeff"
+    fresh = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    message = (
+        f"wc in ke zag {full_v6} en {short_v6} "
+        f"plus {mac_colon} {mac_dash} {mac_dot} {mac_bare} "
+        "via ipbgw.local en hub.example.test bij gwbox "
+        "maar gwboxlamp en wczolder en file.txt blijven"
+    )
+    gateway = FakeGateway(remote_debugging=True, capabilities=["log_stream"])
+    gateway.devices = [
+        {
+            "id": "channel-a",
+            "device_type": "relay",
+            "name": "wc",
+            "room": "ke",
+        }
+    ]
+    gateway.log_lines = [
+        {
+            "type": "log",
+            "ts": fresh,
+            "level": "error",
+            "logger": "gw",
+            "message": message,
+        }
+    ]
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    session.tried = [
+        {"host": "gwbox", "port": gateway.port, "source": "mdns_hostname", "result": "chosen"}
+    ]
+    try:
+        hidden = await read_logs(
+            session, seconds=2, since="2026-01-01T00:00:00Z", level="error", limit=5
+        )
+        shown = await read_logs(
+            session,
+            seconds=2,
+            since="2026-01-01T00:00:00Z",
+            level="error",
+            limit=5,
+            redact=False,
+        )
+    finally:
+        await session.stop()
+        await gateway.stop()
+    text = hidden.data["lines"][0]["message"]
+    blob = hidden.render()
+    assert hidden.data["redacted"] is True
+    assert text.startswith("[naam] in [naam] zag [adres]")
+    assert "[mac]" in text
+    assert "gwboxlamp" in text
+    assert "wczolder" in text
+    assert "file.txt" in text
+    for secret in (
+        full_v6,
+        short_v6,
+        "2001:db8",
+        mac_colon,
+        mac_dash,
+        mac_dot,
+        "ipbgw.local",
+        "hub.example.test",
+    ):
+        assert secret not in blob
+    assert re.search(r"(?<![0-9A-Fa-f])" + mac_bare + r"(?![0-9A-Fa-f])", text) is None
+    assert re.search(r"(?<![A-Za-z0-9.-])gwbox(?![A-Za-z0-9.-])", text) is None
+    assert re.search(r"(?<![A-Za-z0-9_-])wc(?![A-Za-z0-9_-])", text) is None
+    assert re.search(r"(?<![A-Za-z0-9_-])ke(?![A-Za-z0-9_-])", text) is None
+    raw_text = shown.data["lines"][0]["message"]
+    assert shown.data["redacted"] is False
+    assert raw_text == message
+    assert "Deel deze tekst niet" in shown.message
+
+
+@pytest.mark.asyncio
+async def test_list_devices_and_recent_events_keep_short_names() -> None:
+    gateway = FakeGateway(remote_debugging=False, capabilities=[])
+    gateway.devices = [
+        {
+            "id": "device-a",
+            "module_id": "module-a",
+            "channel": 0,
+            "name": "wc",
+            "room": "ke",
+            "device_type": "relay",
+            "state": "on",
+            "active": True,
+        }
+    ]
+    gateway.modules = [
+        {"id": "module-a", "type": "relay", "model": "IP0200PoE", "name": "relay-a"}
+    ]
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        listed = await list_devices(session)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert listed.data["devices"][0]["name"] == "wc"
+    assert "wc" in listed.message
+    await session.buffer.append(
+        {
+            "type": "state_changed",
+            "id": "device-a",
+            "name": "wc",
+            "room": "ke",
+            "state": "on",
+        }
+    )
+    recent = await recent_events(session)
+    assert recent.data["events"][0]["name"] == "wc"
+    assert recent.data["events"][0]["room"] == "ke"
+
+
 def test_unavailable_tools_name_the_missing_capability_or_switch() -> None:
     empty = {item["tool"]: item for item in unavailable_tools([], None)}
     assert empty["read_logs"]["missing"] == "log_stream"

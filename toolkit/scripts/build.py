@@ -46,18 +46,15 @@ COPY_NAMES = (
 # Shown in the desktop extension list. Keep it short and non-technical.
 # The install steps stay in HANDLEIDING.md.
 LONG_DESCRIPTION = (
-    "IPBuilding Gateway Tools laat een assistent meekijken in je eigen installatie.\n"
+    "IPBuilding Gateway Tools helpt je samen met een assistent problemen in je IPBuilding-installatie op te sporen. "
+    "Wat jullie vinden, kun je als rapport naar ons sturen, zodat we de gateway kunnen verbeteren.\n"
     "\n"
-    "De tool praat met de IPBuilding Gateway-add-on in je eigen netwerk. "
-    "Hij kan zien welke lamp of knop bij welk kanaal hoort, of de gateway bereikbaar is, "
-    "en wat er gebeurt als je een knop indrukt of een lamp verandert. "
-    "In de add-on zet je daarvoor een schakelaar aan, en na afloop weer uit.\n"
+    "De tool werkt met de IPBuilding Gateway in je eigen netwerk. "
+    'Om mee te kijken zet je in de gateway "Bediening op afstand (voor debuggen)" aan. '
+    "Als het debuggen klaar is, zet je het weer uit.\n"
     "\n"
-    "Persoonsgegevens worden standaard weggefilterd, "
-    "zoals adressen en namen van lampen en ruimtes. "
-    "Een ruwe weergave is alleen voor jezelf.\n"
-    "\n"
-    "Hoe je de bundel installeert, staat in de handleiding bij dit bestand."
+    "Persoonsgegevens, zoals adressen en namen van lampen en ruimtes, "
+    "worden standaard weggefilterd uit het rapport dat je naar ons stuurt."
 )
 
 

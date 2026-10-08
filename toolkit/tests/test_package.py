@@ -149,14 +149,34 @@ def test_staged_manifest_asks_for_the_gateway_address(tmp_path: Path) -> None:
     ]
     assert (staged / "gateway" / "payloads" / "relay.py").is_file()
     description = manifest["long_description"]
+    expected = (
+        "IPBuilding Gateway Tools helpt je samen met een assistent problemen in je IPBuilding-installatie op te sporen. "
+        "Wat jullie vinden, kun je als rapport naar ons sturen, zodat we de gateway kunnen verbeteren.\n"
+        "\n"
+        "De tool werkt met de IPBuilding Gateway in je eigen netwerk. "
+        'Om mee te kijken zet je in de gateway "Bediening op afstand (voor debuggen)" aan. '
+        "Als het debuggen klaar is, zet je het weer uit.\n"
+        "\n"
+        "Persoonsgegevens, zoals adressen en namen van lampen en ruimtes, "
+        "worden standaard weggefilterd uit het rapport dat je naar ons stuurt."
+    )
+    assert description == expected
     assert len(description) <= 800
     lowered = description.lower()
-    assert "ipbuilding gateway-add-on" in lowered
+    assert "add-on" not in lowered
+    assert "handleiding" not in lowered
     assert "eigen netwerk" in lowered
     assert "persoonsgegevens" in lowered
     assert "weggefilterd" in lowered
+    assert "uit het rapport dat je naar ons stuurt" in lowered
     for technical in ("websocket", "capability", "udp", "payload", "mdns"):
         assert technical not in lowered
+    assert manifest["description"] == (
+        "Meekijken en testen via de IPBuilding Gateway in je thuisnetwerk."
+    )
+    plugin = json.loads((TOOLKIT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    assert plugin["description"] == expected.split(". ")[0] + "."
+    assert "add-on" not in plugin["description"].lower()
     blob = json.dumps(manifest)
     assert "debug-toolkit" not in blob.lower()
     assert "Remote debugging and control" not in blob
