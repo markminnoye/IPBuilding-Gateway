@@ -158,9 +158,9 @@ Optie **`debug.remote_debugging_and_control`** (Configuration → **Debug**). De
 
 Zet je hem aan, dan herstart de add-on en blijft hij aan tot je hem zelf weer uitzet. Er is geen tijdslimiet. Home Assistant toont dan een blijvende melding in de taal van Home Assistant (Nederlands als die taal met `nl` begint, anders Engels):
 
-> Remote control is on. The IPBuilding Gateway Tools can read live traffic and send commands to your modules. Turn it off in the add-on settings when debugging is finished.
+> Remote control is on. The IPBuilding debug-toolkit can read live traffic and send commands to your modules. Turn it off in the add-on settings when debugging is finished.
 
-> Bediening op afstand staat aan. De IPBuilding Gateway Tools kan live verkeer lezen en commando's naar je modules sturen. Zet het uit in de instellingen van de add-on als het debuggen klaar is.
+> Bediening op afstand staat aan. De IPBuilding debug-toolkit kan live verkeer lezen en commando's naar je modules sturen. Zet het uit in de instellingen van de add-on als het debuggen klaar is.
 
 Zet je hem uit, dan verdwijnt die melding na de herstart. `GET /api/v1/status` en de WebSocket-`snapshot` tonen `remote_debugging` (`true`/`false`) en `capabilities`. Deze versie zet `log_stream` en `udp_frame` in die lijst: een client kan gateway-logs live meelezen, het logniveau tijdelijk wijzigen, en elk veldbusbericht zien dat deze gateway zelf verstuurt of ontvangt. De lijst blijft zichtbaar als de optie uit staat, zodat een client het verschil ziet tussen “deze versie kan het” en “de schakelaar staat uit”.
 

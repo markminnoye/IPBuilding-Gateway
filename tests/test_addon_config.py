@@ -189,14 +189,14 @@ def test_translations_present_for_remote_debugging() -> None:
     nl = yaml.safe_load(path_nl.read_text(encoding="utf-8"))
     en_field = en["configuration"]["debug"]["fields"]["remote_debugging_and_control"]
     nl_field = nl["configuration"]["debug"]["fields"]["remote_debugging_and_control"]
-    from gateway.remote_debug_copy import option_description
+    from gateway.remote_debug_copy import TOOL_NAME, option_description
 
     assert en_field["name"] == "Remote control (for debugging)"
     assert en_field["description"].strip() == option_description("en")
     assert nl_field["name"] == "Bediening op afstand (voor debuggen)"
     assert nl_field["description"].strip() == option_description("nl")
-    assert nl_field["description"].count("IPBuilding Gateway Tools") == 1
-    assert en_field["description"].count("IPBuilding Gateway Tools") == 1
+    assert nl_field["description"].count(TOOL_NAME["nl"]) == 1
+    assert en_field["description"].count(TOOL_NAME["en"]) == 1
     for field in (en_field, nl_field):
         assert field.get("description")
         assert en["configuration"]["debug"].get("name")

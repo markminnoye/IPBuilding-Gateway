@@ -11,7 +11,7 @@ from gateway.ha_notify import (
     NOTIFICATION_ID,
     sync_remote_debugging_notification,
 )
-from gateway.remote_debug_copy import notification_message, notification_title
+from gateway.remote_debug_copy import TOOL_NAME, notification_message, notification_title
 
 
 class _Response:
@@ -75,7 +75,7 @@ async def test_create_notification_follows_dutch() -> None:
     call = session.calls[0]
     assert call["json"]["title"] == notification_title("nl")
     assert call["json"]["message"] == notification_message("nl")
-    assert "IPBuilding Gateway Tools" in call["json"]["message"]
+    assert TOOL_NAME["nl"] in call["json"]["message"]
 
 
 @pytest.mark.asyncio
