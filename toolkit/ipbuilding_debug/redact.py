@@ -149,7 +149,7 @@ def mask_stem(name: str) -> str:
 
 
 def collect_display_names(value: Any, hosts: set[str] | None = None) -> list[str]:
-    """Inventory names, in walk order. Case-sensitive, skips addresses."""
+    """Inventory names, in walk order. One entry per name, first spelling wins."""
     found: list[str] = []
     seen: set[str] = set()
     known = {host.lower() for host in hosts or () if host}
@@ -158,14 +158,15 @@ def collect_display_names(value: Any, hosts: set[str] | None = None) -> list[str
         if not isinstance(item, str):
             return
         token = item.strip()
+        folded = token.casefold()
         if (
             not token
-            or token in seen
+            or folded in seen
             or token.lower() in _SKIP_TOKENS
             or _fully_removed(token, known) is not None
         ):
             return
-        seen.add(token)
+        seen.add(folded)
         found.append(token)
 
     def walk(node: Any) -> None:
@@ -192,15 +193,16 @@ def name_masks(names: list[str], appearance: str) -> dict[str, str]:
     unique: list[str] = []
     seen: set[str] = set()
     for name in names:
-        if not name or name in seen:
+        folded = name.casefold()
+        if not name or folded in seen:
             continue
-        seen.add(name)
+        seen.add(folded)
         unique.append(name)
     position = {name: index for index, name in enumerate(unique)}
 
     def first_at(name: str) -> int:
         match = re.search(
-            rf"(?<![A-Za-z0-9_-]){re.escape(name)}(?![A-Za-z0-9_-])",
+            rf"(?i)(?<![A-Za-z0-9_-]){re.escape(name)}(?![A-Za-z0-9_-])",
             appearance,
         )
         if match is not None:
@@ -229,8 +231,9 @@ def redact_text(
 ) -> str:
     """Replace addresses, MAC addresses, emails, hostnames, and known names.
 
-    With ``masks``, inventory names become that mask (case-sensitive, whole
-    word or phrase). Without it, those names become ``[naam]``.
+    With ``masks``, inventory names become that mask. Matching is
+    case-insensitive and whole-word; the mask text comes from the inventory
+    spelling. Without masks, those names become ``[naam]``.
     """
     cleaned = _IPV6_RUN.sub(_ipv6_or_keep, text)
     cleaned = _IPV4.sub("[adres]", cleaned)
@@ -251,16 +254,17 @@ def redact_text(
         )
     spans: list[tuple[int, int, str, int]] = []
     masked = masks or {}
+    masked_folded = {name.casefold() for name in masked}
     for name in sorted(masked, key=len, reverse=True):
         if not name:
             continue
         pattern = re.compile(
-            rf"(?<![A-Za-z0-9_-]){re.escape(name)}(?![A-Za-z0-9_-])"
+            rf"(?i)(?<![A-Za-z0-9_-]){re.escape(name)}(?![A-Za-z0-9_-])"
         )
         for match in pattern.finditer(cleaned):
             spans.append((match.start(), match.end(), masked[name], 0))
     for token in sorted(tokens or (), key=len, reverse=True):
-        if not token or token in masked or token.lower() in known_hosts:
+        if not token or token.casefold() in masked_folded or token.lower() in known_hosts:
             continue
         if len(token) >= 3:
             pattern = re.compile(re.escape(token), re.IGNORECASE)
@@ -331,9 +335,20 @@ def _mask_name_field(value: str, masks: dict[str, str], hosts: set[str]) -> str:
         return removed
     if not token or token.lower() in _SKIP_TOKENS:
         return _PLACEHOLDER["name"]
+    found = _lookup_mask(token, masks)
+    if found is not None:
+        return found
+    return mask_stem(token)
+
+
+def _lookup_mask(token: str, masks: dict[str, str]) -> str | None:
     if token in masks:
         return masks[token]
-    return mask_stem(token)
+    folded = token.casefold()
+    for name, mask in masks.items():
+        if name.casefold() == folded:
+            return mask
+    return None
 
 
 def _fully_removed(token: str, hosts: set[str]) -> str | None:

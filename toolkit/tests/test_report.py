@@ -315,12 +315,11 @@ def test_name_masks_keep_the_first_character_and_number_collisions() -> None:
     assert ordered == {"Traphal": "Txxxxxx-1", "Traphek": "Txxxxxx-2"}
     parked = name_masks(["Traphek", "Traphal"], "")
     assert parked == {"Traphek": "Txxxxxx-1", "Traphal": "Txxxxxx-2"}
-    text = "Traphal en Traphallamp en traphal en Kamer links en Kamer linksom"
-    masked = redact_text(
-        text,
-        masks={"Traphal": "Txxxxxx", "Kamer links": "K" + ("x" * 10)},
-    )
-    assert masked == "Txxxxxx en Traphallamp en traphal en " + ("K" + ("x" * 10)) + " en Kamer linksom"
+    assert name_masks(["Traphal", "traphal", "TRAPHAL"], "traphal") == {"Traphal": "Txxxxxx"}
+    room = "K" + ("x" * 10)
+    text = "TRAPHAL en traphal en Traphallamp en traphallamp en kamer links en Kamer linksom"
+    masked = redact_text(text, masks={"Traphal": "Txxxxxx", "Kamer links": room})
+    assert masked == f"Txxxxxx en Txxxxxx en Traphallamp en traphallamp en {room} en Kamer linksom"
 
 
 @pytest.mark.asyncio
@@ -352,16 +351,25 @@ async def test_report_masks_room_lamp_and_button_names() -> None:
     await session.buffer.append(
         {
             "type": "button_event",
-            "name": "Knop hal",
-            "room": "Kamer links",
+            "name": "knop hal",
+            "room": "kamer links",
             "message": "Knop hal ingedrukt",
         }
     )
+    await session.buffer.append(
+        {
+            "type": "log",
+            "ts": "2026-07-02T03:04:05Z",
+            "level": "info",
+            "logger": "gw",
+            "message": "log: traphal en TRAPHAL",
+        }
+    )
     note = (
-        "1. Traphal\n"
-        "Traphal komt voor Traphek. Kamer links blijft donker en Knop hal ook. "
-        "Bijkeuken en Meterkast blijven buiten de test. "
-        "traphal en Traphallamp en Kamer linksom blijven. "
+        "1. traphal\n"
+        "TRAPHAL komt voor traphek. kamer links blijft donker en knop hal ook. "
+        "bijkeuken en meterkast blijven buiten de test. "
+        "Traphallamp en Kamer linksom blijven. "
         "zag 2001:db8::9"
     )
     hidden = await export_session(session, note=note)
@@ -378,9 +386,12 @@ async def test_report_masks_room_lamp_and_button_names() -> None:
             report,
         ) is None
     assert "2001:db8" not in report
-    assert "traphal" in report
+    assert re.search(r"(?<![A-Za-z0-9_-])traphal(?![A-Za-z0-9_-])", report, re.IGNORECASE) is None
     assert "Traphallamp" in report
     assert "Kamer linksom" in report
+    assert "[naam]" not in report
+    logs = [event for event in hidden.data["events"] if event.get("type") == "log"]
+    assert logs[0]["message"] == "log: Txxxxxx-1 en Txxxxxx-1"
     assert "1. Samenvatting" in report
     assert "6. Feedback over de tool" in report
     assert hidden.message.startswith(report)
@@ -388,6 +399,7 @@ async def test_report_masks_room_lamp_and_button_names() -> None:
     buttons = [event for event in hidden.data["events"] if event.get("type") == "button_event"]
     assert buttons[0]["name"] == "Kxxxxxxx"
     assert buttons[0]["room"] == "K" + ("x" * 10)
+    assert "txxxxxx" not in report
     assert hidden.data["modules"][0]["name"] == "Mxxxxxxxx"
     assert "dev-hal" not in report
     raw = await export_session(session, redact=False)
@@ -476,7 +488,8 @@ def test_skill_describes_the_report_and_the_backlog() -> None:
     assert "letterlijk" in text
     assert "Txxxxxx" in text
     assert "Txxxxxx-1" in text
-    assert "hoofdlettergevoelig" in text
+    assert "hoofdletterongevoelig" in text
+    assert "spelling in de inventaris" in text
     assert "Toegang op afstand" in text
     assert "Debuggen en bedienen op afstand" not in text
     assert "onder Debug" not in text
