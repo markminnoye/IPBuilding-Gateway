@@ -1,5 +1,5 @@
-name: IPBuilding Gateway
-version: "1.8.0-dev.5"
+name: IPBuilding Gateway (develop)
+version: "1.8.0-dev.6"
 slug: ipbuilding_gateway
 description: Open IPBuilding field-bus gateway, replaces proprietary IPBox
 url: https://github.com/markminnoye/IPBuilding-Gateway
@@ -19,7 +19,7 @@ homeassistant_api: true
 ingress: true
 ingress_port: 8080
 panel_icon: mdi:home-variant-outline
-panel_title: IPBuilding Gateway
+panel_title: IPBuilding Gateway (develop)
 discovery:
   - ha_ipbuilding_gateway
 privileged: []
