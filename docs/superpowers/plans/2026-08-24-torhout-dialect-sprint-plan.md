@@ -1,8 +1,8 @@
-# Sprintplan — Nolf veldbus-dialecten (2026-08-24)
+# Sprintplan — Torhout veldbus-dialecten (2026-08-24)
 
 Last updated: 2026-08-24  
 **Status:** gepland — handoff voor implementatie-agent  
-**Doel:** decoder-gaten dichten voor Jan Nolf's oudere module-generatie zodat **status in HA klopt** na commando's en dimmer-polls.
+**Doel:** decoder-gaten dichten voor de oudere Torhout-modulegeneratie zodat **status in HA klopt** na commando's en dimmer-polls.
 
 ---
 
@@ -26,15 +26,15 @@ Last updated: 2026-08-24
 
 ## Sprintdoel (Definition of Done)
 
-- [ ] **`relay.nolf.command_reply`** gedecodeerd; na S/C commando → `STATE` update in gateway + WS naar companion
-- [ ] **`dimmer.nolf.status_reply`** (+ idle `I0115000`) gedecodeerd; status-poll seed brightness/off i.p.v. timeout
-- [ ] Unit tests per dialect-id met **raw bytes uit Nolf-log** (golden vectors)
+- [ ] **`relay.torhout.command_reply`** gedecodeerd; na S/C commando → `STATE` update in gateway + WS naar companion
+- [ ] **`dimmer.torhout.status_reply`** (+ idle `I0115000`) gedecodeerd; status-poll seed brightness/off i.p.v. timeout
+- [ ] Unit tests per dialect-id met **raw bytes uit Torhout-log** (golden vectors)
 - [ ] Registry + RE_STATE bijgewerkt; elke nieuwe regex gelabeld met `dialect_id` in decode-dict
 - [ ] Gateway release **≥1.6.5** (of patch 1.6.4.x) + korte release note voor Jan
 - [ ] Veldvalidatie-checklist klaar (Jan hoeft niet in sprint — wel testplan)
 
 **Buiten scope (tenzij expliciet opgenomen na beslissing):**
-- `input.nolf.binary` decode
+- `input.torhout.binary` decode
 - Companion-wijzigingen (behalve verifiëren dat WS `state` doorgeeft)
 - ESP32 firmware sync (wel: note in CHANGELOG embedded repo)
 - IPBox master/switch-over (wel: teststap in checklist)
@@ -91,7 +91,7 @@ Documenteer in release note: relay status na commando kan in slave-modus nog dee
 
 | Optie | Beschrijving |
 |-------|--------------|
-| **A (voorkeur)** | Elke `decode_*_payload` return dict krijgt `"dialect_id": "relay.nolf.command_reply"` |
+| **A (voorkeur)** | Elke `decode_*_payload` return dict krijgt `"dialect_id": "relay.torhout.command_reply"` |
 | B | Alleen comments | Minder traceerbaar in logs |
 
 **Beslissing vastleggen:** korte sectie onderaan registry + in PR beschrijving.
@@ -102,12 +102,12 @@ Documenteer in release note: relay status na commando kan in slave-modus nog dee
 
 **Bestand:** `gateway/payloads/relay.py`
 
-1. Voeg `_RELAY_NOLF_CMD_REPLY_RE` toe (zie D0.1-A).
+1. Voeg `_RELAY_TORHOUT_CMD_REPLY_RE` toe (zie D0.1-A).
 2. In `decode_relay_payload`: match **na** command TX regex, **vóór** return None.
 3. Return:
    ```python
    {
-       "dialect_id": "relay.nolf.command_reply",
+       "dialect_id": "relay.torhout.command_reply",
        "family": "relay_command_reply",
        "action": "off" | "on" | ...,
        "channel": int,
@@ -122,10 +122,10 @@ Documenteer in release note: relay status na commando kan in slave-modus nog dee
 **Tests:** `tests/test_relay_payload.py`
 
 ```python
-# Golden vectors from Nolf log 2026-08-24
-("C060000000", {"dialect_id": "relay.nolf.command_reply", "channel": 6, "state": "off", ...})
+# Golden vectors from Torhout log 2026-08-24
+("C060000000", {"dialect_id": "relay.torhout.command_reply", "channel": 6, "state": "off", ...})
 # Lab regressie ongewijzigd
-("I000060100", {"dialect_id": "relay.lab.status_reply", ...})
+("I000060100", {"dialect_id": "relay.kessel-lo.status_reply", ...})
 ```
 
 ---
@@ -134,29 +134,29 @@ Documenteer in release note: relay status na commando kan in slave-modus nog dee
 
 **Bestand:** `gateway/payloads/dimmer.py`
 
-1. Voeg `_DIMMER_NOLF_REPLY_RE = ^I01(?P<family>15)(?P<value_code>\d{3})$` toe.
+1. Voeg `_DIMMER_TORHOUT_REPLY_RE = ^I01(?P<family>15)(?P<value_code>\d{3})$` toe.
 2. Parse `{value_code}` als `{ch}{vv}` (mirror lab logic).
 3. Behandel `099`/`999`-achtige codes:
    - **Voorstel:** `99` → idle/unknown level (geen STATE overwrite) OF 100% — **beslissing D0.2**;
-   - idle keepalive `I0115000`: family `dimmer.nolf.idle_keepalive`, geen channel state.
+   - idle keepalive `I0115000`: family `dimmer.torhout.idle_keepalive`, geen channel state.
 4. **`state_poll.py`:** dimmer poll seed gebruikt `decode_dimmer_status` — zou moeten werken zodra decode fixed is.
 5. Optioneel: `_DIMMER_REPLY_RE` family group veralgemenen naar `(54|15)` met expliciete `dialect_id`.
 
 **Tests:** `tests/test_dimmer_payload.py`
 
 ```python
-("I0115184", {"dialect_id": "dimmer.nolf.status_reply", "channel": 1, "level_percent": 84, ...})
-("I0115300", {"dialect_id": "dimmer.nolf.status_reply", "channel": 3, "level_percent": 0, ...})
-("I0115000", {"dialect_id": "dimmer.nolf.idle_keepalive", ...})
+("I0115184", {"dialect_id": "dimmer.torhout.status_reply", "channel": 1, "level_percent": 84, ...})
+("I0115300", {"dialect_id": "dimmer.torhout.status_reply", "channel": 3, "level_percent": 0, ...})
+("I0115000", {"dialect_id": "dimmer.torhout.idle_keepalive", ...})
 # Lab regressie
-("I0154110", {"dialect_id": "dimmer.lab.status_reply", ...})
+("I0154110", {"dialect_id": "dimmer.kessel-lo.status_reply", ...})
 ```
 
 ---
 
 ## Fase 3 — Integratie & observability
 
-1. **Debug logging:** bij succesvolle Nolf-decode één regel INFO: `decoded {dialect_id} from {ip}: {raw}`.
+1. **Debug logging:** bij succesvolle Torhout-decode één regel INFO: `decoded {dialect_id} from {ip}: {raw}`.
 2. **Undecoded counter:** als `I0115…` na fix nog undecoded → bug, niet hardware.
 3. **Companion check (read-only):** bevestig dat `state: off/on` en `brightness` uit WS correct naar entities gaan — geen code change verwacht.
 4. **Embedded sync:** port regex + tests naar `matter-esp32-ipbuilding-gateway/main/veldbus/payloads/` (handmatige sync policy A4).
@@ -167,7 +167,7 @@ Documenteer in release note: relay status na commando kan in slave-modus nog dee
 
 ### Release
 
-- Bump gateway add-on → **1.6.5** (CHANGELOG entry: Nolf dialect support)
+- Bump gateway add-on → **1.6.5** (CHANGELOG entry: Torhout dialect support)
 - Release note (NL, kort) met:
   - wat fixed is (relais status na schakelen; dimmer status)
   - wat Jan moet doen (update, HA restart, optioneel debug opnieuw)
@@ -187,7 +187,7 @@ Documenteer in release note: relay status na commando kan in slave-modus nog dee
 | # | Taak | Bestand(en) | Schatting |
 |---|------|-------------|-----------|
 | 1 | Beslissingen D0.1–D0.5 vastleggen | registry | 30 min |
-| 2 | Relay Nolf command-reply decode | `relay.py`, `device_registry.py` | 2 u |
+| 2 | Relay Torhout command-reply decode | `relay.py`, `device_registry.py` | 2 u |
 | 3 | Relay unit tests + lab regressie | `test_relay_payload.py` | 1 u |
 | 4 | Dimmer family-15 decode | `dimmer.py` | 2 u |
 | 5 | Dimmer unit tests + lab regressie | `test_dimmer_payload.py` | 1 u |
@@ -205,7 +205,7 @@ Documenteer in release note: relay status na commando kan in slave-modus nog dee
 | Risico | Mitigatie |
 |--------|-----------|
 | ON-reply `S06000100` verkeerd | xfail test; veldcheck Jan |
-| `99` op Nolf ≠ lab semantiek | log + Jan validatie; makkelijk aanpasbaar in `_value_code_to_percent` |
+| `99` op Torhout ≠ lab semantiek | log + Jan validatie; makkelijk aanpasbaar in `_value_code_to_percent` |
 | IPBox vangt replies af in slave | test zonder IPBox; documenteer in release note |
 | Prefix `0015`=off fysisch fout | Jan bevestigt 3 kanalen; flip mapping indien nodig (1 regel) |
 

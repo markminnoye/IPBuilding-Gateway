@@ -35,9 +35,9 @@ Confirmed against the REST↔UDP correlation for the Bureau dimmer (ch1, comp
 ### OFF encoding
 
 Hub OFF is always ``C<ch>001030`` (cut with value ``00``) for every IP0300PoE
-dimmer. Lab confirms ``C<ch>991030`` and ``C<ch>001030`` behave the same on
-recent modules; older modules need ``00`` because ``C<ch>991030`` can land as
-full brightness.
+dimmer. Recent modules accept ``C<ch>991030`` and ``C<ch>001030`` the same
+way; older modules need ``00`` because ``C<ch>991030`` can land as full
+brightness.
 
 ## Input-module→dimmer dialect (peer-to-peer)
 
@@ -66,26 +66,27 @@ import re
 from typing import Any
 
 from gateway.models import DimmerCommand, DimmerStatus
+from gateway.payloads.dialects import KESSEL_LO, TORHOUT
 
 _DIMMER_CMD_RE = re.compile(r"^(?P<prefix>[SC])(?P<channel>\d)(?P<value>\d{2})1030$")
 _DIMMER_IDLE_RE = re.compile(r"^I9900$")
 _DIMMER_STATUS_POLL_RE = re.compile(r"^I(?P<channel>[0-7])000000$")
 _DIMMER_REPLY_RE = re.compile(r"^I01(?P<family>54|15)(?P<value_code>\d{3})$")
 
-# Idle/poll heartbeat is family-scoped: 999 only for lab family 54, 000 only
-# for Nolf family 15. Do not treat 000 as a global sentinel — I0154000 is a
-# valid lab ch0-off after C0….
+# Idle/poll heartbeat is family-scoped: 999 only for reference family 54,
+# 000 only for older-generation family 15. Do not treat 000 as a global
+# sentinel — I0154000 is a valid reference-generation ch0-off.
 _DIMMER_IDLE_CODE_BY_FAMILY = {"54": "999", "15": "000"}
 _DIMMER_STATUS_DIALECT_BY_FAMILY = {
-    "54": "dimmer.lab.status_reply",
-    "15": "dimmer.nolf.status_reply",
+    "54": KESSEL_LO.message_type("dimmer", "status_reply"),
+    "15": TORHOUT.message_type("dimmer", "status_reply"),
 }
 _DIMMER_IDLE_DIALECT_BY_FAMILY = {
-    "54": "dimmer.lab.idle_keepalive",
-    "15": "dimmer.nolf.idle_keepalive",
+    "54": KESSEL_LO.message_type("dimmer", "idle_keepalive"),
+    "15": TORHOUT.message_type("dimmer", "idle_keepalive"),
 }
 
-# Hub OFF wire: C<ch>001030 (lab 2026-08-27).
+# Hub OFF wire: C<ch>001030 (reference generation, 2026-08-27).
 
 # Input-module peer-to-peer dialect (IP1100PoE → IP0300PoE, observed only).
 _INPUT_TOGGLE_RE = re.compile(r"^T(?P<channel>\d)(?P<dimmax>\d{2})1000$")

@@ -6,6 +6,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from gateway.payloads.dialects import TORHOUT
 from gateway.payloads.dimmer import decode_dimmer_payload
 from gateway.payloads.input import decode_input_payload
 from gateway.payloads.relay import decode_relay_payload
@@ -137,7 +138,7 @@ class DeviceRegistry:
     def get_dimmer_family(self, module_ip: str) -> str | None:
         """Return the reply family constant last seen from a dimmer module.
 
-        ``"54"`` for lab IP0300PoE, ``"15"`` for Nolf-generation hardware,
+        ``"54"`` for the reference generation, ``"15"`` for older-generation hardware,
         ``None`` until the module has answered. Command encodings that differ
         per generation (notably OFF) resolve against this.
         """
@@ -246,7 +247,8 @@ class DeviceRegistry:
             new_state = parsed["state"]
             raw = parsed.get("raw", "")
             log.info(
-                "decoded relay.nolf.command_reply from %s: %s (ch%d → %s)",
+                "decoded %s from %s: %s (ch%d → %s)",
+                TORHOUT.message_type("relay", "command_reply"),
                 module_ip,
                 raw,
                 ch,
@@ -272,7 +274,7 @@ class DeviceRegistry:
 
         Status and idle frames carry the family constant directly. A module
         that echoes the command back instead of answering ``I0154…`` is
-        Nolf-generation by construction, so the echo counts as family ``15``.
+        the older generation by construction, so the echo counts as family ``15``.
         """
         observed = parsed.get("family_constant")
         if observed is None and parsed.get("family") == "dimmer_command":
@@ -314,15 +316,17 @@ class DeviceRegistry:
                 )
                 self._fire_state_changed(key, old, new_ds)
         elif family == "dimmer_command":
-            # Nolf dimmers echo the command instead of I0115…; the echo is
-            # the state source (lab dimmers reply I0154… and never hit this).
+            # Older-generation dimmers echo the command instead of I0115…; the
+            # echo is the state source (reference dimmers reply I0154… and
+            # never hit this).
             ch = parsed.get("channel")
             new_level = parsed.get("level_percent")
             if ch is None or new_level is None:
                 return
             raw = parsed.get("raw", "")
             log.info(
-                "decoded dimmer.nolf.command_echo from %s: %s (ch%d → %s%%)",
+                "decoded %s from %s: %s (ch%d → %s%%)",
+                TORHOUT.message_type("dimmer", "command_echo"),
                 module_ip,
                 raw,
                 ch,

@@ -20,6 +20,7 @@ from gateway.remote_debug import (
 )
 from gateway.udp_bus import UDPBus
 from gateway.udp_frames import UdpFrameHub
+from gateway.payloads.dialects import TORHOUT
 
 # Older-generation command echo: the reply bytes match the command.
 _ECHO = b"S00001000"
@@ -128,7 +129,7 @@ async def test_subscriber_sees_command_and_echo() -> None:
         assert frames[0]["dst"] == "module"
         assert frames[1]["src"] == "module"
         assert frames[1]["dst"] == "gateway"
-        assert frames[0]["dialect_id"] == "relay.nolf.command_reply"
+        assert frames[0]["dialect_id"] == TORHOUT.message_type("relay", "command_reply")
         assert frames[1]["decoded"]["family"] == "relay_command_reply"
         assert idle.sent == []
     finally:

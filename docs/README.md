@@ -15,7 +15,7 @@ Last updated: 2026-10-07
 | Bestand | Status | Rol |
 |---------|--------|-----|
 | [2026-05-18-gateway-architecture-design.md](superpowers/specs/2026-05-18-gateway-architecture-design.md) | **Goedgekeurd** | Northbound: HA add-on + `ipbuilding-open`; roadmap Fase 1–8 |
-| [2026-08-25-nolf-dialect-decode-design.md](superpowers/specs/2026-08-25-nolf-dialect-decode-design.md) | **Goedgekeurd** | Nolf dialect-decode 1.6.5 (D0.1–D0.5; echo = state; family `15`) |
+| [2026-08-25-torhout-dialect-decode-design.md](superpowers/specs/2026-08-25-torhout-dialect-decode-design.md) | **Goedgekeurd** | Torhout dialect-decode 1.6.5 (D0.1–D0.5; echo = state; family `15`) |
 | [2026-05-17-northbound-architecture-research.md](superpowers/specs/2026-05-17-northbound-architecture-research.md) | Superseded | Achtergrondnotities; beslissing = 2026-05-18 doc |
 | [2026-05-01-ipbuilding-device-inventory-api-design.md](superpowers/specs/2026-05-01-ipbuilding-device-inventory-api-design.md) | Referentie | Device inventory API (northbound-onderdeel) |
 
@@ -30,7 +30,7 @@ Last updated: 2026-10-07
 | Bestand | Status |
 |---------|--------|
 | [2026-05-17-ipbuilding-phase1-re-completion.md](superpowers/plans/2026-05-17-ipbuilding-phase1-re-completion.md) | **CLOSED** 2026-05-22 |
-| [2026-08-24-nolf-dialect-sprint-plan.md](superpowers/plans/2026-08-24-nolf-dialect-sprint-plan.md) | **OPEN** — Nolf veldbus-dialecten (relay command-reply + dimmer family `15`) |
+| [2026-08-24-torhout-dialect-sprint-plan.md](superpowers/plans/2026-08-24-torhout-dialect-sprint-plan.md) | **OPEN** — Torhout veldbus-dialecten (relay command-reply + dimmer family `15`) |
 
 **Volgende plan (nog aan te maken):** Gateway Fase 2 hub-service — zie architectuurdoc Fase 2.
 

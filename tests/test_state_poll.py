@@ -481,7 +481,7 @@ class TestSweepDimmerStates:
             await bus.stop()
 
     @pytest.mark.asyncio
-    async def test_nolf_family_15_reply_seeds_channel_zero(self) -> None:
+    async def test_torhout_family_15_reply_seeds_channel_zero(self) -> None:
         """Golden vector: I0000000 → I0115099 seeds ch0 without timeout."""
         registry = DeviceRegistry()
         cb = MagicMock()

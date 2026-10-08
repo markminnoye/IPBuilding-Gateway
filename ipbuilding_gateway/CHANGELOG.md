@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Field-bus dialect ids use city names. The reference generation is `kessel-lo`. The older generation is `torhout`. `udp_frame` events carry that same `dialect_id`.
+
 ### Fixed
 - In add-on mode the gateway announces its LAN address over mDNS, so a computer on the network can connect. It does not announce the loopback address. Discovery for Home Assistant on the same machine is unchanged.
 

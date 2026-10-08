@@ -2,7 +2,7 @@
 
 from gateway.button_id import canonical_button_id
 
-# Four wire↔IPA pairs confirmed on the 2026-08-29 Nolf log.
+# Four wire↔IPA pairs confirmed on the 2026-08-29 Torhout log.
 _CONFIRMED_PAIRS = [
     # wire 14-hex, IPA/config 10-hex, getButtons 16-hex, canonical 8-hex
     ("dac46c100000c3", "dac46cc330", "01dac46c100000c3", "dac46cc3"),
