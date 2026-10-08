@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -508,6 +509,18 @@ async def list_devices(session: GatewaySession) -> ToolResult:
     lines = [_device_line(row) for row in rows]
     if not lines:
         lines.append("De gateway heeft geen kanalen teruggegeven.")
+    # Remember names and rooms so a later report can redact them, including
+    # text that never came back through the WebSocket snapshot.
+    session.devices = {
+        str(device.get("id")): device
+        for device in devices
+        if device.get("id") is not None
+    }
+    session.modules = {
+        str(module.get("id")): module
+        for module in modules
+        if module.get("id") is not None
+    }
     module_rows = [_module_reachability(module) for module in modules]
     timing = " ".join(
         str(row.get("reachability_sentence") or "")
@@ -1006,10 +1019,26 @@ def _parse_gateway_time(event: dict[str, Any]) -> datetime | None:
     return None
 
 
+_UTC_STAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z")
+
+
 def _format_local(moment: datetime) -> str:
+    """ISO 8601 in the tester's timezone, with a numeric offset. Never a Z suffix."""
     if moment.tzinfo is None:
         moment = moment.replace(tzinfo=timezone.utc)
     return moment.astimezone().isoformat(timespec="seconds")
+
+
+def _localise_utc_text(text: str) -> str:
+    """Rewrite gateway `Z` timestamps in a report to local time with an offset."""
+
+    def replace(match: re.Match[str]) -> str:
+        parsed = _parse_log_ts(match.group(0))
+        if parsed is None:
+            return match.group(0)
+        return _format_local(parsed)
+
+    return _UTC_STAMP.sub(replace, text)
 
 
 def _stamp_event(event: dict[str, Any], received_at: datetime) -> dict[str, Any]:
@@ -1080,14 +1109,20 @@ async def export_session(
         "events": exported[-500:],
         "buffer": _buffer_summary(session),
     }
+    hosts = session_hosts(session)
+    tokens = collect_tokens({"inventory": _inventory_names(session), "session": body})
     if redact:
-        body = redact_payload(body, hosts=session_hosts(session))
-        message = "Sessie gebundeld. " + SHARING_WARNING
+        body = redact_payload(body, tokens=tokens, hosts=hosts)
         sharing = SHARING_WARNING
     else:
-        message = RAW_LOCAL_WARNING
         sharing = RAW_LOCAL_WARNING
     report, frontmatter = render_report(body)
+    report = _localise_utc_text(report)
+    if redact:
+        # Second pass: headings and every other line of the finished report.
+        report = redact_text(report, tokens, hosts)
+        frontmatter = redact_text(frontmatter, tokens, hosts)
+    message = f"{report}\n{sharing}"
     return ToolResult(
         message,
         {
@@ -1509,6 +1544,14 @@ def _count_by(items: list[dict[str, Any]], key: str) -> dict[str, int]:
         name = str(item.get(key) or "onbekend")
         counts[name] = counts.get(name, 0) + 1
     return counts
+
+
+def _inventory_names(session: GatewaySession) -> dict[str, list[dict[str, Any]]]:
+    """Device and module records whose names and rooms must leave the report."""
+    return {
+        "devices": [item for item in session.devices.values() if isinstance(item, dict)],
+        "modules": [item for item in session.modules.values() if isinstance(item, dict)],
+    }
 
 
 def _export_modules(session: GatewaySession) -> list[dict[str, Any]]:

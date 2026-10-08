@@ -17,7 +17,7 @@ Met deze plug-in krijgt Claude toegang tot je IPBuilding Gateway om je installat
 Claude kan pas meekijken als een schakelaar aan staat.
 
 1. Ga in Home Assistant naar Instellingen → Add-ons → IPBuilding Gateway → Configuratie.
-2. Zet onder Debug de schakelaar **Bediening op afstand (voor debuggen)** aan (Engels: *Remote control (for debugging)*).
+2. Zet onder Toegang op afstand de schakelaar **Bediening op afstand (voor debuggen)** aan (Engels: *Remote control (for debugging)*).
 3. De add-on start even opnieuw. Dat hoort zo.
 
 Let op: zolang de schakelaar aan staat, kan iedereen op je thuisnetwerk meelezen met je modules en testpakketjes sturen. De schakelaar gaat niet vanzelf uit.

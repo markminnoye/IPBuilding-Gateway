@@ -446,6 +446,36 @@ async def test_list_devices_maps_channels_from_zero_and_last_seen() -> None:
 
 
 @pytest.mark.asyncio
+async def test_list_devices_keeps_input_channel_31() -> None:
+    gateway = FakeGateway(remote_debugging=False, capabilities=[])
+    gateway.modules = [
+        {"id": "module-c", "type": "input", "model": "IP1100PoE", "name": "input-c"}
+    ]
+    gateway.devices = [
+        {
+            "id": f"button-{channel}",
+            "module_id": "module-c",
+            "channel": channel,
+            "name": f"button-{channel}",
+            "device_type": "input",
+            "active": channel != 31,
+        }
+        for channel in (0, 30, 31, 32)
+    ]
+    await gateway.start()
+    session = GatewaySession(f"127.0.0.1:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await list_devices(session)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    channels = [row["channel"] for row in result.data["devices"]]
+    assert channels == [0, 30, 31, 32]
+    assert "kanaal 31" in result.message
+    assert sum(1 for row in result.data["devices"] if row["channel"] == 31) == 1
+
+
+@pytest.mark.asyncio
 async def test_recent_events_reads_buffer_without_frames() -> None:
     session = GatewaySession("localhost:9", backoff_start=30, backoff_max=30)
     await session.buffer.append(

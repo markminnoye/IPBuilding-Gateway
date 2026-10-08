@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import time
 import uuid
 from pathlib import Path
 
@@ -304,6 +306,71 @@ def test_decode_test_names_a_relay_without_a_dialect_and_a_total_miss() -> None:
     assert "geen dialect-id" not in collision.message
 
 
+@pytest.mark.asyncio
+async def test_report_redacts_room_names_in_headings_and_free_text() -> None:
+    session = GatewaySession("127.0.0.1:9", backoff_start=30, backoff_max=30)
+    session.devices = {
+        "lamp-1": {
+            "id": "lamp-1",
+            "name": "keukenlamp",
+            "room": "traphal",
+            "device_type": "relay",
+        }
+    }
+    hidden = await export_session(
+        session,
+        note="1. Traphal\ntraphal gaat niet aan en keukenlamp ook niet",
+    )
+    report = hidden.data["report"]
+    assert "traphal" not in report.lower()
+    assert "keukenlamp" not in report.lower()
+    assert "1. [naam]" in report
+    assert "1. Samenvatting" in report
+    assert hidden.message.startswith(report)
+
+
+@pytest.mark.asyncio
+async def test_report_times_are_local_and_the_template_is_complete() -> None:
+    previous = os.environ.get("TZ")
+    os.environ["TZ"] = "Europe/Brussels"
+    time.tzset()
+    try:
+        session = GatewaySession("127.0.0.1:9", backoff_start=30, backoff_max=30)
+        await session.buffer.append(
+            {
+                "type": "log",
+                "ts": "2026-07-02T03:04:05Z",
+                "level": "info",
+                "logger": "gw",
+                "message": "geen verbinding van 2026-07-02T03:04:05Z tot 2026-07-02T03:04:20Z",
+            }
+        )
+        result = await export_session(session, note="lamp bleef aan")
+    finally:
+        if previous is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = previous
+        time.tzset()
+    report = result.data["report"]
+    assert "2026-07-02T05:04:05+02:00" in report
+    assert not re.search(r"\d{2}:\d{2}:\d{2}Z", report)
+    for heading in (
+        "1. Samenvatting",
+        "2. Omgeving",
+        "3. Wat getest werd",
+        "4. Bevindingen",
+        "5. Open vragen",
+        "6. Feedback over de tool",
+        "7. Bijlage",
+    ):
+        assert heading in report
+    assert report.splitlines()[0] == FEEDBACK_WARNING
+    assert report.splitlines()[2] == "---"
+    assert "installatie_id:" in result.data["frontmatter"]
+    assert result.message.startswith(report)
+
+
 def test_skill_describes_the_report_and_the_backlog() -> None:
     text = (TOOLKIT / "skills" / "ipbuilding-gateway-tools" / "SKILL.md").read_text(
         encoding="utf-8"
@@ -318,6 +385,10 @@ def test_skill_describes_the_report_and_the_backlog() -> None:
     assert "confirmed=true" in text
     assert "Linear-backlog" in text
     assert "Agent" in text
+    assert "letterlijk" in text
+    assert "Toegang op afstand" in text
+    assert "Debuggen en bedienen op afstand" not in text
+    assert "onder Debug" not in text
     assert "T" + "riage" not in text
     readme = (TOOLKIT / "README.md").read_text(encoding="utf-8")
     guide = (TOOLKIT / "HANDLEIDING.md").read_text(encoding="utf-8")

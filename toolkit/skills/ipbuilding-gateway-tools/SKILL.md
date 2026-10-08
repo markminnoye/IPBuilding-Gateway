@@ -17,7 +17,7 @@ Praat in de taal van de tester. Standaard is dat **Nederlands**. Geen jargon: ze
 
 Er is een schakelaar in de add-on. Engelse naam: **Remote control (for debugging)**. Nederlandse naam: **Bediening op afstand (voor debuggen)**.
 
-- **Waar:** Home Assistant → Instellingen → Add-ons → IPBuilding Gateway → Configuratie, onder **Debug**.
+- **Waar:** Home Assistant → Instellingen → Add-ons → IPBuilding Gateway → Configuratie, onder **Toegang op afstand**.
 - **Wat hij doet:** hij zet live logs, veldbusframes en het sturen van testpakketten open. Knoppen en statuswijzigingen komen ook binnen als de schakelaar uit staat. Alleen de logregels vallen dan weg. Zolang hij aan staat, toont Home Assistant een blijvende melding: "Bediening op afstand staat aan. IPBuilding Gateway Tools kan live verkeer lezen en commando's naar je modules sturen. Zet het uit in de instellingen van de add-on als het debuggen klaar is." Hij blijft aan tot de tester hem zelf uitzet. Er is geen tijdslimiet. Wijzigen herstart de add-on. Iedereen op het netwerk kan dan meelezen en testpakketten sturen.
 - **Wanneer je hem voorstelt, uit jezelf, niet pas na een fout:**
   1. **Aan het begin** van elke sessie: roep eerst `connection_status` aan. Voor een knop of een lampstatus hoef je de schakelaar niet aan te zetten: `recent_events` werkt dan ook. Vraag hem aan te zetten als je live logs, veldbusframes of een testpakket nodig hebt (`switch_active` is false, of `remote_debugging` is false). Wacht tot de add-on opnieuw is opgestart en controleer daarna opnieuw.
@@ -99,7 +99,7 @@ Elk event in het verslag heeft een lokale tijd (`local_time`) en `time_source`. 
 
 Dialecten hebben een stadsnaam. De namen en ids komen uit de tool. Nu zijn dat Kessel-Lo (`kessel-lo`; berichttypes `dimmer.kessel-lo.*` en `input.kessel-lo.*`) en Torhout (`torhout`; berichttypes `*.torhout.*`). Kessel-Lo is het dialect van de dimmer- en inputmodules uit de eerste testopstelling. Torhout is het tweede bevestigde dialect. Gebruik de naam die de tool teruggeeft; die kan later wijzigen. Meld je een nieuw dialect, of schrijf je er een in het verslag, kies dan een willekeurige stad. Nooit de woonplaats van de tester en nooit een persoonsnaam. Een relaisformaat zonder dialect-id is geen stad: verzin er geen.
 
-Schrijf het rapport als losse regels, altijd in deze zeven delen. Geen tabel. Het moet leesbaar blijven zonder opmaak. Verzin geen oorzaak als geen frame die bevestigt.
+`export_session` levert het rapport al, in de tekst van de tool en in `report`. Geef die tekst letterlijk door. Schrijf hem niet opnieuw en laat geen deel weg. De koppen blijven de zeven hieronder. Zet geen ruimtenaam of lampnaam in een kop. Tijden komen uit die tekst: lokale tijd met een offset, bijvoorbeeld `2026-07-02T05:04:05+02:00`. Kopieer geen ruwe `ts` of `at` met een Z. Een verschil tussen een knopnaam en een lampnaam mag je noemen, maar niet als open vraag en niet als verdacht. Feedback over de tool hoort alleen onder kop 6. Staat daar een streepje, vervang alleen dat streepje; verplaats de feedback niet naar de open vragen.
 
 1. Samenvatting — de woorden van de tester en wat gevonden werd.
 2. Omgeving — toolkit- en gatewayversie, rol (master of slave), modules met dialect, welke functies ondersteund en actief zijn.
