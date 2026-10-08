@@ -160,7 +160,11 @@ Zet je hem aan, dan herstart de add-on en blijft hij aan tot je hem zelf weer ui
 
 > Remote debugging and control is ON. Anyone on your network can read field-bus traffic and send raw packets to your IPBuilding modules via this gateway. Turn it off in the add-on configuration when you are done.
 
-Zet je hem uit, dan verdwijnt die melding na de herstart. `GET /api/v1/status` en de WebSocket-`snapshot` tonen `remote_debugging` (`true`/`false`) en `capabilities` (een lijst van wat deze versie echt kan). Die lijst is nu leeg.
+Zet je hem uit, dan verdwijnt die melding na de herstart. `GET /api/v1/status` en de WebSocket-`snapshot` tonen `remote_debugging` (`true`/`false`) en `capabilities`. Deze versie zet `log_stream` in die lijst: een client kan gateway-logs live meelezen en het logniveau tijdelijk wijzigen. De lijst blijft zichtbaar als de optie uit staat, zodat een client het verschil ziet tussen “deze versie kan het” en “de schakelaar staat uit”.
+
+**Zolang de schakelaar aan staat** is er geen login op poort 8080. Iedereen op je netwerk kan dan de logs lezen en het logniveau een tijdje hoger zetten (dat geldt voor de hele gateway, dus ook voor het add-on-log). Het hogere niveau wordt niet opgeslagen en valt vanzelf terug. Wachtwoord- en token-achtige tekst in een logregel wordt afgeschermd. Zet de schakelaar uit als je klaar bent.
+
+Roep je een debug-functie aan terwijl de schakelaar uit staat, dan antwoordt de gateway met foutcode `remote_debugging_disabled` en een Engelse zin die de schakelaar en het pad ernaartoe noemt.
 
 ---
 

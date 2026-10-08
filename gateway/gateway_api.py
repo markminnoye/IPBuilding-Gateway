@@ -45,6 +45,13 @@ from gateway.device_config import (
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.discovery import fetch_module_backup_channels, resolve_module_model
 from gateway.capabilities import CAPABILITIES
+from gateway.log_stream import LogStream, LogStreamError, baseline_from_config
+from gateway.remote_debug import (
+    REMOTE_DEBUGGING_DISABLED,
+    REMOTE_DEBUGGING_DISABLED_MESSAGE,
+    REMOTE_DEBUGGING_DISABLED_STATUS,
+    ws_remote_debugging_disabled,
+)
 from gateway.health import GatewayHealthMonitor
 from gateway.button_id import canonical_button_id
 from gateway.installation import (
@@ -193,6 +200,9 @@ class GatewayAPI:
             config.discovery.lock_timeout_s if config.discovery else 15.0
         )
         self._writer = AtomicWriter(config.devices_file, lock_timeout_s=lock_timeout_s)
+        self._log_stream = LogStream(
+            baseline_level=baseline_from_config(getattr(config, "log_level", None))
+        )
 
     # -------------------------------------------------------------------------
     # Lifecycle
@@ -244,6 +254,9 @@ class GatewayAPI:
         self._app.router.add_post("/api/v1/modules/refresh", self._post_modules_refresh)
         # Runtime auto-discovery
         self._app.router.add_post("/api/v1/discover", self._post_discover)
+        self._app.router.add_post(
+            "/api/v1/debug/log-level", self._post_debug_log_level
+        )
 
         # Register registry callbacks
         self._state_cb = self._registry.on_state_changed(self._on_state_changed)
@@ -255,6 +268,8 @@ class GatewayAPI:
         await self._runner.setup()
         self._site = web.TCPSite(self._runner, self._cfg.api_host, self._cfg.api_port)
         await self._site.start()
+        if self._remote_debugging_enabled():
+            self._log_stream.attach()
         log.info(
             "GatewayAPI started  api=%s:%d",
             self._cfg.api_host,
@@ -272,6 +287,7 @@ class GatewayAPI:
         client can't drag out gateway shutdown. Then aiohttp's
         ``runner.cleanup()`` finishes within a bounded time.
         """
+        self._log_stream.detach()
         # Force-close open WS clients first so runner.cleanup() doesn't
         # wait for their linger timeout.
         for ws in list(self._ws_clients):
@@ -382,6 +398,7 @@ class GatewayAPI:
                 elif msg.type == web.WSMsgType.ERROR:
                     log.warning("WS error: %s", ws.exception())
         finally:
+            await self._log_stream.disconnect(ws)
             async with self._ws_lock:
                 self._ws_clients.discard(ws)
             log.info("WS client disconnected (total %d)", len(self._ws_clients))
@@ -398,7 +415,14 @@ class GatewayAPI:
             log.warning("WS received unparseable JSON: %r", raw)
             return
 
+        if not isinstance(data, dict):
+            log.debug("WS ignored non-object message")
+            return
+
         msg_type = data.get("type")
+        if msg_type in ("subscribe_logs", "unsubscribe_logs", "set_log_level"):
+            await self._handle_log_ws(ws, data)
+            return
         if msg_type != "command":
             log.debug("WS ignored non-command message type %r", msg_type)
             return
@@ -415,6 +439,30 @@ class GatewayAPI:
         await ws.send_json(
             {"type": "command_result", "id": entity_id, "ok": ok, "error": error}
         )
+
+    async def _handle_log_ws(self, ws: WebSocketResponse, data: dict[str, Any]) -> None:
+        """Log subscription and temporary level. Refused while remote debugging is off.
+
+        Later remote-debugging messages (udp frame, raw send) must refuse with
+        the same ``ws_remote_debugging_disabled()`` frame before doing work.
+        """
+        if not self._remote_debugging_enabled():
+            await ws.send_json(ws_remote_debugging_disabled())
+            return
+        msg_type = data.get("type")
+        try:
+            if msg_type == "subscribe_logs":
+                await self._log_stream.subscribe(ws, data.get("min_level"))
+            elif msg_type == "unsubscribe_logs":
+                await self._log_stream.unsubscribe(ws)
+            elif msg_type == "set_log_level":
+                await self._log_stream.set_client_level(
+                    ws, data.get("level"), data.get("ttl")
+                )
+        except LogStreamError as exc:
+            await ws.send_json(
+                {"type": "error", "error": exc.code, "message": exc.message}
+            )
 
     # -------------------------------------------------------------------------
     # REST handlers
@@ -857,6 +905,32 @@ class GatewayAPI:
         asyncio.create_task(self._broadcast(self._build_snapshot()))
         module_list = self._build_module_list()
         return web.json_response({"modules": module_list, "schema_version": 2})
+
+    async def _post_debug_log_level(self, request: web.Request) -> web.Response:
+        """POST /api/v1/debug/log-level — temporary root log level.
+
+        Refused with ``remote_debugging_disabled`` while the add-on option
+        is off. The new level is not stored in add-on options.
+        """
+        if not self._remote_debugging_enabled():
+            raise ApiError(
+                REMOTE_DEBUGGING_DISABLED_STATUS,
+                REMOTE_DEBUGGING_DISABLED,
+                REMOTE_DEBUGGING_DISABLED_MESSAGE,
+            )
+        try:
+            body = await request.json()
+        except Exception:
+            raise ApiError(400, "invalid_json", "Body must be valid JSON") from None
+        if not isinstance(body, dict):
+            raise ApiError(400, "invalid_json", "Body must be a JSON object")
+        try:
+            result = await self._log_stream.set_rest_level(
+                body.get("level"), body.get("ttl")
+            )
+        except LogStreamError as exc:
+            raise ApiError(exc.status, exc.code, exc.message) from None
+        return web.json_response(result)
 
     async def _post_discover(self, request: web.Request) -> web.Response:
         """POST /api/v1/discover — run forced discovery (ARP-sweep + HTTP identify).

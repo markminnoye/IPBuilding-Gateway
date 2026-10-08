@@ -43,3 +43,17 @@ herstart de add-on.
 De gewone release herken je aan een versienummer zonder `-dev`.
 Je hoeft de develop-repository niet te verwijderen. Laat de ontwikkelversie
 gewoon uit staan.
+
+## Debuggen en bedienen op afstand
+
+Die schakelaar staat bij de add-on die je gebruikt (de gewone of de ontwikkelversie):
+
+**Instellingen → Add-ons → IPBuilding Gateway → Configuratie**
+
+Open de groep **Debug**. De schakelaar heet **Debuggen en bedienen op afstand**. In het Engels heet dezelfde schakelaar **Remote debugging and control**.
+
+Zet hem alleen aan als je een probleem onderzoekt. Hij laat een hulpprogramma op je netwerk de gateway-logs live meelezen en het logniveau een tijdje hoger zetten, zodat ook het veldbusverkeer in het log verschijnt. Zonder deze schakelaar weigert de gateway dat.
+
+De schakelaar blijft aan tot je hem zelf weer uitzet. Hij gaat niet vanzelf uit.
+
+Zolang hij aan staat, toont Home Assistant een melding. Die zie je bij het belletje, en die blijft staan tot je de schakelaar uitzet. Wijzigen herstart de add-on.
