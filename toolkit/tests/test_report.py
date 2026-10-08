@@ -18,6 +18,7 @@ from ipbuilding_debug.privacy import (
     RETENTION,
     privacy_notice,
 )
+from ipbuilding_debug.redact import mask_stem, name_masks, redact_text
 from ipbuilding_debug.report import parse_mailto, report_send_enabled
 from ipbuilding_debug.server import build_server
 from ipbuilding_debug.session import GatewaySession
@@ -306,27 +307,114 @@ def test_decode_test_names_a_relay_without_a_dialect_and_a_total_miss() -> None:
     assert "geen dialect-id" not in collision.message
 
 
+def test_name_masks_keep_the_first_character_and_number_collisions() -> None:
+    assert mask_stem("Traphal") == "Txxxxxx"
+    assert mask_stem("Kamer links") == "K" + ("x" * 10)
+    assert name_masks(["Traphal"], "Traphal") == {"Traphal": "Txxxxxx"}
+    ordered = name_masks(["Traphek", "Traphal"], "Traphal komt voor Traphek")
+    assert ordered == {"Traphal": "Txxxxxx-1", "Traphek": "Txxxxxx-2"}
+    parked = name_masks(["Traphek", "Traphal"], "")
+    assert parked == {"Traphek": "Txxxxxx-1", "Traphal": "Txxxxxx-2"}
+    text = "Traphal en Traphallamp en traphal en Kamer links en Kamer linksom"
+    masked = redact_text(
+        text,
+        masks={"Traphal": "Txxxxxx", "Kamer links": "K" + ("x" * 10)},
+    )
+    assert masked == "Txxxxxx en Traphallamp en traphal en " + ("K" + ("x" * 10)) + " en Kamer linksom"
+
+
 @pytest.mark.asyncio
-async def test_report_redacts_room_names_in_headings_and_free_text() -> None:
+async def test_report_masks_room_lamp_and_button_names() -> None:
     session = GatewaySession("127.0.0.1:9", backoff_start=30, backoff_max=30)
     session.devices = {
-        "lamp-1": {
-            "id": "lamp-1",
-            "name": "keukenlamp",
-            "room": "traphal",
+        "dev-hek": {
+            "id": "dev-hek",
+            "name": "Traphek",
+            "room": "Kamer links",
             "device_type": "relay",
-        }
+        },
+        "dev-hal": {
+            "id": "dev-hal",
+            "name": "Traphal",
+            "room": "Kamer links",
+            "device_type": "relay",
+        },
+        "dev-knop": {
+            "id": "dev-knop",
+            "name": "Knop hal",
+            "room": "Bijkeuken",
+            "device_type": "input",
+        },
     }
-    hidden = await export_session(
-        session,
-        note="1. Traphal\ntraphal gaat niet aan en keukenlamp ook niet",
+    session.modules = {
+        "mod-1": {"id": "mod-1", "type": "input", "model": "IP1100PoE", "name": "Meterkast"}
+    }
+    await session.buffer.append(
+        {
+            "type": "button_event",
+            "name": "Knop hal",
+            "room": "Kamer links",
+            "message": "Knop hal ingedrukt",
+        }
     )
+    note = (
+        "1. Traphal\n"
+        "Traphal komt voor Traphek. Kamer links blijft donker en Knop hal ook. "
+        "Bijkeuken en Meterkast blijven buiten de test. "
+        "traphal en Traphallamp en Kamer linksom blijven. "
+        "zag 2001:db8::9"
+    )
+    hidden = await export_session(session, note=note)
     report = hidden.data["report"]
-    assert "traphal" not in report.lower()
-    assert "keukenlamp" not in report.lower()
-    assert "1. [naam]" in report
+    assert "Txxxxxx-1" in report
+    assert "Txxxxxx-2" in report
+    assert "K" + ("x" * 10) in report
+    assert re.search(r"(?<![A-Za-z0-9])Kxxxxxxx(?!x)", report)
+    assert "Mxxxxxxxx" in report
+    assert "Bxxxxxxxx" in report
+    for secret in ("Traphal", "Traphek", "Kamer links", "Knop hal", "Meterkast", "Bijkeuken"):
+        assert re.search(
+            rf"(?<![A-Za-z0-9_-]){re.escape(secret)}(?![A-Za-z0-9_-])",
+            report,
+        ) is None
+    assert "2001:db8" not in report
+    assert "traphal" in report
+    assert "Traphallamp" in report
+    assert "Kamer linksom" in report
     assert "1. Samenvatting" in report
+    assert "6. Feedback over de tool" in report
     assert hidden.message.startswith(report)
+    assert "gemaskeerd" in hidden.data["sharing"]
+    buttons = [event for event in hidden.data["events"] if event.get("type") == "button_event"]
+    assert buttons[0]["name"] == "Kxxxxxxx"
+    assert buttons[0]["room"] == "K" + ("x" * 10)
+    assert hidden.data["modules"][0]["name"] == "Mxxxxxxxx"
+    assert "dev-hal" not in report
+    raw = await export_session(session, redact=False)
+    assert "Traphal" in raw.data["report"]
+    assert "Kamer links" in raw.data["report"]
+    assert raw.data["redacted"] is False
+
+
+@pytest.mark.asyncio
+async def test_report_subject_uses_the_same_name_masks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("IPBUILDING_REPORT_SEND", raising=False)
+    monkeypatch.setenv("IPBUILDING_REPORT_INTAKE", "intake@example.invalid")
+    session = GatewaySession("127.0.0.1:9", backoff_start=30, backoff_max=30)
+    session.devices = {
+        "dev-hek": {"id": "dev-hek", "name": "Traphek", "room": "Hal", "device_type": "relay"},
+        "dev-hal": {"id": "dev-hal", "name": "Traphal", "room": "Hal", "device_type": "relay"},
+    }
+    await session.annotate("Traphal komt voor Traphek")
+    sent = await send_report(session, confirmed=True, korte_fout="Traphal en Traphek")
+    parsed = parse_mailto(sent.data["mailto"])
+    assert "Traphal" not in parsed["subject"]
+    assert "Traphek" not in parsed["subject"]
+    assert "Txxxxxx-1 en Txxxxxx-2" in parsed["subject"]
+    assert "masks" not in sent.data
+    assert "Traphal" not in sent.message
 
 
 @pytest.mark.asyncio
@@ -386,6 +474,9 @@ def test_skill_describes_the_report_and_the_backlog() -> None:
     assert "Linear-backlog" in text
     assert "Agent" in text
     assert "letterlijk" in text
+    assert "Txxxxxx" in text
+    assert "Txxxxxx-1" in text
+    assert "hoofdlettergevoelig" in text
     assert "Toegang op afstand" in text
     assert "Debuggen en bedienen op afstand" not in text
     assert "onder Debug" not in text

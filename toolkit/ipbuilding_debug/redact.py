@@ -141,12 +141,97 @@ def collect_tokens(value: Any) -> set[str]:
     return found
 
 
+def mask_stem(name: str) -> str:
+    """Keep the first character and replace every following one with ``x``."""
+    if not name:
+        return ""
+    return name[0] + ("x" * (len(name) - 1))
+
+
+def collect_display_names(value: Any, hosts: set[str] | None = None) -> list[str]:
+    """Inventory names, in walk order. Case-sensitive, skips addresses."""
+    found: list[str] = []
+    seen: set[str] = set()
+    known = {host.lower() for host in hosts or () if host}
+
+    def add(item: Any) -> None:
+        if not isinstance(item, str):
+            return
+        token = item.strip()
+        if (
+            not token
+            or token in seen
+            or token.lower() in _SKIP_TOKENS
+            or _fully_removed(token, known) is not None
+        ):
+            return
+        seen.add(token)
+        found.append(token)
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, item in node.items():
+                if key in _NAME_KEYS:
+                    add(item)
+                else:
+                    walk(item)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(value)
+    return found
+
+
+def name_masks(names: list[str], appearance: str) -> dict[str, str]:
+    """One mask per name. A shared stem gets ``-1``, ``-2`` in appearance order.
+
+    The first name keeps the bare stem when nothing else shares it. Names
+    that never occur as a whole word fall back to ``names`` order.
+    """
+    unique: list[str] = []
+    seen: set[str] = set()
+    for name in names:
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        unique.append(name)
+    position = {name: index for index, name in enumerate(unique)}
+
+    def first_at(name: str) -> int:
+        match = re.search(
+            rf"(?<![A-Za-z0-9_-]){re.escape(name)}(?![A-Za-z0-9_-])",
+            appearance,
+        )
+        if match is not None:
+            return match.start()
+        return len(appearance) + 1 + position[name]
+
+    groups: dict[str, list[str]] = {}
+    for name in unique:
+        groups.setdefault(mask_stem(name), []).append(name)
+    masks: dict[str, str] = {}
+    for stem, group in groups.items():
+        if len(group) == 1:
+            masks[group[0]] = stem
+            continue
+        ranked = sorted(group, key=lambda item: (first_at(item), position[item]))
+        for number, item in enumerate(ranked, start=1):
+            masks[item] = f"{stem}-{number}"
+    return masks
+
+
 def redact_text(
     text: str,
     tokens: set[str] | None = None,
     hosts: set[str] | None = None,
+    masks: dict[str, str] | None = None,
 ) -> str:
-    """Replace addresses, MAC addresses, emails, hostnames, and known names."""
+    """Replace addresses, MAC addresses, emails, hostnames, and known names.
+
+    With ``masks``, inventory names become that mask (case-sensitive, whole
+    word or phrase). Without it, those names become ``[naam]``.
+    """
     cleaned = _IPV6_RUN.sub(_ipv6_or_keep, text)
     cleaned = _IPV4.sub("[adres]", cleaned)
     cleaned = _MAC_COLON.sub("[mac]", cleaned)
@@ -164,28 +249,39 @@ def redact_text(
             "[adres]",
             cleaned,
         )
+    spans: list[tuple[int, int, str, int]] = []
+    masked = masks or {}
+    for name in sorted(masked, key=len, reverse=True):
+        if not name:
+            continue
+        pattern = re.compile(
+            rf"(?<![A-Za-z0-9_-]){re.escape(name)}(?![A-Za-z0-9_-])"
+        )
+        for match in pattern.finditer(cleaned):
+            spans.append((match.start(), match.end(), masked[name], 0))
     for token in sorted(tokens or (), key=len, reverse=True):
-        if token.lower() in known_hosts:
+        if not token or token in masked or token.lower() in known_hosts:
             continue
         if len(token) >= 3:
-            cleaned = re.sub(re.escape(token), "[naam]", cleaned, flags=re.IGNORECASE)
-        elif token:
-            cleaned = re.sub(
-                rf"(?i)(?<![A-Za-z0-9_-]){re.escape(token)}(?![A-Za-z0-9_-])",
-                "[naam]",
-                cleaned,
+            pattern = re.compile(re.escape(token), re.IGNORECASE)
+        else:
+            pattern = re.compile(
+                rf"(?i)(?<![A-Za-z0-9_-]){re.escape(token)}(?![A-Za-z0-9_-])"
             )
-    return cleaned
+        for match in pattern.finditer(cleaned):
+            spans.append((match.start(), match.end(), "[naam]", 1))
+    return _apply_spans(cleaned, spans)
 
 
 def redact_payload(
     value: Any,
     tokens: set[str] | None = None,
     hosts: set[str] | None = None,
+    masks: dict[str, str] | None = None,
 ) -> Any:
     """Copy ``value`` with sensitive fields and free-text leaks removed."""
     known = collect_tokens(value) if tokens is None else set(tokens)
-    return _redact(value, known, set(hosts or ()))
+    return _redact(value, known, set(hosts or ()), masks)
 
 
 def session_hosts(session: Any) -> set[str]:
@@ -205,20 +301,78 @@ def session_hosts(session: Any) -> set[str]:
     return found
 
 
-def _redact(value: Any, tokens: set[str], hosts: set[str]) -> Any:
+def _redact(
+    value: Any,
+    tokens: set[str],
+    hosts: set[str],
+    masks: dict[str, str] | None = None,
+) -> Any:
     if isinstance(value, dict):
         out: dict[str, Any] = {}
         for key, item in value.items():
-            if key in _SENSITIVE_KEYS:
+            if key in _NAME_KEYS and masks is not None and isinstance(item, str):
+                out[key] = _mask_name_field(item, masks, hosts)
+            elif key in _SENSITIVE_KEYS:
                 out[key] = _PLACEHOLDER[key]
             else:
-                out[key] = _redact(item, tokens, hosts)
+                out[key] = _redact(item, tokens, hosts, masks)
         return out
     if isinstance(value, list):
-        return [_redact(item, tokens, hosts) for item in value]
+        return [_redact(item, tokens, hosts, masks) for item in value]
     if isinstance(value, str):
-        return redact_text(value, tokens, hosts)
+        return redact_text(value, tokens, hosts, masks)
     return value
+
+
+def _mask_name_field(value: str, masks: dict[str, str], hosts: set[str]) -> str:
+    token = value.strip()
+    removed = _fully_removed(token, {host.lower() for host in hosts if host})
+    if removed is not None:
+        return removed
+    if not token or token.lower() in _SKIP_TOKENS:
+        return _PLACEHOLDER["name"]
+    if token in masks:
+        return masks[token]
+    return mask_stem(token)
+
+
+def _fully_removed(token: str, hosts: set[str]) -> str | None:
+    """IP, MAC, hostname, and email stay fully removed, never masked."""
+    if not token:
+        return None
+    if _is_ip(token) or token.lower() in hosts:
+        return "[adres]"
+    host_match = _HOST_IN_TEXT.fullmatch(token)
+    if host_match is not None and _host_or_keep(host_match) == "[adres]":
+        return "[adres]"
+    if _EMAIL.fullmatch(token):
+        return "[e-mail]"
+    if any(
+        pattern.fullmatch(token)
+        for pattern in (_MAC_COLON, _MAC_DASH, _MAC_DOT, _MAC_BARE)
+    ):
+        return "[mac]"
+    return None
+
+
+def _apply_spans(text: str, spans: list[tuple[int, int, str, int]]) -> str:
+    """Apply non-overlapping spans. Longer matches win; masks beat ``[naam]``."""
+    chosen: list[tuple[int, int, str]] = []
+    for start, end, replacement, rank in sorted(spans, key=lambda item: (-(item[1] - item[0]), item[3], item[0])):
+        if any(not (end <= have or start >= stop) for have, stop, _ in chosen):
+            continue
+        chosen.append((start, end, replacement))
+    if not chosen:
+        return text
+    chosen.sort()
+    parts: list[str] = []
+    cursor = 0
+    for start, end, replacement in chosen:
+        parts.append(text[cursor:start])
+        parts.append(replacement)
+        cursor = end
+    parts.append(text[cursor:])
+    return "".join(parts)
 
 
 def _ipv6_or_keep(match: re.Match[str]) -> str:

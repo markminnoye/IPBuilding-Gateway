@@ -216,7 +216,7 @@ def _write_manifest(dest: Path, version: str) -> None:
         },
         {
             "name": "export_session",
-            "description": "Sessie bundelen. Namen en adressen zijn standaard weggehaald.",
+            "description": "Sessie bundelen. Ruimte-, lamp- en knopnamen zijn gemaskeerd. Adressen zijn standaard weggehaald.",
         },
     ]
     if _report_send_enabled():

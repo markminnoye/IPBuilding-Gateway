@@ -125,9 +125,14 @@ def section_map(body: dict[str, Any]) -> dict[str, str]:
     }
 
 
-def subject_line(installatie_id: str, korte_fout: str, moment: datetime | None = None) -> str:
+def subject_line(
+    installatie_id: str,
+    korte_fout: str,
+    moment: datetime | None = None,
+    masks: dict[str, str] | None = None,
+) -> str:
     when = (moment or datetime.now().astimezone()).isoformat(timespec="seconds")
-    short = _short_fault(korte_fout)
+    short = _short_fault(korte_fout, masks)
     return f"[DEBUG] {installatie_id} | {short} | {when}"
 
 
@@ -305,8 +310,8 @@ def _dialects(events: list[Any]) -> list[str]:
     return found
 
 
-def _short_fault(korte_fout: str) -> str:
-    cleaned = redact_text(korte_fout or "")
+def _short_fault(korte_fout: str, masks: dict[str, str] | None = None) -> str:
+    cleaned = redact_text(korte_fout or "", masks=masks)
     cleaned = " ".join(cleaned.split())
     cleaned = cleaned.replace("|", "/")
     if not cleaned:

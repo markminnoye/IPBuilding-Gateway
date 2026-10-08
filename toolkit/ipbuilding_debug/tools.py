@@ -35,7 +35,9 @@ from ipbuilding_debug.errors import (
 )
 from ipbuilding_debug.installation_id import installation_id
 from ipbuilding_debug.redact import (
+    collect_display_names,
     collect_tokens,
+    name_masks,
     redact_payload,
     redact_text,
     session_hosts,
@@ -57,7 +59,8 @@ from ipbuilding_debug.session import GatewaySession
 
 RAW_SEND_PATH = "/api/v1/debug/raw-send"
 SHARING_WARNING = (
-    "Namen, adressen en apparaat-ids zijn weggehaald. "
+    "Ruimte-, lamp- en knopnamen zijn gemaskeerd. "
+    "Adressen en apparaat-ids zijn weggehaald. "
     "Deel dit verslag pas nadat je het zelf hebt nagelezen."
 )
 RAW_LOCAL_WARNING = (
@@ -1069,59 +1072,25 @@ async def export_session(
     marker: str = "",
     redact: bool = True,
 ) -> ToolResult:
-    """Bundle the session. Names and addresses are removed unless redact is false."""
+    """Bundle the session. Names are masked and addresses removed unless redact is false."""
     if note or marker:
         await session.annotate(note or marker, marker=marker)
-    exported = [
-        _stamp_event(entry.event, entry.received_at)
-        for entry in session.buffer.entries()
-        if entry.event.get("type")
-        in {
-            "gap",
-            "note",
-            "udp_frame",
-            "log",
-            "log_dropped",
-            "state_changed",
-            "button_event",
-            "device_added",
-            "device_removed",
-            "device_ip_changed",
-            "device_firmware_changed",
-        }
-    ]
-    status = session.status or {}
-    body: dict[str, Any] = {
-        "gateway": {
-            "version": status.get("version"),
-            "hub_role": status.get("hub_role"),
-            "remote_debugging": status.get("remote_debugging"),
-            "capabilities": _capabilities(status),
-            "connection": session.state,
-            "address": session.host,
-        },
-        # Random local id. The gateway instance id is a different value and
-        # is not copied into the report.
-        "installatie_id": installation_id(),
-        "modules": _export_modules(session),
-        "notes": [_stamp_note(note) for note in session.notes],
-        "gaps": [event for event in exported if event.get("type") == "gap"],
-        "events": exported[-500:],
-        "buffer": _buffer_summary(session),
-    }
+    body = _export_body(session)
     hosts = session_hosts(session)
-    tokens = collect_tokens({"inventory": _inventory_names(session), "session": body})
+    inventory = _inventory_names(session)
+    tokens = collect_tokens({"inventory": inventory, "session": body})
+    masks = _report_name_masks(body, inventory, hosts) if redact else None
     if redact:
-        body = redact_payload(body, tokens=tokens, hosts=hosts)
+        body = redact_payload(body, tokens=tokens, hosts=hosts, masks=masks)
         sharing = SHARING_WARNING
     else:
         sharing = RAW_LOCAL_WARNING
     report, frontmatter = render_report(body)
     report = _localise_utc_text(report)
     if redact:
-        # Second pass: headings and every other line of the finished report.
-        report = redact_text(report, tokens, hosts)
-        frontmatter = redact_text(frontmatter, tokens, hosts)
+        # Second pass: headings, feedback, and every other line of the report.
+        report = redact_text(report, tokens, hosts, masks)
+        frontmatter = redact_text(frontmatter, tokens, hosts, masks)
     message = f"{report}\n{sharing}"
     return ToolResult(
         message,
@@ -1174,9 +1143,19 @@ async def send_report(
             },
         )
     frontmatter = str(exported.data.get("frontmatter") or "")
+    # Same map as the report. The mapping itself is not returned.
+    masks = _report_name_masks(
+        _export_body(session),
+        _inventory_names(session),
+        session_hosts(session),
+    )
     link = mailto_link(
         address,
-        subject_line(str(exported.data.get("installatie_id") or ""), korte_fout),
+        subject_line(
+            str(exported.data.get("installatie_id") or ""),
+            korte_fout,
+            masks=masks,
+        ),
         email_body(section_map(exported.data), frontmatter),
     )
     return ToolResult(
@@ -1552,6 +1531,94 @@ def _inventory_names(session: GatewaySession) -> dict[str, list[dict[str, Any]]]
         "devices": [item for item in session.devices.values() if isinstance(item, dict)],
         "modules": [item for item in session.modules.values() if isinstance(item, dict)],
     }
+
+
+_EXPORT_TYPES = {
+    "gap",
+    "note",
+    "udp_frame",
+    "log",
+    "log_dropped",
+    "state_changed",
+    "button_event",
+    "device_added",
+    "device_removed",
+    "device_ip_changed",
+    "device_firmware_changed",
+}
+
+
+def _export_body(session: GatewaySession) -> dict[str, Any]:
+    exported = [
+        _stamp_event(entry.event, entry.received_at)
+        for entry in session.buffer.entries()
+        if entry.event.get("type") in _EXPORT_TYPES
+    ]
+    status = session.status or {}
+    return {
+        "gateway": {
+            "version": status.get("version"),
+            "hub_role": status.get("hub_role"),
+            "remote_debugging": status.get("remote_debugging"),
+            "capabilities": _capabilities(status),
+            "connection": session.state,
+            "address": session.host,
+        },
+        # Random local id. The gateway instance id is a different value and
+        # is not copied into the report.
+        "installatie_id": installation_id(),
+        "modules": _export_modules(session),
+        "notes": [_stamp_note(note) for note in session.notes],
+        "gaps": [event for event in exported if event.get("type") == "gap"],
+        "events": exported[-500:],
+        "buffer": _buffer_summary(session),
+    }
+
+
+def _report_name_masks(
+    body: dict[str, Any],
+    inventory: dict[str, Any],
+    hosts: set[str],
+) -> dict[str, str]:
+    """Masks for this report. Not included in the tool result."""
+    names = collect_display_names({"inventory": inventory, "session": body}, hosts)
+    return name_masks(names, _report_appearance(body, inventory))
+
+
+def _report_appearance(body: dict[str, Any], inventory: dict[str, Any]) -> str:
+    """Notes, then events, then inventory. First whole-word hit wins."""
+    chunks: list[str] = []
+    for note in body.get("notes") or []:
+        if isinstance(note, dict) and isinstance(note.get("text"), str):
+            chunks.append(note["text"])
+    for event in body.get("events") or []:
+        if not isinstance(event, dict):
+            continue
+        for key in ("message", "text", "name", "room", "descr", "gr", "module_name", "action"):
+            value = event.get(key)
+            if isinstance(value, str) and value:
+                chunks.append(value)
+    chunks.extend(_name_field_text(inventory))
+    chunks.extend(_name_field_text(body.get("modules")))
+    return "\n".join(chunks)
+
+
+def _name_field_text(node: Any) -> list[str]:
+    found: list[str] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key in {"descr", "gr", "module_name", "name", "room"} and isinstance(item, str):
+                    found.append(item)
+                else:
+                    walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(node)
+    return found
 
 
 def _export_modules(session: GatewaySession) -> list[dict[str, Any]]:

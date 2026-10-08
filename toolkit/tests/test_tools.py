@@ -317,7 +317,7 @@ async def test_export_session_includes_note_and_gap() -> None:
     assert result.data["notes"][0]["marker"] == "hypothese-1"
     assert result.data["gaps"]
     assert result.data["redacted"] is True
-    assert "adressen" in result.data["sharing"]
+    assert "adressen" in result.data["sharing"].lower()
 
 
 def _dotted(*parts: int) -> str:
@@ -754,10 +754,10 @@ async def test_export_redacts_ipv6_macs_hosts_and_short_names() -> None:
         if event.get("type") == "state_changed"
     ]
     assert states[0]["state"] == "on"
-    assert states[0]["name"] == "[naam]"
-    assert states[0]["room"] == "[naam]"
+    assert states[0]["name"] == "wx"
+    assert states[0]["room"] == "kx"
     rendered_note = hidden.data["notes"][0]["text"]
-    assert rendered_note.startswith("de [naam] in [naam] zag [adres]")
+    assert rendered_note.startswith("de wx in kx zag [adres]")
     assert "[mac]" in rendered_note
     assert "gwboxlamp" in rendered_note
     raw = await export_session(session, redact=False)
