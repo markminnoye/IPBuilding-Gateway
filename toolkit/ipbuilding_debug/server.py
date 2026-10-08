@@ -21,6 +21,7 @@ from ipbuilding_debug.tools import (
     gateway_health,
     list_devices,
     probe_generation,
+    read_logs,
     recent_events,
     send_raw,
 )
@@ -45,11 +46,15 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
 
     @asynccontextmanager
     async def lifespan(_server: MCPServer) -> Any:
-        await gateway.ensure_started()
+        # Tools are already registered. Do not wait on mDNS or the gateway here:
+        # a discovery or connection error must not hide the tools.
         try:
             yield gateway
         finally:
-            await gateway.stop()
+            try:
+                await gateway.stop()
+            except Exception:
+                log.exception("gateway stop failed")
 
     mcp = MCPServer(
         "ipbuilding-gateway-tools",
@@ -92,6 +97,29 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         Use this for questions about button presses and state changes. It does not need udp_frame and it does not read the add-on log.
         """
         return (await recent_events(gateway, limit=limit)).render()
+
+    @mcp.tool(name="read_logs")
+    async def read_logs_tool(
+        seconds: float = 15,
+        since: str = "",
+        level: str = "info",
+        limit: int = 50,
+        redact: bool = True,
+    ) -> str:
+        """Read gateway log lines from the live log stream.
+
+        Filters by time (since as an ISO timestamp, or the last seconds), minimum level, and limit.
+        Names and addresses are removed unless redact is false. Needs capability log_stream. Without it, the tester should open the add-on Log tab.
+        """
+        result = await read_logs(
+            gateway,
+            seconds=seconds,
+            since=since,
+            level=level,
+            limit=limit,
+            redact=redact,
+        )
+        return result.render()
 
     @mcp.tool(name="discover")
     async def discover_tool(confirmed: bool = False) -> str:

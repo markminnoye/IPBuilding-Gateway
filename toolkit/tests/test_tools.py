@@ -26,8 +26,10 @@ from ipbuilding_debug.tools import (
     gateway_health,
     list_devices,
     probe_generation,
+    read_logs,
     recent_events,
     send_raw,
+    unavailable_tools,
 )
 from fake_gateway import FakeGateway
 
@@ -338,7 +340,9 @@ async def test_old_gateway_is_connected_with_missing_capabilities() -> None:
     assert result.data["missing_capabilities"] == ["log_stream", "udp_frame", "raw_send"]
     assert "te oud voor live debugging" in result.message
     assert "develop-kanaal" in result.message
-    assert result.message == MSG_GATEWAY_TOO_OLD
+    assert "te oud voor live debugging" in result.message
+    assert "send_raw" in result.message
+    assert "raw_send" in result.message
     assert result.data["address_source"] == "manual"
     assert result.data["port"] == gateway.port
     assert result.data["health"]["status"] == "ok"
@@ -534,3 +538,168 @@ async def test_export_redacts_by_default_and_can_show_raw_locally() -> None:
     assert host in raw_blob
     assert "lamp-a" in raw_blob
     assert "Deel deze tekst niet" in raw.message
+
+
+def test_unavailable_tools_name_the_missing_capability_or_switch() -> None:
+    empty = {item["tool"]: item for item in unavailable_tools([], None)}
+    assert empty["read_logs"]["missing"] == "log_stream"
+    assert empty["capture_frames"]["missing"] == "udp_frame"
+    assert empty["send_raw"]["missing"] == "raw_send"
+    assert "capability raw_send ontbreekt" in empty["send_raw"]["reason"]
+
+    partial = unavailable_tools(["log_stream"], True)
+    assert [item["tool"] for item in partial] == ["capture_frames", "send_raw"]
+
+    switched = {
+        item["tool"]: item
+        for item in unavailable_tools(["log_stream", "udp_frame", "raw_send"], False)
+    }
+    assert switched["send_raw"]["missing"] == "remote_debugging"
+    assert switched["read_logs"]["missing"] == "remote_debugging"
+    assert "schakelaar" in switched["send_raw"]["reason"]
+
+
+@pytest.mark.asyncio
+async def test_connection_status_explains_why_send_raw_cannot_run() -> None:
+    gateway = FakeGateway(remote_debugging=True, capabilities=["log_stream"])
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await connection_status(session)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    blocked = {item["tool"]: item for item in result.data["unavailable_tools"]}
+    assert "read_logs" not in blocked
+    assert blocked["send_raw"]["missing"] == "raw_send"
+    assert blocked["capture_frames"]["missing"] == "udp_frame"
+    assert "send_raw" in result.message
+    assert "raw_send" in result.message
+
+
+@pytest.mark.asyncio
+async def test_read_logs_without_log_stream_points_at_the_addon_log_tab() -> None:
+    gateway = FakeGateway(remote_debugging=True, capabilities=[])
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await read_logs(session, seconds=0.2, limit=1)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert result.data["kind"] == "not_available"
+    assert result.data["lines"] == []
+    assert NOT_AVAILABLE_PHRASE in result.message
+    assert "tabblad Log" in result.message
+    assert gateway.received == []
+
+
+@pytest.mark.asyncio
+async def test_read_logs_switch_off_asks_to_enable_the_switch() -> None:
+    gateway = FakeGateway(remote_debugging=False, capabilities=["log_stream"])
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await read_logs(session, seconds=0.2, limit=1)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert result.message == MSG_REMOTE_DEBUGGING_OFF
+    assert result.data["kind"] == "remote_debugging_off"
+
+
+@pytest.mark.asyncio
+async def test_read_logs_filters_and_redacts() -> None:
+    from datetime import datetime, timezone
+
+    host = _dotted(192, 0, 2, 10)
+    fresh = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    gateway = FakeGateway(remote_debugging=True, capabilities=["log_stream"])
+    gateway.devices = [{"id": "channel-a", "device_type": "relay", "name": "lamp-a"}]
+    gateway.log_lines = [
+        {
+            "type": "log",
+            "ts": "2020-01-01T00:00:00Z",
+            "level": "error",
+            "logger": "gw",
+            "message": "oud",
+        },
+        {
+            "type": "log",
+            "ts": fresh,
+            "level": "debug",
+            "logger": "gw",
+            "message": "stil",
+        },
+        {
+            "type": "log",
+            "ts": fresh,
+            "level": "error",
+            "logger": "gw",
+            "message": f"lamp-a zag {host}",
+        },
+    ]
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        hidden = await read_logs(
+            session, seconds=2, since="2026-01-01T00:00:00Z", level="error", limit=5
+        )
+        shown = await read_logs(
+            session,
+            seconds=2,
+            since="2026-01-01T00:00:00Z",
+            level="error",
+            limit=5,
+            redact=False,
+        )
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert any(item.get("type") == "subscribe_logs" for item in gateway.received)
+    texts = [line["message"] for line in hidden.data["lines"]]
+    assert texts
+    assert set(texts) == {"[naam] zag [adres]"}
+    assert host not in hidden.render()
+    assert "lamp-a" not in hidden.render()
+    assert hidden.data["redacted"] is True
+    raw_texts = [line["message"] for line in shown.data["lines"]]
+    assert raw_texts
+    assert set(raw_texts) == {f"lamp-a zag {host}"}
+    assert "Deel deze tekst niet" in shown.message
+    assert "oud" not in raw_texts
+    assert "stil" not in raw_texts
+
+
+@pytest.mark.asyncio
+async def test_debug_log_level_reports_when_it_reverts() -> None:
+    gateway = FakeGateway(
+        remote_debugging=True,
+        capabilities=["log_stream", "udp_frame", "raw_send"],
+    )
+    gateway.log_level_reply = {
+        "type": "log_level",
+        "ok": True,
+        "level": "debug",
+        "ttl": 900,
+        "effective_level": "debug",
+    }
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        result = await connection_status(session, log_level="debug")
+        again = await connection_status(session)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert "900" in result.message
+    assert "15 minuten" in result.message
+    assert "valt daarna terug" in result.message
+    level = result.data["log_level"]
+    assert level["reported"] is True
+    assert level["effective_level"] == "debug"
+    assert level["ttl"] == 900
+    assert str(level["reverts_at"]).endswith("Z")
+    assert 800 <= level["reverts_in_seconds"] <= 900
+    assert again.data["log_level"]["effective_level"] == "debug"
+    assert again.data["log_level"]["reverts_at"] == level["reverts_at"]

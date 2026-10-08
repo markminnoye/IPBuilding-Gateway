@@ -21,10 +21,11 @@ The gateway address is a user setting (`gateway_address` in the bundle, the same
 
 | Tool | This version | Waits on |
 | --- | --- | --- |
-| `connection_status` | Works against `/api/v1/status` and the local buffer. Reports `connected`, `missing_capabilities`, the host, and whether that host was the bundle default or typed in | — |
+| `connection_status` | Works against `/api/v1/status` and the local buffer. Reports `connected`, `missing_capabilities`, `unavailable_tools` (which capability or switch blocks `read_logs`, `capture_frames`, and `send_raw`), the host, and how it was found (`mdns`, `mdns_hostname`, `config_default`, or `manual`). A loopback address from mDNS is skipped; the mDNS hostname is tried next, then the bundle address. Shows the current log level and when it falls back, once the gateway has reported a `ttl` | — |
 | `gateway_health` | Status, subsystems, issues, uptime, buffer from `/api/v1/status` | — |
 | `list_devices` | Module, channel, type, name, state from `/modules` and `/devices`. Relay and dimmer channels count from 0. Shows `last_seen` when the gateway sends it | — |
 | `recent_events` | Buffered `state_changed` and `button_event` (press, single_press, release). No `udp_frame` required | — |
+| `read_logs` | Subscribes to the live log stream. Filters on `since` or the last `seconds`, minimum level, and `limit`. Redacts addresses and names unless `redact=false`. Without `log_stream`, points at the add-on Log tab | Gateway `log_stream` |
 | `discover` | `POST /api/v1/discover` only after `confirmed=true`, then the inventory diff | — |
 | `device_command` | `POST /api/v1/devices/{id}/command` only after `confirmed=true`. Warns that `ok: true` does not mean the module answered | — |
 | `probe_generation` | Works against `/status`, `/modules`, `/devices` | — |
@@ -41,7 +42,7 @@ If a name is missing from `/status.capabilities`, the tool returns a not-availab
 
 The client already speaks this. Adjust the client in the same change if the gateway picks different names.
 
-- WebSocket client → gateway, only when `log_stream` is listed: `{"type":"subscribe_logs","min_level":"INFO"}` and `{"type":"set_log_level","level":"DEBUG","ttl":900}`. More than 10 level changes in 60 seconds come back as `{"type":"error","error":"log_level_rate_limited"}`. The tool then tells the tester to wait a minute.
+- WebSocket client → gateway, only when `log_stream` is listed: `{"type":"subscribe_logs","min_level":"info"}` and `{"type":"set_log_level","level":"DEBUG","ttl":900}`. The gateway accepts `debug`, `info`, `warning`, or `error`. A successful reply is `{"type":"log_level","ok":true,"level":"debug","ttl":900,"effective_level":"debug"}`. It has no absolute expiry; the toolkit computes `reverts_at` from `ttl` and says when the level falls back. Live lines are `{"type":"log","ts":"...","level":"info","logger":"...","message":"..."}`. More than 10 level changes in 60 seconds come back as `{"type":"error","error":"log_level_rate_limited"}`. The tool then tells the tester to wait a minute.
 - WebSocket client → gateway, only when `udp_frame` is listed and a capture is running: `{"type":"subscribe_udp_frames"}`.
 - Gateway → client frames: `{"type":"udp_frame","direction":"tx","hex":"...","src":"...","dst":"...","port":1001}`.
 - Raw send: `POST /api/v1/debug/raw-send` with `target`, `port`, `payload_hex`, `window_ms`. Refusal body: `{"error":"remote_debugging_disabled"}`.

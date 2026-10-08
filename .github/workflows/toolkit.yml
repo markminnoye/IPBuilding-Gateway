@@ -21,7 +21,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install toolkit dependencies
-        run: python -m pip install "mcp>=2,<3" "aiohttp>=3.9" "pydantic>=2" pytest pytest-asyncio
+        run: python -m pip install "mcp>=2,<3" "aiohttp>=3.9" "pydantic>=2" "zeroconf>=0.131" pytest pytest-asyncio
 
       - name: Test
         run: PYTHONPATH=toolkit:. python -m pytest toolkit/tests -q

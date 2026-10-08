@@ -201,6 +201,10 @@ def _write_manifest(dest: Path, version: str) -> None:
                 "description": "Statuswijzigingen en knoppen uit de buffer.",
             },
             {
+                "name": "read_logs",
+                "description": "Logregels van de gateway, als deze versie dat kan.",
+            },
+            {
                 "name": "discover",
                 "description": "Scan starten nadat de tester het bevestigd heeft, daarna het verschil.",
             },

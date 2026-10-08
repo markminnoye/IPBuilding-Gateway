@@ -12,7 +12,7 @@ Je krijgt één bestand: `ipbuilding-gateway-tools.mcpb`.
 
 ## Nieuwere testversie
 
-Elke testversie heeft een eigen nummer: `0.1.0-rc.1`, daarna `0.1.0-rc.2`, `0.1.0-rc.3`, enzovoort. Dat nummer staat in de naam van het bestand. Staat IPBuilding Gateway Tools er al, dan toont Claude Desktop **Update** in plaats van **Install**. Zo zie je welke build je hebt.
+Elke testversie heeft een eigen nummer: `0.1.0-rc.1`, daarna `0.1.0-rc.2`, `0.1.0-rc.3`, `0.1.0-rc.4`, enzovoort. Dat nummer staat in de naam van het bestand. Staat IPBuilding Gateway Tools er al, dan toont Claude Desktop **Update** in plaats van **Install**. Zo zie je welke build je hebt.
 
 ## Schakelaar in Home Assistant
 
@@ -39,6 +39,9 @@ De assistent vraagt eerst wat je ziet, in welke ruimte, en of het altijd gebeurt
 **"De gateway is niet bereikbaar."**
 De add-on draait niet, of het adres in de bundel klopt niet. Kijk of IPBuilding Gateway in Home Assistant aan staat, en of je `homeassistant.local` (of het adres dat jij gebruikt) goed hebt ingevuld.
 
+**Het gevonden adres werkt alleen op de computer van de gateway zelf.**
+De assistent heeft de gateway gezien, maar dat adres is niet bruikbaar vanaf jouw computer. Vul bij de instellingen van de bundel een hostnaam in, bijvoorbeeld `homeassistant.local`, zonder `http://` en zonder poort, en druk op **Save**.
+
 **"De add-on draait, maar 'Remote debugging and control' staat uit."**
 Zet de schakelaar aan op de plek hierboven. Wacht tot de add-on opnieuw is opgestart en stel je vraag opnieuw.
 
@@ -58,7 +61,7 @@ De add-on draait, maar deze versie kan nog niet live meekijken. Installeer de te
 
 Hij kan opvragen welk kanaal bij welke lamp hoort. Kanalen van een relais of dimmer tellen vanaf 0. Hij kan kijken of de gateway gezond is, een scan naar nieuwe modules starten (hij vraagt eerst), en één lamp schakelen of dimmen (hij vraagt eerst). Een antwoord dat het commando is aangekomen betekent niet dat de module heeft geantwoord. Kijk of de lamp echt veranderde.
 
-Een knopdruk of een lamp die van status verandert kan hij teruglezen uit wat de gateway al heeft doorgegeven. De log van de add-on kan deze versie nog niet meesturen. Dan vraagt de assistent je het tabblad **Log** van IPBuilding Gateway te openen en de relevante regels te plakken.
+Een knopdruk of een lamp die van status verandert kan hij teruglezen uit wat de gateway al heeft doorgegeven. Kan de gateway logs meesturen, dan leest de assistent die. Namen en adressen haalt hij daar standaard uit. Kan deze versie dat niet, dan vraagt hij je het tabblad **Log** van IPBuilding Gateway te openen en de relevante regels te plakken. Zet hij het logniveau tijdelijk hoger, dan zegt hij tot wanneer dat geldt. Daarna valt het vanzelf terug.
 
 Een verslag haalt adressen, apparaatnamen en ruimtenamen standaard weg. Alleen als je de ruwe tekst lokaal wil zien, kan de assistent die tonen. Deel die ruwe tekst niet.
 

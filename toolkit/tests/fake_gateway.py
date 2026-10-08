@@ -46,6 +46,7 @@ class FakeGateway:
         ]
         self.frame_on_subscribe: dict[str, Any] | None = None
         self.log_level_reply: dict[str, Any] | None = None
+        self.log_lines: list[dict[str, Any]] = []
         self.omit_toolkit_fields = False
         self.discover_calls: list[dict[str, Any]] = []
         self.command_calls: list[dict[str, Any]] = []
@@ -191,6 +192,17 @@ class FakeGateway:
                     reply = None
                     if data.get("type") == "subscribe_udp_frames":
                         reply = self.frame_on_subscribe
+                    elif data.get("type") == "subscribe_logs":
+                        await ws.send_json(
+                            {
+                                "type": "logs_subscribed",
+                                "min_level": data.get("min_level") or "info",
+                                "buffered": len(self.log_lines),
+                            }
+                        )
+                        for line in self.log_lines:
+                            await ws.send_json(line)
+                        reply = None
                     elif data.get("type") == "set_log_level":
                         reply = self.log_level_reply
                     if reply is not None:

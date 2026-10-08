@@ -114,6 +114,7 @@ def test_staged_manifest_asks_for_the_gateway_address(tmp_path: Path) -> None:
         "gateway_health",
         "list_devices",
         "recent_events",
+        "read_logs",
         "discover",
         "device_command",
         "probe_generation",

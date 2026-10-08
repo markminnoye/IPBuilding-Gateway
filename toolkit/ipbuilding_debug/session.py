@@ -9,13 +9,20 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable
 from urllib.parse import urlsplit
 
 import aiohttp
 
 from ipbuilding_debug.buffer import MAX_WAIT_SECONDS, RingBuffer, clamp_timeout
+from ipbuilding_debug.discovery import (
+    MDNS_TIMEOUT_S,
+    Candidate,
+    MdnsSighting,
+    browse_ipbgw,
+    plan_attempts,
+)
 from ipbuilding_debug.errors import (
     KIND_NO_ADDRESS,
     MSG_NO_ADDRESS,
@@ -62,7 +69,8 @@ def resolve_gateway_address() -> tuple[str, str]:
     """Host plus how it was chosen: ``config_default`` or ``manual``.
 
     An empty setting, or a placeholder Claude Desktop did not substitute,
-    uses ``homeassistant.local``. This build does not search mDNS.
+    uses ``homeassistant.local``. mDNS may replace that host when a
+    non-loopback announcement is found.
     """
     raw = (
         os.environ.get("IPBUILDING_GATEWAY_ADDRESS")
@@ -92,6 +100,9 @@ class GatewaySession:
         sleeper: Sleeper | None = None,
         log_level: str = "INFO",
         address_source: str = "manual",
+        discover_mdns: bool = False,
+        mdns_browser: Callable[[], Awaitable[MdnsSighting | None]] | None = None,
+        mdns_timeout: float = MDNS_TIMEOUT_S,
     ) -> None:
         self.address = (address or "").strip()
         self.address_source = address_source or "manual"
@@ -116,7 +127,16 @@ class GatewaySession:
         self.modules: dict[str, dict[str, Any]] = {}
         self.notes: list[dict[str, str]] = []
         self.want_frames = False
+        self.want_logs = False
+        self.discover_mdns = discover_mdns
+        self._mdns_browser = mdns_browser
+        self.mdns_timeout = mdns_timeout
+        self.tried: list[dict[str, Any]] = []
+        self.mdns_loopback: list[str] = []
+        self.log_level_info: dict[str, Any] | None = None
         self.last_error = ""
+        self._resolved = False
+        self._resolve_lock = asyncio.Lock()
         self._http: aiohttp.ClientSession | None = None
         self._ws: aiohttp.ClientWebSocketResponse | None = None
         self._task: asyncio.Task[None] | None = None
@@ -129,7 +149,7 @@ class GatewaySession:
     @classmethod
     def from_env(cls) -> GatewaySession:
         address, source = resolve_gateway_address()
-        return cls(address, address_source=source)
+        return cls(address, address_source=source, discover_mdns=True)
 
     @property
     def base_http(self) -> str:
@@ -140,7 +160,15 @@ class GatewaySession:
         return f"ws://{self.host}:{self.port}/ws"
 
     async def ensure_started(self) -> None:
-        """Start the reconnect loop if it is not running. Does not wait."""
+        """Start the reconnect loop if it is not running. Does not wait or raise."""
+        try:
+            await self._ensure_started()
+        except Exception:
+            log.exception("gateway start failed")
+            self.last_error = "start"
+
+    async def _ensure_started(self) -> None:
+        await self.resolve()
         if self._task is not None and not self._task.done():
             return
         if self.address_error:
@@ -149,6 +177,77 @@ class GatewaySession:
         self._stopped = asyncio.Event()
         await self._client()
         self._task = asyncio.create_task(self._ws_loop(), name="ipbuilding-gateway-ws")
+
+    async def resolve(self) -> None:
+        """Pick a host. Loopback from mDNS is never used. Does not raise."""
+        if self._resolved:
+            return
+        async with self._resolve_lock:
+            if self._resolved:
+                return
+            try:
+                await self._resolve()
+            except Exception:
+                log.exception("address resolve failed")
+            self._resolved = True
+
+    async def _resolve(self) -> None:
+        if not self.discover_mdns and self._mdns_browser is None:
+            return
+        sighting: MdnsSighting | None = None
+        browser = self._mdns_browser or browse_ipbgw
+        try:
+            sighting = await asyncio.wait_for(browser(), self.mdns_timeout + 1.0)
+        except Exception:
+            log.info("mDNS browse failed", exc_info=True)
+            sighting = None
+        candidates, ignored = plan_attempts(
+            sighting,
+            self.host,
+            self.port,
+            self.address_source,
+        )
+        self.mdns_loopback = list(ignored)
+        self.tried = [
+            {
+                "host": address,
+                "port": (sighting.port if sighting and sighting.port else self.port),
+                "source": "mdns",
+                "result": "skipped_loopback",
+            }
+            for address in ignored
+        ]
+        for candidate in candidates:
+            ok = await self._probe(candidate)
+            self.tried.append(
+                {
+                    "host": candidate.host,
+                    "port": candidate.port,
+                    "source": candidate.source,
+                    "result": "chosen" if ok else "unreachable",
+                }
+            )
+            if not ok:
+                continue
+            self.host = candidate.host
+            self.port = candidate.port
+            self.address_source = candidate.source
+            self.address_error = ""
+            return
+
+    async def _probe(self, candidate: Candidate) -> bool:
+        host = candidate.host
+        if ":" in host and not host.startswith("["):
+            host = f"[{host}]"
+        url = f"http://{host}:{candidate.port}/api/v1/status"
+        try:
+            client = await self._client()
+            timeout = aiohttp.ClientTimeout(total=2)
+            async with client.get(url, timeout=timeout) as response:
+                await response.read()
+                return response.status < 500
+        except Exception:
+            return False
 
     async def stop(self) -> None:
         self._stopped.set()
@@ -320,6 +419,7 @@ class GatewaySession:
             return "sent"
         event = found.event
         if event.get("type") == "log_level":
+            self.remember_log_level(event)
             return "applied"
         code = event.get("error")
         if code == "log_level_rate_limited":
@@ -327,6 +427,81 @@ class GatewaySession:
         if code == "remote_debugging_disabled":
             return "disabled"
         return "rejected"
+
+    def remember_log_level(self, event: dict[str, Any]) -> None:
+        """Keep the gateway ``log_level`` reply. ``reverts_at`` is computed from ``ttl``."""
+        if event.get("type") != "log_level" or event.get("ok") is not True:
+            return
+        ttl = event.get("ttl")
+        if isinstance(ttl, bool) or not isinstance(ttl, int):
+            ttl = None
+        reverts_at = ""
+        if ttl is not None:
+            reverts_at = (
+                datetime.now(timezone.utc) + timedelta(seconds=ttl)
+            ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.log_level_info = {
+            "level": event.get("level"),
+            "effective_level": event.get("effective_level") or event.get("level"),
+            "ttl": ttl,
+            "reverts_at": reverts_at,
+        }
+
+    def log_level_status(self) -> dict[str, Any]:
+        """Current temporary level, if the gateway has reported one."""
+        info = self.log_level_info
+        if not info:
+            return {
+                "reported": False,
+                "effective_level": None,
+                "ttl": None,
+                "reverts_at": None,
+                "reverts_in_seconds": None,
+            }
+        remaining: int | None = None
+        until = info.get("reverts_at")
+        if isinstance(until, str) and until:
+            try:
+                moment = datetime.strptime(until, "%Y-%m-%dT%H:%M:%SZ").replace(
+                    tzinfo=timezone.utc
+                )
+                remaining = max(0, int((moment - datetime.now(timezone.utc)).total_seconds()))
+            except ValueError:
+                remaining = None
+        return {
+            "reported": True,
+            "level": info.get("level"),
+            "effective_level": info.get("effective_level"),
+            "ttl": info.get("ttl"),
+            "reverts_at": until or None,
+            "reverts_in_seconds": remaining,
+        }
+
+    async def ensure_log_subscription(self, min_level: str, timeout: float = 3) -> int | None:
+        """Send ``subscribe_logs`` and return the buffer cursor just before it."""
+        cursor = self.buffer.latest_seq
+        self.want_logs = True
+        level = (min_level or "info").strip().lower() or "info"
+        self.log_level = level.upper()
+        await self.ensure_started()
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + clamp_timeout(timeout)
+        while True:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                return None
+            if not await self._wait_until_socket(remaining):
+                return None
+            if await self._send({"type": "subscribe_logs", "min_level": level}):
+                return cursor
+            self._up.clear()
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                return None
+            try:
+                await asyncio.wait_for(self._up.wait(), timeout=remaining)
+            except asyncio.TimeoutError:
+                return None
 
     async def wait_until_connected(self, timeout: float) -> bool:
         timeout = clamp_timeout(timeout)
@@ -441,6 +616,8 @@ class GatewaySession:
         if not isinstance(payload, dict):
             await self.buffer.append({"type": "undecoded", "text": raw[:500]})
             return
+        if payload.get("type") == "log_level":
+            self.remember_log_level(payload)
         if payload.get("type") == "snapshot":
             await self._on_snapshot(payload)
             return
@@ -495,7 +672,9 @@ class GatewaySession:
         if not isinstance(caps, list):
             return
         if "log_stream" in caps:
-            await self._send({"type": "subscribe_logs", "min_level": self.log_level})
+            await self._send(
+                {"type": "subscribe_logs", "min_level": self.log_level.lower()}
+            )
         if "udp_frame" in caps and self.want_frames:
             await self._send({"type": "subscribe_udp_frames"})
 

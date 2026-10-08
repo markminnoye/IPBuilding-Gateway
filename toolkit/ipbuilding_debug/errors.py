@@ -73,6 +73,11 @@ MSG_LOG_LEVEL_RATE_LIMITED = (
 
 # Quoted by the assistant when /status has none of the live-debug capabilities.
 # Wording follows docs/develop-addon.md (Add-on store, Repositories, -dev. version).
+MSG_LOGS_USE_ADDON_TAB = (
+    "Open in Home Assistant het tabblad Log van de add-on IPBuilding Gateway "
+    "en plak de relevante regels hier."
+)
+
 MSG_GATEWAY_TOO_OLD = (
     "De gateway is bereikbaar, maar deze gateway is te oud voor live debugging; "
     "installeer de testversie via het develop-kanaal. "
@@ -94,6 +99,43 @@ PLANNED_CAPABILITIES = ("log_stream", "udp_frame", "raw_send")
 
 REMOTE_DEBUGGING_DISABLED = "remote_debugging_disabled"
 LOG_LEVEL_RATE_LIMITED = "log_level_rate_limited"
+
+
+def msg_mdns_loopback(*, loopback: list[str], tried: list[dict[str, Any]]) -> str:
+    """Failure text after mDNS announced only a loopback address."""
+    skipped = ", ".join(loopback) or "een loopback-adres"
+    attempted = [
+        str(item.get("host"))
+        for item in tried
+        if item.get("result") != "skipped_loopback" and item.get("host")
+    ]
+    attempted_text = ", ".join(attempted) or "geen ander adres"
+    return (
+        "mDNS vond de gateway, maar het aangekondigde adres is een loopback-adres "
+        f"({skipped}). Dat adres hoort bij deze computer en is overgeslagen. "
+        f"Daarna geprobeerd: {attempted_text}. "
+        "Geen van die adressen antwoordde. "
+        "Vul in Configure een hostnaam of adres in "
+        "(bijvoorbeeld homeassistant.local, zonder http:// en zonder poort)."
+    )
+
+
+def msg_log_level_applied(info: dict[str, Any]) -> str:
+    """Dutch sentence from a gateway ``log_level`` reply (``ttl`` is seconds)."""
+    level = info.get("effective_level") or info.get("level") or "onbekend"
+    ttl = info.get("ttl")
+    until = info.get("reverts_at")
+    if not isinstance(ttl, int):
+        return f"Logniveau is nu {level}. De gateway meldde geen geldigheidsduur."
+    if ttl >= 60 and ttl % 60 == 0:
+        span = f"{ttl // 60} minuten ({ttl} seconden)"
+    else:
+        span = f"{ttl} seconden"
+    when = f" tot {until}" if isinstance(until, str) and until else ""
+    return (
+        f"Logniveau is nu {level}. "
+        f"De gateway laat dit {span} gelden{when} en valt daarna terug."
+    )
 
 
 def msg_not_available(capability: str) -> str:

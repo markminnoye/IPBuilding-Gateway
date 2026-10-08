@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import quote
 
@@ -16,15 +17,18 @@ from ipbuilding_debug.errors import (
     KIND_OTHER,
     KIND_UNREACHABLE,
     MSG_GATEWAY_TOO_OLD,
+    MSG_LOGS_USE_ADDON_TAB,
     MSG_LOG_LEVEL_RATE_LIMITED,
     MSG_REMOTE_DEBUGGING_OFF,
     PLANNED_CAPABILITIES,
     ClassifiedError,
     gate_feature,
     msg_connected,
+    msg_log_level_applied,
+    msg_mdns_loopback,
     msg_not_available,
 )
-from ipbuilding_debug.redact import redact_payload
+from ipbuilding_debug.redact import collect_tokens, redact_payload, redact_text
 from ipbuilding_debug.session import GatewaySession
 
 RAW_SEND_PATH = "/api/v1/debug/raw-send"
@@ -66,8 +70,18 @@ BUFFER_EVENT_TYPES = (
 _ADDRESS_LABELS = {
     "config_default": "standaardadres uit de bundel (homeassistant.local)",
     "manual": "handmatig ingevuld",
-    "mdns": "gevonden via mDNS",
+    "mdns": "adres uit mDNS",
+    "mdns_hostname": "hostnaam uit mDNS",
 }
+
+# Tools that stay registered, and the capability they need before they can run.
+GATED_TOOLS = (
+    ("read_logs", "log_stream"),
+    ("capture_frames", "udp_frame"),
+    ("send_raw", "raw_send"),
+)
+
+_LOG_RANK = {"debug": 10, "info": 20, "warning": 30, "error": 40, "critical": 50}
 
 
 @dataclass
@@ -105,13 +119,23 @@ async def connection_status(
     status = session.status if error is None else None
     where = _endpoint(session)
     if error is not None and error.kind in (KIND_UNREACHABLE, KIND_NO_ADDRESS):
-        return _from_error(
-            error,
-            connected=False,
-            connection=session.state,
-            buffer=_buffer_summary(session),
-            missing_capabilities=list(PLANNED_CAPABILITIES),
-            **where,
+        message = error.message
+        if session.mdns_loopback:
+            message = msg_mdns_loopback(loopback=session.mdns_loopback, tried=session.tried)
+        blocked = unavailable_tools([], None)
+        return ToolResult(
+            message,
+            {
+                "ok": False,
+                "connected": False,
+                "kind": error.kind,
+                "connection": session.state,
+                "buffer": _buffer_summary(session),
+                "missing_capabilities": list(PLANNED_CAPABILITIES),
+                "unavailable_tools": blocked,
+                "log_level": session.log_level_status(),
+                **where,
+            },
         )
     if error is not None and status is None:
         return _from_error(
@@ -155,14 +179,17 @@ async def connection_status(
                 log_note = (
                     "Logniveau nog niet doorgegeven; de live-verbinding staat nog niet."
                 )
-            elif outcome == "applied":
-                log_note = (
-                    "Logniveau gevraagd. Het geldt tijdelijk en wordt niet opgeslagen."
-                )
+            elif outcome == "applied" and session.log_level_info:
+                log_note = msg_log_level_applied(session.log_level_info)
+                message = f"{message} {log_note}"
             else:
                 log_note = "Logniveau gevraagd."
         else:
             log_note = gated.message
+    blocked = unavailable_tools(caps, remote)
+    note = _unavailable_note(blocked)
+    if note and message not in (MSG_REMOTE_DEBUGGING_OFF, MSG_LOG_LEVEL_RATE_LIMITED):
+        message = f"{message} {note}"
     return ToolResult(
         message,
         {
@@ -178,6 +205,8 @@ async def connection_status(
             "health": _health_view(status if isinstance(status, dict) else None),
             "buffer": _buffer_summary(session),
             "log_level_note": log_note,
+            "log_level": session.log_level_status(),
+            "unavailable_tools": blocked,
             **where,
         },
     )
@@ -341,6 +370,78 @@ async def recent_events(
             "kind": "events",
             "events": events,
             "buffer": _buffer_summary(session),
+        },
+    )
+
+
+async def read_logs(
+    session: GatewaySession,
+    *,
+    seconds: float = 15,
+    since: str = "",
+    level: str = "info",
+    limit: int = 50,
+    redact: bool = True,
+) -> ToolResult:
+    """Live gateway logs. Needs capability ``log_stream``.
+
+    ``seconds`` is how long to wait and, when ``since`` is empty, the lookback.
+    ``since`` is an ISO timestamp. ``level`` is the minimum (debug, info, warning, error).
+    """
+    error = await session.refresh_status()
+    if error is not None:
+        return _from_error(error, capability="log_stream")
+    gated = gate_feature(session.status, "log_stream")
+    if gated is not None:
+        message = gated.message
+        if gated.kind == KIND_NOT_AVAILABLE:
+            message = f"{gated.message} {MSG_LOGS_USE_ADDON_TAB}"
+        return _from_error(gated, capability="log_stream") if gated.kind != KIND_NOT_AVAILABLE else ToolResult(
+            message,
+            {"ok": False, "kind": gated.kind, "capability": "log_stream", "lines": []},
+        )
+
+    minimum = (level or "info").strip().lower()
+    if minimum not in _LOG_RANK:
+        return ToolResult(
+            "Onbekend logniveau. Gebruik debug, info, warning of error.",
+            {"ok": False, "kind": KIND_OTHER, "lines": []},
+        )
+    seconds = clamp_timeout(seconds if seconds > 0 else 0.1)
+    limit = max(1, min(int(limit), 200))
+    cursor = await session.ensure_log_subscription(minimum, timeout=3)
+    if cursor is None:
+        return ToolResult(
+            "De gateway antwoordt, maar de live-verbinding staat nog niet. "
+            "Probeer het zo meteen opnieuw.",
+            {"ok": False, "kind": "connecting", "lines": []},
+        )
+    lines = await _collect_logs(
+        session,
+        cursor,
+        seconds=seconds,
+        since=since,
+        minimum=minimum,
+        limit=limit,
+    )
+    if redact:
+        lines = _redact_logs(session, lines)
+    if not lines:
+        message = "Geen logregels in dit venster."
+    else:
+        message = f"{len(lines)} logregel(s)."
+    if not redact:
+        message = f"{message} Ruwe tekst, alleen lokaal. Deel deze tekst niet."
+    return ToolResult(
+        message,
+        {
+            "ok": True,
+            "kind": "logs",
+            "redacted": redact,
+            "level": minimum,
+            "seconds": seconds,
+            "since": since,
+            "lines": lines,
         },
     )
 
@@ -726,6 +827,43 @@ async def export_session(
     )
 
 
+def unavailable_tools(
+    capabilities: list[str], remote: bool | None
+) -> list[dict[str, Any]]:
+    """Why a still-registered tool cannot run on this gateway."""
+    blocked: list[dict[str, Any]] = []
+    for tool, capability in GATED_TOOLS:
+        if capability not in capabilities:
+            blocked.append(
+                {
+                    "tool": tool,
+                    "available": False,
+                    "missing": capability,
+                    "reason": (
+                        f"{tool} is niet te gebruiken: capability {capability} ontbreekt "
+                        "in deze gateway-versie."
+                    ),
+                }
+            )
+        elif remote is False:
+            blocked.append(
+                {
+                    "tool": tool,
+                    "available": False,
+                    "missing": "remote_debugging",
+                    "reason": (
+                        f"{tool} is niet te gebruiken: de schakelaar "
+                        "Remote debugging and control staat uit."
+                    ),
+                }
+            )
+    return blocked
+
+
+def _unavailable_note(items: list[dict[str, Any]]) -> str:
+    return " ".join(str(item.get("reason") or "") for item in items if item.get("reason"))
+
+
 def _endpoint(session: GatewaySession) -> dict[str, Any]:
     return {
         "address": session.host,
@@ -734,6 +872,8 @@ def _endpoint(session: GatewaySession) -> dict[str, Any]:
         "address_source_label": _ADDRESS_LABELS.get(
             session.address_source, session.address_source
         ),
+        "tried": list(session.tried),
+        "mdns_loopback": list(session.mdns_loopback),
     }
 
 
@@ -994,6 +1134,101 @@ def _with_local_decode(event: dict[str, Any]) -> dict[str, Any]:
     if isinstance(hex_payload, str):
         item["local_decode"] = _safe_decode(hex_payload)
     return item
+
+
+def _log_rank(level: str) -> int:
+    return _LOG_RANK.get((level or "").lower(), _LOG_RANK["info"])
+
+
+def _parse_log_ts(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    text = value.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _log_in_window(event: dict[str, Any], start: datetime | None) -> bool:
+    if start is None:
+        return True
+    moment = _parse_log_ts(event.get("ts"))
+    if moment is None:
+        return True
+    return moment >= start
+
+
+def _inventory_tokens(session: GatewaySession) -> set[str]:
+    blob: dict[str, Any] = {
+        "devices": list(session.devices.values()),
+        "modules": list(session.modules.values()),
+    }
+    return collect_tokens(blob)
+
+
+def _redact_logs(
+    session: GatewaySession, lines: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    tokens = _inventory_tokens(session) | collect_tokens(lines)
+    cleaned: list[dict[str, Any]] = []
+    for line in lines:
+        item = dict(line)
+        message = item.get("message")
+        if isinstance(message, str):
+            item["message"] = redact_text(message, tokens)
+        cleaned.append(item)
+    return cleaned
+
+
+async def _collect_logs(
+    session: GatewaySession,
+    since_seq: int,
+    *,
+    seconds: float,
+    since: str,
+    minimum: str,
+    limit: int,
+) -> list[dict[str, Any]]:
+    start = _parse_log_ts(since) if since else None
+    if start is None:
+        start = datetime.now(timezone.utc) - timedelta(seconds=seconds)
+    floor = _log_rank(minimum)
+
+    def matching(event: dict[str, Any]) -> bool:
+        if event.get("type") != "log":
+            return False
+        if _log_rank(str(event.get("level") or "")) < floor:
+            return False
+        return _log_in_window(event, start)
+
+    def gathered() -> list[dict[str, Any]]:
+        found: list[dict[str, Any]] = []
+        for entry in session.buffer.since(since_seq, types={"log"}):
+            if not matching(entry.event):
+                continue
+            found.append(dict(entry.event))
+            if len(found) >= limit:
+                break
+        return found
+
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + seconds
+    watched = since_seq
+    while True:
+        lines = gathered()
+        if len(lines) >= limit:
+            return lines
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            return lines
+        nxt = await session.buffer.wait_until(matching, remaining, watched)
+        if nxt is None:
+            return gathered()
+        watched = nxt.seq
 
 
 async def _collect_frames(
