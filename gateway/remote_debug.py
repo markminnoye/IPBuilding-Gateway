@@ -9,12 +9,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from gateway.remote_debug_copy import OPTION_NAME
+
 # Stable machine-readable code. Clients switch on this, not on the sentence.
 REMOTE_DEBUGGING_DISABLED = "remote_debugging_disabled"
 
 # Labels as shown in the Home Assistant add-on configuration UI.
-OPTION_LABEL_EN = "Remote debugging and control"
-OPTION_LABEL_NL = "Debuggen en bedienen op afstand"
+OPTION_LABEL_EN = OPTION_NAME["en"]
+OPTION_LABEL_NL = OPTION_NAME["nl"]
 SETTINGS_PATH = "Settings > Add-ons > IPBuilding Gateway > Configuration"
 
 REMOTE_DEBUGGING_DISABLED_MESSAGE = (
