@@ -77,7 +77,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `input_mode_label` | string | Operator label: `Slave` / `Master`. |
 | `multi_press` | boolean | Global double/triple-press classification for all wall buttons (add-on option). When `false`, short release emits `single_press` immediately. |
 | `multi_press_window_ms` | integer | Inter-click window in ms when `multi_press` is enabled (default 350). |
-| `remote_debugging` | boolean | Add-on option **Remote debugging and control**. `false` until a user turns it on in the add-on configuration. It stays on until they turn it off. While it is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Check this field before calling a remote-debugging route. |
+| `remote_debugging` | boolean | Add-on option **Remote control (for debugging)**. `false` until a user turns it on in the add-on configuration. It stays on until they turn it off. While it is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Check this field before calling a remote-debugging route. |
 | `capabilities` | list of strings | Features this gateway build actually implements. `log_stream` is live logs over WebSocket. `udp_frame` is live field-bus frames over WebSocket (`subscribe_udp_frames`). A later build may add `raw_send`. The list stays present when `remote_debugging` is `false`, so a client can tell “this build has the feature” from “the option is off”. Unknown extra fields are safe for older clients. |
 
 ---
@@ -430,7 +430,7 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) re
 
 **Description:** Raise or lower the gateway log level for a limited time. The change applies to the whole process (including the Home Assistant add-on log) and is **not** written to add-on options or `GATEWAY_LOG_LEVEL`. When several requests overlap, the most verbose level wins. Each request expires on its own `ttl`. The level is never set quieter than the configured baseline.
 
-There is no login on port 8080. While **Remote debugging and control** is on, anyone who can reach this port can change the level and read logs. Token- and password-like values in log lines are redacted. Turn the option off when finished.
+There is no login on port 8080. While **Remote control (for debugging)** is on, anyone who can reach this port can change the level and read logs. Token- and password-like values in log lines are redacted. Turn the option off when finished.
 
 **Request body:**
 ```json
@@ -456,7 +456,7 @@ There is no login on port 8080. While **Remote debugging and control** is on, an
 ```json
 {
   "error": "remote_debugging_disabled",
-  "message": "Remote debugging is off. Turn on \"Remote debugging and control\" (Nederlands: \"Debuggen en bedienen op afstand\") under Settings > Add-ons > IPBuilding Gateway > Configuration."
+  "message": "Remote debugging is off. Turn on \"Remote control (for debugging)\" (Nederlands: \"Bediening op afstand (voor debuggen)\") under Settings > Add-ons > IPBuilding Gateway > Configuration."
 }
 ```
 

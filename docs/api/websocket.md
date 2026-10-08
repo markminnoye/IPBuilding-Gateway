@@ -131,7 +131,7 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
 }
 ```
 
-`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream` and `udp_frame`). `remote_debugging` is the add-on option **Remote debugging and control**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing.
+`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream` and `udp_frame`). `remote_debugging` is the add-on option **Remote control (for debugging)**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing.
 
 ### `gateway_status` -- aggregate health update
 
@@ -369,11 +369,11 @@ Emitted after a forced sweep (`POST /api/v1/discover` or WS `discover` message) 
 {
   "type": "error",
   "error": "remote_debugging_disabled",
-  "message": "Remote debugging is off. Turn on \"Remote debugging and control\" (Nederlands: \"Debuggen en bedienen op afstand\") under Settings > Add-ons > IPBuilding Gateway > Configuration."
+  "message": "Remote debugging is off. Turn on \"Remote control (for debugging)\" (Nederlands: \"Bediening op afstand (voor debuggen)\") under Settings > Add-ons > IPBuilding Gateway > Configuration."
 }
 ```
 
-`error` is the stable code. `message` is English and names the add-on option in English (**Remote debugging and control**) and Dutch (**Debuggen en bedienen op afstand**), plus where to turn it on. REST `POST /api/v1/debug/log-level` uses the same code and sentence with HTTP 403. A later raw-send message will use this same refusal. `GET /api/v1/status` and this snapshot stay available either way.
+`error` is the stable code. `message` is English and names the add-on option in English (**Remote control (for debugging)**) and Dutch (**Bediening op afstand (voor debuggen)**), plus where to turn it on. REST `POST /api/v1/debug/log-level` uses the same code and sentence with HTTP 403. A later raw-send message will use this same refusal. `GET /api/v1/status` and this snapshot stay available either way.
 
 Other unknown message types are still ignored. The Home Assistant companion does not send these messages, so it does not receive `log` events.
 

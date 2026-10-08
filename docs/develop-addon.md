@@ -44,13 +44,13 @@ De gewone release herken je aan een versienummer zonder `-dev`.
 Je hoeft de develop-repository niet te verwijderen. Laat de ontwikkelversie
 gewoon uit staan.
 
-## Debuggen en bedienen op afstand
+## Bediening op afstand (voor debuggen)
 
 Die schakelaar staat bij de add-on die je gebruikt (de gewone of de ontwikkelversie):
 
 **Instellingen → Add-ons → IPBuilding Gateway → Configuratie**
 
-Open de groep **Debug**. De schakelaar heet **Debuggen en bedienen op afstand**. In het Engels heet dezelfde schakelaar **Remote debugging and control**.
+Open de groep **Debug**. De schakelaar heet **Bediening op afstand (voor debuggen)**. In het Engels heet dezelfde schakelaar **Remote control (for debugging)**.
 
 Zet hem alleen aan als je een probleem onderzoekt. Hij laat een hulpprogramma op je netwerk de gateway-logs live meelezen, het logniveau een tijdje hoger zetten, en de veldbusberichten zien die deze gateway zelf verstuurt en ontvangt. Zonder deze schakelaar weigert de gateway dat.
 

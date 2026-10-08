@@ -5,11 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- The add-on option is named **Remote control (for debugging)** (Nederlands: **Bediening op afstand (voor debuggen)**). The option key is unchanged. The Home Assistant notification follows the Home Assistant language.
+
 ### Fixed
 - In add-on mode the gateway announces its LAN address over mDNS, so a computer on the network can connect. It does not announce the loopback address. Discovery for Home Assistant on the same machine is unchanged.
 
 ### Added
-- **Remote debugging and control** in the add-on configuration, off by default. It stays on until you turn it off. While it is on, Home Assistant keeps a notification that anyone on your network can read field-bus traffic and send raw packets through this gateway.
+- **Remote control (for debugging)** in the add-on configuration, off by default. It stays on until you turn it off. While it is on, Home Assistant keeps a notification that anyone on your network can read field-bus traffic and send raw packets through this gateway.
 - **Live logs** while that option is on. A subscribed client receives recent lines and then new ones. The log level can be raised for a limited time (debug shows field-bus traffic) and returns on its own. It is not saved in the add-on configuration. With the option off, those calls are refused.
 - **Live field-bus frames** while that option is on. A subscribed client sees each payload this gateway sends or receives. With the option off, that subscription is refused.
 
