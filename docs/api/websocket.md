@@ -471,7 +471,7 @@ Reply: `{"type": "udp_frames_subscribed"}`. After that, each payload this gatewa
 }
 ```
 
-`direction` is `tx` or `rx`. `src` and `dst` are the host addresses on that hop. `hex` is the payload. `decoded` and `dialect_id` are present when a known payload decoder matches, otherwise `null`. The gateway only sees its own traffic, not frames between other devices.
+`direction` is `tx` or `rx`. `src` and `dst` are the host addresses on that hop. `hex` is the payload. `decoded` and `dialect_id` are present when a known payload decoder matches, otherwise `null`. Relay commands such as `S0500` use `relay.kessel-lo.command`. Status `0100`/`0000` uses `relay.kessel-lo.status_reply`. Status `0115`/`0015` uses `relay.torhout.status_reply`. The gateway only sees its own traffic, not frames between other devices.
 
 A client that falls behind gets:
 

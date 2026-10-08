@@ -1,7 +1,7 @@
 """Tests for gateway.payloads.relay."""
 
 from gateway.models import RelayAction, RelayCommand
-from gateway.payloads.dialects import TORHOUT
+from gateway.payloads.dialects import KESSEL_LO, TORHOUT
 from gateway.payloads.relay import (
     decode_relay_payload,
     decode_relay_status,
@@ -9,6 +9,8 @@ from gateway.payloads.relay import (
     relay_state_from_code,
     strip_j_envelope,
 )
+from gateway.udp_bus import UDPPacket
+from gateway.udp_frames import describe_payload, frame_event
 
 
 def test_decode_relay_status_reply_on():
@@ -39,6 +41,7 @@ def test_encode_relay_on_wire():
     parsed = decode_relay_payload(wire)
     assert parsed["action"] == "on"
     assert parsed["channel"] == 0
+    assert parsed["dialect_id"] == KESSEL_LO.message_type("relay", "command")
 
 
 def test_pulse_reply_candidate():
@@ -122,6 +125,7 @@ def test_decode_relay_status_poll_ch6_on():
     assert parsed["channel"] == 6
     assert parsed["state"] == "on"
     assert parsed["state_code"] == "0115"
+    assert parsed["dialect_id"] == TORHOUT.message_type("relay", "status_reply")
 
 
 def test_decode_relay_status_poll_ch5_off():
@@ -132,6 +136,7 @@ def test_decode_relay_status_poll_ch5_off():
     assert parsed["channel"] == 5
     assert parsed["state"] == "off"
     assert parsed["state_code"] == "0015"
+    assert parsed["dialect_id"] == TORHOUT.message_type("relay", "status_reply")
 
 
 def test_decode_relay_status_true_unknown():
@@ -139,3 +144,44 @@ def test_decode_relay_status_true_unknown():
     assert result is not None
     assert result.state == "unknown"
     assert result.state_code == "0200"
+    parsed = decode_relay_payload(b"I00000200")
+    assert parsed is not None
+    assert "dialect_id" not in parsed
+
+
+def test_relay_frames_carry_city_dialect_on_udp_frame():
+    """Fake frames: commands and known status replies name a city."""
+    command, command_id = describe_payload(b"S0500")
+    assert command is not None
+    assert command_id == KESSEL_LO.message_type("relay", "command")
+    assert command["dialect_id"] == command_id
+
+    off, off_id = describe_payload(b"C0300")
+    assert off_id == KESSEL_LO.message_type("relay", "command")
+    assert off["action"] == "off"
+
+    reference, reference_id = describe_payload(b"I000030100")
+    assert reference["state_code"] == "0100"
+    assert reference_id == KESSEL_LO.message_type("relay", "status_reply")
+
+    short_off, short_id = describe_payload(b"I00100000")
+    assert short_off["channel"] == 10
+    assert short_id == KESSEL_LO.message_type("relay", "status_reply")
+
+    older, older_id = describe_payload(b"I00000015")
+    assert older["state_code"] == "0015"
+    assert older_id == TORHOUT.message_type("relay", "status_reply")
+
+    pkt = UDPPacket(
+        data=b"S0500",
+        src_ip="192.0.2.1",
+        src_port=1001,
+        dst_ip="192.0.2.30",
+        dst_port=1001,
+        monotonic_ts=0.0,
+    )
+    event = frame_event("tx", pkt)
+    assert event["type"] == "udp_frame"
+    assert event["dialect_id"] == KESSEL_LO.message_type("relay", "command")
+    assert event["decoded"]["dialect_id"] == event["dialect_id"]
+    assert event["hex"] == b"S0500".hex()
