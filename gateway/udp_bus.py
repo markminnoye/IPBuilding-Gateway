@@ -75,6 +75,7 @@ class UDPBus:
         self._protocol: _UDPProtocol | None = None
         self._simulated_replies: dict[bytes, bytes] = {}
         self._listeners: list[ReplyCallback] = []
+        self._frame_listeners: list[Callable[[str, UDPPacket], None]] = []
         self._recent_packets: deque[UDPPacket] = deque(maxlen=_RECENT_PACKETS_MAX)
         self._poll_task: asyncio.Task[None] | None = None
         self._next_poll_ts: dict[str, float] = {}
@@ -87,6 +88,57 @@ class UDPBus:
     def remove_listener(self, cb: ReplyCallback) -> None:
         self._listeners.remove(cb)
 
+    def add_frame_listener(self, cb: Callable[[str, UDPPacket], None]) -> None:
+        """Register a callback for every TX and RX field-bus frame.
+
+        The callback is ``(direction, packet)`` with direction ``tx`` or ``rx``.
+        It must not block. Reply correlation uses :meth:`add_listener` and
+        stays receive-only.
+        """
+        self._frame_listeners.append(cb)
+
+    def remove_frame_listener(self, cb: Callable[[str, UDPPacket], None]) -> None:
+        self._frame_listeners.remove(cb)
+
+    def _local_endpoint(self) -> tuple[str, int]:
+        transport = self._transport
+        if transport is not None:
+            sock = transport.get_extra_info("sockname")
+            if isinstance(sock, tuple) and len(sock) >= 2:
+                return str(sock[0]), int(sock[1])
+        return self.config.bind_ip, 0
+
+    def _emit_frame(self, direction: str, pkt: UDPPacket) -> None:
+        if direction == "rx" and not pkt.dst_ip:
+            dst_ip, dst_port = self._local_endpoint()
+            pkt = UDPPacket(
+                data=pkt.data,
+                src_ip=pkt.src_ip,
+                src_port=pkt.src_port,
+                dst_ip=dst_ip,
+                dst_port=dst_port,
+                monotonic_ts=pkt.monotonic_ts,
+            )
+        for cb in self._frame_listeners:
+            try:
+                cb(direction, pkt)
+            except Exception:
+                log.exception("Frame listener failed")
+
+    def _emit_tx(self, module_ip: str, payload: bytes, dst_port: int) -> None:
+        src_ip, src_port = self._local_endpoint()
+        self._emit_frame(
+            "tx",
+            UDPPacket(
+                data=payload,
+                src_ip=src_ip,
+                src_port=src_port,
+                dst_ip=module_ip,
+                dst_port=dst_port,
+                monotonic_ts=self.last_send_ts or time.monotonic(),
+            ),
+        )
+
     def _notify_listeners(self, pkt: UDPPacket) -> None:
         self._recent_packets.append(pkt)
         for cb in self._listeners:
@@ -94,6 +146,7 @@ class UDPBus:
                 cb(pkt)
             except Exception:
                 log.exception("Listener callback error")
+        self._emit_frame("rx", pkt)
 
     def _match_reply(
         self,
@@ -237,6 +290,7 @@ class UDPBus:
         dst_port = port or self.config.hub_port
         if self.config.simulated_mode:
             self.last_send_ts = time.monotonic()
+            self._emit_tx(module_ip, payload, dst_port)
             reply = self._simulated_replies.get(payload)
             if reply:
                 pkt = UDPPacket(
@@ -253,6 +307,7 @@ class UDPBus:
             raise RuntimeError("UDPBus not started")
         self._transport.sendto(payload, (module_ip, dst_port))
         self.last_send_ts = time.monotonic()
+        self._emit_tx(module_ip, payload, dst_port)
 
     async def listen_for_replies(self) -> AsyncIterator[UDPPacket]:
         queue: asyncio.Queue[UDPPacket] = asyncio.Queue(maxsize=_CORRELATE_QUEUE_MAX)

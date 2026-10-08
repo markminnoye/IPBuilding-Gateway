@@ -60,7 +60,7 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   "multi_press": false,
   "multi_press_window_ms": 350,
   "remote_debugging": false,
-  "capabilities": ["log_stream"],
+  "capabilities": ["log_stream", "udp_frame"],
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
     "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" }
@@ -78,7 +78,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `multi_press` | boolean | Global double/triple-press classification for all wall buttons (add-on option). When `false`, short release emits `single_press` immediately. |
 | `multi_press_window_ms` | integer | Inter-click window in ms when `multi_press` is enabled (default 350). |
 | `remote_debugging` | boolean | Add-on option **Remote debugging and control**. `false` until a user turns it on in the add-on configuration. It stays on until they turn it off. While it is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Check this field before calling a remote-debugging route. |
-| `capabilities` | list of strings | Features this gateway build actually implements. `log_stream` is live logs over WebSocket. Later builds may add `udp_frame` and `raw_send`. The list stays present when `remote_debugging` is `false`, so a client can tell “this build has the feature” from “the option is off”. Unknown extra fields are safe for older clients. |
+| `capabilities` | list of strings | Features this gateway build actually implements. `log_stream` is live logs over WebSocket. `udp_frame` is live field-bus frames over WebSocket (`subscribe_udp_frames`). A later build may add `raw_send`. The list stays present when `remote_debugging` is `false`, so a client can tell “this build has the feature” from “the option is off”. Unknown extra fields are safe for older clients. |
 
 ---
 
@@ -462,7 +462,7 @@ There is no login on port 8080. While **Remote debugging and control** is on, an
 
 | Field | Meaning |
 |-------|---------|
-| `error` | Stable code `remote_debugging_disabled`. Later remote-debugging routes (`udp_frame`, raw send) use this same code when the option is off. |
+| `error` | Stable code `remote_debugging_disabled`. WebSocket `subscribe_udp_frames` uses this same code when the option is off. A later raw-send route will too. |
 | `message` | English hint. Names the add-on option in English and Dutch, and where to find it. |
 
 **Response 400:** `invalid_json`, `invalid_log_level`, or `invalid_ttl`.

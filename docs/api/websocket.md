@@ -126,12 +126,12 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
     },
     "issues": [],
     "remote_debugging": false,
-    "capabilities": ["log_stream"]
+    "capabilities": ["log_stream", "udp_frame"]
   }
 }
 ```
 
-`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream` today). `remote_debugging` is the add-on option **Remote debugging and control**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing to logs.
+`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream` and `udp_frame`). `remote_debugging` is the add-on option **Remote debugging and control**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing.
 
 ### `gateway_status` -- aggregate health update
 
@@ -161,7 +161,7 @@ Pushed when aggregate `status` or the set of open `issues[].id` changes. Same fi
     }
   ],
   "remote_debugging": false,
-  "capabilities": ["log_stream"]
+  "capabilities": ["log_stream", "udp_frame"]
 }
 ```
 
@@ -363,7 +363,7 @@ Emitted after a forced sweep (`POST /api/v1/discover` or WS `discover` message) 
 
 ### Remote debugging gate
 
-`subscribe_logs`, `unsubscribe_logs`, and `set_log_level` are remote-debugging features. When `remote_debugging` is false they do nothing and the gateway replies:
+`subscribe_logs`, `unsubscribe_logs`, `set_log_level`, `subscribe_udp_frames`, and `unsubscribe_udp_frames` are remote-debugging features. When `remote_debugging` is false they do nothing and the gateway replies:
 
 ```json
 {
@@ -373,7 +373,7 @@ Emitted after a forced sweep (`POST /api/v1/discover` or WS `discover` message) 
 }
 ```
 
-`error` is the stable code. `message` is English and names the add-on option in English (**Remote debugging and control**) and Dutch (**Debuggen en bedienen op afstand**), plus where to turn it on. REST `POST /api/v1/debug/log-level` uses the same code and sentence with HTTP 403. Later `udp_frame` and raw-send messages will use this same refusal. `GET /api/v1/status` and this snapshot stay available either way.
+`error` is the stable code. `message` is English and names the add-on option in English (**Remote debugging and control**) and Dutch (**Debuggen en bedienen op afstand**), plus where to turn it on. REST `POST /api/v1/debug/log-level` uses the same code and sentence with HTTP 403. A later raw-send message will use this same refusal. `GET /api/v1/status` and this snapshot stay available either way.
 
 Other unknown message types are still ignored. The Home Assistant companion does not send these messages, so it does not receive `log` events.
 
@@ -444,6 +444,50 @@ More than 10 level changes in 60 seconds from one client are refused:
 `invalid_log_level` and `invalid_ttl` use the same `type: error` shape.
 
 Token- and password-like values in `message` are replaced with `[redacted]`. While the option is on, anyone on the LAN who can open this WebSocket can read logs and change the level.
+
+### `subscribe_udp_frames` -- live field-bus frames
+
+```json
+{"type": "subscribe_udp_frames"}
+```
+
+Reply: `{"type": "udp_frames_subscribed"}`. After that, each payload this gateway sends or receives on the field bus is one event, only for subscribers:
+
+```json
+{
+  "type": "udp_frame",
+  "ts": "2026-06-15T11:42:00.123Z",
+  "direction": "tx",
+  "src": "gateway",
+  "src_port": 1001,
+  "dst": "module",
+  "dst_port": 1001,
+  "hex": "533030303031303030",
+  "decoded": {
+    "dialect_id": "relay.nolf.command_reply",
+    "family": "relay_command_reply"
+  },
+  "dialect_id": "relay.nolf.command_reply"
+}
+```
+
+`direction` is `tx` or `rx`. `src` and `dst` are the host addresses on that hop. `hex` is the payload. `decoded` and `dialect_id` are present when a known payload decoder matches, otherwise `null`. The gateway only sees its own traffic, not frames between other devices.
+
+A client that falls behind gets:
+
+```json
+{"type": "udp_frame_dropped", "dropped": 15}
+```
+
+`dropped` is how many frames were discarded for that client. The bus and other WebSocket clients keep going. There is no replay buffer: subscription starts at the next frame.
+
+### `unsubscribe_udp_frames`
+
+```json
+{"type": "unsubscribe_udp_frames"}
+```
+
+Reply: `{"type": "udp_frames_unsubscribed"}`.
 
 ### `discover` -- force discovery sweep
 
