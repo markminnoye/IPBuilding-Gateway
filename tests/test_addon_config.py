@@ -197,10 +197,14 @@ def test_translations_present_for_remote_debugging() -> None:
     assert nl_field["description"].strip() == option_description("nl")
     assert nl_field["description"].count(TOOL_NAME["nl"]) == 1
     assert en_field["description"].count(TOOL_NAME["en"]) == 1
-    for field in (en_field, nl_field):
-        assert field.get("description")
-        assert en["configuration"]["debug"].get("name")
-        assert nl["configuration"]["debug"].get("name")
+    assert en["configuration"]["debug"]["name"] == "Remote access"
+    assert en["configuration"]["debug"]["description"] == (
+        "Temporarily allow remote access to track down problems. Off by default."
+    )
+    assert nl["configuration"]["debug"]["name"] == "Toegang op afstand"
+    assert nl["configuration"]["debug"]["description"] == (
+        "Geef tijdelijk toegang op afstand om problemen op te sporen. Standaard uit."
+    )
 
 
 def test_required_manifest_fields() -> None:
