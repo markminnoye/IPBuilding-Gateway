@@ -12,10 +12,10 @@ De gewone installatie voor testers blijft de release.
    `https://github.com/markminnoye/IPBuilding-Gateway#develop`
 
 4. Sluit het venster en ververs de add-onwinkel.
-5. Er staat nu een tweede **IPBuilding Gateway** in de lijst. Open die.
-   Het versienummer ziet eruit als `1.8.0-dev.3` (er staat `-dev.` in).
-   Dat is de ontwikkelversie. De gewone release is een gewoon nummer,
-   bijvoorbeeld `1.7.0`, zonder `-dev`.
+5. Er staat nu een tweede add-on in de lijst: **IPBuilding Gateway (develop)**.
+   Open die. Het versienummer bevat `-dev.`, bijvoorbeeld `1.8.0-dev.4`.
+   Dat is de ontwikkelversie. De gewone release heet **IPBuilding Gateway**
+   en heeft een gewoon nummer, bijvoorbeeld `1.7.0`, zonder `-dev`.
 
 ## Aanzetten
 
@@ -24,10 +24,9 @@ Draai niet twee gateways tegelijk. Die praten allebei met dezelfde modules.
 1. Open de **gewone** IPBuilding Gateway en klik op **Stop**.
 2. Open in die gewone add-on het paneel **IPBuilding Gateway**.
    Bij **Backup & restore** kies je **Download backup** en bewaar je het bestand.
-3. Installeer de ontwikkelversie (de add-on waarvan het nummer `-dev.` bevat)
-   en start die.
-4. Open het paneel van de ontwikkelversie. Bij **Backup & restore** kies je
-   **Restore from backup** en selecteer je het bestand uit stap 2.
+3. Installeer **IPBuilding Gateway (develop)** en start die.
+4. Open het paneel **IPBuilding Gateway (develop)**. Bij **Backup & restore**
+   kies je **Restore from backup** en selecteer je het bestand uit stap 2.
 
 Daarna laat Home Assistant bij elke nieuwe ontwikkelversie een update zien.
 Staat automatisch updaten aan, dan installeert Home Assistant die zelf en
@@ -40,15 +39,18 @@ herstart de add-on.
 3. Staat de lijst met modules leeg, zet dan de backup terug in het paneel
    van de gewone add-on (**Restore from backup**).
 
-De gewone release herken je aan een versienummer zonder `-dev`.
-Je hoeft de develop-repository niet te verwijderen. Laat de ontwikkelversie
-gewoon uit staan.
+De gewone release herken je aan de naam **IPBuilding Gateway** en een
+versienummer zonder `-dev`. De ontwikkelversie heet **IPBuilding Gateway
+(develop)**. Je hoeft de develop-repository niet te verwijderen. Laat de
+ontwikkelversie gewoon uit staan.
 
 ## Debuggen en bedienen op afstand
 
 Die schakelaar staat bij de add-on die je gebruikt (de gewone of de ontwikkelversie):
 
-**Instellingen → Add-ons → IPBuilding Gateway → Configuratie**
+**Instellingen → Add-ons → IPBuilding Gateway (develop) → Configuratie**
+
+Bij de gewone release is dat **Instellingen → Add-ons → IPBuilding Gateway → Configuratie**.
 
 Open de groep **Debug**. De schakelaar heet **Debuggen en bedienen op afstand**. In het Engels heet dezelfde schakelaar **Remote debugging and control**.
 

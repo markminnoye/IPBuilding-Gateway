@@ -1,0 +1,64 @@
+# stable-addon-name.yaml — keep the release add-on name on main.
+#
+# The develop image job writes "IPBuilding Gateway (develop)" into
+# config.yaml on the develop branch, in the same commit as the dev
+# version. A later merge of develop into main can copy that line for
+# one commit. This workflow runs on that push and puts the stable name
+# back. The follow-up commit uses [skip ci]. A GITHUB_TOKEN push does
+# not start another run.
+#
+# Release image builds also force the stable name in their checkout
+# (build-app.yaml) before the image labels are read.
+
+name: Keep the stable add-on name
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    name: Restore IPBuilding Gateway
+    if: github.repository == 'markminnoye/IPBuilding-Gateway'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit the stable name when needed
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          commit_stable_name() {
+            python3 scripts/addon_channel.py stable
+            if git diff --quiet -- ipbuilding_gateway/config.yaml; then
+              echo "stable add-on name already set"
+              return 1
+            fi
+            git add ipbuilding_gateway/config.yaml
+            git commit -m "ci: keep the stable add-on name [skip ci]"
+            return 0
+          }
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            if ! commit_stable_name; then
+              exit 0
+            fi
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "push rejected, retry ${attempt}"
+          done
+          echo "could not restore the stable add-on name on main" >&2
+          exit 1

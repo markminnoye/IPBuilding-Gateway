@@ -106,6 +106,7 @@ def test_workflows_publish_dev_tags_only_from_develop() -> None:
     assert "tags:" not in develop
     assert "version_override:" in develop
     assert "[skip ci]" in develop
+    assert "scripts/addon_channel.py develop" in develop
 
     build_app = _BUILD_APP.read_text(encoding="utf-8")
     assert "version_override:" in build_app
@@ -113,6 +114,9 @@ def test_workflows_publish_dev_tags_only_from_develop() -> None:
     assert "inputs.version_override == '' && github.ref_name == 'main'" in build_app
     assert "github.ref_name == 'develop'" in build_app
     assert "scripts/dev_version.py check" in build_app
+    assert "scripts/addon_channel.py develop" in build_app
+    assert "scripts/addon_channel.py stable" in build_app
+    assert "github.ref_name != 'develop'" in build_app
 
     builder = _BUILDER.read_text(encoding="utf-8")
     assert 'tags:\n      - "v*.*.*"' in builder

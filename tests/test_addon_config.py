@@ -204,6 +204,12 @@ def test_required_manifest_fields() -> None:
     for key in ("name", "version", "slug", "description", "arch"):
         assert cfg.get(key), f"required config.yaml field missing: {key}"
     assert cfg["slug"] == "ipbuilding_gateway"
+    assert cfg["name"] == "IPBuilding Gateway"
+    assert cfg["panel_title"] == "IPBuilding Gateway"
+    assert (
+        cfg["description"]
+        == "Open IPBuilding field-bus gateway, replaces proprietary IPBox"
+    )
     assert "ha_ipbuilding_gateway" in cfg.get("discovery", [])
 
 
