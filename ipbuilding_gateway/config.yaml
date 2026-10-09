@@ -1,5 +1,5 @@
 name: IPBuilding Gateway (develop)
-version: "1.8.0-dev.13"
+version: "1.8.0-dev.14"
 slug: ipbuilding_gateway
 description: Open IPBuilding field-bus gateway, replaces proprietary IPBox
 url: https://github.com/markminnoye/IPBuilding-Gateway
