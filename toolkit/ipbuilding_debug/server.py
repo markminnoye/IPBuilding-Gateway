@@ -214,7 +214,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
 
         payload is hex or a short ASCII token such as S0000. No gateway connection.
         """
-        return decode_test(payload).render()
+        return (await decode_test(payload, gateway)).render()
 
     @mcp.tool(name="export_session")
     async def export_session_tool(

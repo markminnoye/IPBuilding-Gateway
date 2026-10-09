@@ -810,9 +810,33 @@ async def device_command(
         payload["value"] = value
     body, call_error = await session.post_json(path, payload)
     if call_error is not None:
+        await _record_command_result(
+            session,
+            device_id=device_id,
+            action=action_name,
+            value=value,
+            ok=False,
+            error=call_error.detail or call_error.kind,
+            module_confirmed=None,
+            confirm_ms=None,
+            reported=None,
+            confirmation_available=False,
+        )
         return _from_error(call_error, **preview)
     gateway_ok = isinstance(body, dict) and body.get("ok") is True
     confirmation = _command_confirmation(body, action_name)
+    await _record_command_result(
+        session,
+        device_id=device_id,
+        action=action_name,
+        value=value,
+        ok=gateway_ok,
+        error="" if gateway_ok else (_raw_error_code(body) or ""),
+        module_confirmed=confirmation["module_confirmed"],
+        confirm_ms=confirmation["confirm_ms"],
+        reported=confirmation["reported"],
+        confirmation_available=confirmation["available"],
+    )
     return ToolResult(
         confirmation["message"],
         {
@@ -1032,15 +1056,18 @@ async def send_raw(
     )
 
 
-def decode_test(payload: str) -> ToolResult:
+async def decode_test(payload: str, session: GatewaySession | None = None) -> ToolResult:
     """Local decode through the gateway payload decoders. No gateway needed."""
     try:
         data = parse_frame(payload)
     except ValueError:
-        return ToolResult(
+        result = ToolResult(
             "Dit is geen frame dat ik kan lezen. Plak hex of een korte ASCII-tekst.",
             {"ok": False, "kind": KIND_OTHER, "matched": False, "matches": []},
         )
+        if session is not None:
+            await session.buffer.append(_decode_result_event(None))
+        return result
     decoded = present_decode(decode_frame(data))
     if decoded["matched"]:
         names = ", ".join(item["decoder"] for item in decoded["matches"])
@@ -1059,6 +1086,8 @@ def decode_test(payload: str) -> ToolResult:
             )
     else:
         message = "Geen enkele decoder herkent dit frame."
+    if session is not None:
+        await session.buffer.append(_decode_result_event(decoded))
     return ToolResult(message, {"ok": True, "kind": "decode", **decoded})
 
 
@@ -1463,6 +1492,159 @@ def _reported_sentence(reported: Any) -> str:
     return " De module meldt " + " en ".join(bits) + "."
 
 
+def _device_display_name(session: GatewaySession, device_id: str) -> str:
+    record = session.devices.get(device_id)
+    if isinstance(record, dict) and isinstance(record.get("name"), str):
+        return record["name"].strip()
+    return ""
+
+
+def _command_result_line(
+    *,
+    action: str,
+    value: int | None,
+    name: str,
+    device_id: str,
+    ok: bool,
+    error: str,
+    module_confirmed: bool | None,
+    confirm_ms: int | None,
+    reported: dict[str, Any] | None,
+) -> str:
+    bits = [action]
+    if value is not None:
+        bits.append(str(value))
+    if name:
+        bits.append(name)
+    if device_id:
+        bits.append(device_id)
+    if ok:
+        bits.append("ok")
+    elif error:
+        bits.append(f"fout {error}")
+    else:
+        bits.append("fout")
+    if module_confirmed is True:
+        bits.append("bevestigd")
+        if confirm_ms is not None:
+            bits.append(f"{confirm_ms} ms")
+    else:
+        bits.append("niet bevestigd")
+    if isinstance(reported, dict):
+        state = reported.get("state")
+        if isinstance(state, str) and state.strip():
+            bits.append(f"status {state.strip()}")
+        level = reported.get("level_percent")
+        if type(level) is int:
+            bits.append(f"niveau {level}%")
+    return " ".join(bits)
+
+
+async def _record_command_result(
+    session: GatewaySession,
+    *,
+    device_id: str,
+    action: str,
+    value: int | None,
+    ok: bool,
+    error: str,
+    module_confirmed: bool | None,
+    confirm_ms: int | None,
+    reported: dict[str, Any] | None,
+    confirmation_available: bool,
+) -> None:
+    """Store one sent command. Previews never call this."""
+    name = _device_display_name(session, device_id)
+    event: dict[str, Any] = {
+            "type": "command_result",
+            "received_at": _format_local(datetime.now().astimezone()),
+            "device_id": device_id,
+            "action": action,
+            "value": value,
+            "ok": ok,
+            "error": error,
+            "module_confirmed": module_confirmed,
+            "confirm_ms": confirm_ms,
+            "reported": reported,
+            "confirmation_available": confirmation_available,
+            "message": _command_result_line(
+                action=action,
+                value=value,
+                name=name,
+                device_id=device_id,
+                ok=ok,
+                error=error,
+                module_confirmed=module_confirmed,
+                confirm_ms=confirm_ms,
+                reported=reported,
+            ),
+    }
+    if name:
+        event["name"] = name
+    await session.buffer.append(event)
+
+
+_DECODE_FIELD_KEYS = ("family", "action", "channel", "state", "state_code", "dialect_id")
+
+
+def _decode_result_event(decoded: dict[str, Any] | None) -> dict[str, Any]:
+    """One decode, short enough for the report. No raw decoder dump."""
+    matches: list[dict[str, Any]] = []
+    dialect_ids: list[str] = []
+    hex_text = ""
+    matched = False
+    if isinstance(decoded, dict):
+        hex_text = str(decoded.get("hex") or "")
+        matched = bool(decoded.get("matched"))
+        for dialect in decoded.get("dialects") or []:
+            if isinstance(dialect, dict) and isinstance(dialect.get("id"), str) and dialect["id"]:
+                if dialect["id"] not in dialect_ids:
+                    dialect_ids.append(dialect["id"])
+        for match in decoded.get("matches") or []:
+            if not isinstance(match, dict):
+                continue
+            fields = match.get("fields") if isinstance(match.get("fields"), dict) else {}
+            short: dict[str, Any] = {}
+            decoder = match.get("decoder")
+            if isinstance(decoder, str) and decoder:
+                short["decoder"] = decoder
+            for key in _DECODE_FIELD_KEYS:
+                value = fields.get(key)
+                if isinstance(value, str) and value:
+                    short[key] = present_dialect_id(value) if key == "dialect_id" else value
+                elif type(value) is int:
+                    short[key] = value
+            raw_dialect = short.get("dialect_id")
+            if isinstance(raw_dialect, str) and raw_dialect and raw_dialect not in dialect_ids:
+                dialect_ids.append(raw_dialect)
+            if short:
+                matches.append(short)
+    dialect_id = dialect_ids[0] if dialect_ids else ""
+    if not matched:
+        line = f"{hex_text} niet herkend".strip()
+    else:
+        decoders = ", ".join(str(item.get("decoder")) for item in matches if item.get("decoder"))
+        bits = [hex_text, "herkend", decoders]
+        bits.append("dialect " + ", ".join(dialect_ids) if dialect_ids else "geen dialect-id")
+        for item in matches:
+            for key in ("action", "channel", "state"):
+                if key in item:
+                    bits.append(f"{key} {item[key]}")
+        line = " ".join(bit for bit in bits if bit)
+    event: dict[str, Any] = {
+        "type": "decode_result",
+        "received_at": _format_local(datetime.now().astimezone()),
+        "hex": hex_text,
+        "matched": matched,
+        "fields": matches,
+        "message": line,
+    }
+    if dialect_id:
+        event["dialect_id"] = dialect_id
+        event["dialect_ids"] = dialect_ids
+    return event
+
+
 def _command_confirmation(body: Any, action: str) -> dict[str, Any]:
     """Read module_confirmed from a command body. Missing fields are an older gateway."""
     if not isinstance(body, dict) or "module_confirmed" not in body:
@@ -1617,6 +1799,8 @@ _EXPORT_TYPES = {
     "device_removed",
     "device_ip_changed",
     "device_firmware_changed",
+    "command_result",
+    "decode_result",
 }
 
 

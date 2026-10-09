@@ -398,11 +398,12 @@ async def test_send_raw_rejects_a_bad_window_and_a_long_payload() -> None:
     assert gateway.raw_calls == []
 
 
-def test_decode_test_matches_relay_and_reports_a_miss() -> None:
-    matched = decode_test("S0000")
+@pytest.mark.asyncio
+async def test_decode_test_matches_relay_and_reports_a_miss() -> None:
+    matched = await decode_test("S0000")
     assert matched.data["matched"] is True
     assert matched.data["matches"][0]["decoder"] == "relay"
-    missed = decode_test("zzzz")
+    missed = await decode_test("zzzz")
     assert missed.data["matched"] is False
     assert "Geen enkele decoder" in missed.message
 
@@ -709,6 +710,81 @@ async def test_device_command_reports_module_confirmation_when_present() -> None
     assert odd.data["module_confirmed"] is False
     assert odd.data["confirm_ms"] is None
     assert odd.data["reported"] is None
+
+
+def _command_results(session: GatewaySession) -> list[dict]:
+    return [event for event in session.buffer.snapshot() if event.get("type") == "command_result"]
+
+
+@pytest.mark.asyncio
+async def test_device_command_records_a_sent_result_and_skips_previews() -> None:
+    gateway = FakeGateway(remote_debugging=True, capabilities=[])
+    gateway.command_body = {
+        "ok": True,
+        "module_confirmed": True,
+        "confirm_ms": 42,
+        "reported": {"state": "on"},
+    }
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    session.devices = {"dev-trap": {"id": "dev-trap", "name": "Traphal"}}
+    try:
+        preview = await device_command(
+            session, device_id="dev-trap", action="ON", confirmed=False
+        )
+        missing = await device_command(
+            session, device_id="dev-trap", action="DIM", confirmed=True
+        )
+        sent = await device_command(
+            session, device_id="dev-trap", action="ON", confirmed=True
+        )
+        gateway.command_status = 400
+        gateway.command_body = {"ok": False, "error": "rejected"}
+        failed = await device_command(
+            session, device_id="dev-trap", action="OFF", confirmed=True
+        )
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert preview.data["kind"] == "confirmation_required"
+    assert missing.data["kind"] == "confirmation_required"
+    assert sent.data["sent"] is True
+    assert failed.data["ok"] is False
+    recorded = _command_results(session)
+    assert len(recorded) == 2
+    assert recorded[0]["device_id"] == "dev-trap"
+    assert recorded[0]["name"] == "Traphal"
+    assert recorded[0]["action"] == "ON"
+    assert recorded[0]["ok"] is True
+    assert recorded[0]["module_confirmed"] is True
+    assert recorded[0]["confirm_ms"] == 42
+    assert recorded[0]["reported"] == {"state": "on"}
+    assert recorded[0]["confirmation_available"] is True
+    assert "bevestigd" in recorded[0]["message"]
+    assert "niet bevestigd" not in recorded[0]["message"]
+    assert recorded[1]["ok"] is False
+    assert recorded[1]["error"] == "rejected"
+    assert "fout rejected" in recorded[1]["message"]
+    assert "niet bevestigd" in recorded[1]["message"]
+
+
+@pytest.mark.asyncio
+async def test_decode_test_records_a_match_and_a_miss() -> None:
+    session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
+    matched = await decode_test("I0154110", session)
+    missed = await decode_test("I0100", session)
+    events = [event for event in session.buffer.snapshot() if event.get("type") == "decode_result"]
+    assert matched.data["matched"] is True
+    assert len(events) == 2
+    assert events[0]["hex"]
+    assert events[0]["matched"] is True
+    assert "kessel-lo" in str(events[0].get("dialect_id"))
+    assert events[0]["fields"]
+    assert "herkend" in events[0]["message"]
+    assert missed.data["matched"] is False
+    assert events[1]["matched"] is False
+    assert "niet herkend" in events[1]["message"]
+    assert "dialect_id" not in events[1]
 
 
 @pytest.mark.asyncio

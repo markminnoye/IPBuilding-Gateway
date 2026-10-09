@@ -26,6 +26,7 @@ from ipbuilding_debug.tools import (
     capture_frames,
     connection_status,
     decode_test,
+    device_command,
     export_session,
     send_report,
 )
@@ -293,8 +294,9 @@ async def test_second_capture_includes_the_pause_and_skips_old_frames() -> None:
     assert "verder waar de vorige stopte" in second.message
 
 
-def test_decode_test_names_a_relay_without_a_dialect_and_a_total_miss() -> None:
-    matched = decode_test("S0000")
+@pytest.mark.asyncio
+async def test_decode_test_names_a_relay_without_a_dialect_and_a_total_miss() -> None:
+    matched = await decode_test("S0000")
     assert matched.data["matched"] is True
     relay = matched.data["matches"][0]
     assert relay["decoder"] == "relay"
@@ -315,12 +317,12 @@ def test_decode_test_names_a_relay_without_a_dialect_and_a_total_miss() -> None:
         assert "geen dialect-id" in matched.message
         assert "Kessel-Lo" in matched.message
         assert "Torhout" in matched.message
-    missed = decode_test("I0100")
+    missed = await decode_test("I0100")
     assert missed.data["matched"] is False
     assert "Geen enkele decoder herkent dit frame." in missed.message
     assert "dialect-id" not in missed.message
     # Channel 0 of the relay poll is the same five bytes as the input poll.
-    collision = decode_test("I0000")
+    collision = await decode_test("I0000")
     assert collision.data["matched"] is True
     assert collision.data["matches"][0]["decoder"] == "input"
     assert "geen dialect-id" not in collision.message
@@ -652,6 +654,79 @@ async def test_report_redacts_instance_uuid_and_service_name() -> None:
     stored = installation_id()
     assert stored in report
     assert f"installatie_id: {stored}" in report.split("1. Samenvatting", 1)[0]
+
+
+@pytest.mark.asyncio
+async def test_export_shows_command_and_decode_with_masked_names() -> None:
+    gateway = FakeGateway(remote_debugging=True, capabilities=[])
+    gateway.command_body = {
+        "ok": True,
+        "module_confirmed": True,
+        "confirm_ms": 42,
+        "reported": {"state": "on"},
+    }
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    session.devices = {
+        "192.0.2.40-1": {"id": "192.0.2.40-1", "name": "Traphal"},
+    }
+    try:
+        await device_command(session, device_id="192.0.2.40-1", action="ON", confirmed=False)
+        await device_command(session, device_id="192.0.2.40-1", action="DIM", confirmed=True)
+        await device_command(session, device_id="192.0.2.40-1", action="ON", confirmed=True)
+        gateway.command_body = {
+            "ok": True,
+            "module_confirmed": False,
+            "confirm_ms": None,
+            "reported": None,
+        }
+        await device_command(session, device_id="192.0.2.40-1", action="OFF", confirmed=True)
+        await decode_test("I0154110", session)
+        await session.buffer.append(
+            {
+                "type": "udp_frame",
+                "direction": "rx",
+                "hex": "4930313534313130",
+                "src": "module",
+                "dst": "gateway",
+                "port": 1001,
+            }
+        )
+        for index in range(APPENDIX_LOG_LIMIT + 5):
+            await session.buffer.append(
+                {
+                    "type": "log",
+                    "level": "info",
+                    "logger": "gw",
+                    "message": f"regel-{index:03d}",
+                }
+            )
+        result = await export_session(session)
+    finally:
+        await session.stop()
+        await gateway.stop()
+    report = result.data["report"]
+    rendered = result.render()
+    tested = report.split("3. Wat getest werd", 1)[1].split("4. Bevindingen", 1)[0]
+    confirmed = report.split("Bevestigd", 1)[1].split("Vermoeden", 1)[0]
+    clock = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}"
+    assert re.search(clock + r" command_result", tested)
+    assert re.search(clock + r" decode_result", tested)
+    assert "Txxxxxx" in tested
+    assert "niet bevestigd" in tested
+    assert "herkend" in tested
+    assert "kessel-lo" in tested
+    assert "Txxxxxx" in confirmed
+    assert "42 ms" in confirmed
+    assert "niet bevestigd" not in confirmed
+    assert "4930313534313130" in confirmed
+    assert "Traphal" not in rendered
+    assert "192.0.2" not in rendered
+    assert "regel-000" not in report
+    kinds = [event.get("type") for event in result.data["events"]]
+    assert kinds.count("command_result") == 2
+    assert "decode_result" in kinds
+    assert "udp_frame" in kinds
 
 
 def test_skill_describes_the_report_and_the_backlog() -> None:

@@ -97,14 +97,16 @@ Geef de boodschap van de tool door, in de taal van de tester. Vier gevallen:
 
 Elk event in het verslag heeft een lokale tijd (`local_time`) en `time_source`. Zeg welke bron het is: de gateway, of het moment waarop de toolkit het ontving. Tijden in het rapport zijn de lokale tijd van de tester.
 
+Een verstuurd commando (`device_command` met confirmed=true) en elke `decode_test` komen vanzelf in de buffer. Zet ze niet over in de notitie. In het rapport staan ze onder Wat getest werd, één regel, met lokale tijd. Bevestigde de module het commando, dan staat die regel ook onder Bevestigd. Geen antwoord van de module is geen fout: de regel zegt dan niet bevestigd.
+
 Dialecten hebben een stadsnaam. De namen en ids komen uit de tool. Nu zijn dat Kessel-Lo (`kessel-lo`; berichttypes `dimmer.kessel-lo.*` en `input.kessel-lo.*`) en Torhout (`torhout`; berichttypes `*.torhout.*`). Kessel-Lo is het dialect van de dimmer- en inputmodules uit de eerste testopstelling. Torhout is het tweede bevestigde dialect. Gebruik de naam die de tool teruggeeft; die kan later wijzigen. Meld je een nieuw dialect, of schrijf je er een in het verslag, kies dan een willekeurige stad. Nooit de woonplaats van de tester en nooit een persoonsnaam. Een relaisformaat zonder dialect-id is geen stad: verzin er geen.
 
 `export_session` levert het rapport al, in de tekst van de tool en in `report`. Geef die tekst letterlijk door. Schrijf hem niet opnieuw en laat geen deel weg. De koppen blijven de zeven hieronder. Namen in die tekst zijn al gemaskeerd; zet de echte naam niet terug in een kop of in de feedback. Tijden komen uit die tekst: lokale tijd met een offset, bijvoorbeeld `2026-07-02T05:04:05+02:00`. Kopieer geen ruwe `ts` of `at` met een Z. Een verschil tussen een knopnaam en een lampnaam mag je noemen, maar niet als open vraag en niet als verdacht. Feedback over de tool hoort alleen onder kop 6. Staat daar een streepje, vervang alleen dat streepje; verplaats de feedback niet naar de open vragen. Houd in die feedback de maskers uit het rapport.
 
 1. Samenvatting — de woorden van de tester en wat gevonden werd.
 2. Omgeving — toolkit- en gatewayversie, rol (master of slave), modules met dialect, welke functies ondersteund en actief zijn.
-3. Wat getest werd — per stap wat de tester deed en wat er gebeurde, in lokale tijd.
-4. Bevindingen — `Bevestigd` (frames) en `Vermoeden` (alleen de buffer) strikt apart, met het bewijs.
+3. Wat getest werd — per stap wat de tester deed en wat er gebeurde, in lokale tijd. Een verstuurd commando en een dialecttest staan hier vanzelf.
+4. Bevindingen — `Bevestigd` (frames, en een commando dat de module bevestigde) en `Vermoeden` (alleen de buffer) strikt apart, met het bewijs.
 5. Open vragen.
 6. Feedback over de tool.
 7. Bijlage — ruwe events en frames, gefilterd. Logregels staan alleen hier, elk één keer, de laatste 80. Frames staan ook onder Bevestigd.

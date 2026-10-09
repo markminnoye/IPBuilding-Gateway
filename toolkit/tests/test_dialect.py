@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from ipbuilding_debug.dialect import (
     DIALECTS,
     KESSEL_LO,
@@ -41,9 +43,10 @@ def test_legacy_segments_display_as_the_current_city() -> None:
             assert dialect_name(incoming) == dialect.name
 
 
-def test_decode_test_names_the_city_and_hides_the_previous_id() -> None:
-    first = decode_test("I0154110")
-    second = decode_test("I0115100")
+@pytest.mark.asyncio
+async def test_decode_test_names_the_city_and_hides_the_previous_id() -> None:
+    first = await decode_test("I0154110")
+    second = await decode_test("I0115100")
     assert "Kessel-Lo" in first.message
     assert first.data["dialects"][0]["id"] == "kessel-lo"
     assert "dimmer.kessel-lo.status_reply" in first.render()

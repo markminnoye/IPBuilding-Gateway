@@ -188,7 +188,8 @@ def limit_export_events(events: list[dict[str, Any]]) -> tuple[list[dict[str, An
     """Keep frames, the newest unique log lines, and other events. Preserve order.
 
     Log lines are kept once (first occurrence). The appendix then shows only
-    the last ``APPENDIX_LOG_LIMIT`` of those. Frames are not pushed out by logs.
+    the last ``APPENDIX_LOG_LIMIT`` of those. Frames, command results, and
+    decode results stay. A long log does not push them out.
     """
     frames: list[dict[str, Any]] = []
     logs: list[dict[str, Any]] = []
@@ -249,7 +250,12 @@ def _sections(body: dict[str, Any]) -> dict[str, Any]:
         for item in events
         if item.get("type") not in _CONFIRMED_TYPES and item.get("type") not in _LOG_TYPES
     ]
-    confirmed = [_event_line(item) for item in frames]
+    confirmed_commands = [
+        item
+        for item in others
+        if item.get("type") == "command_result" and item.get("module_confirmed") is True
+    ]
+    confirmed = [_event_line(item) for item in frames + confirmed_commands]
     suspected = [_event_line(item) for item in others if item.get("type") in _SUSPECTED_TYPES]
     gaps = [item for item in others if item.get("type") == "gap"]
     note_lines = [_note_line(item) for item in notes]
