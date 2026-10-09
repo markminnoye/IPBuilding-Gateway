@@ -13,7 +13,12 @@ from urllib.parse import quote
 
 from ipbuilding_debug.buffer import clamp_timeout
 from ipbuilding_debug.decode import decode_frame, parse_frame
-from ipbuilding_debug.dialect import dialect_name, present_decode, present_dialect_id, present_event
+from ipbuilding_debug.dialect import (
+    dialect_name,
+    full_dialect_id,
+    present_decode,
+    present_event,
+)
 from ipbuilding_debug.errors import (
     KIND_NOT_AVAILABLE,
     KIND_NO_ADDRESS,
@@ -493,6 +498,15 @@ async def probe_generation(session: GatewaySession) -> ToolResult:
     if remote is False:
         parts.append(MSG_REMOTE_DEBUGGING_OFF)
     message = " ".join(parts)
+    await session.buffer.append(
+        {
+            "type": "decode_result",
+            "received_at": _format_local(datetime.now().astimezone()),
+            "matched": False,
+            "source": "probe_generation",
+            "message": dialect,
+        }
+    )
     return ToolResult(
         message,
         {
@@ -900,6 +914,7 @@ async def capture_frames(
         pattern=pattern,
         limit=limit,
     )
+    await _record_capture_decodes(session, frames)
     session.frame_cursor = session.buffer.latest_seq
     if not frames:
         message = (
@@ -1152,7 +1167,8 @@ def _stamp_event(event: dict[str, Any], received_at: datetime) -> dict[str, Any]
         item["time_source"] = "received"
     _localise_time_fields(item)
     if item.get("type") == "udp_frame":
-        _remember_frame_dialects(item)
+        decoded = _with_local_decode(item).get("local_decode")
+        _remember_frame_dialects(item, decoded if isinstance(decoded, dict) else None)
     return item
 
 
@@ -1596,10 +1612,6 @@ def _decode_result_event(decoded: dict[str, Any] | None) -> dict[str, Any]:
     if isinstance(decoded, dict):
         hex_text = str(decoded.get("hex") or "")
         matched = bool(decoded.get("matched"))
-        for dialect in decoded.get("dialects") or []:
-            if isinstance(dialect, dict) and isinstance(dialect.get("id"), str) and dialect["id"]:
-                if dialect["id"] not in dialect_ids:
-                    dialect_ids.append(dialect["id"])
         for match in decoded.get("matches") or []:
             if not isinstance(match, dict):
                 continue
@@ -1610,13 +1622,16 @@ def _decode_result_event(decoded: dict[str, Any] | None) -> dict[str, Any]:
                 short["decoder"] = decoder
             for key in _DECODE_FIELD_KEYS:
                 value = fields.get(key)
-                if isinstance(value, str) and value:
-                    short[key] = present_dialect_id(value) if key == "dialect_id" else value
+                if key == "dialect_id" and isinstance(value, str) and value:
+                    full = full_dialect_id(value)
+                    if full:
+                        short[key] = full
+                        if full not in dialect_ids:
+                            dialect_ids.append(full)
+                elif isinstance(value, str) and value:
+                    short[key] = value
                 elif type(value) is int:
                     short[key] = value
-            raw_dialect = short.get("dialect_id")
-            if isinstance(raw_dialect, str) and raw_dialect and raw_dialect not in dialect_ids:
-                dialect_ids.append(raw_dialect)
             if short:
                 matches.append(short)
     dialect_id = dialect_ids[0] if dialect_ids else ""
@@ -1804,46 +1819,144 @@ _EXPORT_TYPES = {
 }
 
 
-def _remember_frame_dialects(item: dict[str, Any]) -> None:
-    """Copy dialect ids from a local decode onto the frame. Not the raw decode.
+_POLL_MARKERS = ("idle", "keepalive", "poll")
+_SESSION_GRACE = timedelta(seconds=5)
 
-    The decode can carry module addresses. The report only needs the dialect id,
-    so confirmed frames and the frontmatter can name it.
+
+def _fields_are_poll(fields: dict[str, Any]) -> bool:
+    family = str(fields.get("family") or "")
+    if family == "relay_reply_candidate":
+        return True
+    blob = " ".join(
+        str(fields.get(key) or "") for key in ("family", "action", "dialect_id")
+    ).lower()
+    return any(marker in blob for marker in _POLL_MARKERS)
+
+
+def _frame_kind(decoded: dict[str, Any] | None) -> str:
+    """``poll``, ``confirming``, or ``other``.
+
+    A frame that confirms something stays confirming even when another match
+    is a poll. An unrecognized frame is ``other``.
     """
-    decoded = _with_local_decode(item).get("local_decode")
-    if not isinstance(decoded, dict):
-        return
-    found: list[str] = []
-    for dialect in decoded.get("dialects") or []:
-        if isinstance(dialect, dict) and isinstance(dialect.get("id"), str) and dialect["id"]:
-            found.append(dialect["id"])
+    if not isinstance(decoded, dict) or not decoded.get("matched"):
+        return "other"
+    saw_confirming = False
+    saw_poll = False
     for match in decoded.get("matches") or []:
         if not isinstance(match, dict):
             continue
-        fields = match.get("fields")
-        if not isinstance(fields, dict):
+        fields = match.get("fields") if isinstance(match.get("fields"), dict) else {}
+        if _fields_are_poll(fields):
+            saw_poll = True
+        else:
+            saw_confirming = True
+    if saw_confirming:
+        return "confirming"
+    if saw_poll:
+        return "poll"
+    return "other"
+
+
+def _full_ids_from_decode(decoded: dict[str, Any] | None) -> list[str]:
+    found: list[str] = []
+    if not isinstance(decoded, dict):
+        return found
+    for match in decoded.get("matches") or []:
+        if not isinstance(match, dict):
             continue
-        raw = fields.get("dialect_id")
-        if isinstance(raw, str) and raw and raw not in found:
-            found.append(present_dialect_id(raw))
+        fields = match.get("fields") if isinstance(match.get("fields"), dict) else {}
+        full = full_dialect_id(str(fields.get("dialect_id") or ""))
+        if full and full not in found:
+            found.append(full)
+    return found
+
+
+def _remember_frame_dialects(item: dict[str, Any], decoded: dict[str, Any] | None) -> None:
+    """Copy full dialect ids onto the frame. Not the raw decode, not the city name.
+
+    The decode can carry module addresses. The report only needs the full
+    dialect id, so a confirming frame and the frontmatter can name it.
+    """
+    item["frame_kind"] = _frame_kind(decoded)
+    found = _full_ids_from_decode(decoded)
+    own = item.get("dialect_id")
+    if isinstance(own, str):
+        full = full_dialect_id(own)
+        if full and full not in found:
+            found.insert(0, full)
+    for raw in item.get("dialect_ids") or []:
+        if not isinstance(raw, str):
+            continue
+        full = full_dialect_id(raw)
+        if full and full not in found:
+            found.append(full)
     if not found:
+        item.pop("dialect_id", None)
+        item.pop("dialect_ids", None)
+        item.pop("dialect_name", None)
         return
     item["dialect_ids"] = found
-    if not item.get("dialect_id"):
-        item["dialect_id"] = found[0]
-    shown = present_dialect_id(str(item.get("dialect_id") or ""))
-    if shown:
-        item["dialect_id"] = shown
-        name = dialect_name(shown)
-        if name:
-            item["dialect_name"] = name
+    item["dialect_id"] = found[0]
+    name = dialect_name(found[0])
+    if name:
+        item["dialect_name"] = name
+    else:
+        item.pop("dialect_name", None)
+
+
+def _within_session(event: dict[str, Any], received_at: datetime, started_at: datetime) -> bool:
+    """True when the event belongs to this toolkit session.
+
+    A gateway clock (``ts``, ``timestamp``, ``time``) wins, so a log line
+    replayed from last night stays out even though it arrived just now.
+    Live events without that clock use the moment the toolkit stored them.
+    """
+    moment = _parse_gateway_time(event) or received_at
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    start = started_at if started_at.tzinfo is not None else started_at.replace(tzinfo=timezone.utc)
+    return moment >= start - _SESSION_GRACE
+
+
+async def _record_capture_decodes(session: GatewaySession, frames: list[dict[str, Any]]) -> None:
+    """One determination per full dialect id, plus at most one miss and one plain match."""
+    seen: set[str] = set()
+    plain = False
+    miss = False
+    for frame in frames:
+        decoded = frame.get("local_decode")
+        event = _decode_result_event(decoded if isinstance(decoded, dict) else None)
+        ids = [item for item in event.get("dialect_ids") or [] if isinstance(item, str)]
+        if ids:
+            fresh = [item for item in ids if item not in seen]
+            if not fresh:
+                continue
+            seen.update(fresh)
+            event["dialect_id"] = fresh[0]
+            event["dialect_ids"] = fresh
+            event["source"] = "capture_frames"
+            await session.buffer.append(event)
+            continue
+        if event.get("matched"):
+            if plain:
+                continue
+            plain = True
+        else:
+            if miss:
+                continue
+            miss = True
+        event["source"] = "capture_frames"
+        await session.buffer.append(event)
 
 
 def _export_body(session: GatewaySession) -> dict[str, Any]:
+    started = session.started_at
     exported = [
         _stamp_event(entry.event, entry.received_at)
         for entry in session.buffer.entries()
         if entry.event.get("type") in _EXPORT_TYPES
+        and _within_session(entry.event, entry.received_at, started)
     ]
     kept, note = limit_export_events(exported)
     status = session.status or {}

@@ -117,6 +117,9 @@ class GatewaySession:
             except ValueError as exc:
                 self.address_error = str(exc)
         self.buffer = RingBuffer(maxlen=buffer_size)
+        # Export window. Replayed gateway logs keep their own timestamp, so
+        # this stays at process start and is not reset when the socket reconnects.
+        self.started_at = datetime.now().astimezone()
         self.backoff_start = backoff_start
         self.backoff_max = backoff_max
         self._sleeper = sleeper or asyncio.sleep

@@ -120,6 +120,33 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
     assert readme.startswith(text)
 
 
+def _load_staged_version(path: Path, name: str) -> str:
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.__version__
+
+
+def test_staged_bundle_reports_the_real_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("IPBUILDING_REPORT_INTAKE", raising=False)
+    monkeypatch.delenv("IPBUILDING_REPORT_SEND", raising=False)
+    staged = stage(file_version(), dest=tmp_path / "bundle")
+    assert (staged / "VERSION").read_text(encoding="utf-8").strip() == file_version()
+    loaded = _load_staged_version(staged / "ipbuilding_debug" / "version.py", "staged_version_file")
+    assert loaded == file_version()
+    assert loaded != "0.0.0"
+    (staged / "VERSION").unlink()
+    from_manifest = _load_staged_version(
+        staged / "ipbuilding_debug" / "version.py",
+        "staged_version_manifest",
+    )
+    assert from_manifest == file_version()
+    assert from_manifest != "0.0.0"
+
+
 def test_staged_manifest_asks_for_the_gateway_address(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

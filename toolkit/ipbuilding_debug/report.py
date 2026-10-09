@@ -189,7 +189,9 @@ def limit_export_events(events: list[dict[str, Any]]) -> tuple[list[dict[str, An
 
     Log lines are kept once (first occurrence). The appendix then shows only
     the last ``APPENDIX_LOG_LIMIT`` of those. Frames, command results, and
-    decode results stay. A long log does not push them out.
+    decode results stay. A long log does not push them out. Poll frames stay
+    in the list so the appendix can count them; the report does not print
+    each one.
     """
     frames: list[dict[str, Any]] = []
     logs: list[dict[str, Any]] = []
@@ -250,14 +252,18 @@ def _sections(body: dict[str, Any]) -> dict[str, Any]:
         for item in events
         if item.get("type") not in _CONFIRMED_TYPES and item.get("type") not in _LOG_TYPES
     ]
-    confirmed_commands = [
-        item
-        for item in others
-        if item.get("type") == "command_result" and item.get("module_confirmed") is True
+    tested_items = [
+        item for item in others if item.get("type") in {"command_result", "decode_result"}
     ]
-    confirmed = [_event_line(item) for item in frames + confirmed_commands]
-    suspected = [_event_line(item) for item in others if item.get("type") in _SUSPECTED_TYPES]
+    suspected_items = [item for item in others if item.get("type") in _SUSPECTED_TYPES]
     gaps = [item for item in others if item.get("type") == "gap"]
+    confirming = [item for item in frames if item.get("frame_kind") == "confirming"]
+    polls = [item for item in frames if item.get("frame_kind") == "poll"]
+    other_frames = [
+        item for item in frames if item.get("frame_kind") not in {"confirming", "poll"}
+    ]
+    confirmed = [_event_line(item) for item in confirming]
+    suspected = [_event_line(item) for item in suspected_items]
     note_lines = [_note_line(item) for item in notes]
     words = " ".join(str(item.get("text") or "").strip() for item in notes).strip()
     if words:
@@ -271,8 +277,8 @@ def _sections(body: dict[str, Any]) -> dict[str, Any]:
             "De tester heeft nog geen probleem in een notitie gezet. "
             "Een oorzaak staat onder Bevindingen alleen als een frame die bevestigt."
         )
-    tested = note_lines + [_event_line(item) for item in others]
-    appendix = _appendix_lines(body, logs, frames)
+    tested = note_lines + [_event_line(item) for item in tested_items]
+    appendix = _appendix_lines(body, logs, other_frames, len(polls))
     return {
         "samenvatting": summary,
         "omgeving": _environment(body),
@@ -290,13 +296,19 @@ def _appendix_lines(
     body: dict[str, Any],
     logs: list[dict[str, Any]],
     frames: list[dict[str, Any]],
+    poll_count: int,
 ) -> list[str]:
-    """Log lines once, then captured frames. The cap note comes first."""
+    """Log lines once, a poll count, then frames that were not recognized.
+
+    Confirming frames stay under Bevestigd. Routine polls are not listed.
+    """
     lines: list[str] = []
     note = body.get("appendix_note")
     if isinstance(note, str) and note.strip():
         lines.append(note.strip())
     lines.extend(_event_line(item) for item in logs)
+    if poll_count > 0:
+        lines.append(f"Routinepolls: {poll_count}.")
     lines.extend(_event_line(item) for item in frames)
     return lines
 
@@ -385,21 +397,16 @@ def _open_questions(gaps: list[dict[str, Any]]) -> str:
 
 
 def _dialects(events: list[Any]) -> list[str]:
+    """Full dialect ids only, first-seen order, no bare city name."""
     found: list[str] = []
     for event in events:
         if not isinstance(event, dict):
             continue
-        raw = event.get("dialect_id")
-        if isinstance(raw, str) and raw and raw not in found:
-            found.append(raw)
-        for item in event.get("dialect_ids") or []:
-            if isinstance(item, str) and item and item not in found:
-                found.append(item)
-        decode = event.get("local_decode")
-        if isinstance(decode, dict):
-            for item in decode.get("dialects") or []:
-                if isinstance(item, dict) and item.get("id") and item["id"] not in found:
-                    found.append(str(item["id"]))
+        raw_ids: list[Any] = [event.get("dialect_id")]
+        raw_ids.extend(event.get("dialect_ids") or [])
+        for raw in raw_ids:
+            if isinstance(raw, str) and raw.count(".") >= 2 and raw not in found:
+                found.append(raw)
     return found
 
 

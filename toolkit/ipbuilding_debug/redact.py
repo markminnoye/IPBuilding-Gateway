@@ -287,8 +287,12 @@ def redact_text(
             pattern = re.compile(
                 rf"(?i)(?<![A-Za-z0-9_-]){re.escape(token)}(?![A-Za-z0-9_-])"
             )
+        # A report passes masks. Leftover tokens are ids, not lamp names,
+        # so they use the same ``[id]`` marker as id fields. ``read_logs``
+        # passes no masks and still says ``[naam]``.
+        token_mark = "[id]" if masks is not None else "[naam]"
         for match in pattern.finditer(cleaned):
-            spans.append((match.start(), match.end(), "[naam]", 1))
+            spans.append((match.start(), match.end(), token_mark, 1))
     return _apply_spans(cleaned, spans)
 
 

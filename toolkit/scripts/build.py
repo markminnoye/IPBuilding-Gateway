@@ -115,6 +115,9 @@ def stage(version: str, dest: Path = STAGING) -> Path:
     dest.mkdir(parents=True)
     for name in COPY_NAMES:
         _copy_tree(TOOLKIT / name, dest / name)
+    # version.py reads this file from the bundle root. Without it the report
+    # falls back to 0.0.0 even though manifest.json has the real version.
+    shutil.copy2(TOOLKIT / "VERSION", dest / "VERSION")
     # Same square PNG the Home Assistant add-on uses (512x512).
     shutil.copy2(REPO / "ipbuilding_gateway" / "icon.png", dest / "icon.png")
     for rel in GATEWAY_FILES:

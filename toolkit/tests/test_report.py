@@ -7,6 +7,7 @@ import os
 import re
 import time
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -22,6 +23,7 @@ from ipbuilding_debug.redact import mask_stem, name_masks, redact_text
 from ipbuilding_debug.report import APPENDIX_LOG_LIMIT, parse_mailto, report_send_enabled
 from ipbuilding_debug.server import build_server
 from ipbuilding_debug.session import GatewaySession
+from ipbuilding_debug.version import __version__
 from ipbuilding_debug.tools import (
     capture_frames,
     connection_status,
@@ -50,6 +52,11 @@ def test_privacy_notice_has_retention_and_contact_and_no_statement() -> None:
     assert "http" not in notice.lower()
     assert "privacyverklaring" not in notice.lower()
     assert "T" + "riage" not in notice
+
+
+def _include_history(session: GatewaySession) -> None:
+    """Keep July fixtures inside the export window."""
+    session.started_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 
 def test_installation_id_is_a_stable_random_uuid4(
@@ -125,10 +132,14 @@ async def test_export_report_splits_evidence_and_redacts_free_text() -> None:
     confirmed = report.split("Bevestigd", 1)[1].split("Vermoeden", 1)[0]
     suspected = report.split("Vermoeden", 1)[1].split("5. Open vragen", 1)[0]
     tested = report.split("3. Wat getest werd", 1)[1].split("4. Bevindingen", 1)[0]
+    appendix = report.split("7. Bijlage", 1)[1]
     assert "5330303030" in confirmed
+    assert "5330303030" not in appendix
     assert "knop-alleen-vermoeden" not in confirmed
+    assert "knop-alleen-vermoeden" not in tested
     assert "knop-alleen-vermoeden" in suspected
     assert "5330303030" not in suspected
+    assert "onderbreking-open-vraag" not in tested
     assert "local_time" not in tested
     assert re.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", tested)
     assert "onderbreking-open-vraag" in report.split("5. Open vragen", 1)[1]
@@ -346,6 +357,7 @@ def test_name_masks_keep_the_first_character_and_number_collisions() -> None:
 @pytest.mark.asyncio
 async def test_report_masks_room_lamp_and_button_names() -> None:
     session = GatewaySession("127.0.0.1:9", backoff_start=30, backoff_max=30)
+    _include_history(session)
     session.devices = {
         "dev-hek": {
             "id": "dev-hek",
@@ -457,6 +469,7 @@ async def test_report_times_are_local_and_the_template_is_complete() -> None:
     time.tzset()
     try:
         session = GatewaySession("127.0.0.1:9", backoff_start=30, backoff_max=30)
+        _include_history(session)
         await session.buffer.append(
             {
                 "type": "log",
@@ -496,6 +509,7 @@ async def test_report_times_are_local_and_the_template_is_complete() -> None:
 @pytest.mark.asyncio
 async def test_report_masks_a_name_that_a_longer_token_would_swallow() -> None:
     session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
+    _include_history(session)
     session.devices = {
         "dev-1": {
             "id": "relay Traphal extra",
@@ -531,6 +545,7 @@ async def test_report_times_in_the_appendix_are_local() -> None:
     time.tzset()
     try:
         session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
+        _include_history(session)
         await session.buffer.append(
             {
                 "type": "log",
@@ -569,6 +584,7 @@ async def test_report_times_in_the_appendix_are_local() -> None:
 @pytest.mark.asyncio
 async def test_report_keeps_frames_and_caps_duplicate_logs() -> None:
     session = GatewaySession("192.0.2.40:9", backoff_start=30, backoff_max=30)
+    _include_history(session)
     await session.buffer.append(
         {
             "type": "udp_frame",
@@ -578,6 +594,16 @@ async def test_report_keeps_frames_and_caps_duplicate_logs() -> None:
             "dst": "192.0.2.1",
         }
     )
+    for _ in range(2):
+        await session.buffer.append(
+            {
+                "type": "udp_frame",
+                "direction": "rx",
+                "hex": "4930303030",
+                "src": "192.0.2.50",
+                "dst": "192.0.2.1",
+            }
+        )
     total = APPENDIX_LOG_LIMIT + 40
     for index in range(total):
         await session.buffer.append(
@@ -605,10 +631,14 @@ async def test_report_keeps_frames_and_caps_duplicate_logs() -> None:
     suspected = report.split("Vermoeden", 1)[1].split("5. Open vragen", 1)[0]
     appendix = report.split("7. Bijlage", 1)[1]
     assert "I0154110" in confirmed
-    assert "I0154110" in appendix
+    assert "I0154110" not in appendix
+    assert "4930303030" not in confirmed
+    assert "4930303030" not in appendix
+    assert "Routinepolls: 2." in appendix
     assert "kessel-lo" in confirmed
     assert "kessel-lo" in result.data["frontmatter"]
     assert "dialects: []" not in result.data["frontmatter"]
+    assert "\n  - kessel-lo\n" not in result.data["frontmatter"]
     newest = f"regel-{total - 1:03d}"
     assert report.count(newest) == 1
     assert newest in appendix
@@ -625,6 +655,7 @@ async def test_report_redacts_instance_uuid_and_service_name() -> None:
     service_uuid = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
     service = "ipbgw-11111111._ipbgw._tcp.local."
     session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
+    _include_history(session)
     session.devices = {
         "dev-1": {"id": "dev-1", "name": "Traphal", "room": "Keuken", "device_type": "relay"}
     }
@@ -713,13 +744,17 @@ async def test_export_shows_command_and_decode_with_masked_names() -> None:
     assert re.search(clock + r" command_result", tested)
     assert re.search(clock + r" decode_result", tested)
     assert "Txxxxxx" in tested
+    assert "42 ms" in tested
     assert "niet bevestigd" in tested
     assert "herkend" in tested
     assert "kessel-lo" in tested
-    assert "Txxxxxx" in confirmed
-    assert "42 ms" in confirmed
+    assert "command_result" not in confirmed
+    assert "Txxxxxx" not in confirmed
+    assert "42 ms" not in confirmed
     assert "niet bevestigd" not in confirmed
     assert "4930313534313130" in confirmed
+    assert __version__ != "0.0.0"
+    assert f"toolkit_version: {__version__}" in result.data["frontmatter"]
     assert "Traphal" not in rendered
     assert "192.0.2" not in rendered
     assert "regel-000" not in report
@@ -727,6 +762,123 @@ async def test_export_shows_command_and_decode_with_masked_names() -> None:
     assert kinds.count("command_result") == 2
     assert "decode_result" in kinds
     assert "udp_frame" in kinds
+
+
+@pytest.mark.asyncio
+async def test_appendix_masks_names_like_the_rest_of_the_report() -> None:
+    session = GatewaySession("192.0.2.30:9", backoff_start=30, backoff_max=30)
+    session.devices = {
+        "dev-1": {"id": "dev-1", "name": "Traphal", "room": "Keuken", "device_type": "relay"}
+    }
+    await session.buffer.append(
+        {
+            "type": "log",
+            "level": "info",
+            "logger": "gw",
+            "message": "Traphal aan via 192.0.2.30 id dev-1",
+        }
+    )
+    result = await export_session(session)
+    appendix = result.data["report"].split("7. Bijlage", 1)[1]
+    assert "Txxxxxx" in appendix
+    assert "Traphal" not in appendix
+    assert "[naam]" not in appendix
+    assert "dev-1" not in appendix
+    assert "[id]" in appendix
+    assert "192.0.2.30" not in appendix
+    assert "192.0.2.30" not in result.data["report"]
+
+
+@pytest.mark.asyncio
+async def test_yaml_dialects_keep_full_ids_only() -> None:
+    session = GatewaySession("192.0.2.40:9", backoff_start=30, backoff_max=30)
+    await session.buffer.append(
+        {
+            "type": "decode_result",
+            "message": "bepaling",
+            "matched": True,
+            "dialect_id": "kessel-lo",
+            "dialect_ids": [
+                "kessel-lo",
+                "input.kessel-lo.idle_reply",
+                "input.kessel-lo.idle_reply",
+            ],
+        }
+    )
+    result = await export_session(session)
+    front = result.data["frontmatter"]
+    block = front.split("dialects:", 1)[1]
+    ids: list[str] = []
+    for line in block.splitlines():
+        if line.startswith("  - "):
+            ids.append(line[4:].strip().strip("'\""))
+        elif line.strip() and not line.startswith(" "):
+            break
+    assert ids == ["input.kessel-lo.idle_reply"]
+    assert "kessel-lo" not in ids
+
+
+@pytest.mark.asyncio
+async def test_export_omits_events_from_before_the_session() -> None:
+    session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
+    session.devices = {
+        "dev-1": {"id": "dev-1", "name": "Traphal", "room": "Keuken", "device_type": "relay"}
+    }
+    await session.buffer.append(
+        {
+            "type": "log",
+            "ts": "2026-07-02T03:04:05Z",
+            "level": "info",
+            "message": "Traphal ging uit",
+        }
+    )
+    await session.buffer.append(
+        {
+            "type": "udp_frame",
+            "ts": "2026-07-02T03:04:06Z",
+            "direction": "rx",
+            "hex": "4930303030",
+        }
+    )
+    await session.buffer.append(
+        {
+            "type": "state_changed",
+            "ts": "2026-07-02T03:04:07Z",
+            "id": "dev-1",
+            "state": "off",
+            "message": "oude status",
+        }
+    )
+    await session.buffer.append(
+        {
+            "type": "log",
+            "level": "info",
+            "message": "sessieregel Traphal",
+        }
+    )
+    await session.buffer.append(
+        {
+            "type": "state_changed",
+            "id": "dev-1",
+            "state": "on",
+            "message": "status live",
+        }
+    )
+    result = await export_session(session)
+    report = result.data["report"]
+    tested = report.split("3. Wat getest werd", 1)[1].split("4. Bevindingen", 1)[0]
+    suspected = report.split("Vermoeden", 1)[1].split("5. Open vragen", 1)[0]
+    appendix = report.split("7. Bijlage", 1)[1]
+    assert "2026-07-02" not in report
+    assert "Traphal ging uit" not in report
+    assert "4930303030" not in report
+    assert "oude status" not in report
+    assert "sessieregel" in appendix
+    assert "Txxxxxx" in appendix
+    assert "Traphal" not in report
+    assert "status live" in suspected
+    assert "status live" not in tested
+    assert "state_changed" not in tested
 
 
 def test_skill_describes_the_report_and_the_backlog() -> None:
@@ -751,6 +903,8 @@ def test_skill_describes_the_report_and_the_backlog() -> None:
     assert "Toegang op afstand" not in text
     assert "Debuggen en bedienen op afstand" not in text
     assert "onder **Debug**" in text
+    assert "Voor een dialecttest" in text
+    assert "Routinepolls" in text
     assert "T" + "riage" not in text
     readme = (TOOLKIT / "README.md").read_text(encoding="utf-8")
     guide = (TOOLKIT / "HANDLEIDING.md").read_text(encoding="utf-8")

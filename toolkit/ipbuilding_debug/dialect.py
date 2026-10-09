@@ -69,6 +69,17 @@ def legacy_segments() -> tuple[str, ...]:
     return tuple(_LEGACY)
 
 
+def full_dialect_id(dialect_id: str) -> str:
+    """A message-type id such as ``dimmer.kessel-lo.status_reply``.
+
+    A bare city name has no dots and is not a dialect id for the report.
+    """
+    shown = present_dialect_id((dialect_id or "").strip())
+    if shown.count(".") < 2:
+        return ""
+    return shown
+
+
 def present_dialect_id(dialect_id: str) -> str:
     """Map an incoming dialect id onto the current id."""
     parts = dialect_id.split(".")

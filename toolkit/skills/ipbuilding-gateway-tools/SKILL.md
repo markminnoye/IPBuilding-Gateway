@@ -57,7 +57,7 @@ Er is een schakelaar in de add-on. Engelse naam: **Remote control (for debugging
 - `probe_generation` — modules en versie.
 - `capture_frames` — alleen als `udp_frame` in `capabilities` staat én de schakelaar aan staat. Eén aanroep wacht hoogstens 30 seconden. Een volgende aanroep gaat verder waar de vorige stopte en neemt mee wat tussendoor binnenkwam. Twee aanroepen dekken zo een langere periode zonder gat. Wacht niet langer dan 30 seconden per aanroep.
 - `send_raw` — staat altijd in de tool-lijst. Draaien kan alleen als `raw_send` in `capabilities` staat én de schakelaar aan staat. Ontbreekt dat, zeg dan de reden uit `unavailable_tools` (capability of schakelaar), en verberg de tool niet. Eerst zonder bevestiging, daarna pas met `confirmed=true`.
-- `decode_test` — lokaal, geen verbinding nodig. Een herkend dialect toont de stadsnaam en het id uit de tool (`dialect_name`, `dialects`), nu Kessel-Lo (`kessel-lo`, `dimmer.kessel-lo.*` en `input.kessel-lo.*`) en Torhout (`torhout`, `*.torhout.*`). Gebruik die namen. Verzin geen andere. Zegt de tool dat een relaisformaat herkend is maar dat deze decoder er geen dialect-id aan geeft, herhaal dat. Dat is geen Kessel-Lo en geen Torhout. Zegt de tool dat geen enkele decoder het frame herkent, geef dat door.
+- `decode_test` — lokaal, geen verbinding nodig. Voor een dialecttest roep je altijd `decode_test` aan, met de hex van een opgenomen frame. `probe_generation` en `capture_frames` vervangen die test niet; hun bepaling komt ook in de buffer, maar de dialecttest zelf is `decode_test`. Een herkend dialect toont de stadsnaam en het id uit de tool (`dialect_name`, `dialects`), nu Kessel-Lo (`kessel-lo`, `dimmer.kessel-lo.*` en `input.kessel-lo.*`) en Torhout (`torhout`, `*.torhout.*`). Gebruik die namen. Verzin geen andere. Zegt de tool dat een relaisformaat herkend is maar dat deze decoder er geen dialect-id aan geeft, herhaal dat. Dat is geen Kessel-Lo en geen Torhout. Zegt de tool dat geen enkele decoder het frame herkent, geef dat door.
 - `export_session` — namen en adressen standaard weg. Ruwe tekst alleen met `redact=false`, en alleen lokaal. Elk event heeft `local_time` (ISO 8601 met offset, lokale tijd) en `time_source`: `gateway` als de gateway een tijdstip meestuurde, anders `received` (het ontvangstmoment in de toolkit). Het resultaat bevat het vaste rapport hieronder.
 - `send_report` — alleen als die tool in de lijst staat. Eerst de privacymelding en het gefilterde rapport, zonder mailto. Pas na een expliciet ja opnieuw aanroepen met `confirmed=true`. Dan komt er een mailto-link. De toolkit verstuurt niets. Ontbreekt de tool, dan blijft het bij `export_session`.
 
@@ -97,7 +97,7 @@ Geef de boodschap van de tool door, in de taal van de tester. Vier gevallen:
 
 Elk event in het verslag heeft een lokale tijd (`local_time`) en `time_source`. Zeg welke bron het is: de gateway, of het moment waarop de toolkit het ontving. Tijden in het rapport zijn de lokale tijd van de tester.
 
-Een verstuurd commando (`device_command` met confirmed=true) en elke `decode_test` komen vanzelf in de buffer. Zet ze niet over in de notitie. In het rapport staan ze onder Wat getest werd, één regel, met lokale tijd. Bevestigde de module het commando, dan staat die regel ook onder Bevestigd. Geen antwoord van de module is geen fout: de regel zegt dan niet bevestigd.
+Een verstuurd commando (`device_command` met confirmed=true) en elke dialectbepaling komen vanzelf in de buffer: `decode_test`, en ook de bepaling uit `probe_generation` en uit de lokale decode van `capture_frames`. Zet ze niet over in de notitie. In het rapport staan ze onder Wat getest werd, één regel, met lokale tijd, en niet nog eens onder Bevestigd. Geen antwoord van de module is geen fout: de regel zegt dan niet bevestigd. Het rapport bevat alleen gebeurtenissen uit deze sessie, vanaf het verbinden, niet de oudere logbuffer van de gateway.
 
 Dialecten hebben een stadsnaam. De namen en ids komen uit de tool. Nu zijn dat Kessel-Lo (`kessel-lo`; berichttypes `dimmer.kessel-lo.*` en `input.kessel-lo.*`) en Torhout (`torhout`; berichttypes `*.torhout.*`). Kessel-Lo is het dialect van de dimmer- en inputmodules uit de eerste testopstelling. Torhout is het tweede bevestigde dialect. Gebruik de naam die de tool teruggeeft; die kan later wijzigen. Meld je een nieuw dialect, of schrijf je er een in het verslag, kies dan een willekeurige stad. Nooit de woonplaats van de tester en nooit een persoonsnaam. Een relaisformaat zonder dialect-id is geen stad: verzin er geen.
 
@@ -105,11 +105,11 @@ Dialecten hebben een stadsnaam. De namen en ids komen uit de tool. Nu zijn dat K
 
 1. Samenvatting — de woorden van de tester en wat gevonden werd.
 2. Omgeving — toolkit- en gatewayversie, rol (master of slave), modules met dialect, welke functies ondersteund en actief zijn.
-3. Wat getest werd — per stap wat de tester deed en wat er gebeurde, in lokale tijd. Een verstuurd commando en een dialecttest staan hier vanzelf.
-4. Bevindingen — `Bevestigd` (frames, en een commando dat de module bevestigde) en `Vermoeden` (alleen de buffer) strikt apart, met het bewijs.
+3. Wat getest werd — per stap wat de tester deed en wat er gebeurde, in lokale tijd. Een verstuurd commando en een dialectbepaling staan hier, en niet ook onder Bevindingen.
+4. Bevindingen — `Bevestigd` (alleen frames die iets bevestigen: commandoantwoorden en statuswijzigingen, geen keepalive en geen poll) en `Vermoeden` (status, knop en apparaat uit de buffer, niet ook in sectie 3) strikt apart, met het bewijs.
 5. Open vragen.
 6. Feedback over de tool.
-7. Bijlage — ruwe events en frames, gefilterd. Logregels staan alleen hier, elk één keer, de laatste 80. Frames staan ook onder Bevestigd.
+7. Bijlage — logregels, elk één keer, de laatste 80, met hetzelfde naammasker als de rest van het rapport. Routinepolls alleen als aantal. Frames die iets bevestigen staan onder Bevestigd en niet nog eens hier. Adressen, IP's en MAC-adressen blijven weg.
 
 Het rapport begint met het YAML-blok, vóór elke andere tekst. Direct daarna staat: "Zet geen namen, adressen, wachtwoorden of codes in je feedback." Elke tijd in het rapport is lokale tijd met een offset. Een tijd met Z of +00:00 wordt omgezet. `instance_id`, `uuid` en `service_name` in logregels gaan eruit, net als adressen. Het installatie-id in het YAML-blok blijft staan.
 

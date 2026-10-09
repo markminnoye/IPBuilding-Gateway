@@ -108,6 +108,12 @@ async def test_probe_lists_modules_without_the_switch() -> None:
     assert result.data["modules"][0]["model"] == "IP0200PoE"
     assert "PoE" in result.message
     assert MSG_REMOTE_DEBUGGING_OFF in result.message
+    recorded = [
+        event for event in session.buffer.snapshot() if event.get("type") == "decode_result"
+    ]
+    assert len(recorded) == 1
+    assert recorded[0]["source"] == "probe_generation"
+    assert "dialect" in recorded[0]["message"].lower()
 
 
 @pytest.mark.asyncio
@@ -175,6 +181,17 @@ async def test_capture_frames_subscribes_and_returns_a_frame() -> None:
     assert result.data["frames"][0]["hex"] == "5330303030"
     assert result.data["frames"][0]["local_decode"]["matched"] is True
     assert any(item.get("type") == "subscribe_udp_frames" for item in gateway.received)
+    recorded = [
+        event for event in session.buffer.snapshot() if event.get("type") == "decode_result"
+    ]
+    assert len(recorded) == 1
+    assert recorded[0]["source"] == "capture_frames"
+    assert recorded[0]["matched"] is True
+    dialect = recorded[0].get("dialect_id")
+    if dialect:
+        assert str(dialect).count(".") >= 2
+    else:
+        assert "geen dialect-id" in recorded[0]["message"]
 
 
 @pytest.mark.asyncio
@@ -778,7 +795,9 @@ async def test_decode_test_records_a_match_and_a_miss() -> None:
     assert len(events) == 2
     assert events[0]["hex"]
     assert events[0]["matched"] is True
-    assert "kessel-lo" in str(events[0].get("dialect_id"))
+    assert events[0]["dialect_id"].count(".") >= 2
+    assert "kessel-lo" in events[0]["dialect_id"]
+    assert events[0]["dialect_id"] != "kessel-lo"
     assert events[0]["fields"]
     assert "herkend" in events[0]["message"]
     assert missed.data["matched"] is False
@@ -1349,6 +1368,7 @@ async def test_export_stamps_local_time_and_hides_legacy_dialect_ids() -> None:
         if "input" in dialect.families
     )
     session = GatewaySession("localhost:9", backoff_start=30, backoff_max=30)
+    session.started_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
     await session.buffer.append(
         {
             "type": "log",
