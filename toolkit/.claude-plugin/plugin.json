@@ -1,7 +1,7 @@
 {
   "name": "ipbuilding-gateway-tools",
   "displayName": "IPBuilding Gateway Tools",
-  "version": "0.1.0-rc.13",
+  "version": "0.1.0",
   "description": "IPBuilding Gateway Tools helpt je samen met een assistent problemen in je IPBuilding-installatie op te sporen.",
   "author": {
     "name": "Sonic Rocket"

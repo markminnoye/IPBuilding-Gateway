@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0-rc.13
+## 0.1.0 — 2026-10-09
 
 - Every dialect determination is stored, including `probe_generation` and the local decode in `capture_frames`. A dialect test uses `decode_test`.
 - Appendix log lines use the same name mask as the rest of the report. Addresses, IPs, and MAC addresses stay removed.
