@@ -1,0 +1,67 @@
+# Checks IPBuilding Gateway Tools on every pull request.
+# A tag gateway-tools-vX.Y.Z (matching toolkit/VERSION) also publishes the .mcpb
+# on a GitHub release. Add-on tags stay vX.Y.Z and are not handled here.
+
+name: IPBuilding Gateway Tools
+
+on:
+  pull_request:
+  push:
+    tags:
+      - "gateway-tools-v*.*.*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install toolkit dependencies
+        run: python -m pip install "mcp>=2,<3" "aiohttp>=3.9" "pydantic>=2" "zeroconf>=0.131" pytest pytest-asyncio
+
+      - name: Test
+        run: PYTHONPATH=toolkit:. python -m pytest toolkit/tests -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install mcpb
+        run: npm install --prefix "${RUNNER_TEMP}/mcpb" @anthropic-ai/mcpb
+
+      - name: Build bundle
+        env:
+          # Empty when the secret is not set. The bundle then has no intake address.
+          IPBUILDING_REPORT_INTAKE: ${{ secrets.IPBUILDING_REPORT_INTAKE }}
+        run: PATH="${RUNNER_TEMP}/mcpb/node_modules/.bin:$PATH" python toolkit/scripts/build.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ipbuilding-gateway-tools
+          path: toolkit/dist/*.mcpb
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/gateway-tools-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ipbuilding-gateway-tools
+          path: dist
+
+      - name: Publish the bundle on the gateway-tools release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.mcpb
+          body_path: toolkit/HANDLEIDING.md
+          draft: false

@@ -77,3 +77,7 @@ tests/fixtures/minimal_udp1001_session/udp_ipbox_export.txt
 
 # HA add-on build staging (populated by prepare-build.sh / CI)
 ipbuilding_gateway/gateway/
+
+# Debug toolkit bundle output
+toolkit/dist/
+toolkit/.build/

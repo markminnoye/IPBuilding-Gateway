@@ -1,0 +1,19 @@
+{
+  "name": "ipbuilding-gateway-tools",
+  "displayName": "IPBuilding Gateway Tools",
+  "version": "0.1.0",
+  "description": "IPBuilding Gateway Tools helpt je samen met een assistent problemen in je IPBuilding-installatie op te sporen.",
+  "author": {
+    "name": "Sonic Rocket"
+  },
+  "license": "MIT",
+  "userConfig": {
+    "gateway_address": {
+      "type": "string",
+      "title": "Gateway-adres",
+      "description": "homeassistant.local volstaat meestal. Lukt dat niet, vul het adres in waarmee je Home Assistant in je browser opent, zonder http:// en zonder poort.",
+      "default": "homeassistant.local",
+      "required": false
+    }
+  }
+}
