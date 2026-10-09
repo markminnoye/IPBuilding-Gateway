@@ -3,6 +3,7 @@
 import pytest
 
 from gateway.models import DimmerCommand
+from gateway.payloads.dialects import KESSEL_LO, TORHOUT
 from gateway.payloads.dimmer import (
     decode_dimmer_payload,
     decode_dimmer_status,
@@ -48,7 +49,7 @@ def test_decode_dimmer_status_channel_in_code():
     assert r30.level_percent == 30
     assert r30.internal_value_code == "130"
     assert r30.family_constant == "54"
-    assert decode_dimmer_payload(b"I0154130")["dialect_id"] == "dimmer.lab.status_reply"
+    assert decode_dimmer_payload(b"I0154130")["dialect_id"] == KESSEL_LO.message_type("dimmer", "status_reply")
 
     r70 = decode_dimmer_status(b"I0154170")
     assert r70.channel == 1
@@ -82,7 +83,7 @@ def test_encode_dim_off():
     assert encode_dim_off(0) == b"C0001030"
 
 
-def test_nolf_dim_off_echo_decodes_as_zero_percent():
+def test_torhout_dim_off_echo_decodes_as_zero_percent():
     """C<ch>001030 echo must land as 0% (cut + value 00)."""
     parsed = decode_dimmer_payload(b"C1001030")
     assert parsed is not None
@@ -103,17 +104,17 @@ def test_decode_dimmer_command_off_placeholder_is_zero():
     assert parsed["level_percent"] == 0
 
 
-def test_decode_nolf_dimmer_status_ch1_84():
+def test_decode_torhout_dimmer_status_ch1_84():
     parsed = decode_dimmer_payload(b"I0115184")
     assert parsed is not None
-    assert parsed["dialect_id"] == "dimmer.nolf.status_reply"
+    assert parsed["dialect_id"] == TORHOUT.message_type("dimmer", "status_reply")
     assert parsed["family"] == "dimmer_status_reply"
     assert parsed["family_constant"] == "15"
     assert parsed["channel"] == 1
     assert parsed["level_percent"] == 84
 
 
-def test_decode_nolf_dimmer_status_ch0_100():
+def test_decode_torhout_dimmer_status_ch0_100():
     result = decode_dimmer_status(b"I0115099")
     assert result is not None
     assert result.family_constant == "15"
@@ -121,20 +122,20 @@ def test_decode_nolf_dimmer_status_ch0_100():
     assert result.level_percent == 100
 
 
-def test_decode_nolf_dimmer_status_ch3_off():
+def test_decode_torhout_dimmer_status_ch3_off():
     result = decode_dimmer_status(b"I0115300")
     assert result is not None
     assert result.channel == 3
     assert result.level_percent == 0
 
 
-def test_decode_nolf_dimmer_idle_keepalive():
+def test_decode_torhout_dimmer_idle_keepalive():
     """I0115000 is family-15 idle sentinel, not ch0 off."""
     parsed = decode_dimmer_payload(b"I0115000")
     assert parsed is not None
     assert parsed["family"] == "dimmer_poll"
     assert parsed["action"] == "idle"
-    assert parsed["dialect_id"] == "dimmer.nolf.idle_keepalive"
+    assert parsed["dialect_id"] == TORHOUT.message_type("dimmer", "idle_keepalive")
     assert "channel" not in parsed
     assert "level_percent" not in parsed
     assert decode_dimmer_status(b"I0115000") is None

@@ -124,10 +124,14 @@ Contains physical modules (with firmware, network config, MAC) and logical devic
       "module_metadata": "ok",
       "discovery": "ok"
     },
-    "issues": []
+    "issues": [],
+    "remote_debugging": false,
+    "capabilities": ["log_stream", "udp_frame", "raw_send"]
   }
 }
 ```
+
+`remote_debugging` and `capabilities` match `GET /api/v1/status`. `capabilities` lists only features this build implements (`log_stream`, `udp_frame`, and `raw_send`). `remote_debugging` is the add-on option **Remote control (for debugging)**. While that option is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Both fields are present when the option is off, so a client can check before subscribing. Each module in `snapshot.modules` includes a `reachability` object; see [rest.md](rest.md).
 
 ### `gateway_status` -- aggregate health update
 
@@ -155,7 +159,9 @@ Pushed when aggregate `status` or the set of open `issues[].id` changes. Same fi
       "context": { "ip": "10.10.1.30", "method": "getSysSet" },
       "since": "2026-06-15T11:40:00Z"
     }
-  ]
+  ],
+  "remote_debugging": false,
+  "capabilities": ["log_stream", "udp_frame", "raw_send"]
 }
 ```
 
@@ -288,13 +294,13 @@ lost. Distinguish from module discovery via `semantic_type: "button"`.
   "active": true,
   "channel": null,
   "type_hex": "2d",
-  "dialect_id": "input.lab.button_event"
+  "dialect_id": "input.kessel-lo.button_event"
 }
 ```
 
 `id` is the canonical 8-hex hardware id (same form as `button_event.id`).
-`type_hex` is the wire type byte; `dialect_id` is `input.lab.button_event`,
-`input.nolf.button_event`, or `input.unknown.button_event`.
+`type_hex` is the wire type byte; `dialect_id` is `input.kessel-lo.button_event`,
+`input.torhout.button_event`, or `input.unknown.button_event`.
 
 ### `device_removed` -- module not seen for N polls
 
@@ -355,6 +361,146 @@ Emitted after a forced sweep (`POST /api/v1/discover` or WS `discover` message) 
 
 ## Client -> Gateway messages
 
+### Remote debugging gate
+
+`subscribe_logs`, `unsubscribe_logs`, `set_log_level`, `subscribe_udp_frames`, `unsubscribe_udp_frames`, and `raw_send` are remote-debugging features. When `remote_debugging` is false they do nothing and the gateway replies:
+
+```json
+{
+  "type": "error",
+  "error": "remote_debugging_disabled",
+  "message": "Remote debugging is off. Turn on \"Remote control (for debugging)\" (Nederlands: \"Bediening op afstand (voor debuggen)\") under Settings > Add-ons > IPBuilding Gateway > Configuration."
+}
+```
+
+`error` is the stable code. `message` is English and names the add-on option in English (**Remote control (for debugging)**) and Dutch (**Bediening op afstand (voor debuggen)**), plus where to turn it on. REST `POST /api/v1/debug/log-level` and `POST /api/v1/debug/raw-send` use the same code and sentence with HTTP 403. `GET /api/v1/status` and this snapshot stay available either way.
+
+Other unknown message types are still ignored. The Home Assistant companion does not send these messages, so it does not receive `log` events.
+
+### `subscribe_logs` -- live gateway log
+
+```json
+{"type": "subscribe_logs", "min_level": "info"}
+```
+
+`min_level` is optional (`debug`, `info`, `warning`, `error`; default `info`). The gateway first replays the last lines it kept (up to 500, already filtered to `min_level`), then sends:
+
+```json
+{"type": "logs_subscribed", "min_level": "info", "buffered": 12}
+```
+
+Live lines follow, only to this subscriber:
+
+```json
+{
+  "type": "log",
+  "ts": "2026-06-15T11:42:00.123Z",
+  "level": "debug",
+  "logger": "gateway.udp_bus",
+  "message": "TX keepalive"
+}
+```
+
+A client that did not subscribe, including the companion, gets none of these. WebSocket-library loggers (`aiohttp`, `websockets`) are not forwarded.
+
+If the client falls behind, lines are dropped and the gateway sends `log_dropped` instead of waiting:
+
+```json
+{"type": "log_dropped", "count": 15}
+```
+
+That drop never blocks commands or `state_changed` for this or any other client.
+
+### `unsubscribe_logs`
+
+```json
+{"type": "unsubscribe_logs"}
+```
+
+Reply: `{"type": "logs_unsubscribed"}`. A temporary level requested by this client is dropped. If that was the most verbose active request, the next one applies, or the configured level returns.
+
+### `set_log_level` -- temporary level
+
+```json
+{"type": "set_log_level", "level": "debug", "ttl": 900}
+```
+
+`ttl` is required (integer seconds, 1–3600). The level applies to the whole gateway, so debug also fills the add-on log, and raw UDP TX/RX lines show up within seconds without a restart. It is not saved in add-on options.
+
+Reply:
+
+```json
+{"type": "log_level", "ok": true, "level": "debug", "ttl": 900, "effective_level": "debug"}
+```
+
+Several clients can request different levels at once. The most verbose request wins. Each has its own `ttl`. When one expires, or that client unsubscribes or disconnects, the next active request applies. The applied level stays at least as verbose as the configured baseline. REST level changes use the same rule and last until their own `ttl` even if no WebSocket client is subscribed.
+
+More than 10 level changes in 60 seconds from one client are refused:
+
+```json
+{"type": "error", "error": "log_level_rate_limited", "message": "Too many log level changes. Wait and try again."}
+```
+
+`invalid_log_level` and `invalid_ttl` use the same `type: error` shape.
+
+Token- and password-like values in `message` are replaced with `[redacted]`. While the option is on, anyone on the LAN who can open this WebSocket can read logs and change the level.
+
+### `subscribe_udp_frames` -- live field-bus frames
+
+```json
+{"type": "subscribe_udp_frames"}
+```
+
+Reply: `{"type": "udp_frames_subscribed"}`. After that, each payload this gateway sends or receives on the field bus is one event, only for subscribers:
+
+```json
+{
+  "type": "udp_frame",
+  "ts": "2026-06-15T11:42:00.123Z",
+  "direction": "tx",
+  "src": "gateway",
+  "src_port": 1001,
+  "dst": "module",
+  "dst_port": 1001,
+  "hex": "533030303031303030",
+  "decoded": {
+    "dialect_id": "relay.torhout.command_reply",
+    "family": "relay_command_reply"
+  },
+  "dialect_id": "relay.torhout.command_reply"
+}
+```
+
+`direction` is `tx` or `rx`. `src` and `dst` are the host addresses on that hop. `hex` is the payload. `decoded` and `dialect_id` are present when a known payload decoder matches, otherwise `null`. Relay commands such as `S0500` use `relay.kessel-lo.command`. Status `0100`/`0000` uses `relay.kessel-lo.status_reply`. Status `0115`/`0015` uses `relay.torhout.status_reply`. The gateway only sees its own traffic, not frames between other devices.
+
+A client that falls behind gets:
+
+```json
+{"type": "udp_frame_dropped", "dropped": 15}
+```
+
+`dropped` is how many frames were discarded for that client. The bus and other WebSocket clients keep going. There is no replay buffer: subscription starts at the next frame.
+
+### `unsubscribe_udp_frames`
+
+```json
+{"type": "unsubscribe_udp_frames"}
+```
+
+Reply: `{"type": "udp_frames_unsubscribed"}`.
+
+### `raw_send` -- one payload and its reply window
+
+Same body as `POST /api/v1/debug/raw-send`. See [rest.md](rest.md).
+
+```json
+{"type": "raw_send", "module_ip": "192.0.2.10", "payload_hex": "5030303030", "window_ms": 2000}
+```
+
+Reply: `{"type": "raw_send_result", "ok": true, "schema_version": 2, "sent_hex": "5030303030", "module_ip": "192.0.2.10", "port": 1001, "window_ms": 2000, "replies": [], "truncated": false}`.
+
+Errors use `{"type": "error", "error": "<code>", "message": "..."}`. While remote debugging is off, `error` is `remote_debugging_disabled`.
+
 ### `discover` -- force discovery sweep
 
 Trigger the same ARP-first + HTTP discovery as `POST /api/v1/discover`. Ignores toggles.
@@ -385,9 +531,12 @@ The gateway responds with a `discovery_completed` event (see below).
 
 ### `command_result`
 
+`ok` means the gateway sent the command. `module_confirmed` is whether a field-bus reply arrived inside the reply window. No reply is still `ok: true` with `module_confirmed: false`. `confirm_ms` is the milliseconds until that reply, or `null`. `reported` is the decoded `state` and/or `level_percent`, or `null`. `DIM_START` does not wait, so `module_confirmed` is false and `confirm_ms` is null.
+
 ```json
-{"type": "command_result", "id": "10.10.1.30-0", "ok": true, "error": null}
-{"type": "command_result", "id": "10.10.1.30-0", "ok": false, "error": "unknown device_id: 10.10.1.99-0"}
+{"type": "command_result", "id": "192.0.2.10-0", "ok": true, "error": null, "module_confirmed": true, "confirm_ms": 42, "reported": {"state": "on"}}
+{"type": "command_result", "id": "192.0.2.10-0", "ok": true, "error": null, "module_confirmed": false, "confirm_ms": null, "reported": null}
+{"type": "command_result", "id": "192.0.2.99-0", "ok": false, "error": "unknown or invalid entity_id: 192.0.2.99-0", "module_confirmed": false, "confirm_ms": null, "reported": null}
 ```
 
 ---

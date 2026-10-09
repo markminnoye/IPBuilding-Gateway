@@ -95,6 +95,17 @@ configuration:
       log_level:
         name: Log level
         description: debug, info, warning, or error. debug also logs field-bus TX/RX (keepalives, commands, unmatched replies).
+  debug:
+    name: Debug
+    description: Temporarily allow remote access to track down problems. Off by default.
+    fields:
+      remote_debugging_and_control:
+        name: Remote control (for debugging)
+        description: >-
+          Allows the IPBuilding Gateway Tools to read live logs and field-bus
+          traffic and to send commands to your modules remotely, so problems
+          can be diagnosed. Only turn this on during a debug session. It stays
+          on until you turn it off.
 network:
   8080/tcp: API and web UI — WebSocket /ws and REST /api/v1/ (companion integration; web UI via Ingress).
   30200/tcp: IPBox REST compatibility (only used when enabled under Network → IPBox REST compatibility).

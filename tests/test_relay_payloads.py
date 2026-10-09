@@ -1,6 +1,7 @@
 """Tests for gateway.payloads.relay."""
 
 from gateway.models import RelayAction, RelayCommand
+from gateway.payloads.dialects import KESSEL_LO, TORHOUT
 from gateway.payloads.relay import (
     decode_relay_payload,
     decode_relay_status,
@@ -8,6 +9,8 @@ from gateway.payloads.relay import (
     relay_state_from_code,
     strip_j_envelope,
 )
+from gateway.udp_bus import UDPPacket
+from gateway.udp_frames import describe_payload, frame_event
 
 
 def test_decode_relay_status_reply_on():
@@ -38,19 +41,20 @@ def test_encode_relay_on_wire():
     parsed = decode_relay_payload(wire)
     assert parsed["action"] == "on"
     assert parsed["channel"] == 0
+    assert parsed["dialect_id"] == KESSEL_LO.message_type("relay", "command")
 
 
 def test_pulse_reply_candidate():
     parsed = decode_relay_payload(b"P000000000")
     assert parsed["family"] == "relay_reply_candidate"
-    assert parsed.get("dialect_id") != "relay.nolf.command_reply"
+    assert parsed.get("dialect_id") != TORHOUT.message_type("relay", "command_reply")
 
 
-def test_nolf_command_reply_off_ch6():
-    """Golden vector from Nolf log 2026-08-24: C060000000 echo after OFF ch6."""
+def test_torhout_command_reply_off_ch6():
+    """Golden vector from Torhout log 2026-08-24: C060000000 echo after OFF ch6."""
     parsed = decode_relay_payload(b"C060000000")
     assert parsed is not None
-    assert parsed["dialect_id"] == "relay.nolf.command_reply"
+    assert parsed["dialect_id"] == TORHOUT.message_type("relay", "command_reply")
     assert parsed["family"] == "relay_command_reply"
     assert parsed["action"] == "off"
     assert parsed["channel"] == 6
@@ -60,7 +64,7 @@ def test_nolf_command_reply_off_ch6():
     assert parsed["raw"] == "C060000000"
 
 
-def test_nolf_command_reply_on_from_prefix():
+def test_torhout_command_reply_on_from_prefix():
     """State comes from the prefix (S→on), not a guessed quartet."""
     parsed = decode_relay_payload(b"S060000000")
     assert parsed is not None
@@ -71,8 +75,8 @@ def test_nolf_command_reply_on_from_prefix():
     assert parsed["state_code"] == ""
 
 
-def test_nolf_command_reply_p2p_toggle_collision():
-    """T11001000 is input→dimmer p2p toggle; the Nolf regex also matches it.
+def test_torhout_command_reply_p2p_toggle_collision():
+    """T11001000 is input→dimmer p2p toggle; the Torhout regex also matches it.
 
     decode_relay_payload is only invoked for relay-module IPs, so this is a
     routing-only safety — not a property of the regex. Do not decode
@@ -97,7 +101,7 @@ def test_relay_state_from_code_prefix_rule():
     assert relay_state_from_code("abc") == "unknown"
 
 
-def test_decode_relay_status_nolf_0015_off():
+def test_decode_relay_status_torhout_0015_off():
     result = decode_relay_status(b"I00000015")
     assert result is not None
     assert result.channel == 0
@@ -105,7 +109,7 @@ def test_decode_relay_status_nolf_0015_off():
     assert result.state_code == "0015"
 
 
-def test_decode_relay_status_nolf_0115_on():
+def test_decode_relay_status_torhout_0115_on():
     result = decode_relay_status(b"I00000115")
     assert result is not None
     assert result.channel == 0
@@ -114,23 +118,25 @@ def test_decode_relay_status_nolf_0115_on():
 
 
 def test_decode_relay_status_poll_ch6_on():
-    """Lab/Nolf status-poll I000060115 — ch6 on, not a command echo."""
+    """Lab/Torhout status-poll I000060115 — ch6 on, not a command echo."""
     parsed = decode_relay_payload(b"I000060115")
     assert parsed is not None
     assert parsed["family"] == "relay_status"
     assert parsed["channel"] == 6
     assert parsed["state"] == "on"
     assert parsed["state_code"] == "0115"
+    assert parsed["dialect_id"] == TORHOUT.message_type("relay", "status_reply")
 
 
 def test_decode_relay_status_poll_ch5_off():
-    """Lab/Nolf status-poll I000050015 — ch5 off, not a command echo."""
+    """Lab/Torhout status-poll I000050015 — ch5 off, not a command echo."""
     parsed = decode_relay_payload(b"I000050015")
     assert parsed is not None
     assert parsed["family"] == "relay_status"
     assert parsed["channel"] == 5
     assert parsed["state"] == "off"
     assert parsed["state_code"] == "0015"
+    assert parsed["dialect_id"] == TORHOUT.message_type("relay", "status_reply")
 
 
 def test_decode_relay_status_true_unknown():
@@ -138,3 +144,44 @@ def test_decode_relay_status_true_unknown():
     assert result is not None
     assert result.state == "unknown"
     assert result.state_code == "0200"
+    parsed = decode_relay_payload(b"I00000200")
+    assert parsed is not None
+    assert "dialect_id" not in parsed
+
+
+def test_relay_frames_carry_city_dialect_on_udp_frame():
+    """Fake frames: commands and known status replies name a city."""
+    command, command_id = describe_payload(b"S0500")
+    assert command is not None
+    assert command_id == KESSEL_LO.message_type("relay", "command")
+    assert command["dialect_id"] == command_id
+
+    off, off_id = describe_payload(b"C0300")
+    assert off_id == KESSEL_LO.message_type("relay", "command")
+    assert off["action"] == "off"
+
+    reference, reference_id = describe_payload(b"I000030100")
+    assert reference["state_code"] == "0100"
+    assert reference_id == KESSEL_LO.message_type("relay", "status_reply")
+
+    short_off, short_id = describe_payload(b"I00100000")
+    assert short_off["channel"] == 10
+    assert short_id == KESSEL_LO.message_type("relay", "status_reply")
+
+    older, older_id = describe_payload(b"I00000015")
+    assert older["state_code"] == "0015"
+    assert older_id == TORHOUT.message_type("relay", "status_reply")
+
+    pkt = UDPPacket(
+        data=b"S0500",
+        src_ip="192.0.2.1",
+        src_port=1001,
+        dst_ip="192.0.2.30",
+        dst_port=1001,
+        monotonic_ts=0.0,
+    )
+    event = frame_event("tx", pkt)
+    assert event["type"] == "udp_frame"
+    assert event["dialect_id"] == KESSEL_LO.message_type("relay", "command")
+    assert event["decoded"]["dialect_id"] == event["dialect_id"]
+    assert event["hex"] == b"S0500".hex()

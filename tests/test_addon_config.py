@@ -174,11 +174,50 @@ def test_translations_present_for_multi_press() -> None:
             assert fields[key].get("description")
 
 
+def test_remote_debugging_option_defaults_off() -> None:
+    cfg = _load_config()
+    assert cfg["homeassistant_api"] is True
+    assert cfg["hassio_api"] is True
+    assert cfg["options"]["debug"]["remote_debugging_and_control"] is False
+    assert cfg["schema"]["debug"]["remote_debugging_and_control"] == "bool"
+
+
+def test_translations_present_for_remote_debugging() -> None:
+    path_en = _CONFIG.parent / "translations" / "en.yaml"
+    path_nl = _CONFIG.parent / "translations" / "nl.yaml"
+    en = yaml.safe_load(path_en.read_text(encoding="utf-8"))
+    nl = yaml.safe_load(path_nl.read_text(encoding="utf-8"))
+    en_field = en["configuration"]["debug"]["fields"]["remote_debugging_and_control"]
+    nl_field = nl["configuration"]["debug"]["fields"]["remote_debugging_and_control"]
+    from gateway.remote_debug_copy import TOOL_NAME, option_description
+
+    assert en_field["name"] == "Remote control (for debugging)"
+    assert en_field["description"].strip() == option_description("en")
+    assert nl_field["name"] == "Bediening op afstand (voor debuggen)"
+    assert nl_field["description"].strip() == option_description("nl")
+    assert nl_field["description"].count(TOOL_NAME["nl"]) == 1
+    assert en_field["description"].count(TOOL_NAME["en"]) == 1
+    assert en["configuration"]["debug"]["name"] == "Debug"
+    assert en["configuration"]["debug"]["description"] == (
+        "Temporarily allow remote access to track down problems. Off by default."
+    )
+    assert nl["configuration"]["debug"]["name"] == "Debug"
+    assert nl["configuration"]["debug"]["description"] == (
+        "Geef tijdelijk toegang op afstand om problemen op te sporen. Standaard uit."
+    )
+
+
 def test_required_manifest_fields() -> None:
     cfg = _load_config()
     for key in ("name", "version", "slug", "description", "arch"):
         assert cfg.get(key), f"required config.yaml field missing: {key}"
     assert cfg["slug"] == "ipbuilding_gateway"
+    assert cfg["name"] == "IPBuilding Gateway"
+    assert cfg["panel_title"] == "IPBuilding Gateway"
+    assert (
+        cfg["description"]
+        == "Open IPBuilding field-bus gateway, replaces proprietary IPBox"
+    )
     assert "ha_ipbuilding_gateway" in cfg.get("discovery", [])
 
 

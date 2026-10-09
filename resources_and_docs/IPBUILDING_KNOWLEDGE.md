@@ -628,18 +628,18 @@ Open gateway: zelfde payloads in `gateway/udp_bus.py` (`_MODULE_POLL`). Veldtest
 
 | `state` (4 cijfers) | Gateway / HA | Confidence |
 |---------------------|--------------|------------|
-| `0100` | on | Confirmed (lab); also Nolf **command replies** |
-| `0000` | off | Confirmed (lab + Nolf) |
-| `0015` | off (`00xx` prefix) | Hypothesized (prefix). Observed Nolf 2026-08-08 startup-poll. Field confirmation pending. |
-| `0115` | on (`01xx` prefix) | Hypothesized (prefix). Observed Nolf 1× toilet. `0115` ≈ `0100 \| 0015`. Field confirmation pending. |
+| `0100` | on | Confirmed (lab); also Torhout **command replies** |
+| `0000` | off | Confirmed (lab + Torhout) |
+| `0015` | off (`00xx` prefix) | Hypothesized (prefix). Observed Torhout 2026-08-08 startup-poll. Field confirmation pending. |
+| `0115` | on (`01xx` prefix) | Hypothesized (prefix). Observed Torhout 1× toilet. `0115` ≈ `0100 \| 0015`. Field confirmation pending. |
 | `00xx` / `01xx` | off / on | Hypothesized (prefix). Decoder rule since gateway 1.6.4. |
 | overig | unknown | Decoder fallback |
 
-**Dual encoding (Nolf IP0200 Diagnostic 03.03):** startup status-poll returns generation quartets (`0015`/`0115`/`0000`); after an `S`/`C` command the same module replies with lab quartets (`0100`/`0000`). Both go through `relay_state_from_code`.
+**Dual encoding (Torhout IP0200 Diagnostic 03.03):** startup status-poll returns generation quartets (`0015`/`0115`/`0000`); after an `S`/`C` command the same module replies with lab quartets (`0100`/`0000`). Both go through `relay_state_from_code`.
 
-Detail + per-kanaal Nolf-tabel: [2026-05-04_relay_payload_correlation.md](evidence/2026-05-04_relay_payload_correlation.md) §State_code, [2026-08-08_jan_nolf_restore_test.md](evidence/2026-08-08_jan_nolf_restore_test.md) §5.
+Detail + per-kanaal Torhout-tabel: [2026-05-04_relay_payload_correlation.md](evidence/2026-05-04_relay_payload_correlation.md) §State_code, [2026-08-08_jan_nolf_restore_test.md](evidence/2026-08-08_jan_nolf_restore_test.md) §5.
 
-**Alternatief read-pad:** HTTP `GET /api.html?method=statuses` op moderne relaymodules (§2A) — JSON per kanaal `status: 0|1`. Ontbreekt op oudere generatie (Nolf).
+**Alternatief read-pad:** HTTP `GET /api.html?method=statuses` op moderne relaymodules (§2A) — JSON per kanaal `status: 0|1`. Ontbreekt op oudere generatie (Torhout).
 
 ### 6.4 Input — poll (`I0000`) en idle reply
 
@@ -1018,7 +1018,7 @@ Velden per component in de centrale:
 | UDP `B…E` | `dac46c100000c3` | 14 | bytes 0,1,2,6 |
 | HTTP `getButtons` | `2ddac46c100000c3` | 16 | typebyte strippen, daarna als 14 |
 
-Northbound (`button_event.id`, `devices.json`) gebruikt altijd de 8-hex vorm. Typebyte is metadata (lab `0x2d`, Nolf `0x01`), geen identiteit.
+Northbound (`button_event.id`, `devices.json`) gebruikt altijd de 8-hex vorm. Typebyte is metadata (lab `0x2d`, Torhout `0x01`), geen identiteit.
 
 ### 12.5 Autonomiemechanisme IP1100 (master/slave)
 

@@ -1161,6 +1161,45 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Debug",
+      "description": "Routes that work only while Remote control (for debugging) is on. They use the gateway socket. There is no separate login on this port.\n",
+      "item": [
+        {
+          "name": "Raw send",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"module_ip\": \"192.0.2.10\",\n  \"port\": 1001,\n  \"payload_hex\": \"5030303030\",\n  \"window_ms\": 2000\n}"
+            },
+            "url": {
+              "raw": "{{gateway_host}}:{{gateway_port}}/api/{{apiVersion}}/debug/raw-send",
+              "host": [
+                "{{gateway_host}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "debug",
+                "raw-send"
+              ],
+              "protocol": "http",
+              "port": "{{gateway_port}}"
+            },
+            "description": "Send one raw payload on the gateway field-bus socket and return every reply from that module inside the window. The target must be a known module or a host in the discovery subnet. The payload is at most 64 bytes. The window is at most 3000 ms. At most 8 replies are returned. While the window is open that module is not polled and its replies are not applied to Home Assistant state. Refused with remote_debugging_disabled while the option is off. See docs/api/rest.md.\n"
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

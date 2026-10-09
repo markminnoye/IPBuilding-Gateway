@@ -21,6 +21,7 @@ from gateway.types import DeviceType
 from gateway.rest_shim import RESTShim
 from gateway.udp_bus import UDPBus
 from gateway.gateway_api import GatewayAPI
+from gateway.ha_notify import sync_remote_debugging_notification
 from gateway.health import GatewayHealthMonitor
 
 from gateway import __version__
@@ -30,6 +31,11 @@ log = logging.getLogger(__name__)
 
 async def run_gateway(config: GatewayConfig | None = None) -> None:
     cfg = config or GatewayConfig.from_env()
+
+    try:
+        await sync_remote_debugging_notification(cfg.remote_debugging)
+    except Exception:
+        log.warning("Remote debugging notification failed", exc_info=True)
 
     registry = DeviceRegistry()
 

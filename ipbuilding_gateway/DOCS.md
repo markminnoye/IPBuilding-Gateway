@@ -1,6 +1,7 @@
 # IPBuilding Gateway — Home Assistant Add-on
 
-Open veldbus-hub voor IPBuilding relais, dimmers en drukknoppen via **UDP/1001**.
+Open IPBuilding field-bus gateway, replaces proprietary IPBox.
+
 Dit vervangt de propriëtaire IPBox op de veldbus en voedt de companion
 [**IPBuilding Gateway Companion App**](https://github.com/markminnoye/ha-ipbuilding-gateway)
 via WebSocket (`8080`) en optioneel REST (`30200` shim).
@@ -121,6 +122,7 @@ Opties staan gegroepeerd in **Settings → Add-ons → IPBuilding Gateway → Co
 | `discovery.arp_poll_interval_s` | `30.0` | Hoe vaak (s) de passieve monitor het netwerk bekijkt |
 | `discovery.use_env_defaults` | `false` | Lab/test: vaste `.30/.40/.50` IPs als `devices.json` ontbreekt. Productie: uit laten |
 | `logging.log_level` | `info` | Logniveau: `debug`, `info`, `warning`, `error`. `debug` logt ook veldbus TX/RX (keepalives, commando’s, unmatched replies) |
+| `debug.remote_debugging_and_control` | `false` | **Remote control (for debugging)** / **Bediening op afstand (voor debuggen).** Alleen aan tijdens een debugsessie. Blijft aan tot je het uitzet. Home Assistant toont dan een melding in de taal van Home Assistant. Wijzigen herstart de add-on. |
 
 De API/web-UI-poort (`8080`) en de IPBox REST-compatibiliteitspoort (`30200`) liggen vast en staan **niet** in deze tabel — ze staan onder Supervisor’s eigen **Network**-sectie op de add-on info-pagina (zie [Ports](#ports)).
 
@@ -150,6 +152,22 @@ Of de IP1100PoE-drukknoppen events naar **Home Assistant** sturen, stel je in me
 **Verschil met kanaal `active`:** `active: false` op een drukknop schakelt alleen de northbound/HA-entity uit; bij knoppen via HA pollt de gateway de input-module nog steeds. `buttons_via_ha` bepaalt of **deze gateway** de veldbus-claim voor ingangen overneemt.
 
 Uitgebreide uitleg staat ook in de Configuration-UI (translations) en in de add-on docs tab.
+
+### Remote control (for debugging)
+
+Optie **`debug.remote_debugging_and_control`** (Configuration → **Debug**). De schakelaar heet **Remote control (for debugging)**, in het Nederlands **Bediening op afstand (voor debuggen)**. Standaard **uit**.
+
+Zet je hem aan, dan herstart de add-on en blijft hij aan tot je hem zelf weer uitzet. Er is geen tijdslimiet. Home Assistant toont dan een blijvende melding in de taal van Home Assistant (Nederlands als die taal met `nl` begint, anders Engels):
+
+> Remote control is on. The IPBuilding Gateway Tools can read live traffic and send commands to your modules. Turn it off in the add-on settings when debugging is finished.
+
+> Bediening op afstand staat aan. De IPBuilding Gateway Tools kan live verkeer lezen en commando's naar je modules sturen. Zet het uit in de instellingen van de add-on als het debuggen klaar is.
+
+Zet je hem uit, dan verdwijnt die melding na de herstart. `GET /api/v1/status` en de WebSocket-`snapshot` tonen `remote_debugging` (`true`/`false`) en `capabilities`. Deze versie zet `log_stream`, `udp_frame` en `raw_send` in die lijst: een client kan gateway-logs live meelezen, het logniveau tijdelijk wijzigen, elk veldbusbericht zien dat deze gateway zelf verstuurt of ontvangt, en één ruw pakket sturen en de antwoorden in een kort venster terugkrijgen. De lijst blijft zichtbaar als de optie uit staat, zodat een client het verschil ziet tussen “deze versie kan het” en “de schakelaar staat uit”.
+
+**Zolang de schakelaar aan staat** is er geen login op poort 8080. Iedereen op je netwerk kan dan de logs lezen en het logniveau een tijdje hoger zetten (dat geldt voor de hele gateway, dus ook voor het add-on-log). Het hogere niveau wordt niet opgeslagen en valt vanzelf terug. Wachtwoord- en token-achtige tekst in een logregel wordt afgeschermd. Zet de schakelaar uit als je klaar bent.
+
+Roep je een debug-functie aan terwijl de schakelaar uit staat, dan antwoordt de gateway met foutcode `remote_debugging_disabled` en een Engelse zin die de schakelaar en het pad ernaartoe noemt.
 
 ---
 

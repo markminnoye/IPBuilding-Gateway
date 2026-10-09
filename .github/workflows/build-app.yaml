@@ -1,8 +1,15 @@
 # build-app.yaml — reusable workflow for building a HA add-on image
 #
-# Called by builder.yaml with:
-#   app:       subfolder name (e.g. ipbuilding_gateway)
-#   publish:   true/false — whether to push to ghcr.io
+# Called by builder.yaml (release tags) and develop-image.yaml (develop).
+#   app:               subfolder name (e.g. ipbuilding_gateway)
+#   publish:           true/false — whether to push to ghcr.io
+#   version_override:  optional X.Y.Z-dev.N written into config.yaml before
+#                      the image is tagged. Empty for release builds.
+#                      Never publishes :latest when this is set.
+#                      A dev override also sets the develop add-on name
+#                      in this checkout. Release builds publish the name
+#                      already stored in config.yaml.
+# Pushes from the develop branch may only publish an X.Y.Z-dev.N tag.
 #
 # Prerequisites:
 #   - repo has a Packages section at ghcr.io/<owner>/<repo>
@@ -18,6 +25,10 @@ on:
       publish:
         required: true
         type: boolean
+      version_override:
+        required: false
+        type: string
+        default: ""
 
 env:
   # Files/dirs that trigger a rebuild when changed
@@ -39,6 +50,16 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Apply dev version override
+        if: inputs.version_override != ''
+        env:
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
+        run: python3 scripts/dev_version.py write --version "$VERSION_OVERRIDE"
+
+      - name: Use the develop add-on name
+        if: inputs.version_override != ''
+        run: python3 scripts/addon_channel.py develop
 
       - name: Prepare build context (pre-build copy for monorepo)
         run: ./${{ inputs.app }}/prepare-build.sh
@@ -66,6 +87,12 @@ jobs:
             echo "url=${url}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Refuse a release tag from the develop branch
+        if: github.ref_name == 'develop'
+        env:
+          RESOLVED_VERSION: ${{ steps.normalize.outputs.version }}
+        run: python3 scripts/dev_version.py check --version "$RESOLVED_VERSION"
+
       - name: Prepare multi-arch build matrix
         id: matrix
         uses: home-assistant/builder/actions/prepare-multi-arch-matrix@2026.03.2
@@ -91,6 +118,16 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Apply dev version override
+        if: inputs.version_override != ''
+        env:
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
+        run: python3 scripts/dev_version.py write --version "$VERSION_OVERRIDE"
+
+      - name: Use the develop add-on name
+        if: inputs.version_override != ''
+        run: python3 scripts/addon_channel.py develop
+
       - name: Prepare build context
         run: ./${{ inputs.app }}/prepare-build.sh
 
@@ -103,7 +140,7 @@ jobs:
           image: ${{ matrix.image }}
           image-tags: |
             ${{ needs.prepare.outputs.version }}
-            ${{ github.ref_name == 'main' && 'latest' || '' }}
+            ${{ inputs.version_override == '' && github.ref_name == 'main' && 'latest' || '' }}
           labels: |
             io.hass.type=app
             io.hass.name=${{ needs.prepare.outputs.name }}
@@ -129,5 +166,5 @@ jobs:
           image-name: ${{ needs.prepare.outputs.image_name }}
           image-tags: |
             ${{ needs.prepare.outputs.version }}
-            ${{ github.ref_name == 'main' && 'latest' || '' }}
+            ${{ inputs.version_override == '' && github.ref_name == 'main' && 'latest' || '' }}
           registry-prefix: ${{ needs.prepare.outputs.registry_prefix }}

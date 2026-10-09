@@ -95,6 +95,17 @@ configuration:
       log_level:
         name: Logniveau
         description: debug, info, warning of error. debug logt ook veldbus TX/RX (keepalives, commando’s, unmatched replies).
+  debug:
+    name: Debug
+    description: Geef tijdelijk toegang op afstand om problemen op te sporen. Standaard uit.
+    fields:
+      remote_debugging_and_control:
+        name: Bediening op afstand (voor debuggen)
+        description: >-
+          Laat de IPBuilding Gateway Tools live logs en veldbusverkeer lezen en
+          op afstand commando's naar je modules sturen, zodat problemen
+          opgespoord kunnen worden. Zet dit alleen aan tijdens een debugsessie.
+          Het blijft aan tot je het zelf uitzet.
 network:
   8080/tcp: API en web-UI — WebSocket /ws en REST /api/v1/ (companion-integratie; web-UI via Ingress).
   30200/tcp: IPBox REST-compatibiliteit (alleen actief als "IPBox REST-compatibiliteit" bij Netwerk aan staat).

@@ -6,21 +6,34 @@ import re
 from typing import Any
 
 from gateway.models import RelayAction, RelayCommand, RelayStatus
+from gateway.payloads.dialects import KESSEL_LO, TORHOUT
 
 _RELAY_CMD_RE = re.compile(r"^(?P<prefix>[SCTP])(?P<channel>\d{2})00$")
 _RELAY_STATUS_RE = re.compile(r"^I(?P<module>\d{3})(?P<channel>\d{2})(?P<state>\d{4})$")
 _RELAY_STATUS_SHORT_RE = re.compile(r"^I(?P<channel>\d{4})(?P<state>\d{4})$")
 _RELAY_REPLY_PULSE_RE = re.compile(r"^P\d{9}$")
-# Nolf IP0200 command echo (9–10 ASCII). Prefix [SCT] only — P000000000 must
+# Older-generation relay command echo (9–10 ASCII). Prefix [SCT] only — P000000000 must
 # stay relay_reply_candidate (otherwise ch0 would be forced off every poll).
 # Routing-only safety: T11001000 (input→dimmer p2p toggle, 9 chars) also
 # matches this regex as toggle ch11. Harmless today because
 # decode_relay_payload is only called for relay-module IPs; do not run this
 # decoder generically on dimmer/input traffic.
-_RELAY_NOLF_CMD_REPLY_RE = re.compile(
+_RELAY_TORHOUT_CMD_REPLY_RE = re.compile(
     r"^(?P<prefix>[SCT])(?P<channel>\d{2})(?P<tail>\d{6,7})$"
 )
 _J_ENVELOPE_RE = re.compile(r"^.(?P<core>[SCPT]\d{4,5})$")
+
+# City ids live in dialects.py. These frames were already recognised, but
+# without an id udp_frame could not say Kessel-Lo or Torhout.
+# 5-byte hub commands are the reference generation (both cities share the
+# bytes; the older generation is recognised on its echo and on 0115/0015).
+_RELAY_COMMAND_DIALECT = KESSEL_LO.message_type("relay", "command")
+_RELAY_STATUS_DIALECT = {
+    "0100": KESSEL_LO.message_type("relay", "status_reply"),
+    "0000": KESSEL_LO.message_type("relay", "status_reply"),
+    "0115": TORHOUT.message_type("relay", "status_reply"),
+    "0015": TORHOUT.message_type("relay", "status_reply"),
+}
 
 # Prefix-byte → first command letter mapping (Sprint 2 confirmed)
 # Sprint 2 confirmed action letters
@@ -35,8 +48,8 @@ _CMD_LETTER: dict[RelayAction, str] = {
 def relay_state_from_code(state_code: str) -> str:
     """Map a 4-digit ASCII state quartet to on/off/unknown.
 
-    Prefix rule (hypothesized from Nolf IP0200 Diagnostic 03.03):
-    ``01xx`` → on, ``00xx`` → off. Lab firmware uses ``0100``/``0000``;
+    Prefix rule (hypothesized from older-generation Diagnostic 03.03):
+    ``01xx`` → on, ``00xx`` → off. Reference firmware uses ``0100``/``0000``;
     older modules also report ``0115``/``0015`` on status-poll. Command
     replies on those modules still use ``0100``/``0000``. The raw
     ``state_code`` is kept on the northbound object.
@@ -63,6 +76,27 @@ def strip_j_envelope(data: bytes) -> bytes:
     return data
 
 
+def _relay_status_result(
+    *,
+    channel: int,
+    module: str | None,
+    state_code: str,
+    raw: str,
+) -> dict[str, Any]:
+    parsed: dict[str, Any] = {
+        "family": "relay_status",
+        "channel": channel,
+        "module": module,
+        "state": relay_state_from_code(state_code),
+        "state_code": state_code,
+        "raw": raw,
+    }
+    dialect_id = _RELAY_STATUS_DIALECT.get(state_code)
+    if dialect_id:
+        parsed["dialect_id"] = dialect_id
+    return parsed
+
+
 def decode_relay_payload(data: bytes) -> dict[str, Any] | None:
     """Decode relay ASCII payload (core or wire envelope)."""
     core = strip_j_envelope(data)
@@ -76,6 +110,7 @@ def decode_relay_payload(data: bytes) -> dict[str, Any] | None:
         prefix = m.group("prefix")
         action_map = {"S": "on", "T": "toggle", "C": "off", "P": "pulse"}
         return {
+            "dialect_id": _RELAY_COMMAND_DIALECT,
             "family": "relay_command",
             "action": action_map.get(prefix),
             "channel": int(m.group("channel")),
@@ -84,29 +119,21 @@ def decode_relay_payload(data: bytes) -> dict[str, Any] | None:
 
     m = _RELAY_STATUS_RE.match(text)
     if m:
-        state_code = m.group("state")
-        state = relay_state_from_code(state_code)
-        return {
-            "family": "relay_status",
-            "channel": int(m.group("channel")),
-            "module": m.group("module"),
-            "state": state,
-            "state_code": state_code,
-            "raw": text,
-        }
+        return _relay_status_result(
+            channel=int(m.group("channel")),
+            module=m.group("module"),
+            state_code=m.group("state"),
+            raw=text,
+        )
 
     m = _RELAY_STATUS_SHORT_RE.match(text)
     if m:
-        state_code = m.group("state")
-        state = relay_state_from_code(state_code)
-        return {
-            "family": "relay_status",
-            "channel": int(m.group("channel")),
-            "module": None,
-            "state": state,
-            "state_code": state_code,
-            "raw": text,
-        }
+        return _relay_status_result(
+            channel=int(m.group("channel")),
+            module=None,
+            state_code=m.group("state"),
+            raw=text,
+        )
 
     if _RELAY_REPLY_PULSE_RE.match(text):
         return {
@@ -116,13 +143,13 @@ def decode_relay_payload(data: bytes) -> dict[str, Any] | None:
             "suffix_nine": text[1:],
         }
 
-    m = _RELAY_NOLF_CMD_REPLY_RE.match(text)
+    m = _RELAY_TORHOUT_CMD_REPLY_RE.match(text)
     if m:
         prefix = m.group("prefix")
         action_map = {"S": "on", "C": "off", "T": "toggle"}
         state_map = {"S": "on", "C": "off", "T": "unknown"}
         return {
-            "dialect_id": "relay.nolf.command_reply",
+            "dialect_id": TORHOUT.message_type("relay", "command_reply"),
             "family": "relay_command_reply",
             "action": action_map[prefix],
             "channel": int(m.group("channel")),
@@ -176,7 +203,7 @@ def encode_relay_status_poll(channel: int) -> bytes:
 
     Query ``I<CH>00`` (5 bytes ASCII) returns ``I000<CH><state>`` where
     the first two digits of the state quartet are on/off (``01xx`` = on,
-    ``00xx`` = off). Lab firmware uses ``0100``/``0000``; older Nolf
+    ``00xx`` = off). Reference firmware uses ``0100``/``0000``; older
     IP0200 modules also report ``0115``/``0015`` on this poll. See RE
     evidence 2026-06-12 and 2026-08-08.
     """

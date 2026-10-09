@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import AsyncIterator, Callable
 
 from gateway.config import GatewayConfig
+from gateway.reachability import ReachabilityTracker
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +51,11 @@ _MODULE_POLL: dict[str, bytes] = {
     "input": _POLL_INPUT,
 }
 
+
+def poll_payload_for(module_type: str) -> bytes | None:
+    """Steady-state poll payload for a module type, or None when unknown."""
+    return _MODULE_POLL.get(module_type)
+
 # Bound correlate_reply buffering during command waits (drop oldest on overflow).
 _CORRELATE_QUEUE_MAX = 64
 # Recent inbound packets for correlate_reply after synchronous send_command.
@@ -64,6 +70,7 @@ class UDPPacket:
     dst_ip: str
     dst_port: int
     monotonic_ts: float
+    ignore_state: bool = False
 
 
 class UDPBus:
@@ -75,10 +82,15 @@ class UDPBus:
         self._protocol: _UDPProtocol | None = None
         self._simulated_replies: dict[bytes, bytes] = {}
         self._listeners: list[ReplyCallback] = []
+        self._frame_listeners: list[Callable[[str, UDPPacket], None]] = []
         self._recent_packets: deque[UDPPacket] = deque(maxlen=_RECENT_PACKETS_MAX)
         self._poll_task: asyncio.Task[None] | None = None
         self._next_poll_ts: dict[str, float] = {}
         self.last_send_ts: float = 0.0  # monotonic ts of last send_command
+        self.reachability = ReachabilityTracker(
+            timeout_s=self.config.reply_timeout_ms / 1000.0,
+        )
+        self._status_hold_until: dict[str, float] = {}
 
     def add_listener(self, cb: ReplyCallback) -> None:
         """Register a callback invoked for every inbound packet."""
@@ -87,13 +99,86 @@ class UDPBus:
     def remove_listener(self, cb: ReplyCallback) -> None:
         self._listeners.remove(cb)
 
+    def add_frame_listener(self, cb: Callable[[str, UDPPacket], None]) -> None:
+        """Register a callback for every TX and RX field-bus frame.
+
+        The callback is ``(direction, packet)`` with direction ``tx`` or ``rx``.
+        It must not block. Reply correlation uses :meth:`add_listener` and
+        stays receive-only.
+        """
+        self._frame_listeners.append(cb)
+
+    def remove_frame_listener(self, cb: Callable[[str, UDPPacket], None]) -> None:
+        self._frame_listeners.remove(cb)
+
+    def _local_endpoint(self) -> tuple[str, int]:
+        transport = self._transport
+        if transport is not None:
+            sock = transport.get_extra_info("sockname")
+            if isinstance(sock, tuple) and len(sock) >= 2:
+                return str(sock[0]), int(sock[1])
+        return self.config.bind_ip, 0
+
+    def _emit_frame(self, direction: str, pkt: UDPPacket) -> None:
+        if direction == "rx" and not pkt.dst_ip:
+            dst_ip, dst_port = self._local_endpoint()
+            pkt = UDPPacket(
+                data=pkt.data,
+                src_ip=pkt.src_ip,
+                src_port=pkt.src_port,
+                dst_ip=dst_ip,
+                dst_port=dst_port,
+                monotonic_ts=pkt.monotonic_ts,
+            )
+        for cb in self._frame_listeners:
+            try:
+                cb(direction, pkt)
+            except Exception:
+                log.exception("Frame listener failed")
+
+    def _emit_tx(self, module_ip: str, payload: bytes, dst_port: int) -> None:
+        src_ip, src_port = self._local_endpoint()
+        self._emit_frame(
+            "tx",
+            UDPPacket(
+                data=payload,
+                src_ip=src_ip,
+                src_port=src_port,
+                dst_ip=module_ip,
+                dst_port=dst_port,
+                monotonic_ts=self.last_send_ts or time.monotonic(),
+            ),
+        )
+
+    def hold_status(self, module_ip: str, until_monotonic: float) -> None:
+        """Pause polls and status updates for ``module_ip`` until ``until_monotonic``."""
+        current = self._status_hold_until.get(module_ip, 0.0)
+        if until_monotonic > current:
+            self._status_hold_until[module_ip] = until_monotonic
+
+    def release_hold(self, module_ip: str) -> None:
+        self._status_hold_until.pop(module_ip, None)
+
+    def status_held(self, module_ip: str, now: float | None = None) -> bool:
+        until = self._status_hold_until.get(module_ip)
+        if until is None:
+            return False
+        if (time.monotonic() if now is None else now) >= until:
+            self._status_hold_until.pop(module_ip, None)
+            return False
+        return True
+
     def _notify_listeners(self, pkt: UDPPacket) -> None:
         self._recent_packets.append(pkt)
+        pkt.ignore_state = bool(pkt.src_ip) and self.status_held(pkt.src_ip)
+        if pkt.src_ip:
+            self.reachability.note_reply(pkt.src_ip, pkt.monotonic_ts)
         for cb in self._listeners:
             try:
                 cb(pkt)
             except Exception:
                 log.exception("Listener callback error")
+        self._emit_frame("rx", pkt)
 
     def _match_reply(
         self,
@@ -194,6 +279,8 @@ class UDPBus:
                     continue
                 if module_type == "input" and not self.config.claims_input_modules:
                     continue
+                if self.status_held(mc.ip, now):
+                    continue
                 poll_payload = _MODULE_POLL.get(module_type)
                 if not poll_payload:
                     continue
@@ -206,6 +293,8 @@ class UDPBus:
                 if module_type not in due_types:
                     continue
                 if module_type == "input" and not self.config.claims_input_modules:
+                    continue
+                if self.status_held(module_ip, now):
                     continue
                 poll_payload = _MODULE_POLL.get(module_type)
                 if not poll_payload:
@@ -233,10 +322,20 @@ class UDPBus:
     def register_simulated_reply(self, command: bytes, reply: bytes) -> None:
         self._simulated_replies[command] = reply
 
-    async def send_command(self, module_ip: str, payload: bytes, port: int | None = None) -> None:
+    async def send_command(
+        self,
+        module_ip: str,
+        payload: bytes,
+        port: int | None = None,
+        *,
+        expect_reply: bool = True,
+    ) -> None:
         dst_port = port or self.config.hub_port
         if self.config.simulated_mode:
             self.last_send_ts = time.monotonic()
+            if expect_reply:
+                self.reachability.note_send(module_ip, self.last_send_ts)
+            self._emit_tx(module_ip, payload, dst_port)
             reply = self._simulated_replies.get(payload)
             if reply:
                 pkt = UDPPacket(
@@ -253,6 +352,9 @@ class UDPBus:
             raise RuntimeError("UDPBus not started")
         self._transport.sendto(payload, (module_ip, dst_port))
         self.last_send_ts = time.monotonic()
+        if expect_reply:
+            self.reachability.note_send(module_ip, self.last_send_ts)
+        self._emit_tx(module_ip, payload, dst_port)
 
     async def listen_for_replies(self) -> AsyncIterator[UDPPacket]:
         queue: asyncio.Queue[UDPPacket] = asyncio.Queue(maxsize=_CORRELATE_QUEUE_MAX)
@@ -335,6 +437,67 @@ class UDPBus:
                     logged=logged_unmatched,
                 )
             return None
+        finally:
+            self.remove_listener(collect)
+
+    async def collect_replies(
+        self,
+        *,
+        module_ip: str,
+        after_ts: float,
+        timeout_ms: int,
+        limit: int,
+    ) -> tuple[list[UDPPacket], bool]:
+        """Replies from ``module_ip`` after ``after_ts``, capped at ``limit``.
+
+        Same match as :meth:`correlate_reply` (source and timestamp), but every
+        reply in the window is kept. The second value is true when a further
+        reply was dropped because of ``limit``.
+        """
+        if limit <= 0:
+            return [], False
+        found: list[UDPPacket] = []
+        truncated = False
+        wait_queue: asyncio.Queue[UDPPacket] = asyncio.Queue(maxsize=_CORRELATE_QUEUE_MAX)
+
+        def collect(pkt: UDPPacket) -> None:
+            try:
+                wait_queue.put_nowait(pkt)
+            except asyncio.QueueFull:
+                with contextlib.suppress(asyncio.QueueEmpty):
+                    wait_queue.get_nowait()
+                with contextlib.suppress(asyncio.QueueFull):
+                    wait_queue.put_nowait(pkt)
+
+        def take(pkt: UDPPacket) -> bool:
+            nonlocal truncated
+            if not self._match_reply(
+                pkt, module_ip=module_ip, after_ts=after_ts, predicate=None
+            ):
+                return False
+            if len(found) >= limit:
+                truncated = True
+                return True
+            found.append(pkt)
+            return False
+
+        self.add_listener(collect)
+        try:
+            for pkt in self._recent_packets:
+                if take(pkt):
+                    return found, truncated
+            deadline = time.monotonic() + max(0, timeout_ms) / 1000.0
+            while time.monotonic() < deadline:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                try:
+                    pkt = await asyncio.wait_for(wait_queue.get(), timeout=remaining)
+                except asyncio.TimeoutError:
+                    break
+                if take(pkt):
+                    return found, truncated
+            return found, truncated
         finally:
             self.remove_listener(collect)
 

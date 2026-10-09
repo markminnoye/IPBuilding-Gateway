@@ -44,6 +44,22 @@ from gateway.device_config import (
 )
 from gateway.device_registry import DeviceKey, DeviceRegistry, DeviceType, RelayState, DimmerState
 from gateway.discovery import fetch_module_backup_channels, resolve_module_model
+from gateway.capabilities import CAPABILITIES
+from gateway.raw_send import RawSend, RawSendError, SendPolicy
+from gateway.reachability import (
+    ReachabilityTracker,
+    confirmation_ms,
+    empty_reachability,
+    reported_fields,
+)
+from gateway.log_stream import LogStream, LogStreamError, baseline_from_config
+from gateway.udp_frames import UdpFrameHub
+from gateway.remote_debug import (
+    REMOTE_DEBUGGING_DISABLED,
+    REMOTE_DEBUGGING_DISABLED_MESSAGE,
+    REMOTE_DEBUGGING_DISABLED_STATUS,
+    ws_remote_debugging_disabled,
+)
 from gateway.health import GatewayHealthMonitor
 from gateway.button_id import canonical_button_id
 from gateway.installation import (
@@ -148,6 +164,26 @@ def _resolve_entity_id(
 # ---------------------------------------------------------------------------
 
 
+@dataclass
+class CommandResult:
+    """Outcome of one northbound command.
+
+    ``ok`` means the gateway accepted and sent the command. ``module_confirmed``
+    is whether a field-bus reply arrived inside the reply window. No reply is
+    not an error. Iterating yields ``(ok, error)`` for existing callers.
+    """
+
+    ok: bool
+    error: str | None = None
+    module_confirmed: bool = False
+    confirm_ms: int | None = None
+    reported: dict[str, Any] | None = None
+
+    def __iter__(self) -> Any:
+        yield self.ok
+        yield self.error
+
+
 class GatewayAPI:
     """Northbound WebSocket + REST API server.
 
@@ -192,6 +228,12 @@ class GatewayAPI:
             config.discovery.lock_timeout_s if config.discovery else 15.0
         )
         self._writer = AtomicWriter(config.devices_file, lock_timeout_s=lock_timeout_s)
+        self._log_stream = LogStream(
+            baseline_level=baseline_from_config(getattr(config, "log_level", None))
+        )
+        self._udp_frames = UdpFrameHub()
+        self._udp_frame_listener = False
+        self._raw_send = RawSend(bus, self._raw_send_policy)
 
     # -------------------------------------------------------------------------
     # Lifecycle
@@ -243,6 +285,12 @@ class GatewayAPI:
         self._app.router.add_post("/api/v1/modules/refresh", self._post_modules_refresh)
         # Runtime auto-discovery
         self._app.router.add_post("/api/v1/discover", self._post_discover)
+        self._app.router.add_post(
+            "/api/v1/debug/log-level", self._post_debug_log_level
+        )
+        self._app.router.add_post(
+            "/api/v1/debug/raw-send", self._post_debug_raw_send
+        )
 
         # Register registry callbacks
         self._state_cb = self._registry.on_state_changed(self._on_state_changed)
@@ -254,6 +302,8 @@ class GatewayAPI:
         await self._runner.setup()
         self._site = web.TCPSite(self._runner, self._cfg.api_host, self._cfg.api_port)
         await self._site.start()
+        if self._remote_debugging_enabled():
+            self._log_stream.attach()
         log.info(
             "GatewayAPI started  api=%s:%d",
             self._cfg.api_host,
@@ -271,6 +321,8 @@ class GatewayAPI:
         client can't drag out gateway shutdown. Then aiohttp's
         ``runner.cleanup()`` finishes within a bounded time.
         """
+        self._log_stream.detach()
+        self._detach_udp_frames()
         # Force-close open WS clients first so runner.cleanup() doesn't
         # wait for their linger timeout.
         for ws in list(self._ws_clients):
@@ -381,6 +433,8 @@ class GatewayAPI:
                 elif msg.type == web.WSMsgType.ERROR:
                     log.warning("WS error: %s", ws.exception())
         finally:
+            await self._log_stream.disconnect(ws)
+            await self._udp_frames.disconnect(ws)
             async with self._ws_lock:
                 self._ws_clients.discard(ws)
             log.info("WS client disconnected (total %d)", len(self._ws_clients))
@@ -397,7 +451,20 @@ class GatewayAPI:
             log.warning("WS received unparseable JSON: %r", raw)
             return
 
+        if not isinstance(data, dict):
+            log.debug("WS ignored non-object message")
+            return
+
         msg_type = data.get("type")
+        if msg_type in ("subscribe_logs", "unsubscribe_logs", "set_log_level"):
+            await self._handle_log_ws(ws, data)
+            return
+        if msg_type in ("subscribe_udp_frames", "unsubscribe_udp_frames"):
+            await self._handle_udp_frame_ws(ws, data)
+            return
+        if self._raw_send.accepts(msg_type):
+            await self._handle_raw_send_ws(ws, data)
+            return
         if msg_type != "command":
             log.debug("WS ignored non-command message type %r", msg_type)
             return
@@ -410,10 +477,77 @@ class GatewayAPI:
             log.warning("WS command missing id or action: %s", data)
             return
 
-        ok, error = await self._execute_command(entity_id, action, value)
+        result = await self._execute_command(entity_id, action, value)
         await ws.send_json(
-            {"type": "command_result", "id": entity_id, "ok": ok, "error": error}
+            {
+                "type": "command_result",
+                "id": entity_id,
+                "ok": result.ok,
+                "error": result.error,
+                "module_confirmed": result.module_confirmed,
+                "confirm_ms": result.confirm_ms,
+                "reported": result.reported,
+            }
         )
+
+    async def _handle_log_ws(self, ws: WebSocketResponse, data: dict[str, Any]) -> None:
+        """Log subscription and temporary level. Refused while remote debugging is off.
+
+        Raw send, when it exists, must refuse with the same
+        ``ws_remote_debugging_disabled()`` frame before doing work.
+        """
+        if not self._remote_debugging_enabled():
+            await ws.send_json(ws_remote_debugging_disabled())
+            return
+        msg_type = data.get("type")
+        try:
+            if msg_type == "subscribe_logs":
+                await self._log_stream.subscribe(ws, data.get("min_level"))
+            elif msg_type == "unsubscribe_logs":
+                await self._log_stream.unsubscribe(ws)
+            elif msg_type == "set_log_level":
+                await self._log_stream.set_client_level(
+                    ws, data.get("level"), data.get("ttl")
+                )
+        except LogStreamError as exc:
+            await ws.send_json(
+                {"type": "error", "error": exc.code, "message": exc.message}
+            )
+
+    async def _handle_udp_frame_ws(
+        self, ws: WebSocketResponse, data: dict[str, Any]
+    ) -> None:
+        """Field-bus frame subscription. Refused while remote debugging is off."""
+        if not self._remote_debugging_enabled():
+            await ws.send_json(ws_remote_debugging_disabled())
+            return
+        msg_type = data.get("type")
+        if msg_type == "subscribe_udp_frames":
+            self._attach_udp_frames()
+            await self._udp_frames.subscribe(ws)
+        elif msg_type == "unsubscribe_udp_frames":
+            await self._udp_frames.unsubscribe(ws)
+
+    def _attach_udp_frames(self) -> None:
+        if self._udp_frame_listener:
+            return
+        add = getattr(self._bus, "add_frame_listener", None)
+        if not callable(add):
+            return
+        add(self._udp_frames.publish)
+        self._udp_frame_listener = True
+
+    def _detach_udp_frames(self) -> None:
+        self._udp_frames.close()
+        if not self._udp_frame_listener:
+            return
+        remove = getattr(self._bus, "remove_frame_listener", None)
+        if callable(remove):
+            try:
+                remove(self._udp_frames.publish)
+            except ValueError:
+                pass
+        self._udp_frame_listener = False
 
     # -------------------------------------------------------------------------
     # REST handlers
@@ -438,10 +572,58 @@ class GatewayAPI:
     def _status_payload(self) -> dict[str, Any]:
         """Health snapshot plus deployment-specific input-mode fields."""
         body = self._health.snapshot()
-        body.update(self._input_mode_status_fields())
-        body["multi_press"] = self._cfg.multi_press
-        body["multi_press_window_ms"] = self._cfg.multi_press_window_ms
+        body.update(self._deployment_status_fields())
         return body
+
+    def _raw_send_policy(self) -> SendPolicy:
+        known: set[str] = set()
+        installation = getattr(self._cfg, "installation", None)
+        modules = getattr(installation, "modules", None) if installation is not None else None
+        if modules:
+            for mc in modules:
+                ip = getattr(mc, "ip", None)
+                if isinstance(ip, str) and ip:
+                    known.add(ip)
+        field_modules = getattr(self._cfg, "field_modules", None) or {}
+        if isinstance(field_modules, dict):
+            for ip in field_modules.values():
+                if isinstance(ip, str) and ip:
+                    known.add(ip)
+        discovery = getattr(self._cfg, "discovery", None)
+        subnet = getattr(discovery, "subnet", None) if discovery is not None else None
+        if not isinstance(subnet, str):
+            subnet = None
+        hub_port = getattr(self._cfg, "hub_port", 1001)
+        if isinstance(hub_port, bool) or not isinstance(hub_port, int):
+            hub_port = 1001
+        return SendPolicy(frozenset(known), subnet, hub_port)
+
+    async def _handle_raw_send_ws(
+        self, ws: WebSocketResponse, data: dict[str, Any]
+    ) -> None:
+        if not self._remote_debugging_enabled():
+            await ws.send_json(ws_remote_debugging_disabled())
+            return
+        await self._raw_send.handle_ws(ws, data)
+
+    def _remote_debugging_enabled(self) -> bool:
+        enabled = getattr(self._cfg, "remote_debugging", False)
+        return enabled if isinstance(enabled, bool) else False
+
+    def _toolkit_status_fields(self) -> dict[str, Any]:
+        """Fields the debug toolkit reads. Extra keys are safe for older clients."""
+        return {
+            "remote_debugging": self._remote_debugging_enabled(),
+            "capabilities": list(CAPABILITIES),
+        }
+
+    def _deployment_status_fields(self) -> dict[str, Any]:
+        return {
+            **self._input_mode_status_fields(),
+            "multi_press": self._cfg.multi_press,
+            "multi_press_window_ms": self._cfg.multi_press_window_ms,
+            **self._toolkit_status_fields(),
+        }
 
     def _input_mode_status_fields(self) -> dict[str, Any]:
         return {
@@ -623,9 +805,18 @@ class GatewayAPI:
         if not action:
             raise ApiError(400, "missing_action", "Body must contain 'action'")
 
-        ok, error = await self._execute_command(device_id, action, value)
-        if ok:
-            return web.json_response({"ok": True, "schema_version": 2})
+        result = await self._execute_command(device_id, action, value)
+        if result.ok:
+            return web.json_response(
+                {
+                    "ok": True,
+                    "schema_version": 2,
+                    "module_confirmed": result.module_confirmed,
+                    "confirm_ms": result.confirm_ms,
+                    "reported": result.reported,
+                }
+            )
+        error = result.error
         # Map internal error strings to typed codes so the client can act.
         code = "command_failed"
         status = 422
@@ -840,6 +1031,58 @@ class GatewayAPI:
         module_list = self._build_module_list()
         return web.json_response({"modules": module_list, "schema_version": 2})
 
+    async def _post_debug_log_level(self, request: web.Request) -> web.Response:
+        """POST /api/v1/debug/log-level — temporary root log level.
+
+        Refused with ``remote_debugging_disabled`` while the add-on option
+        is off. The new level is not stored in add-on options.
+        """
+        if not self._remote_debugging_enabled():
+            raise ApiError(
+                REMOTE_DEBUGGING_DISABLED_STATUS,
+                REMOTE_DEBUGGING_DISABLED,
+                REMOTE_DEBUGGING_DISABLED_MESSAGE,
+            )
+        try:
+            body = await request.json()
+        except Exception:
+            raise ApiError(400, "invalid_json", "Body must be valid JSON") from None
+        if not isinstance(body, dict):
+            raise ApiError(400, "invalid_json", "Body must be a JSON object")
+        try:
+            result = await self._log_stream.set_rest_level(
+                body.get("level"), body.get("ttl")
+            )
+        except LogStreamError as exc:
+            raise ApiError(exc.status, exc.code, exc.message) from None
+        return web.json_response(result)
+
+    async def _post_debug_raw_send(self, request: web.Request) -> web.Response:
+        """POST /api/v1/debug/raw-send — one raw payload and its reply window.
+
+        Refused with ``remote_debugging_disabled`` while the add-on option
+        is off. Uses the gateway socket. Status updates for that module are
+        held until the window ends.
+        """
+        if not self._remote_debugging_enabled():
+            raise ApiError(
+                REMOTE_DEBUGGING_DISABLED_STATUS,
+                REMOTE_DEBUGGING_DISABLED,
+                REMOTE_DEBUGGING_DISABLED_MESSAGE,
+            )
+        try:
+            body = await request.json()
+        except Exception:
+            raise ApiError(400, "invalid_json", "Body must be valid JSON") from None
+        if not isinstance(body, dict):
+            raise ApiError(400, "invalid_json", "Body must be a JSON object")
+        client = request.remote if isinstance(request.remote, str) else "rest"
+        try:
+            result = await self._raw_send.send(body, client=client)
+        except RawSendError as exc:
+            raise ApiError(exc.status, exc.code, exc.message) from None
+        return web.json_response(result)
+
     async def _post_discover(self, request: web.Request) -> web.Response:
         """POST /api/v1/discover — run forced discovery (ARP-sweep + HTTP identify).
 
@@ -862,11 +1105,13 @@ class GatewayAPI:
 
     async def _execute_command(
         self, entity_id: str, action: str, value: Any
-    ) -> tuple[bool, str | None]:
+    ) -> CommandResult:
         """Resolve entity_id, encode and send the UDP command, wait for reply."""
         parsed = _resolve_entity_id(entity_id, self._cfg.installation)
         if parsed is None:
-            return False, f"unknown or invalid entity_id: {entity_id}"
+            return CommandResult(
+                False, f"unknown or invalid entity_id: {entity_id}"
+            )
         module_ip, dtype, channel = parsed
 
         # Refuse commands for inactive channels so a manually-enabled HA entity
@@ -877,7 +1122,7 @@ class GatewayAPI:
             if mc is not None:
                 ch_cfg = next((c for c in mc.channels if c.ch == channel), None)
                 if ch_cfg is not None and not ch_cfg.active:
-                    return False, "channel inactive"
+                    return CommandResult(False, "channel inactive")
 
         # Encode the command
         # ``awaits_reply`` is shared across relay and dimmer branches so the
@@ -896,7 +1141,7 @@ class GatewayAPI:
             elif action == "TOGGLE":
                 cmd = RelayCommand(channel=channel, action=RelayAction.TOGGLE)
             else:
-                return False, f"unsupported relay action: {action}"
+                return CommandResult(False, f"unsupported relay action: {action}")
             payload = encode_relay_command(cmd)
         elif dtype == DeviceType.DIMMER:
             if action == "DIM":
@@ -913,7 +1158,7 @@ class GatewayAPI:
             elif action == "DIM_STOP":
                 payload = encode_dim_stop(channel)
             else:
-                return False, f"unsupported dimmer action: {action}"
+                return CommandResult(False, f"unsupported dimmer action: {action}")
             # DIM_START produces no reply on the wire — the dimmer just begins
             # ramping. TOGGLE/DIM_STOP reply with I0154<ch><VV> (as DIM does),
             # so the channel-less reply still needs to land on the right key.
@@ -922,7 +1167,7 @@ class GatewayAPI:
             else:
                 self._registry.track_dimmer_channel(module_ip, channel)
         else:
-            return False, f"unsupported device type: {dtype.value}"
+            return CommandResult(False, f"unsupported device type: {dtype.value}")
 
         # Send and wait for reply
         try:
@@ -932,10 +1177,13 @@ class GatewayAPI:
                 action,
                 format_payload(payload),
             )
-            await self._bus.send_command(module_ip, payload)
+            sent = time.monotonic()
+            await self._bus.send_command(
+                module_ip, payload, expect_reply=awaits_reply
+            )
             if not awaits_reply:
-                # DIM_START — fire-and-forget; no reply to correlate.
-                return True, None
+                # DIM_START — fire-and-forget; no status reply on the wire.
+                return CommandResult(True)
             reply = await self._bus.correlate_reply(
                 module_ip=module_ip,
                 after_ts=self._bus.last_send_ts,
@@ -945,19 +1193,28 @@ class GatewayAPI:
                 log.warning(
                     "command %s on %s timed out (no reply)", action, entity_id
                 )
-            else:
-                data = getattr(reply, "data", None)
-                if isinstance(data, bytes):
-                    log.debug(
-                        "RX %s command %s %s",
-                        module_ip,
-                        action,
-                        format_payload(data),
-                    )
-            return True, None
+                tracker = getattr(self._bus, "reachability", None)
+                if isinstance(tracker, ReachabilityTracker):
+                    tracker.note_timeout(module_ip, time.monotonic())
+                return CommandResult(True, module_confirmed=False)
+            data = getattr(reply, "data", None)
+            if isinstance(data, bytes):
+                log.debug(
+                    "RX %s command %s %s",
+                    module_ip,
+                    action,
+                    format_payload(data),
+                )
+            elapsed = confirmation_ms(sent, reply)
+            return CommandResult(
+                True,
+                module_confirmed=elapsed is not None,
+                confirm_ms=elapsed,
+                reported=reported_fields(data) if isinstance(data, bytes) else None,
+            )
         except Exception as exc:
             log.exception("command %s on %s failed: %s", action, entity_id, exc)
-            return False, str(exc)
+            return CommandResult(False, str(exc))
 
     # -------------------------------------------------------------------------
     # Registry callbacks → broadcast
@@ -1215,9 +1472,7 @@ class GatewayAPI:
 
     def _on_health_changed(self) -> None:
         payload = self._health.snapshot(include_actions=False)
-        payload.update(self._input_mode_status_fields())
-        payload["multi_press"] = self._cfg.multi_press
-        payload["multi_press_window_ms"] = self._cfg.multi_press_window_ms
+        payload.update(self._deployment_status_fields())
         asyncio.create_task(
             self._broadcast({"type": "gateway_status", **payload})
         )
@@ -1268,6 +1523,11 @@ class GatewayAPI:
                 entry["last_seen"] = mc.last_seen
             if mc.last_seen_source:
                 entry["last_seen_source"] = mc.last_seen_source
+            tracker = getattr(self._bus, "reachability", None)
+            if isinstance(tracker, ReachabilityTracker):
+                entry["reachability"] = tracker.view(mc.ip)
+            else:
+                entry["reachability"] = empty_reachability()
             # Merge cached metadata
             if meta is not None:
                 entry["network"] = meta.network
@@ -1300,11 +1560,7 @@ class GatewayAPI:
             "modules": self._build_module_list(),
             "devices": self._build_device_list(),
             "gateway_status": self._health.snapshot(include_actions=False)
-            | self._input_mode_status_fields()
-            | {
-                "multi_press": self._cfg.multi_press,
-                "multi_press_window_ms": self._cfg.multi_press_window_ms,
-            },
+            | self._deployment_status_fields(),
         }
 
     def _resolve_include_inactive(self, include_inactive: bool | None) -> bool:

@@ -41,8 +41,7 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   "subsystems": {
     "installation": "ok",
     "module_metadata": "degraded",
-    "discovery": "ok",
-    "fieldbus": "ok"
+    "discovery": "ok"
   },
   "issues": [
     {
@@ -60,10 +59,11 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   "input_mode_label": "Slave",
   "multi_press": false,
   "multi_press_window_ms": 350,
+  "remote_debugging": false,
+  "capabilities": ["log_stream", "udp_frame", "raw_send"],
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
-    "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" },
-    "set_fieldbus_polling": { "method": "POST", "path": "/api/v1/debug/fieldbus-polling" }
+    "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" }
   }
 }
 ```
@@ -77,6 +77,8 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `input_mode_label` | string | Operator label: `Slave` / `Master`. |
 | `multi_press` | boolean | Global double/triple-press classification for all wall buttons (add-on option). When `false`, short release emits `single_press` immediately. |
 | `multi_press_window_ms` | integer | Inter-click window in ms when `multi_press` is enabled (default 350). |
+| `remote_debugging` | boolean | Add-on option **Remote control (for debugging)**. `false` until a user turns it on in the add-on configuration. It stays on until they turn it off. While it is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Check this field before calling a remote-debugging route. |
+| `capabilities` | list of strings | Features this gateway build actually implements. `log_stream` is live logs over WebSocket. `udp_frame` is live field-bus frames over WebSocket (`subscribe_udp_frames`). `raw_send` is one raw payload plus the replies that arrive in a short window (`POST /api/v1/debug/raw-send` or WebSocket `raw_send`). The list stays present when `remote_debugging` is `false`, so a client can tell “this build has the feature” from “the option is off”. Unknown extra fields are safe for older clients. |
 
 ---
 
@@ -128,6 +130,36 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `fetched_at` | string | ISO 8601 timestamp of last getSysSet fetch |
 | `last_seen` | string | ISO 8601 timestamp of most recent ARP or UDP activity (runtime-only, not in `devices.json`) |
 | `last_seen_source` | string | How `last_seen` was last updated: `arp`, `udp`, or `http` (runtime-only) |
+| `reachability` | object | Reply timing for this module. Always present. See the fields below. |
+
+`reachability` is filled from field-bus traffic the gateway already sends and receives (keepalive and commands). It is not written to `devices.json`. `last_seen` stays the ARP/HTTP contact time; `reachability.last_reply_at` is the last inbound UDP packet from that module.
+
+```json
+"reachability": {
+  "last_reply_at": "2026-10-08T12:00:00+00:00",
+  "last_reply_ms": 18,
+  "avg_reply_ms": 22,
+  "missed_replies": 1
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `last_reply_at` | string or null | ISO 8601 UTC time of the last inbound UDP packet from this module. `null` until one arrives. |
+| `last_reply_ms` | integer or null | Milliseconds from the latest unanswered send to the reply that landed inside the reply window. `null` when no reply has been paired yet. |
+| `avg_reply_ms` | integer or null | Rounded mean of the last 20 paired response times. `null` when there is no sample. |
+| `missed_replies` | integer | Sends whose reply window closed with no reply. A newer send inside the window replaces the pending one and is not a miss. |
+
+The same object is on `GET /api/v1/modules/{module_id}` and on each module in the WebSocket `snapshot`. A module that has not answered yet:
+
+```json
+"reachability": {
+  "last_reply_at": null,
+  "last_reply_ms": null,
+  "avg_reply_ms": null,
+  "missed_replies": 0
+}
+```
 
 ---
 
@@ -150,7 +182,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 
 **Request body:** `{}`
 
-**Response 200:** full `{ "modules": [...] }` with refreshed data.
+**Response 200:** full `{ "modules": [...] }` with refreshed data. Each module includes `reachability`.
 
 ---
 
@@ -375,10 +407,41 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) re
 | `TOGGLE` | Relay | -- |
 | `DIM` | Dimmer | `0-100` (0 = off) |
 
-**Response 200:**
+**Response 200:** the gateway accepted and sent the command. A missing field-bus reply is still `ok: true`. It is not an error.
+
 ```json
-{"ok": true}
+{
+  "ok": true,
+  "schema_version": 2,
+  "module_confirmed": true,
+  "confirm_ms": 42,
+  "reported": {"state": "on"}
+}
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | `true` when the command was sent. `false` is not used on this status; failures use 4xx below. |
+| `schema_version` | integer | `2`. |
+| `module_confirmed` | boolean | `true` when a reply from that module arrived inside the reply window (`reply_timeout_ms`, default 500) and the reply has a timestamp. `false` when no reply arrived. |
+| `confirm_ms` | integer or null | Milliseconds from the send to that reply. `null` when `module_confirmed` is false. |
+| `reported` | object or null | State taken from the reply. A relay status contributes `state` (`on`, `off`, or `unknown`). A dimmer status contributes `level_percent`. `null` when the reply is missing or is not a known status. A confirmed reply can still have `reported: null`. |
+
+No reply inside the window:
+
+```json
+{
+  "ok": true,
+  "schema_version": 2,
+  "module_confirmed": false,
+  "confirm_ms": null,
+  "reported": null
+}
+```
+
+`DIM_START` does not wait for a status reply. Its 200 body is `module_confirmed: false`, `confirm_ms: null`, `reported: null`, and the send is not counted as a missed reply.
+
+The WebSocket `command_result` frame carries the same three fields. See [websocket.md](websocket.md).
 
 **Response 400** (missing action):
 ```json
@@ -424,6 +487,118 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) re
 
 ---
 
+## POST /api/v1/debug/log-level
+
+**Description:** Raise or lower the gateway log level for a limited time. The change applies to the whole process (including the Home Assistant add-on log) and is **not** written to add-on options or `GATEWAY_LOG_LEVEL`. When several requests overlap, the most verbose level wins. Each request expires on its own `ttl`. The level is never set quieter than the configured baseline.
+
+There is no login on port 8080. While **Remote control (for debugging)** is on, anyone who can reach this port can change the level and read logs. Token- and password-like values in log lines are redacted. Turn the option off when finished.
+
+**Request body:**
+```json
+{"level": "debug", "ttl": 900}
+```
+
+`level`: `debug`, `info`, `warning`, or `error` (case-insensitive). `ttl`: integer seconds from 1 to 3600. Required. Boolean `true` is rejected.
+
+**Response 200:**
+```json
+{
+  "ok": true,
+  "level": "debug",
+  "ttl": 900,
+  "effective_level": "debug"
+}
+```
+
+`effective_level` is the level actually applied. A request quieter than the configured baseline leaves the baseline in place.
+
+**Response 403** — remote debugging is off. The same code and sentence are returned on the WebSocket. `GET /api/v1/status` stays available so a client can read `remote_debugging` and `capabilities` before calling this route.
+
+```json
+{
+  "error": "remote_debugging_disabled",
+  "message": "Remote debugging is off. Turn on \"Remote control (for debugging)\" (Nederlands: \"Bediening op afstand (voor debuggen)\") under Settings > Add-ons > IPBuilding Gateway > Configuration."
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `error` | Stable code `remote_debugging_disabled`. WebSocket `subscribe_udp_frames` uses this same code when the option is off. A later raw-send route will too. |
+| `message` | English hint. Names the add-on option in English and Dutch, and where to find it. |
+
+**Response 400:** `invalid_json`, `invalid_log_level`, or `invalid_ttl`.
+
+**Response 429:** `log_level_rate_limited` — more than 10 level changes in 60 seconds from REST.
+
+---
+
+## POST /api/v1/debug/raw-send
+
+**Description:** Send one raw payload on the gateway’s field-bus socket and return every reply from that module inside a short window. Modules answer to a fixed port, so the toolkit does not open its own UDP socket. The field bus has no request id: the window is the correlation.
+
+While the window is open the gateway does not poll that module and does not apply replies from it to Home Assistant state. Other modules are unchanged. After the window, polling and normal commands work again.
+
+Requires **Remote control (for debugging)** (`debug.remote_debugging_and_control`). `GET /api/v1/status` lists capability `raw_send` whether the option is on or off.
+
+**Request body:**
+
+```json
+{
+  "module_ip": "192.0.2.10",
+  "port": 1001,
+  "payload_hex": "5030303030",
+  "window_ms": 2000
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `module_ip` | string | IPv4 address. Allowed when it is a configured module or a host in the discovery subnet (`/24`). Loopback, multicast, and broadcast are rejected. |
+| `port` | integer | Optional. Must be the field-bus port (1001). Omitted means that port. |
+| `payload_hex` | string | Even-length hex. 1 to 64 bytes. |
+| `window_ms` | integer | Optional. 1 to 3000. Default 2000. |
+
+**Response 200:**
+
+```json
+{
+  "ok": true,
+  "schema_version": 2,
+  "sent_hex": "5030303030",
+  "module_ip": "192.0.2.10",
+  "port": 1001,
+  "window_ms": 2000,
+  "replies": [
+    {"hex": "49303030303330313030", "delay_ms": 40}
+  ],
+  "truncated": false
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sent_hex` | string | Bytes that were sent. |
+| `replies` | array | Replies from `module_ip` with `monotonic` time at or after the send, up to 8. `delay_ms` is milliseconds from the send. `null` when the reply has no timestamp. |
+| `truncated` | boolean | `true` when another reply arrived after the 8th and was not included. The status hold still lasts the whole window. |
+
+No reply is still HTTP 200 with `replies: []`.
+
+**Response 403** — remote debugging is off. Same code and sentence as `POST /api/v1/debug/log-level`.
+
+**Response 400:** `invalid_json`, `invalid_payload`, `invalid_window`.
+
+**Response 422:** `target_not_allowed`, `invalid_target`, `invalid_port`, `payload_too_large`.
+
+**Response 429:** `raw_send_rate_limited` (5 sends per client and 10 sends in total, each per 60 seconds) or `raw_send_busy` (one send at a time).
+
+**Response 503:** `send_failed` — the socket could not send. The status hold is released.
+
+Every send, including a refused target, rate limit, or busy socket, is written to the gateway log: time, client, target, port, hex bytes, result, and reply count.
+
+WebSocket: `{"type": "raw_send", ...same fields...}` returns `{"type": "raw_send_result", ...same body...}`. While the option is off the frame is the shared `remote_debugging_disabled` error.
+
+---
+
 ## POST /api/v1/provision/autonomy
 
 **Description:** EEPROM sync to IP1100PoE (saveAutonomy). Stub -- not implemented (Fase 8).
@@ -433,45 +608,6 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) re
 **Response 501:**
 ```json
 {"ok": false, "error": "not yet implemented"}
-```
-
----
-
-## POST /api/v1/debug/fieldbus-polling
-
-**Description:** Runtime debug toggle for the UDP/1001 keep-alive poll loop. Surfaces in the companion as the `Veldbus polling (debug)` switch on the gateway device. **Not persistent** — the gateway restarts with `poll_interval` / `actuator_poll_interval` config defaults on the next start.
-
-**Request headers:** `Content-Type: application/json`
-
-**Request body:**
-```json
-{"enabled": false}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `enabled` | boolean | `false` stops the periodic poll loop; `true` resumes it |
-
-**Behaviour while polling is disabled:**
-
-- The background `_poll_loop` keeps running on the faster of `poll_interval_s` and `actuator_poll_interval_s` but skips the per-round due-module poll step. The loop stays alive so flipping the flag back on resumes polling almost immediately, without a bus restart.
-- On-demand `send_command` calls (light on/off, dimmer set level, relay toggle) keep working — only the periodic keep-alive polls stop.
-- Input modules cache the last hub IP and may direct `B-…E` events to the IPBox instead of this gateway while polling is off.
-- A `fieldbus.polling_disabled` warning is reported in `/api/v1/status` (`level: warning`, `subsystems.fieldbus: degraded`).
-
-**Response 200:**
-```json
-{
-  "polling_enabled": false,
-  "poll_interval_s": 2.0,
-  "actuator_poll_interval_s": 20.0
-}
-```
-
-**Response 400** (missing or wrong type):
-```json
-{"error": "missing_field", "message": "Body must include 'enabled' boolean"}
-{"error": "invalid_type",  "message": "'enabled' must be a boolean"}
 ```
 
 ---

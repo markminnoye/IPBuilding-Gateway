@@ -1,9 +1,10 @@
 """Tests for gateway.payloads.input."""
 
 from gateway.payloads.input import decode_input_payload, encode_input_poll
+from gateway.payloads.dialects import KESSEL_LO, TORHOUT
 
 IDLE_REPLY_LAB = bytes([0x49, 0x02, 0x52, 0x05, 0x02, 0x04, 0, 0, 0, 0, 0, 0, 0, 0x45])
-IDLE_REPLY_NOLF = bytes.fromhex("49022800000000000000000045")
+IDLE_REPLY_TORHOUT = bytes.fromhex("49022800000000000000000045")
 
 
 def test_input_poll():
@@ -17,15 +18,15 @@ def test_input_idle_reply_lab():
     assert parsed["status_byte_0"] == 0x05
     assert parsed["length"] == 14
     assert parsed["family_hex"] == "52"
-    assert parsed["dialect_id"] == "input.lab.idle_reply"
+    assert parsed["dialect_id"] == KESSEL_LO.message_type("input", "idle_reply")
 
 
-def test_input_idle_reply_nolf():
-    parsed = decode_input_payload(IDLE_REPLY_NOLF)
+def test_input_idle_reply_torhout():
+    parsed = decode_input_payload(IDLE_REPLY_TORHOUT)
     assert parsed["family"] == "input_reply_binary"
     assert parsed["length"] == 13
     assert parsed["family_hex"] == "28"
-    assert parsed["dialect_id"] == "input.nolf.idle_reply"
+    assert parsed["dialect_id"] == TORHOUT.message_type("input", "idle_reply")
 
 
 def test_lab_button_event_press():
@@ -36,10 +37,10 @@ def test_lab_button_event_press():
     assert parsed["id_hex"] == "2f8185df"
     assert parsed["id_wire_hex"] == "2f8185190000df"
     assert parsed["type_hex"] == "2d"
-    assert parsed["dialect_id"] == "input.lab.button_event"
+    assert parsed["dialect_id"] == KESSEL_LO.message_type("input", "button_event")
 
 
-def test_nolf_button_event_press():
+def test_torhout_button_event_press():
     raw = bytes.fromhex("4201dac46c100000c301010045")
     parsed = decode_input_payload(raw)
     assert parsed["family"] == "input_button_event"
@@ -47,7 +48,7 @@ def test_nolf_button_event_press():
     assert parsed["id_hex"] == "dac46cc3"
     assert parsed["id_wire_hex"] == "dac46c100000c3"
     assert parsed["type_hex"] == "01"
-    assert parsed["dialect_id"] == "input.nolf.button_event"
+    assert parsed["dialect_id"] == TORHOUT.message_type("input", "button_event")
 
 
 def test_input_button_event_release():
