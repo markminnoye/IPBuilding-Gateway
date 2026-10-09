@@ -3,7 +3,17 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.8.0] - 2026-10-09
+
+Nieuw
+- Een nieuwe schakelaar in de instellingen: Bediening op afstand (voor debuggen), in de groep "Debug", standaard uit. Zet hem aan als je samen met iemand een probleem in je installatie wil uitzoeken. Home Assistant toont een melding zolang hij aanstaat, zodat je hem niet vergeet uit te zetten.
+- Je ziet nu of een module je commando echt heeft ontvangen, en hoe vlot hij antwoordt.
+
+Opgelost
+- Een computer in je netwerk kan de gateway nu vanzelf vinden.
+- De gateway herkent nu ook oudere modules.
+
+### Technische details
 
 ### Changed
 - The settings group that holds **Remote control (for debugging)** is titled **Debug** in English and Dutch. The group description, the group key, and the switch texts are unchanged.
