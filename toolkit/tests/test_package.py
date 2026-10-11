@@ -56,7 +56,7 @@ def test_toolkit_sources_have_no_private_addresses() -> None:
 
 def test_versions_match() -> None:
     versions_agree()
-    assert re.fullmatch(r"0\.1\.1-rc\.[1-9]\d*", file_version())
+    assert file_version() == "0.1.1"
     plugin = json.loads((TOOLKIT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
     setting = plugin["userConfig"]["gateway_address"]
     assert setting["required"] is False

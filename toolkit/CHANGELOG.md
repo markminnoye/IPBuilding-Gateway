@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1 — 2026-10-11
+
+- Feedback you give reaches the report.
+- You can leave test events out of the report.
+- Claude offers to send the report on its own, and understands everyday words such as "bugrapport".
+- The text says activiteitenlog.
+- The gateway device list is the source for identifying buttons.
+
 ## 0.1.1-rc.1 — 2026-10-11
 
 - Feedback about the tool is a parameter and appears under heading 6, with the same redaction. The problem note stays in the summary.
