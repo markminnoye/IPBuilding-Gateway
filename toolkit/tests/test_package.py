@@ -68,11 +68,11 @@ def test_download_zips_match_the_upload_formats(
 ) -> None:
     sentinel = "https://intake.example.test/never-embed"
     monkeypatch.setenv("IPBUILDING_REPORT_INTAKE", sentinel)
-    skill_zip, plugin_zip = _build.write_download_zips(file_version(), dest=tmp_path)
-    with zipfile.ZipFile(skill_zip) as archive:
-        skill_names = archive.namelist()
-        skill_text = archive.read(skill_names[0]).decode("utf-8")
-    assert skill_names == ["ipbuilding-gateway-tools/SKILL.md"]
+    plugin_zip = _build.write_download_zips(file_version(), dest=tmp_path)
+    assert list(tmp_path.glob("*skill*")) == []
+    skill_text = (TOOLKIT / "skills" / "ipbuilding-gateway-tools" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
     assert skill_text.startswith("---\n")
     fields = _build._folded_frontmatter(skill_text)
     assert fields["name"] == "ipbuilding-gateway-tools"
@@ -98,7 +98,6 @@ def test_download_zips_match_the_upload_formats(
     assert plugin["version"] == file_version()
     env = mcp["mcpServers"]["ipbuilding-gateway-tools"]["env"]
     assert list(env) == ["IPBUILDING_GATEWAY_ADDRESS"]
-    assert sentinel.encode() not in skill_zip.read_bytes()
     assert sentinel.encode() not in plugin_zip.read_bytes()
 
 
@@ -127,8 +126,10 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
     assert "te debuggen" in approved
     assert "Zet de lamp in de keuken aan en controleer of de module dat bevestigt." in approved
     assert "testpakketjes sturen" in approved
-    assert text.startswith("## Installeren\n")
-    assert "Dubbelklik" in text
+    assert text.startswith(
+        "IPBuilding Gateway Tools zijn hulpmiddelen voor AI-assistenten zoals Claude:"
+    )
+    assert "dubbelklik" in text
     assert "homeassistant.local" in text
     assert "Remote control (for debugging)" in text
     assert "Bediening op afstand (voor debuggen)" in text
@@ -136,7 +137,9 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
     assert "Debuggen en bedienen op afstand" not in text
     assert "debug-toolkit" not in text.lower()
     assert "weer uit" in text
-    assert "1.8.0-dev.5" in text
+    assert "IPBuilding Gateway 1.8.0" in text
+    assert "Voor ontwikkelaars (Claude Code)" in text
+    assert "~/.claude/skills/" in text
     assert "Update" in text
     assert "Install" in text
     assert "IPBuilding Gateway Tools" in text
@@ -225,30 +228,31 @@ def test_staged_manifest_asks_for_the_gateway_address(
     assert (staged / "gateway" / "payloads" / "relay.py").is_file()
     description = manifest["long_description"]
     expected = (
-        "IPBuilding Gateway Tools helpt je samen met een assistent problemen in je IPBuilding-installatie op te sporen. "
-        "Wat jullie vinden, kun je als rapport naar ons sturen, zodat we de gateway kunnen verbeteren.\n"
-        "\n"
-        "De tool werkt met de IPBuilding Gateway in je eigen netwerk. "
-        'Om mee te kijken zet je in de gateway "Bediening op afstand (voor debuggen)" aan. '
-        "Als het debuggen klaar is, zet je het weer uit.\n"
+        "IPBuilding Gateway Tools zijn hulpmiddelen voor AI-assistenten zoals Claude. "
+        "Ze helpen je samen met een assistent problemen in je IPBuilding-installatie te vinden. "
+        "Wat jullie vinden, kun je als rapport naar Sonic Rocket sturen.\n"
         "\n"
         "Persoonsgegevens, zoals adressen en namen van lampen en ruimtes, "
-        "worden standaard weggefilterd uit het rapport dat je naar ons stuurt."
+        "worden standaard weggefilterd uit het rapport.\n"
+        "\n"
+        'Om mee te kijken zet je in de gateway "Bediening op afstand (voor debuggen)" aan. '
+        "Als je klaar bent, zet je het weer uit."
     )
     assert description == expected
     assert len(description) <= 800
     lowered = description.lower()
     assert "add-on" not in lowered
     assert "handleiding" not in lowered
-    assert "eigen netwerk" in lowered
+    assert "dubbelklik" not in lowered
+    assert ".mcpb" not in lowered
+    assert "download" not in lowered
     assert "persoonsgegevens" in lowered
     assert "weggefilterd" in lowered
-    assert "uit het rapport dat je naar ons stuurt" in lowered
+    assert "uit het rapport" in lowered
+    assert "sonic rocket" in lowered
     for technical in ("websocket", "capability", "udp", "payload", "mdns"):
         assert technical not in lowered
-    assert manifest["description"] == (
-        "Meekijken en testen via de IPBuilding Gateway in je thuisnetwerk."
-    )
+    assert manifest["description"] == "Hulpmiddelen voor AI-assistenten zoals Claude."
     plugin = json.loads((TOOLKIT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
     assert plugin["description"] == expected.split(". ")[0] + "."
     assert "add-on" not in plugin["description"].lower()

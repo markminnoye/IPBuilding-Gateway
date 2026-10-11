@@ -1,12 +1,18 @@
+IPBuilding Gateway Tools zijn hulpmiddelen voor AI-assistenten zoals Claude: ze helpen je samen met een assistent problemen in je IPBuilding-installatie te vinden. Wat jullie vinden, kun je als rapport naar Sonic Rocket sturen.
+
+Persoonsgegevens, zoals adressen en namen van lampen en ruimtes, worden standaard weggefilterd uit het rapport.
+
+Je hebt IPBuilding Gateway 1.8.0 in Home Assistant nodig, en Claude Desktop.
+
+Om mee te kijken zet je in de gateway "Bediening op afstand (voor debuggen)" aan. Als je klaar bent, zet je het weer uit.
+
 ## Installeren
 
-Dubbelklik op `ipbuilding-gateway-tools.mcpb`. Claude Desktop vraagt of je IPBuilding Gateway Tools wil installeren. Kies **Install**. Staat de plug-in er al, dan staat er **Update**.
+Download `ipbuilding-gateway-tools.mcpb` en dubbelklik het bestand. Dat is de download. Alleen daarmee kun je een rapport sturen. Claude Desktop vraagt of je IPBuilding Gateway Tools wil installeren. Kies **Install**. Staat de plug-in er al, dan staat er **Update**.
 
 `homeassistant.local` volstaat meestal. Druk dan op **Save**.
 
 Zegt de assistent dat de gateway niet bereikbaar is, controleer dan of de add-on draait en of de schakelaar aan staat. Vul bij **Configure** het adres in dat je ook in je browser gebruikt om Home Assistant te openen, zonder `http://` en zonder poort.
-
-Je hebt de gateway nodig van develop `1.8.0-dev.5` of nieuwer.
 
 ## IPBuilding Gateway Tools
 
@@ -51,3 +57,7 @@ Je mag gewoon in je eigen woorden vragen. Claude vraagt altijd eerst bevestiging
 **Klaar?**
 
 Zet de schakelaar weer uit. De add-on start opnieuw en de melding in Home Assistant verdwijnt. Stuur het rapport naar ons, zodat we de software kunnen verbeteren.
+
+## Voor ontwikkelaars (Claude Code)
+
+Pak de zip `ipbuilding-gateway-tools-claude-code` uit en zet de map `ipbuilding-gateway-tools` in `~/.claude/skills/`. Een rapport sturen kan daar niet.
