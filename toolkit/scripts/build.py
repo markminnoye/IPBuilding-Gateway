@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Build the IPBuilding Gateway Tools .mcpb.
+"""Build the IPBuilding Gateway Tools downloads.
 
 Used locally and from GitHub Actions. Stages a self-contained bundle, then
-runs ``mcpb validate`` and ``mcpb pack``.
+runs ``mcpb validate`` and ``mcpb pack``. Also writes the skill zip and the
+Claude Code plugin zip. Those zips never receive the intake address.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 TOOLKIT = Path(__file__).resolve().parents[1]
@@ -293,6 +295,120 @@ def _write_manifest(dest: Path, version: str) -> None:
     )
 
 
+def _folded_frontmatter(text: str) -> dict[str, str]:
+    """Read the YAML block at the top of SKILL.md. Only name and description."""
+    if not text.startswith("---\n"):
+        raise SystemExit("SKILL.md must start with frontmatter")
+    end = text.find("\n---\n", 4)
+    if end < 0:
+        raise SystemExit("SKILL.md frontmatter is not closed")
+    fields: dict[str, str] = {}
+    folding: str | None = None
+    folded: list[str] = []
+    for line in text[4:end].splitlines():
+        if folding is not None and (line.startswith(" ") or line.startswith("\t") or line.strip() == ""):
+            folded.append(line.strip())
+            continue
+        if folding is not None:
+            fields[folding] = re.sub(r"\s+", " ", " ".join(folded)).strip()
+            folding = None
+        if ":" not in line:
+            continue
+        key, rest = line.split(":", 1)
+        key = key.strip()
+        rest = rest.strip().strip('"').strip("'")
+        if rest in {">", "|", ">-", "|-"}:
+            folding = key
+            folded = []
+            continue
+        fields[key] = rest
+    if folding is not None:
+        fields[folding] = re.sub(r"\s+", " ", " ".join(folded)).strip()
+    return fields
+
+
+def _validate_skill_frontmatter(skill_dir: Path) -> str:
+    """Claude rejects a skill whose name or description breaks the upload rules."""
+    skill = skill_dir / "SKILL.md"
+    fields = _folded_frontmatter(skill.read_text(encoding="utf-8"))
+    name = fields.get("name", "")
+    description = fields.get("description", "")
+    if not re.fullmatch(r"[a-z0-9-]{1,64}", name):
+        raise SystemExit(f"skill name {name!r} is not a lowercase slug of at most 64 characters")
+    if "claude" in name or "anthropic" in name:
+        raise SystemExit(f"skill name {name!r} contains a reserved word")
+    if name != skill_dir.name:
+        raise SystemExit(f"skill name {name!r} does not match directory {skill_dir.name}")
+    if not description or len(description) > 1024:
+        raise SystemExit("skill description must be 1 to 1024 characters")
+    if "<" in description or ">" in description:
+        raise SystemExit("skill description must not contain XML tags")
+    return name
+
+
+def _skill_files(skill_dir: Path) -> list[Path]:
+    files = [
+        path
+        for path in skill_dir.rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+    ]
+    skill_md = skill_dir / "SKILL.md"
+    if skill_md not in files:
+        raise SystemExit(f"missing {skill_md}")
+    others = sorted(path for path in files if path != skill_md)
+    return [skill_md, *others]
+
+
+def _plugin_files() -> list[Path]:
+    skip = {".build", "dist", "__pycache__", ".pytest_cache"}
+    return sorted(
+        path
+        for path in TOOLKIT.rglob("*")
+        if path.is_file()
+        and not skip.intersection(path.relative_to(TOOLKIT).parts)
+        and path.suffix != ".pyc"
+    )
+
+
+def _write_zip(dest: Path, entries: list[tuple[Path, str]]) -> None:
+    if dest.exists():
+        dest.unlink()
+    with zipfile.ZipFile(dest, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path, arcname in entries:
+            archive.write(path, arcname=arcname)
+
+
+def write_download_zips(version: str, dest: Path = DIST) -> tuple[Path, Path]:
+    """Write the skill zip and the Claude Code plugin zip.
+
+    The skill zip has one top folder whose name matches the frontmatter, with
+    SKILL.md as the first entry. Claude looks for that folder and ignores a
+    SKILL.md at the zip root. The plugin zip is the toolkit tree. Neither zip
+    gets IPBUILDING_REPORT_INTAKE; only the .mcpb manifest does.
+    """
+    versions_agree()
+    dest.mkdir(parents=True, exist_ok=True)
+    skill_dir = TOOLKIT / "skills" / "ipbuilding-gateway-tools"
+    skill_name = _validate_skill_frontmatter(skill_dir)
+    skill_zip = dest / f"ipbuilding-gateway-tools-skill-{version}.zip"
+    plugin_zip = dest / f"ipbuilding-gateway-tools-claude-code-{version}.zip"
+    _write_zip(
+        skill_zip,
+        [
+            (path, f"{skill_name}/{path.relative_to(skill_dir).as_posix()}")
+            for path in _skill_files(skill_dir)
+        ],
+    )
+    _write_zip(
+        plugin_zip,
+        [
+            (path, f"ipbuilding-gateway-tools/{path.relative_to(TOOLKIT).as_posix()}")
+            for path in _plugin_files()
+        ],
+    )
+    return skill_zip, plugin_zip
+
+
 def pack(staging: Path, version: str) -> Path:
     DIST.mkdir(parents=True, exist_ok=True)
     output = DIST / f"ipbuilding-gateway-tools-{version}.mcpb"
@@ -314,6 +430,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     version = resolve_version()
+    skill_zip, plugin_zip = write_download_zips(version)
+    print(f"skill {skill_zip}")
+    print(f"plugin {plugin_zip}")
     staged = stage(version)
     print(f"staged {staged} ({version})")
     if args.stage_only:
