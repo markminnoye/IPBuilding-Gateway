@@ -68,11 +68,11 @@ def test_download_zips_match_the_upload_formats(
 ) -> None:
     sentinel = "https://intake.example.test/never-embed"
     monkeypatch.setenv("IPBUILDING_REPORT_INTAKE", sentinel)
-    skill_zip, plugin_zip = _build.write_download_zips(file_version(), dest=tmp_path)
-    with zipfile.ZipFile(skill_zip) as archive:
-        skill_names = archive.namelist()
-        skill_text = archive.read(skill_names[0]).decode("utf-8")
-    assert skill_names == ["ipbuilding-gateway-tools/SKILL.md"]
+    plugin_zip = _build.write_download_zips(file_version(), dest=tmp_path)
+    assert list(tmp_path.glob("*skill*")) == []
+    skill_text = (TOOLKIT / "skills" / "ipbuilding-gateway-tools" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
     assert skill_text.startswith("---\n")
     fields = _build._folded_frontmatter(skill_text)
     assert fields["name"] == "ipbuilding-gateway-tools"
@@ -98,7 +98,6 @@ def test_download_zips_match_the_upload_formats(
     assert plugin["version"] == file_version()
     env = mcp["mcpServers"]["ipbuilding-gateway-tools"]["env"]
     assert list(env) == ["IPBUILDING_GATEWAY_ADDRESS"]
-    assert sentinel.encode() not in skill_zip.read_bytes()
     assert sentinel.encode() not in plugin_zip.read_bytes()
 
 

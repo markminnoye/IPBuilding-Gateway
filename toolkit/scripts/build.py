@@ -2,8 +2,8 @@
 """Build the IPBuilding Gateway Tools downloads.
 
 Used locally and from GitHub Actions. Stages a self-contained bundle, then
-runs ``mcpb validate`` and ``mcpb pack``. Also writes the skill zip and the
-Claude Code plugin zip. Those zips never receive the intake address.
+runs ``mcpb validate`` and ``mcpb pack``. Also writes the Claude Code zip
+for developers. That zip never receives the intake address.
 """
 
 from __future__ import annotations
@@ -346,19 +346,6 @@ def _validate_skill_frontmatter(skill_dir: Path) -> str:
     return name
 
 
-def _skill_files(skill_dir: Path) -> list[Path]:
-    files = [
-        path
-        for path in skill_dir.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
-    ]
-    skill_md = skill_dir / "SKILL.md"
-    if skill_md not in files:
-        raise SystemExit(f"missing {skill_md}")
-    others = sorted(path for path in files if path != skill_md)
-    return [skill_md, *others]
-
-
 def _plugin_files() -> list[Path]:
     skip = {".build", "dist", "__pycache__", ".pytest_cache"}
     return sorted(
@@ -378,27 +365,17 @@ def _write_zip(dest: Path, entries: list[tuple[Path, str]]) -> None:
             archive.write(path, arcname=arcname)
 
 
-def write_download_zips(version: str, dest: Path = DIST) -> tuple[Path, Path]:
-    """Write the skill zip and the Claude Code plugin zip.
+def write_download_zips(version: str, dest: Path = DIST) -> Path:
+    """Write the Claude Code plugin zip for developers.
 
-    The skill zip has one top folder whose name matches the frontmatter, with
-    SKILL.md as the first entry. Claude looks for that folder and ignores a
-    SKILL.md at the zip root. The plugin zip is the toolkit tree. Neither zip
-    gets IPBUILDING_REPORT_INTAKE; only the .mcpb manifest does.
+    The zip is the toolkit tree under ``ipbuilding-gateway-tools/``. It does
+    not get ``IPBUILDING_REPORT_INTAKE``. Only the ``.mcpb`` manifest does, so
+    sending a report is not available from this zip.
     """
     versions_agree()
+    _validate_skill_frontmatter(TOOLKIT / "skills" / "ipbuilding-gateway-tools")
     dest.mkdir(parents=True, exist_ok=True)
-    skill_dir = TOOLKIT / "skills" / "ipbuilding-gateway-tools"
-    skill_name = _validate_skill_frontmatter(skill_dir)
-    skill_zip = dest / f"ipbuilding-gateway-tools-skill-{version}.zip"
     plugin_zip = dest / f"ipbuilding-gateway-tools-claude-code-{version}.zip"
-    _write_zip(
-        skill_zip,
-        [
-            (path, f"{skill_name}/{path.relative_to(skill_dir).as_posix()}")
-            for path in _skill_files(skill_dir)
-        ],
-    )
     _write_zip(
         plugin_zip,
         [
@@ -406,7 +383,7 @@ def write_download_zips(version: str, dest: Path = DIST) -> tuple[Path, Path]:
             for path in _plugin_files()
         ],
     )
-    return skill_zip, plugin_zip
+    return plugin_zip
 
 
 def pack(staging: Path, version: str) -> Path:
@@ -430,8 +407,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     version = resolve_version()
-    skill_zip, plugin_zip = write_download_zips(version)
-    print(f"skill {skill_zip}")
+    plugin_zip = write_download_zips(version)
     print(f"plugin {plugin_zip}")
     staged = stage(version)
     print(f"staged {staged} ({version})")
