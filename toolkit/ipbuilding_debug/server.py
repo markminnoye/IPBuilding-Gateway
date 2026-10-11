@@ -77,7 +77,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
 
     @mcp.tool(name="gateway_health")
     async def gateway_health_tool() -> str:
-        """Read /api/v1/status health: status, subsystems, issues, uptime, and the local buffer.
+        """Read /api/v1/status health: status, subsystems, issues, uptime, and the activiteitenlog.
 
         Call this when the tester asks whether the gateway itself is healthy.
         """
@@ -85,8 +85,9 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
 
     @mcp.tool(name="list_devices")
     async def list_devices_tool() -> str:
-        """Map each channel to its module, type, name, and state from the gateway inventory.
+        """Map each channel to its module, type, name, and state from the live gateway inventory.
 
+        This list (module, channel, button id, name) is the only reliable link between a button or lamp and a physical position. Check an id against this live result, never against an earlier answer or a remembered id. A Home Assistant entity is secondary.
         Relay and dimmer channels count from 0. Button channel is the module index, unchanged.
         Includes last_seen and last_seen_source when the gateway sent them on /modules.
         """
@@ -94,7 +95,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
 
     @mcp.tool(name="recent_events")
     async def recent_events_tool(limit: int = 50) -> str:
-        """Read state changes and button events already in the buffer.
+        """Read state changes and button events already in the activiteitenlog.
 
         Use this for questions about button presses and state changes. It does not need udp_frame and it does not read the add-on log.
         """
@@ -221,27 +222,49 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         note: str = "",
         marker: str = "",
         redact: bool = True,
+        feedback: str = "",
+        include_events: bool | None = None,
     ) -> str:
-        """Export the session buffer for the report. Addresses and names are removed by default.
+        """Export a report: rapport, bugrapport, foutmelding, feedback, probleem melden, bug report.
 
-        The result includes a fixed plain-text report and YAML frontmatter.
-        Pass redact=false only when the tester wants the raw text locally. Tell them not to share that raw text.
+        Use this when someone asks for a report, a bug report, feedback, or to report a problem, in Dutch or English.
+        note is the problem description and stays in the summary. feedback is free text about the tool, the skill, tables, or terminology. The latest feedback is kept and shown under heading 6.
+        include_events defaults to true. Pass false to leave events, frames, and logs out of the report. Omit it to keep the last choice.
+        Addresses and names are removed by default. Pass redact=false only when the tester wants the raw text locally. Tell them not to share that raw text.
         """
-        result = await export_session(gateway, note=note, marker=marker, redact=redact)
+        result = await export_session(
+            gateway,
+            note=note,
+            marker=marker,
+            redact=redact,
+            feedback=feedback,
+            include_events=include_events,
+        )
         return result.render()
 
     if report_send_enabled():
 
         @mcp.tool(name="send_report")
-        async def send_report_tool(confirmed: bool = False, korte_fout: str = "") -> str:
-            """Offer the filtered report as a mailto link after the tester confirms.
+        async def send_report_tool(
+            confirmed: bool = False,
+            korte_fout: str = "",
+            feedback: str = "",
+            include_events: bool | None = None,
+        ) -> str:
+            """Send the report: versturen, sturen, doorsturen naar Sonic Rocket, naar Mark, naar de ontwikkelaars, to the developers.
 
+            Use this to send or forward a rapport, bugrapport, foutmelding, or feedback to Sonic Rocket, to Mark, or to the developers.
+            feedback and include_events are optional. Omit them to reuse the last export_session values.
             The first call shows the privacy notice and the report. Nothing is sent.
             Call again with confirmed=true only after an explicit yes. The tester chooses the sender and sends the mail.
             Without an intake address the option is unavailable.
             """
             result = await send_report(
-                gateway, confirmed=confirmed, korte_fout=korte_fout
+                gateway,
+                confirmed=confirmed,
+                korte_fout=korte_fout,
+                feedback=feedback,
+                include_events=include_events,
             )
             return result.render()
 

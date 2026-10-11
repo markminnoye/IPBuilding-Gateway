@@ -157,6 +157,18 @@ def sent_message(link: str) -> str:
     )
 
 
+OFFER_TO_SEND = (
+    "Wil je dit rapport naar de ontwikkelaars van Sonic Rocket sturen? Zeg dan ja."
+)
+
+
+def offer_sentence() -> str:
+    """Fixed offer on the export text, only when sending can actually run."""
+    if report_send_enabled() and intake_address():
+        return OFFER_TO_SEND
+    return ""
+
+
 def unavailable_message() -> str:
     return (
         "Doorsturen is niet beschikbaar. "
@@ -242,9 +254,16 @@ def _appendix_note(duplicate_logs: int, dropped_logs: int) -> str:
     return " ".join(parts)
 
 
+def _reported_events(body: dict[str, Any]) -> list[dict[str, Any]]:
+    """Events for the report. ``events_included: false`` drops them all."""
+    if body.get("events_included") is False:
+        return []
+    return [item for item in body.get("events") or [] if isinstance(item, dict)]
+
+
 def _sections(body: dict[str, Any]) -> dict[str, Any]:
     notes = [item for item in body.get("notes") or [] if isinstance(item, dict)]
-    events = [item for item in body.get("events") or [] if isinstance(item, dict)]
+    events = _reported_events(body)
     frames = [item for item in events if item.get("type") in _CONFIRMED_TYPES]
     logs = [item for item in events if item.get("type") in _LOG_TYPES]
     others = [
@@ -278,15 +297,19 @@ def _sections(body: dict[str, Any]) -> dict[str, Any]:
             "Een oorzaak staat onder Bevindingen alleen als een frame die bevestigt."
         )
     tested = note_lines + [_event_line(item) for item in tested_items]
-    appendix = _appendix_lines(body, logs, other_frames, len(polls))
+    if body.get("events_included") is False:
+        appendix: list[str] = []
+    else:
+        appendix = _appendix_lines(body, logs, other_frames, len(polls))
+    feedback = str(body.get("feedback") or "").strip()
     return {
         "samenvatting": summary,
         "omgeving": _environment(body),
         "getest": "\n".join(tested) or "Geen stappen genoteerd.",
         "bevestigd": "\n".join(confirmed) or "Geen frame dat dit bevestigt.",
-        "vermoeden": "\n".join(suspected) or "Geen vermoeden uit de buffer.",
+        "vermoeden": "\n".join(suspected) or "Geen vermoeden uit het activiteitenlog.",
         "open": _open_questions(gaps),
-        "feedback": "—",
+        "feedback": feedback or "—",
         "bijlage": "\n".join(appendix) or "Geen gebeurtenissen.",
         "dialects": _dialects(events),
     }
@@ -332,7 +355,7 @@ def _environment(body: dict[str, Any]) -> str:
             lines.append(f"Module: {kind} {model}".strip())
     else:
         lines.append("Modules: niet geladen in deze sessie.")
-    dialects = _dialects(body.get("events") or [])
+    dialects = _dialects(_reported_events(body))
     lines.append("Dialecten: " + (", ".join(dialects) or "geen bevestigd in de frames"))
     return "\n".join(lines)
 
@@ -344,6 +367,7 @@ def _frontmatter(body: dict[str, Any], dialects: list[str]) -> str:
     lines = [
         "---",
         f"installatie_id: {_yaml(body.get('installatie_id') or '')}",
+        f"events_included: {_yaml(body.get('events_included', True) is not False)}",
         f"toolkit_version: {_yaml(__version__)}",
         f"gateway_version: {_yaml(gateway.get('version'))}",
         f"hub_role: {_yaml(gateway.get('hub_role'))}",
@@ -392,7 +416,7 @@ def _open_questions(gaps: list[dict[str, Any]]) -> str:
         text = gap.get("message") or "onderbreking zonder toelichting"
         lines.append(f"{when} {text}".strip())
     if not lines:
-        return "Geen open vraag uit de buffer."
+        return "Geen open vraag uit het activiteitenlog."
     return "\n".join(lines)
 
 

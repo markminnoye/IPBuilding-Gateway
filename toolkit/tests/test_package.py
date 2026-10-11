@@ -6,6 +6,7 @@ import importlib.util
 import json
 import re
 import struct
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -55,11 +56,50 @@ def test_toolkit_sources_have_no_private_addresses() -> None:
 
 def test_versions_match() -> None:
     versions_agree()
-    assert re.fullmatch(r"0\.1\.0(-rc\.[1-9]\d*)?", file_version())
+    assert re.fullmatch(r"0\.1\.1-rc\.[1-9]\d*", file_version())
     plugin = json.loads((TOOLKIT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
     setting = plugin["userConfig"]["gateway_address"]
     assert setting["required"] is False
     assert setting["default"] == "homeassistant.local"
+
+
+def test_download_zips_match_the_upload_formats(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sentinel = "https://intake.example.test/never-embed"
+    monkeypatch.setenv("IPBUILDING_REPORT_INTAKE", sentinel)
+    skill_zip, plugin_zip = _build.write_download_zips(file_version(), dest=tmp_path)
+    with zipfile.ZipFile(skill_zip) as archive:
+        skill_names = archive.namelist()
+        skill_text = archive.read(skill_names[0]).decode("utf-8")
+    assert skill_names == ["ipbuilding-gateway-tools/SKILL.md"]
+    assert skill_text.startswith("---\n")
+    fields = _build._folded_frontmatter(skill_text)
+    assert fields["name"] == "ipbuilding-gateway-tools"
+    assert 1 <= len(fields["description"]) <= 1024
+    assert "<" not in fields["description"] and ">" not in fields["description"]
+    assert "claude" not in fields["name"] and "anthropic" not in fields["name"]
+
+    with zipfile.ZipFile(plugin_zip) as archive:
+        plugin_names = archive.namelist()
+        mcp = json.loads(archive.read("ipbuilding-gateway-tools/.mcp.json"))
+        plugin = json.loads(archive.read("ipbuilding-gateway-tools/.claude-plugin/plugin.json"))
+    assert plugin_names[0].startswith("ipbuilding-gateway-tools/")
+    assert {name.split("/", 1)[0] for name in plugin_names} == {"ipbuilding-gateway-tools"}
+    for required in (
+        "ipbuilding-gateway-tools/.mcp.json",
+        "ipbuilding-gateway-tools/.claude-plugin/plugin.json",
+        "ipbuilding-gateway-tools/skills/ipbuilding-gateway-tools/SKILL.md",
+        "ipbuilding-gateway-tools/ipbuilding_debug/__main__.py",
+        "ipbuilding-gateway-tools/pyproject.toml",
+        "ipbuilding-gateway-tools/VERSION",
+    ):
+        assert required in plugin_names
+    assert plugin["version"] == file_version()
+    env = mcp["mcpServers"]["ipbuilding-gateway-tools"]["env"]
+    assert list(env) == ["IPBUILDING_GATEWAY_ADDRESS"]
+    assert sentinel.encode() not in skill_zip.read_bytes()
+    assert sentinel.encode() not in plugin_zip.read_bytes()
 
 
 def test_skill_mentions_the_switch_up_front_and_at_the_end() -> None:

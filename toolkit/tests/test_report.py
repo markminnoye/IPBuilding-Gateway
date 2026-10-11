@@ -20,7 +20,12 @@ from ipbuilding_debug.privacy import (
     privacy_notice,
 )
 from ipbuilding_debug.redact import mask_stem, name_masks, redact_text
-from ipbuilding_debug.report import APPENDIX_LOG_LIMIT, parse_mailto, report_send_enabled
+from ipbuilding_debug.report import (
+    APPENDIX_LOG_LIMIT,
+    OFFER_TO_SEND,
+    parse_mailto,
+    report_send_enabled,
+)
 from ipbuilding_debug.server import build_server
 from ipbuilding_debug.session import GatewaySession
 from ipbuilding_debug.version import __version__
@@ -896,8 +901,16 @@ def test_skill_describes_the_report_and_the_backlog() -> None:
     assert "Linear-backlog" in text
     assert "Agent" in text
     assert "letterlijk" in text
-    assert "Txxxxxx" in text
-    assert "Txxxxxx-1" in text
+    assert "Sxxxxxxxxxx" in text
+    assert "Sxxxxxxxxxx-1" in text
+    assert "Traphal" not in text
+    assert "buffer" not in text.lower()
+    assert "activiteitenlog" in text
+    assert "hoofdonderdeel" in text
+    assert "knop-id" in text
+    assert "include_events=false" in text
+    assert "bugrapport" in text
+    assert "doorsturen" in text
     assert "hoofdletterongevoelig" in text
     assert "spelling in de inventaris" in text
     assert "Toegang op afstand" not in text
@@ -909,9 +922,19 @@ def test_skill_describes_the_report_and_the_backlog() -> None:
     readme = (TOOLKIT / "README.md").read_text(encoding="utf-8")
     guide = (TOOLKIT / "HANDLEIDING.md").read_text(encoding="utf-8")
     assert readme.startswith(guide)
-    for blob in (text, readme, guide, privacy_notice()):
+    descriptions = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            TOOLKIT / "ipbuilding_debug" / "server.py",
+            TOOLKIT / "scripts" / "build.py",
+        )
+    )
+    for blob in (text, readme, guide, privacy_notice(), descriptions):
         assert "T" + "riage" not in blob
         assert "Toegang op afstand" not in blob
+        assert "Traphal" not in blob
+        assert "10.10.1." not in blob
+        assert "192.168." not in blob
 
 
 def test_default_tree_has_no_intake_address() -> None:
@@ -936,6 +959,11 @@ def test_stage_embeds_the_intake_address_only_when_sending_is_on(
     manifest = json.loads((staged / "manifest.json").read_text(encoding="utf-8"))
     env = manifest["server"]["mcp_config"]["env"]
     assert env["IPBUILDING_REPORT_INTAKE"] == "intake@example.invalid"
+    by_name = {tool["name"]: tool["description"] for tool in manifest["tools"]}
+    assert "bugrapport" in by_name["export_session"]
+    assert "doorsturen" in by_name["send_report"]
+    assert "naar Mark" in by_name["send_report"]
+    assert "activiteitenlog" in by_name["recent_events"]
     assert "send_report" in [tool["name"] for tool in manifest["tools"]]
 
     monkeypatch.setenv("IPBUILDING_REPORT_SEND", "off")
@@ -943,3 +971,149 @@ def test_stage_embeds_the_intake_address_only_when_sending_is_on(
     hidden = json.loads((quiet / "manifest.json").read_text(encoding="utf-8"))
     assert "IPBUILDING_REPORT_INTAKE" not in hidden["server"]["mcp_config"]["env"]
     assert "send_report" not in [tool["name"] for tool in hidden["tools"]]
+
+
+@pytest.mark.asyncio
+async def test_feedback_is_redacted_in_the_report_and_the_mailto(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("IPBUILDING_REPORT_SEND", raising=False)
+    monkeypatch.setenv("IPBUILDING_REPORT_INTAKE", "intake@example.invalid")
+    session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
+    session.devices = {
+        "dev-1": {
+            "id": "dev-1",
+            "name": "Schemerlamp",
+            "room": "Werkkamer",
+            "device_type": "relay",
+        }
+    }
+    await export_session(session, feedback="oude tekst over Schemerlamp")
+    feedback = (
+        "De tabel voor Schemerlamp op 192.0.2.44 "
+        "aa:bb:cc:dd:ee:10 schemer.example.invalid is onduidelijk."
+    )
+    exported = await export_session(
+        session,
+        note="De lamp bleef aan",
+        feedback=feedback,
+    )
+    report = exported.data["report"]
+    section = report.split("6. Feedback over de tool", 1)[1].split("7. Bijlage", 1)[0]
+    summary = report.split("1. Samenvatting", 1)[1].split("2. Omgeving", 1)[0]
+    assert "Schemerlamp" not in section
+    assert "S" + ("x" * 10) in section
+    assert "192.0.2.44" not in section
+    assert "aa:bb:cc:dd:ee:10" not in section
+    assert "schemer.example.invalid" not in section
+    assert "[adres]" in section
+    assert "[mac]" in section
+    assert "oude tekst" not in section
+    assert "De lamp bleef aan" in summary
+    assert "De lamp bleef aan" not in section
+    assert "—" not in section
+
+    sent = await send_report(session, confirmed=True, korte_fout="lamp bleef aan")
+    parsed = parse_mailto(sent.data["mailto"])
+    body = parsed["body"]
+    assert "Schemerlamp" not in body
+    assert "S" + ("x" * 10) in body
+    assert "192.0.2.44" not in body
+    assert "aa:bb:cc:dd:ee:10" not in body
+    feedback_line = body.split("Feedback over de tool:", 1)[1].split("Bijlage:", 1)[0]
+    assert "S" + ("x" * 10) in feedback_line
+    assert "De lamp bleef aan" in body.split("Samenvatting:", 1)[1].split("Omgeving:", 1)[0]
+
+
+@pytest.mark.asyncio
+async def test_include_events_false_drops_events_and_send_follows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("IPBUILDING_REPORT_SEND", raising=False)
+    monkeypatch.setenv("IPBUILDING_REPORT_INTAKE", "intake@example.invalid")
+    session = GatewaySession("192.0.2.20:9", backoff_start=30, backoff_max=30)
+    await session.buffer.append(
+        {
+            "type": "udp_frame",
+            "hex": "5330303030",
+            "frame_kind": "confirming",
+            "src": "192.0.2.30",
+            "dst": "192.0.2.31",
+        }
+    )
+    await session.buffer.append({"type": "button_event", "message": "knop-schemer-event"})
+    await session.buffer.append({"type": "log", "message": "logregel-schemer"})
+    await session.buffer.append({"type": "command_result", "message": "commando-schemer"})
+    hidden = await export_session(
+        session,
+        note="De lamp bleef aan",
+        feedback="De tabel is onduidelijk",
+        include_events=False,
+    )
+    report = hidden.data["report"]
+    assert "events_included: false" in hidden.data["frontmatter"]
+    for leaked in ("5330303030", "knop-schemer-event", "logregel-schemer", "commando-schemer"):
+        assert leaked not in report
+    assert "De lamp bleef aan" in report
+    assert "De tabel is onduidelijk" in report
+    assert f"Installatie-id: {hidden.data['installatie_id']}" in report
+    tested = report.split("3. Wat getest werd", 1)[1].split("4. Bevindingen", 1)[0]
+    assert "notitie" in tested
+    assert "commando-schemer" not in tested
+    assert "Geen frame dat dit bevestigt." in report
+    assert "Geen vermoeden uit het activiteitenlog." in report
+    assert "Geen gebeurtenissen." in report.split("7. Bijlage", 1)[1]
+
+    sent = await send_report(session, confirmed=True, korte_fout="lamp bleef aan")
+    parsed = parse_mailto(sent.data["mailto"])
+    assert "events_included: false" in parsed["body"]
+    assert "5330303030" not in parsed["body"]
+    assert "knop-schemer-event" not in parsed["body"]
+    assert "De lamp bleef aan" in parsed["body"]
+    assert "De tabel is onduidelijk" in parsed["body"]
+
+
+@pytest.mark.asyncio
+async def test_export_offers_to_send_when_sending_is_available(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("IPBUILDING_REPORT_SEND", raising=False)
+    monkeypatch.delenv("IPBUILDING_REPORT_INTAKE", raising=False)
+    session = GatewaySession("192.0.2.21:9", backoff_start=30, backoff_max=30)
+    quiet = await export_session(session, note="De lamp bleef aan")
+    assert OFFER_TO_SEND not in quiet.message
+
+    monkeypatch.setenv("IPBUILDING_REPORT_INTAKE", "intake@example.invalid")
+    offered = await export_session(session)
+    assert offered.message.endswith(OFFER_TO_SEND)
+    assert OFFER_TO_SEND not in offered.data["report"]
+
+    monkeypatch.setenv("IPBUILDING_REPORT_SEND", "0")
+    disabled = await export_session(session)
+    assert OFFER_TO_SEND not in disabled.message
+
+
+@pytest.mark.asyncio
+async def test_report_tool_descriptions_use_everyday_words(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("IPBUILDING_REPORT_SEND", raising=False)
+    session = GatewaySession("192.0.2.22:9", backoff_start=30, backoff_max=30)
+    try:
+        server = build_server(session)
+        tools = {tool.name: tool.description or "" for tool in await server.list_tools()}
+    finally:
+        await session.stop()
+    export = tools["export_session"].lower()
+    for word in ("bugrapport", "foutmelding", "probleem melden", "feedback", "bug report"):
+        assert word in export
+    send = tools["send_report"].lower()
+    for word in (
+        "sonic rocket",
+        "naar mark",
+        "ontwikkelaars",
+        "developers",
+        "doorsturen",
+        "versturen",
+    ):
+        assert word in send

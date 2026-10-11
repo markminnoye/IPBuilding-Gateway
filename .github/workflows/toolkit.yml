@@ -1,6 +1,7 @@
 # Checks IPBuilding Gateway Tools on every pull request.
-# A tag gateway-tools-vX.Y.Z (matching toolkit/VERSION) also publishes the .mcpb
-# on a GitHub release. Add-on tags stay vX.Y.Z and are not handled here.
+# A tag gateway-tools-vX.Y.Z (matching toolkit/VERSION) also publishes the .mcpb,
+# the skill zip, and the Claude Code zip on a GitHub release.
+# Add-on tags stay vX.Y.Z and are not handled here.
 
 name: IPBuilding Gateway Tools
 
@@ -42,7 +43,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ipbuilding-gateway-tools
-          path: toolkit/dist/*.mcpb
+          path: |
+            toolkit/dist/*.mcpb
+            toolkit/dist/*.zip
           if-no-files-found: error
 
   release:
@@ -62,6 +65,8 @@ jobs:
       - name: Publish the bundle on the gateway-tools release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.mcpb
+          files: |
+            dist/*.mcpb
+            dist/*.zip
           body_path: toolkit/HANDLEIDING.md
           draft: false
