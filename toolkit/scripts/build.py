@@ -181,15 +181,18 @@ def _write_manifest(dest: Path, version: str) -> None:
         },
         {
             "name": "gateway_health",
-            "description": "Status, subsystemen, meldingen, looptijd en buffer.",
+            "description": "Status, subsystemen, meldingen, looptijd en het activiteitenlog.",
         },
         {
             "name": "list_devices",
-            "description": "Module, kanaal, type, naam en status. Kanalen tellen vanaf 0.",
+            "description": (
+                "Live inventaris: module, kanaal, knop-id en naam. "
+                "Controleer een id altijd opnieuw tegen deze lijst. Kanalen tellen vanaf 0."
+            ),
         },
         {
             "name": "recent_events",
-            "description": "Statuswijzigingen en knoppen uit de buffer.",
+            "description": "Statuswijzigingen en knoppen uit het activiteitenlog.",
         },
         {
             "name": "read_logs",
@@ -221,7 +224,10 @@ def _write_manifest(dest: Path, version: str) -> None:
         },
         {
             "name": "export_session",
-            "description": "Sessie bundelen. Ruimte-, lamp- en knopnamen zijn gemaskeerd. Adressen zijn standaard weggehaald.",
+            "description": (
+                "Rapport, bugrapport, foutmelding of feedback. Probleem melden, report, bug report. "
+                "Namen en adressen gaan er standaard uit."
+            ),
         },
     ]
     if _report_send_enabled():
@@ -229,8 +235,8 @@ def _write_manifest(dest: Path, version: str) -> None:
             {
                 "name": "send_report",
                 "description": (
-                    "Gefilterd rapport als mailto, nadat de tester het bevestigd heeft. "
-                    "De toolkit verstuurt niets."
+                    "Rapport versturen, sturen of doorsturen naar Sonic Rocket, naar Mark, "
+                    "naar de ontwikkelaars of de developers. De toolkit verstuurt niets zelf."
                 ),
             }
         )
