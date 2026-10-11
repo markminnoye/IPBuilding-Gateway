@@ -1,6 +1,6 @@
 # Checks IPBuilding Gateway Tools on every pull request.
-# A tag gateway-tools-vX.Y.Z (matching toolkit/VERSION) also publishes the .mcpb,
-# the skill zip, and the Claude Code zip on a GitHub release.
+# A tag gateway-tools-vX.Y.Z (matching toolkit/VERSION) also publishes the .mcpb
+# and the Claude Code zip for developers on a GitHub release.
 # Add-on tags stay vX.Y.Z and are not handled here.
 
 name: IPBuilding Gateway Tools

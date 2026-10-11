@@ -1,12 +1,18 @@
+IPBuilding Gateway Tools zijn hulpmiddelen voor AI-assistenten zoals Claude: ze helpen je samen met een assistent problemen in je IPBuilding-installatie te vinden. Wat jullie vinden, kun je als rapport naar Sonic Rocket sturen.
+
+Persoonsgegevens, zoals adressen en namen van lampen en ruimtes, worden standaard weggefilterd uit het rapport.
+
+Je hebt IPBuilding Gateway 1.8.0 in Home Assistant nodig, en Claude Desktop.
+
+Om mee te kijken zet je in de gateway "Bediening op afstand (voor debuggen)" aan. Als je klaar bent, zet je het weer uit.
+
 ## Installeren
 
-Dubbelklik op `ipbuilding-gateway-tools.mcpb`. Claude Desktop vraagt of je IPBuilding Gateway Tools wil installeren. Kies **Install**. Staat de plug-in er al, dan staat er **Update**.
+Download `ipbuilding-gateway-tools.mcpb` en dubbelklik het bestand. Dat is de download. Alleen daarmee kun je een rapport sturen. Claude Desktop vraagt of je IPBuilding Gateway Tools wil installeren. Kies **Install**. Staat de plug-in er al, dan staat er **Update**.
 
 `homeassistant.local` volstaat meestal. Druk dan op **Save**.
 
 Zegt de assistent dat de gateway niet bereikbaar is, controleer dan of de add-on draait en of de schakelaar aan staat. Vul bij **Configure** het adres in dat je ook in je browser gebruikt om Home Assistant te openen, zonder `http://` en zonder poort.
-
-Je hebt de gateway nodig van develop `1.8.0-dev.5` of nieuwer.
 
 ## IPBuilding Gateway Tools
 
@@ -51,6 +57,10 @@ Je mag gewoon in je eigen woorden vragen. Claude vraagt altijd eerst bevestiging
 **Klaar?**
 
 Zet de schakelaar weer uit. De add-on start opnieuw en de melding in Home Assistant verdwijnt. Stuur het rapport naar ons, zodat we de software kunnen verbeteren.
+
+## Voor ontwikkelaars (Claude Code)
+
+Pak de zip `ipbuilding-gateway-tools-claude-code` uit. Ga in de map staan waar de uitgepakte map `ipbuilding-gateway-tools` in staat, en voer dit uit: `claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools`. Een rapport sturen kan daar niet.
 
 ## Layout
 
@@ -106,11 +116,11 @@ The WebSocket stays up for the life of the MCP process, reconnects with backoff 
 python3 toolkit/scripts/build.py
 ```
 
-The script stages a bundle, copies the decoders it needs, and runs `mcpb validate` and `mcpb pack`. It also writes `ipbuilding-gateway-tools-skill-<version>.zip` and `ipbuilding-gateway-tools-claude-code-<version>.zip`. CI does the same on every pull request. A tag `gateway-tools-vX.Y.Z` whose number matches `VERSION` attaches the `.mcpb` and both zips to a GitHub release. The release text is `HANDLEIDING.md`. The workflow artifact is `ipbuilding-gateway-tools`. The packed file is `ipbuilding-gateway-tools-<version>.mcpb`.
+The script stages a bundle, copies the decoders it needs, and runs `mcpb validate` and `mcpb pack`. It also writes `ipbuilding-gateway-tools-claude-code-<version>.zip` for developers. CI does the same on every pull request. A tag `gateway-tools-vX.Y.Z` whose number matches `VERSION` attaches the `.mcpb` and that zip to a GitHub release. The release text is `HANDLEIDING.md`. The workflow artifact is `ipbuilding-gateway-tools`. The packed file is `ipbuilding-gateway-tools-<version>.mcpb`.
 
-The skill zip has one folder, `ipbuilding-gateway-tools/`, with `SKILL.md` first. That is the file Claude accepts under Settings → Skills. The Claude Code zip unpacks to the same folder name; add that folder as a local plugin.
+The `.mcpb` is the download for Claude Desktop. The Claude Code zip is for developers. Unpack it, then from the directory that contains the unpacked folder `ipbuilding-gateway-tools` run `claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools`. That installs the plugin and starts its MCP server. Sending a report is not available from that zip.
 
-Sending a report is on unless `IPBUILDING_REPORT_SEND` is `0`, `false`, `no`, or `off`. The intake address is not in the repository. CI passes the Actions secret `IPBUILDING_REPORT_INTAKE` into the `.mcpb` manifest environment of the same name, and only when that value is non-empty. The skill zip and the Claude Code zip do not get that value. Claude Code reads `IPBUILDING_REPORT_INTAKE` from the environment when the plugin starts. `.mcp.json` does not set it. Without the variable, the other tools still run and `send_report` stays unavailable. A confirmed call returns a `mailto:` link; the toolkit does not send the mail. The Linear template puts the ticket in the backlog with the label Agent.
+Sending a report is on unless `IPBUILDING_REPORT_SEND` is `0`, `false`, `no`, or `off`. The intake address is not in the repository. CI passes the Actions secret `IPBUILDING_REPORT_INTAKE` into the `.mcpb` manifest environment of the same name, and only when that value is non-empty. The Claude Code zip does not get that value. `.mcp.json` does not set it. Without the variable, the other tools still run and sending a report is not available. A confirmed call returns a `mailto:` link; the toolkit does not send the mail. The Linear template puts the ticket in the backlog with the label Agent.
 
 Each test bundle uses the next `0.1.0-rc.N` (`rc.1`, `rc.2`, …) in `toolkit/VERSION`. The same string goes in `.claude-plugin/plugin.json`, `pyproject.toml`, and the `.mcpb` manifest. Raise N by one for every new test build so Claude Desktop offers Update instead of Install, and so the builds stay distinct. Do not reuse a number.
 
