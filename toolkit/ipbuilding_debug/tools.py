@@ -55,6 +55,7 @@ from ipbuilding_debug.report import (
     intake_address,
     limit_export_events,
     mailto_link,
+    offer_sentence,
     preview_message,
     render_report,
     report_send_enabled,
@@ -435,7 +436,7 @@ async def connection_status(
 
 
 async def gateway_health(session: GatewaySession) -> ToolResult:
-    """Health, subsystems, issues, uptime, and the local buffer from /status."""
+    """Health, subsystems, issues, uptime, and the activiteitenlog from /status."""
     error = await session.refresh_status()
     if error is not None and error.kind in (KIND_UNREACHABLE, KIND_NO_ADDRESS):
         return _from_error(error, connected=False, **_endpoint(session))
@@ -586,7 +587,7 @@ async def recent_events(
     *,
     limit: int = 50,
 ) -> ToolResult:
-    """State changes and button events already in the local buffer.
+    """State changes and button events already in the activiteitenlog.
 
     Works without ``udp_frame``. Does not read the add-on log.
     """
@@ -605,13 +606,13 @@ async def recent_events(
     changes = [event for event in events if event.get("type") == "state_changed"]
     if not events:
         message = (
-            "De buffer heeft nog geen statuswijzigingen of knopgebeurtenissen. "
+            "Het activiteitenlog heeft nog geen statuswijzigingen of knopgebeurtenissen. "
             "Druk op de knop of verander een lamp, en lees daarna opnieuw."
         )
     else:
         message = (
             f"{len(changes)} statuswijziging(en) en {len(presses)} knopgebeurtenis(sen) "
-            "in de buffer (state_changed, button_event: press, single_press, release "
+            "in het activiteitenlog (state_changed, button_event: press, single_press, release "
             "en wat de gateway verder stuurde)."
         )
     return ToolResult(
@@ -1187,11 +1188,19 @@ async def export_session(
     note: str = "",
     marker: str = "",
     redact: bool = True,
+    feedback: str = "",
+    include_events: bool | None = None,
 ) -> ToolResult:
     """Bundle the session. Names are masked and addresses removed unless redact is false."""
     if note or marker:
         await session.annotate(note or marker, marker=marker)
+    if feedback.strip():
+        session.tool_feedback = feedback.strip()
+    if include_events is not None:
+        session.include_events = bool(include_events)
     body = _export_body(session)
+    body["feedback"] = session.tool_feedback
+    body["events_included"] = session.include_events
     hosts = session_hosts(session)
     inventory = _inventory_names(session)
     tokens = collect_tokens({"inventory": inventory, "session": body})
@@ -1209,6 +1218,9 @@ async def export_session(
     report = _localise_utc_text(report)
     frontmatter = _localise_utc_text(frontmatter)
     message = f"{report}\n{sharing}"
+    offer = offer_sentence()
+    if offer:
+        message = f"{message}\n{offer}"
     return ToolResult(
         message,
         {
@@ -1228,6 +1240,8 @@ async def send_report(
     *,
     confirmed: bool = False,
     korte_fout: str = "",
+    feedback: str = "",
+    include_events: bool | None = None,
 ) -> ToolResult:
     """Show the filtered report, then a mailto link after an explicit yes.
 
@@ -1245,7 +1259,12 @@ async def send_report(
             unavailable_message(),
             {"ok": False, "kind": "report_unavailable", "sent": False, "mailto": None},
         )
-    exported = await export_session(session, redact=True)
+    exported = await export_session(
+        session,
+        redact=True,
+        feedback=feedback,
+        include_events=include_events,
+    )
     report = str(exported.data.get("report") or "")
     if not confirmed:
         return ToolResult(

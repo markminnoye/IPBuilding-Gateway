@@ -129,6 +129,10 @@ class GatewaySession:
         self.devices: dict[str, dict[str, Any]] = {}
         self.modules: dict[str, dict[str, Any]] = {}
         self.notes: list[dict[str, str]] = []
+        # Latest free-text feedback about the tool. Empty until export or send.
+        self.tool_feedback = ""
+        # Report choice. A later call without the argument keeps this value.
+        self.include_events = True
         self.want_frames = False
         self.want_logs = False
         self.discover_mdns = discover_mdns

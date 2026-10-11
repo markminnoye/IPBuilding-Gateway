@@ -45,18 +45,19 @@ COPY_NAMES = (
     ".mcpbignore",
 )
 
-# Shown in the desktop extension list. Keep it short and non-technical.
-# The install steps stay in HANDLEIDING.md.
+# Shown after install, in the desktop extension list. No install steps:
+# the reader already has the tool. Install steps stay on the release page
+# and in HANDLEIDING.md.
 LONG_DESCRIPTION = (
-    "IPBuilding Gateway Tools helpt je samen met een assistent problemen in je IPBuilding-installatie op te sporen. "
-    "Wat jullie vinden, kun je als rapport naar ons sturen, zodat we de gateway kunnen verbeteren.\n"
-    "\n"
-    "De tool werkt met de IPBuilding Gateway in je eigen netwerk. "
-    'Om mee te kijken zet je in de gateway "Bediening op afstand (voor debuggen)" aan. '
-    "Als het debuggen klaar is, zet je het weer uit.\n"
+    "IPBuilding Gateway Tools zijn hulpmiddelen voor AI-assistenten zoals Claude. "
+    "Ze helpen je samen met een assistent problemen in je IPBuilding-installatie te vinden. "
+    "Wat jullie vinden, kun je als rapport naar Sonic Rocket sturen.\n"
     "\n"
     "Persoonsgegevens, zoals adressen en namen van lampen en ruimtes, "
-    "worden standaard weggefilterd uit het rapport dat je naar ons stuurt."
+    "worden standaard weggefilterd uit het rapport.\n"
+    "\n"
+    'Om mee te kijken zet je in de gateway "Bediening op afstand (voor debuggen)" aan. '
+    "Als je klaar bent, zet je het weer uit."
 )
 
 
@@ -181,15 +182,18 @@ def _write_manifest(dest: Path, version: str) -> None:
         },
         {
             "name": "gateway_health",
-            "description": "Status, subsystemen, meldingen, looptijd en buffer.",
+            "description": "Status, subsystemen, meldingen, looptijd en het activiteitenlog.",
         },
         {
             "name": "list_devices",
-            "description": "Module, kanaal, type, naam en status. Kanalen tellen vanaf 0.",
+            "description": (
+                "Live inventaris: module, kanaal, knop-id en naam. "
+                "Controleer een id altijd opnieuw tegen deze lijst. Kanalen tellen vanaf 0."
+            ),
         },
         {
             "name": "recent_events",
-            "description": "Statuswijzigingen en knoppen uit de buffer.",
+            "description": "Statuswijzigingen en knoppen uit het activiteitenlog.",
         },
         {
             "name": "read_logs",
@@ -221,7 +225,10 @@ def _write_manifest(dest: Path, version: str) -> None:
         },
         {
             "name": "export_session",
-            "description": "Sessie bundelen. Ruimte-, lamp- en knopnamen zijn gemaskeerd. Adressen zijn standaard weggehaald.",
+            "description": (
+                "Rapport, bugrapport, foutmelding of feedback. Probleem melden, report, bug report. "
+                "Namen en adressen gaan er standaard uit."
+            ),
         },
     ]
     if _report_send_enabled():
@@ -229,8 +236,8 @@ def _write_manifest(dest: Path, version: str) -> None:
             {
                 "name": "send_report",
                 "description": (
-                    "Gefilterd rapport als mailto, nadat de tester het bevestigd heeft. "
-                    "De toolkit verstuurt niets."
+                    "Rapport versturen, sturen of doorsturen naar Sonic Rocket, naar Mark, "
+                    "naar de ontwikkelaars of de developers. De toolkit verstuurt niets zelf."
                 ),
             }
         )
@@ -241,7 +248,7 @@ def _write_manifest(dest: Path, version: str) -> None:
         "version": version,
         # Legacy single-asset field. Clients use this when `icons` is omitted.
         "icon": "icon.png",
-        "description": "Meekijken en testen via de IPBuilding Gateway in je thuisnetwerk.",
+        "description": "Hulpmiddelen voor AI-assistenten zoals Claude.",
         "long_description": LONG_DESCRIPTION,
         "author": {"name": "Sonic Rocket"},
         "license": "MIT",
