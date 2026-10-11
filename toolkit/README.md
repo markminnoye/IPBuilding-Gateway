@@ -60,7 +60,7 @@ Zet de schakelaar weer uit. De add-on start opnieuw en de melding in Home Assist
 
 ## Voor ontwikkelaars (Claude Code)
 
-Pak de zip `ipbuilding-gateway-tools-claude-code` uit en zet de map `ipbuilding-gateway-tools` in `~/.claude/skills/`. Een rapport sturen kan daar niet.
+Pak de zip `ipbuilding-gateway-tools-claude-code` uit. Ga in de map staan waar de uitgepakte map `ipbuilding-gateway-tools` in staat, en voer dit uit: `claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools`. Een rapport sturen kan daar niet.
 
 ## Layout
 
@@ -118,7 +118,7 @@ python3 toolkit/scripts/build.py
 
 The script stages a bundle, copies the decoders it needs, and runs `mcpb validate` and `mcpb pack`. It also writes `ipbuilding-gateway-tools-claude-code-<version>.zip` for developers. CI does the same on every pull request. A tag `gateway-tools-vX.Y.Z` whose number matches `VERSION` attaches the `.mcpb` and that zip to a GitHub release. The release text is `HANDLEIDING.md`. The workflow artifact is `ipbuilding-gateway-tools`. The packed file is `ipbuilding-gateway-tools-<version>.mcpb`.
 
-The `.mcpb` is the download for Claude Desktop. The Claude Code zip is for developers: unpack it and put the folder `ipbuilding-gateway-tools` in `~/.claude/skills/`.
+The `.mcpb` is the download for Claude Desktop. The Claude Code zip is for developers. Unpack it, then from the directory that contains the unpacked folder `ipbuilding-gateway-tools` run `claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools`. That installs the plugin and starts its MCP server. Sending a report is not available from that zip.
 
 Sending a report is on unless `IPBUILDING_REPORT_SEND` is `0`, `false`, `no`, or `off`. The intake address is not in the repository. CI passes the Actions secret `IPBUILDING_REPORT_INTAKE` into the `.mcpb` manifest environment of the same name, and only when that value is non-empty. The Claude Code zip does not get that value. `.mcp.json` does not set it. Without the variable, the other tools still run and sending a report is not available. A confirmed call returns a `mailto:` link; the toolkit does not send the mail. The Linear template puts the ticket in the backlog with the label Agent.
 

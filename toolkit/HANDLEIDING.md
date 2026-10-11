@@ -60,4 +60,4 @@ Zet de schakelaar weer uit. De add-on start opnieuw en de melding in Home Assist
 
 ## Voor ontwikkelaars (Claude Code)
 
-Pak de zip `ipbuilding-gateway-tools-claude-code` uit en zet de map `ipbuilding-gateway-tools` in `~/.claude/skills/`. Een rapport sturen kan daar niet.
+Pak de zip `ipbuilding-gateway-tools-claude-code` uit. Ga in de map staan waar de uitgepakte map `ipbuilding-gateway-tools` in staat, en voer dit uit: `claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools`. Een rapport sturen kan daar niet.

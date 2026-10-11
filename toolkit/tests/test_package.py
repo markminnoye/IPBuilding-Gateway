@@ -84,11 +84,15 @@ def test_download_zips_match_the_upload_formats(
         plugin_names = archive.namelist()
         mcp = json.loads(archive.read("ipbuilding-gateway-tools/.mcp.json"))
         plugin = json.loads(archive.read("ipbuilding-gateway-tools/.claude-plugin/plugin.json"))
+        marketplace = json.loads(
+            archive.read("ipbuilding-gateway-tools/.claude-plugin/marketplace.json")
+        )
     assert plugin_names[0].startswith("ipbuilding-gateway-tools/")
     assert {name.split("/", 1)[0] for name in plugin_names} == {"ipbuilding-gateway-tools"}
     for required in (
         "ipbuilding-gateway-tools/.mcp.json",
         "ipbuilding-gateway-tools/.claude-plugin/plugin.json",
+        "ipbuilding-gateway-tools/.claude-plugin/marketplace.json",
         "ipbuilding-gateway-tools/skills/ipbuilding-gateway-tools/SKILL.md",
         "ipbuilding-gateway-tools/ipbuilding_debug/__main__.py",
         "ipbuilding-gateway-tools/pyproject.toml",
@@ -96,6 +100,13 @@ def test_download_zips_match_the_upload_formats(
     ):
         assert required in plugin_names
     assert plugin["version"] == file_version()
+    assert marketplace["plugins"] == [
+        {
+            "name": "ipbuilding-gateway-tools",
+            "source": "./",
+            "description": plugin["description"],
+        }
+    ]
     env = mcp["mcpServers"]["ipbuilding-gateway-tools"]["env"]
     assert list(env) == ["IPBUILDING_GATEWAY_ADDRESS"]
     assert sentinel.encode() not in plugin_zip.read_bytes()
@@ -139,7 +150,11 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
     assert "weer uit" in text
     assert "IPBuilding Gateway 1.8.0" in text
     assert "Voor ontwikkelaars (Claude Code)" in text
-    assert "~/.claude/skills/" in text
+    assert (
+        "claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools"
+        in text
+    )
+    assert "~/.claude/skills/" not in text
     assert "Update" in text
     assert "Install" in text
     assert "IPBuilding Gateway Tools" in text
@@ -161,6 +176,11 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
         assert banned not in lowered
     readme = (TOOLKIT / "README.md").read_text(encoding="utf-8")
     assert readme.startswith(text)
+    assert "~/.claude/skills/" not in readme
+    assert (
+        "claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools"
+        in readme
+    )
 
 
 def _load_staged_version(path: Path, name: str) -> str:
