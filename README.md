@@ -17,10 +17,10 @@ The same gateway code runs in three shapes. Pick what fits your hardware:
 |---------|----------|--------|
 | **HA add-on** (Docker, Supervisor-managed) | Home Assistant OS / Supervised | Primary, fully supported |
 | **Standalone Docker container** (`docker run` / `python -m gateway`) | Linux — Raspberry Pi, NAS, VPS, any x86/ARM box | Same Python code, no Supervisor |
-| **ESP32 firmware** (C++ / ESP-IDF) | ESP32 + W5500 Ethernet | Future — protocol-level POC ([ARCHITECTURE.md](ARCHITECTURE.md) §3) |
+| **ESP32 firmware** (C++ / ESP-IDF) | ESP32 + W5500 Ethernet | Future — protocol-level POC |
 
 For the HA add-on variant, follow the [Installation](#installation) steps
-below. For standalone or ESP32, see [ARCHITECTURE.md](ARCHITECTURE.md) §3 and
+below. For standalone or ESP32 and
 the [add-on documentation](ipbuilding_gateway/DOCS.md).
 
 ## If Home Assistant is your client: the companion is required
