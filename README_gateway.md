@@ -182,7 +182,7 @@ Relevant suites: `test_udp_bus.py`, `test_device_registry.py`, `test_rest_shim.p
 
 ## Run locally
 
-**Dev launcher (recommended on the Mac):** `./local/gateway/start.sh` supports `--sim`, `--init` (interactive refresh from the field bus) and `--help`. See [`local/README.md`](local/README.md) for the two-terminal HA workflow.
+**Dev launcher (recommended on the Mac):** `./local/gateway/start.sh` supports `--sim`, `--init` (interactive refresh from the field bus), `--debug` (`GATEWAY_LOG_LEVEL=DEBUG`) and `--help`. See [`local/README.md`](local/README.md) for the two-terminal HA workflow.
 
 **Simulated (no hardware):**
 
