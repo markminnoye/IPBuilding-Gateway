@@ -32,8 +32,8 @@ The diagram below shows the three products side by side:
 - future **ESP32 standalone** protocol-level proof of concept
 
 <p align="center">
-  <a href="resources_and_docs/images/deployment_variants_overview.svg">
-    <img src="resources_and_docs/images/deployment_variants_overview.svg" alt="Deployment variants overview" width="900"/>
+  <a href="docs/images/architecture.png">
+    <img src="docs/images/architecture.png" alt="Deployment variants overview" width="900"/>
   </a>
 </p>
 
@@ -89,7 +89,7 @@ This add-on does **not** implement IPBox scenes, moods, or button→relay rules.
 
 ### 1. Companion (required — do this first or in parallel)
 
-[![Open companion in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=markminnoye&repository=ha-ipbuilding-gateway&category=[...]
+[![Open companion in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=markminnoye&repository=ha-ipbuilding-gateway&category=integration)
 
 Adds custom repository `markminnoye/ha-ipbuilding-gateway` in HACS, then download
 **IPBuilding Gateway Companion App** and restart HA. Full steps:
@@ -97,7 +97,7 @@ Adds custom repository `markminnoye/ha-ipbuilding-gateway` in HACS, then downloa
 
 ### 2. Add-on repository
 
-[![Add add-on repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2F[...]
+[![Add add-on repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fmarkminnoye%2FIPBuilding-Gateway)
 
 Or: **Settings → Add-ons → Add-on Store → ⋮ → Repositories**
 
