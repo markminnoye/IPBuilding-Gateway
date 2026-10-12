@@ -17,11 +17,31 @@ The same gateway code runs in three shapes. Pick what fits your hardware:
 |---------|----------|--------|
 | **HA add-on** (Docker, Supervisor-managed) | Home Assistant OS / Supervised | Primary, fully supported |
 | **Standalone Docker container** (`docker run` / `python -m gateway`) | Linux — Raspberry Pi, NAS, VPS, any x86/ARM box | Same Python code, no Supervisor |
-| **ESP32 firmware** (C++ / ESP-IDF) | ESP32 + W5500 Ethernet | Future — protocol-level POC |
+| **ESP32 firmware** (C++ / ESP-IDF) | ESP32 + W5500 Ethernet | [Future — protocol-level POC](#deployment-variants-overview) |
 
 For the HA add-on variant, follow the [Installation](#installation) steps
 below. For standalone or ESP32 and
 the [add-on documentation](ipbuilding_gateway/DOCS.md).
+
+## Deployment variants - Overview
+
+The diagram below shows the three products side by side:
+
+- legacy **HA-IPBuilding + IPBox** stack
+- current **gateway** solution as HA add-on or standalone container
+- future **ESP32 standalone** protocol-level proof of concept
+
+<p align="center">
+  <a href="resources_and_docs/images/deployment_variants_overview.svg">
+    <img src="resources_and_docs/images/deployment_variants_overview.svg" alt="Deployment variants overview" width="900"/>
+  </a>
+</p>
+
+This overview highlights the current product split:
+
+- **Legacy IPBox / HA-IPBuilding** — migration-friendly path for existing IPBox deployments
+- **Open gateway** — supported production path, with Home Assistant companion for entities
+- **ESP32 standalone** — future protocol-level POC for a more compact hardware form factor
 
 ## If Home Assistant is your client: the companion is required
 
@@ -69,7 +89,7 @@ This add-on does **not** implement IPBox scenes, moods, or button→relay rules.
 
 ### 1. Companion (required — do this first or in parallel)
 
-[![Open companion in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=markminnoye&repository=ha-ipbuilding-gateway&category=integration)
+[![Open companion in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=markminnoye&repository=ha-ipbuilding-gateway&category=[...]
 
 Adds custom repository `markminnoye/ha-ipbuilding-gateway` in HACS, then download
 **IPBuilding Gateway Companion App** and restart HA. Full steps:
@@ -77,7 +97,7 @@ Adds custom repository `markminnoye/ha-ipbuilding-gateway` in HACS, then downloa
 
 ### 2. Add-on repository
 
-[![Add add-on repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fmarkminnoye%2FIPBuilding-Gateway)
+[![Add add-on repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2F[...]
 
 Or: **Settings → Add-ons → Add-on Store → ⋮ → Repositories**
 
