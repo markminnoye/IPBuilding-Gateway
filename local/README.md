@@ -20,8 +20,11 @@ The script supports three modes; default is real field bus + passive ARP.
 ./local/gateway/start.sh            # real field bus, existing devices.json
 ./local/gateway/start.sh --sim      # simulated UDP, no hardware required
 ./local/gateway/start.sh --init     # prompt: refresh install from field bus
+./local/gateway/start.sh --debug    # GATEWAY_LOG_LEVEL=DEBUG (TX TOGGLE vs DIM)
 ./local/gateway/start.sh --help     # usage
 ```
+
+`--debug` combines with `--sim` / `--init`. Equivalent env: `GATEWAY_LOG_LEVEL=DEBUG`.
 
 ### `--init` — refresh from the field bus
 
@@ -58,9 +61,13 @@ reload the integration.
 ./local/gateway/start.sh --sim
 # or to refresh the install from the field bus:
 ./local/gateway/start.sh --init
+# or with TX / command frames in the terminal:
+./local/gateway/start.sh --debug
 
 # Terminal 2 — Home Assistant
 ./local/ha-core/start.sh
+# or verbose HA core logs (hass --debug -v):
+./local/ha-core/start.sh --debug
 # Open http://localhost:8123
 ```
 

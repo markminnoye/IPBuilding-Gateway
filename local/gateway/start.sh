@@ -6,6 +6,7 @@
 #   (default)            Real field bus + passive ARP
 #   --sim                Simulated UDP (no hardware required)
 #   --init               Field bus install/refresh: prompt before launching
+#   --debug              GATEWAY_LOG_LEVEL=DEBUG (TX frames, command actions)
 #   -h | --help          Show this help
 #
 # With --init, an interactive prompt runs BEFORE the gateway starts:
@@ -17,6 +18,7 @@
 #   GATEWAY_PASSIVE_ARP_MONITOR
 #   GATEWAY_AUTO_DISCOVER_ON_START         (--init + y)
 #   GATEWAY_FORCE_DISCOVER_ON_START        (--init + N)
+#   GATEWAY_LOG_LEVEL                      DEBUG with --debug
 #   GATEWAY_DEVICES_FILE
 #   PYTHONPATH
 set -euo pipefail
@@ -27,7 +29,7 @@ cd "${REPO_ROOT}"
 
 usage() {
     cat <<EOF
-Usage: ./local/gateway/start.sh [--sim] [--init] [-h|--help]
+Usage: ./local/gateway/start.sh [--sim] [--init] [--debug] [-h|--help]
 
 Starts the IPBuilding gateway in the foreground (Ctrl+C to stop). HA Core in
 ~/.homeassistant reaches it at http://127.0.0.1:8080.
@@ -36,6 +38,8 @@ Modes
   (default)            Real field bus; passive ARP monitor; existing devices.json
   --sim                Simulated UDP (no real hardware, no discovery)
   --init               Field bus install/refresh (see prompt below)
+  --debug              GATEWAY_LOG_LEVEL=DEBUG — TX frames (TOGGLE vs DIM) in the
+                       terminal. Combines with --sim / --init.
 
 --init interactive prompt (before the gateway starts):
 
@@ -51,6 +55,7 @@ Environment variables used by python -m gateway:
   GATEWAY_AUTO_DISCOVER_ON_START   1 with --init and prompt y, else 0
   GATEWAY_FORCE_DISCOVER_ON_START  1 with --init and prompt N, else 0
   GATEWAY_DEVICES_FILE             ./devices.json
+  GATEWAY_LOG_LEVEL                DEBUG with --debug, else env or INFO
   GATEWAY_MULTI_PRESS              0/1 — global double/triple press (default 0)
   GATEWAY_MULTI_PRESS_WINDOW_MS    inter-click window ms (default 350)
   PYTHONPATH                       repo root
@@ -58,6 +63,7 @@ Environment variables used by python -m gateway:
 Examples
   ./local/gateway/start.sh
   ./local/gateway/start.sh --sim
+  ./local/gateway/start.sh --debug       # TX command lines in the terminal
   ./local/gateway/start.sh --init        # prompt: y = reset, N = merge
 
 See local/README.md for the two-terminal HA workflow.
@@ -67,6 +73,7 @@ EOF
 # --- Argument parsing ---
 sim=0
 init_mode=0
+debug=0
 while [ "$#" -gt 0 ]; do
     case "$1" in
         -h|--help)
@@ -79,6 +86,10 @@ while [ "$#" -gt 0 ]; do
             ;;
         --init)
             init_mode=1
+            shift
+            ;;
+        --debug)
+            debug=1
             shift
             ;;
         --)
@@ -174,6 +185,10 @@ export GATEWAY_PASSIVE_ARP_MONITOR="${passive}"
 export GATEWAY_AUTO_DISCOVER_ON_START="${auto_discover}"
 export GATEWAY_FORCE_DISCOVER_ON_START="${force_discover}"
 
-echo "[start.sh] GATEWAY_SIMULATED=${simulated}  passive_arp=${passive}  auto_discover=${auto_discover}  force_discover=${force_discover}"
+if [ "${debug}" -eq 1 ]; then
+    export GATEWAY_LOG_LEVEL=DEBUG
+fi
+
+echo "[start.sh] GATEWAY_SIMULATED=${simulated}  passive_arp=${passive}  auto_discover=${auto_discover}  force_discover=${force_discover}  log_level=${GATEWAY_LOG_LEVEL:-INFO}"
 
 exec "${PYTHON_BIN}" -m gateway
