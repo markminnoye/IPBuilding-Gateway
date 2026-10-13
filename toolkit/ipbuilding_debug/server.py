@@ -39,7 +39,9 @@ def skill_text() -> str:
     return (
         "Praat Nederlands met de tester. "
         "Roep eerst connection_status aan. "
-        "Staat Remote control (for debugging) uit, vraag dan om die schakelaar aan te zetten."
+        "Staat Remote control (for debugging) uit "
+        "(Nederlands: Bediening op afstand (voor debuggen)), "
+        "vraag dan om die schakelaar aan te zetten."
     )
 
 
@@ -69,7 +71,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
     async def connection_status_tool(log_level: str | None = None) -> str:
         """Check whether the gateway answers, whether Remote control (for debugging) is on, and which capabilities this version has.
 
-        Call this first in every debug session. When remote_debugging is false, tell the tester to turn the switch on. When a capability is missing, say that feature is not in this gateway version yet.
+        In Dutch the switch is Bediening op afstand (voor debuggen). Call this first in every debug session. When remote_debugging is false, tell the tester to turn that switch on, using that exact name. When a capability is missing, say that feature is not in this gateway version yet.
         log_level is optional (INFO or DEBUG) and is only sent when the gateway advertises log_stream.
         """
         result = await connection_status(gateway, log_level=log_level)
@@ -139,9 +141,9 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         value: int | None = None,
         confirmed: bool = False,
     ) -> str:
-        """Switch or dim one device through the gateway command the Home Assistant integration uses.
+        """These are tools for AI assistants such as Claude. Switch or dim one device.
 
-        action is ON, OFF, PULSE, TOGGLE, DIM, DIM_START, or DIM_STOP. DIM needs value 0-100.
+        A relay takes ON, OFF, PULSE, or TOGGLE. A dimmer takes DIM 0-100, TOGGLE, DIM_START, or DIM_STOP. For a dimmer, ON is sent as DIM 100 and OFF as DIM 0. PULSE is refused for a dimmer. The type comes from list_devices.
         First call with confirmed=false. Only send after an explicit yes and confirmed=true.
         ok true means the gateway sent the command. module_confirmed and confirm_ms say whether the module replied. If those fields are absent, this gateway version does not report them.
         """

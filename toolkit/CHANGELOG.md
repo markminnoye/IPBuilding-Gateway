@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2-rc.1 — 2026-10-13
+
+- The report YAML keeps `toolkit_version`. The skill tells the assistant to leave that line in place.
+- The switch is named **Bediening op afstand (voor debuggen)** and **Remote control (for debugging)** in the skill and in tool text.
+- A dimmer command sends DIM 0–100, TOGGLE, DIM_START, or DIM_STOP. ON becomes DIM 100 and OFF becomes DIM 0. PULSE on a dimmer is refused. The type comes from the device list.
+- The skill may include an earlier observation when it is relevant and labelled with the date and the build. It asks what the tester sees while switching. It starts a capture before asking for a press, names a cause only with evidence, does not hand changelog or code work to the tester, does not advise a restart without a tool message, shows local time in chat, and offers a report.
+- Claude Code can install the plugin from this repository. The plugin files stay in `toolkit/`.
+
 ## 0.1.1 — 2026-10-11
 
 - Feedback you give reaches the report.

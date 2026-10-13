@@ -638,6 +638,15 @@ async def test_discover_waits_for_confirmation_then_diffs() -> None:
 @pytest.mark.asyncio
 async def test_device_command_previews_then_warns_ok_is_not_a_reply() -> None:
     gateway = FakeGateway(remote_debugging=False, capabilities=[])
+    gateway.devices = [
+        {
+            "id": "device-a",
+            "device_type": "relay",
+            "name": "lamp",
+            "module_id": "module-a",
+            "channel": 0,
+        }
+    ]
     await gateway.start()
     session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
     try:
@@ -671,6 +680,22 @@ async def test_device_command_previews_then_warns_ok_is_not_a_reply() -> None:
 @pytest.mark.asyncio
 async def test_device_command_reports_module_confirmation_when_present() -> None:
     gateway = FakeGateway(remote_debugging=True, capabilities=["log_stream"])
+    gateway.devices = [
+        {
+            "id": "device-a",
+            "device_type": "relay",
+            "name": "lamp",
+            "module_id": "module-a",
+            "channel": 0,
+        },
+        {
+            "id": "dim-0",
+            "device_type": "dimmer",
+            "name": "Lamp Noord",
+            "module_id": "module-a",
+            "channel": 1,
+        },
+    ]
     gateway.command_body = {
         "ok": True,
         "schema_version": 2,
@@ -700,7 +725,7 @@ async def test_device_command_reports_module_confirmation_when_present() -> None
             "reported": None,
         }
         started = await device_command(
-            session, device_id="device-a", action="DIM_START", confirmed=True
+            session, device_id="dim-0", action="DIM_START", confirmed=True
         )
         gateway.command_body = {
             "ok": True,
@@ -744,7 +769,9 @@ async def test_device_command_records_a_sent_result_and_skips_previews() -> None
     }
     await gateway.start()
     session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
-    session.devices = {"dev-trap": {"id": "dev-trap", "name": "Traphal"}}
+    session.devices = {
+        "dev-trap": {"id": "dev-trap", "name": "Traphal", "device_type": "relay"}
+    }
     try:
         preview = await device_command(
             session, device_id="dev-trap", action="ON", confirmed=False
@@ -764,7 +791,8 @@ async def test_device_command_records_a_sent_result_and_skips_previews() -> None
         await session.stop()
         await gateway.stop()
     assert preview.data["kind"] == "confirmation_required"
-    assert missing.data["kind"] == "confirmation_required"
+    assert missing.data["sent"] is False
+    assert missing.data["kind"] == "other"
     assert sent.data["sent"] is True
     assert failed.data["ok"] is False
     recorded = _command_results(session)
@@ -783,6 +811,85 @@ async def test_device_command_records_a_sent_result_and_skips_previews() -> None
     assert recorded[1]["error"] == "rejected"
     assert "fout rejected" in recorded[1]["message"]
     assert "niet bevestigd" in recorded[1]["message"]
+
+
+@pytest.mark.asyncio
+async def test_dimmer_on_and_off_become_dim_and_pulse_is_refused() -> None:
+    gateway = FakeGateway(remote_debugging=True, capabilities=[])
+    gateway.devices = [
+        {
+            "id": "dim-0",
+            "device_type": "dimmer",
+            "name": "Lamp Noord",
+            "module_id": "mod-d",
+            "channel": 0,
+        }
+    ]
+    gateway.modules = [
+        {"id": "mod-d", "type": "dimmer", "model": "IP0300PoE", "name": "dimmer"}
+    ]
+    gateway.command_body = {
+        "ok": True,
+        "module_confirmed": True,
+        "confirm_ms": 22,
+        "reported": {"level_percent": 100},
+    }
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        preview = await device_command(
+            session, device_id="dim-0", action="ON", confirmed=False
+        )
+        sent = await device_command(
+            session, device_id="dim-0", action="on", confirmed=True
+        )
+        off = await device_command(
+            session, device_id="dim-0", action="OFF", confirmed=True
+        )
+        pulse = await device_command(
+            session, device_id="dim-0", action="PULSE", confirmed=True
+        )
+        bare = await device_command(
+            session, device_id="dim-0", action="DIM", confirmed=True
+        )
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert preview.data["sent"] is False
+    assert preview.data["action"] == "DIM"
+    assert preview.data["value"] == 100
+    assert preview.data["translated"] is True
+    assert "DIM 100" in preview.message
+    assert sent.data["sent"] is True
+    assert sent.data["action"] == "DIM"
+    assert sent.data["value"] == 100
+    assert off.data["action"] == "DIM"
+    assert off.data["value"] == 0
+    assert pulse.data["sent"] is False
+    assert "PULSE" in pulse.message
+    assert "dimmer" in pulse.message
+    assert bare.data["sent"] is False
+    assert gateway.command_calls == [
+        {"device_id": "dim-0", "action": "DIM", "value": 100},
+        {"device_id": "dim-0", "action": "DIM", "value": 0},
+    ]
+    recorded = _command_results(session)
+    assert [item["action"] for item in recorded] == ["DIM", "DIM"]
+    assert "ON op een dimmer wordt DIM 100." in recorded[0]["message"]
+
+
+@pytest.mark.asyncio
+async def test_dimmer_type_can_come_from_the_module() -> None:
+    session = GatewaySession("192.0.2.40:9", backoff_start=30, backoff_max=30)
+    session.devices = {
+        "dim-1": {"id": "dim-1", "name": "Lamp Oost", "module_id": "mod-d"}
+    }
+    session.modules = {"mod-d": {"id": "mod-d", "type": "dimmer", "model": "IP0300PoE"}}
+    refused = await device_command(
+        session, device_id="dim-1", action="PULSE", confirmed=True
+    )
+    assert refused.data["sent"] is False
+    assert "PULSE werkt niet op een dimmer" in refused.message
 
 
 @pytest.mark.asyncio

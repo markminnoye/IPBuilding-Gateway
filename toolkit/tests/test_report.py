@@ -704,7 +704,11 @@ async def test_export_shows_command_and_decode_with_masked_names() -> None:
     await gateway.start()
     session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
     session.devices = {
-        "192.0.2.40-1": {"id": "192.0.2.40-1", "name": "Traphal"},
+        "192.0.2.40-1": {
+            "id": "192.0.2.40-1",
+            "name": "Traphal",
+            "device_type": "relay",
+        },
     }
     try:
         await device_command(session, device_id="192.0.2.40-1", action="ON", confirmed=False)

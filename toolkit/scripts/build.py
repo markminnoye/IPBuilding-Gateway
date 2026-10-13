@@ -355,13 +355,17 @@ def _validate_skill_frontmatter(skill_dir: Path) -> str:
 
 def _plugin_files() -> list[Path]:
     skip = {".build", "dist", "__pycache__", ".pytest_cache"}
-    return sorted(
-        path
-        for path in TOOLKIT.rglob("*")
-        if path.is_file()
-        and not skip.intersection(path.relative_to(TOOLKIT).parts)
-        and path.suffix != ".pyc"
-    )
+    found: list[Path] = []
+    for path in TOOLKIT.rglob("*"):
+        if not path.is_file() or path.suffix == ".pyc":
+            continue
+        relative = path.relative_to(TOOLKIT)
+        if skip.intersection(relative.parts):
+            continue
+        if relative.parts[:2] == ("evals", "results"):
+            continue
+        found.append(path)
+    return sorted(found)
 
 
 def _write_zip(dest: Path, entries: list[tuple[Path, str]]) -> None:
