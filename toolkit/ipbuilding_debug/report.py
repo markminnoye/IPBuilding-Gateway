@@ -49,7 +49,7 @@ def intake_address() -> str:
 
 
 def render_report(body: dict[str, Any]) -> tuple[str, str]:
-    """Plain-text report and its YAML frontmatter.
+    """Plain-text report and its fenced YAML block.
 
     ``body`` is the export payload. Pass the redacted copy when redaction is on.
     """
@@ -389,7 +389,7 @@ def _frontmatter(body: dict[str, Any], dialects: list[str]) -> str:
     modules = [item for item in body.get("modules") or [] if isinstance(item, dict)]
     caps = gateway.get("capabilities") if isinstance(gateway.get("capabilities"), list) else []
     lines = [
-        "---",
+        "```yaml",
         f"installatie_id: {_yaml(body.get('installatie_id') or '')}",
         f"events_included: {_yaml(body.get('events_included', True) is not False)}",
         f"toolkit_version: {_yaml(__version__)}",
@@ -414,7 +414,7 @@ def _frontmatter(body: dict[str, Any], dialects: list[str]) -> str:
         lines.extend(f"  - {_yaml(item)}" for item in dialects)
     else:
         lines.append("dialects: []")
-    lines.append("---")
+    lines.append("```")
     return "\n".join(lines)
 
 

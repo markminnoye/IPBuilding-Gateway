@@ -38,6 +38,14 @@ from ipbuilding_debug.tools import (
 from fake_gateway import FakeGateway
 
 
+def test_event_stream_stays_connecting_until_the_snapshot() -> None:
+    session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
+    session.state = "connecting"
+    assert session.event_stream_state() == "connecting"
+    session.state = "connected"
+    assert session.event_stream_state() == "connecting"
+
+
 def _closed_port() -> int:
     sock = socket.socket()
     sock.bind(("127.0.0.1", 0))
@@ -84,11 +92,17 @@ async def test_connection_status_switch_on() -> None:
     session = GatewaySession(f"127.0.0.1:{gateway.port}", backoff_start=0.05)
     try:
         result = await connection_status(session)
+        events = await recent_events(session)
     finally:
         await session.stop()
         await gateway.stop()
     assert result.data["ok"] is True
     assert result.data["remote_debugging"] is True
+    assert result.data["connection"] == "connected"
+    assert result.data["kind"] == "connected"
+    assert result.data["buffer"]["connection"] == "connected"
+    assert events.data["connection"] == "connected"
+    assert events.data["buffer"]["connection"] == result.data["connection"]
     assert "Remote control (for debugging)" in result.message
     assert NOT_AVAILABLE_PHRASE in result.message
     assert "log_stream" in result.data["missing_capabilities"]

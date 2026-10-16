@@ -121,9 +121,11 @@ async def test_export_report_splits_evidence_and_redacts_free_text() -> None:
     )
     hidden = await export_session(session, note=note)
     report = hidden.data["report"]
-    assert report.startswith("---")
+    assert report.startswith("```yaml\n")
+    assert "\n```\n" in report
     assert FEEDBACK_WARNING in report
-    assert report.index("---") < report.index(FEEDBACK_WARNING)
+    assert report.index("```yaml") < report.index(FEEDBACK_WARNING)
+    assert "\n---\n" not in report
     for heading in (
         "1. Samenvatting",
         "2. Omgeving",
@@ -161,7 +163,8 @@ async def test_export_report_splits_evidence_and_redacts_free_text() -> None:
     stored = installation_id()
     assert hidden.data["installatie_id"] == stored
     assert f"installatie_id: {stored}" in hidden.data["frontmatter"]
-    assert hidden.data["frontmatter"].splitlines()[0] == "---"
+    assert hidden.data["frontmatter"].splitlines()[0] == "```yaml"
+    assert hidden.data["frontmatter"].splitlines()[-1] == "```"
 
     raw_session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
     shown = await export_session(raw_session, note=note, redact=False)
@@ -199,9 +202,9 @@ async def test_send_report_waits_for_confirmation_and_never_sends(
     assert parsed["address"] == "intake@example.invalid"
     assert parsed["subject"].startswith(f"[DEBUG] {installation_id()} | lamp uit | ")
     assert re.search(r"\d{4}-\d{2}-\d{2}T", parsed["subject"])
-    assert parsed["body"].startswith("---")
+    assert parsed["body"].startswith("```yaml\n")
     assert FEEDBACK_WARNING in parsed["body"]
-    assert parsed["body"].index("---") < parsed["body"].index(FEEDBACK_WARNING)
+    assert parsed["body"].index("```yaml") < parsed["body"].index(FEEDBACK_WARNING)
     for key in (
         "Samenvatting:",
         "Omgeving:",
@@ -593,9 +596,10 @@ async def test_report_times_are_local_and_the_template_is_complete() -> None:
         "7. Bijlage",
     ):
         assert heading in report
-    assert report.splitlines()[0] == "---"
+    assert report.splitlines()[0] == "```yaml"
     assert FEEDBACK_WARNING in report
-    assert report.index("---") < report.index(FEEDBACK_WARNING)
+    assert report.index("```yaml") < report.index(FEEDBACK_WARNING)
+    assert "\n---\n" not in report
     assert "installatie_id:" in result.data["frontmatter"]
     assert result.message.startswith(report)
 
@@ -1011,6 +1015,9 @@ def test_skill_describes_the_report_and_the_backlog() -> None:
     assert "open_vraag" in text
     assert "tijdens het schakelen" in text
     assert "de tester het rapport zelf verstuurt" in text
+    assert "```yaml" in text
+    assert "drie streepjes" in text
+    assert "datzelfde woord staat bij de gebeurtenissen" in text
     assert "Toegang op afstand" not in text
     assert "Debuggen en bedienen op afstand" not in text
     assert "onder **Debug**" in text

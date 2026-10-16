@@ -330,7 +330,7 @@ async def connection_status(
                 "ok": False,
                 "connected": False,
                 "kind": error.kind,
-                "connection": session.state,
+                "connection": session.event_stream_state(),
                 "buffer": _buffer_summary(session),
                 "missing_capabilities": list(PLANNED_CAPABILITIES),
                 "capability_status": _feature_rows(
@@ -345,11 +345,13 @@ async def connection_status(
         return _from_error(
             error,
             connected=False,
-            connection=session.state,
+            connection=session.event_stream_state(),
             buffer=_buffer_summary(session),
             **where,
         )
 
+    # Let the snapshot land so connection matches the activiteitenlog.
+    await session.wait_until_connected(2)
     remote = status.get("remote_debugging") if isinstance(status, dict) else None
     if not isinstance(remote, bool):
         remote = None
@@ -419,13 +421,18 @@ async def connection_status(
     note = _unavailable_note(blocked)
     if note and message not in (MSG_REMOTE_DEBUGGING_OFF, MSG_LOG_LEVEL_RATE_LIMITED):
         message = f"{message} {note}"
+    live = session.event_stream_state()
+    if live != "connected" and kind == "connected":
+        kind = "connecting"
+        message = f"{message} {_CONNECTION_WAIT}"
     return ToolResult(
         message,
         {
             "ok": ok,
             "connected": True,
             "kind": kind,
-            "connection": session.state,
+            "connection": live,
+            "connection_note": _connection_note(live),
             "version": (status or {}).get("version"),
             "remote_debugging": remote,
             "capabilities": caps,
@@ -623,11 +630,16 @@ async def recent_events(
             "in het activiteitenlog (state_changed, button_event: press, single_press, release "
             "en wat de gateway verder stuurde)."
         )
+    live = session.event_stream_state()
+    if events and live == "connecting":
+        message = f"{message} {_CONNECTION_WAIT}"
     return ToolResult(
         message,
         {
             "ok": True,
             "kind": "events",
+            "connection": live,
+            "connection_note": _connection_note(live),
             "events": events,
             "buffer": _buffer_summary(session),
         },
@@ -1940,14 +1952,30 @@ def _diff_sentence(diff: dict[str, list[str]]) -> str:
     return " ".join(parts) + "."
 
 
+_CONNECTION_WAIT = (
+    "De live-verbinding is connecting. "
+    "connected op de gateway betekent dat hij antwoordt, niet dat gebeurtenissen al binnenkomen. "
+    "Zeg connected pas als connection connected is. Dat is hetzelfde woord als bij de gebeurtenissen."
+)
+
+
+def _connection_note(live: str) -> str:
+    if live == "connected":
+        return "connection is connected, hetzelfde woord als bij de gebeurtenissen."
+    if live == "connecting":
+        return _CONNECTION_WAIT
+    return f"connection is {live}."
+
+
 def _buffer_summary(session: GatewaySession) -> dict[str, Any]:
     gaps = session.gap_events()
+    live = session.event_stream_state()
     return {
         "count": len(session.buffer),
         "dropped": session.buffer.dropped,
         "gaps": len(gaps),
         "last_gap": gaps[-1] if gaps else None,
-        "connection": session.state,
+        "connection": live,
     }
 
 
@@ -2139,7 +2167,7 @@ def _export_body(session: GatewaySession) -> dict[str, Any]:
             "hub_role": status.get("hub_role"),
             "remote_debugging": status.get("remote_debugging"),
             "capabilities": _capabilities(status),
-            "connection": session.state,
+            "connection": session.event_stream_state(),
             "address": session.host,
         },
         # Random local id. The gateway instance id is a different value and
