@@ -1,13 +1,13 @@
 # Changelog
 
-## 0.1.2-rc.2 — 2026-10-16
+## 0.1.2 — 2026-10-16
 
 - The ticket subject uses the same masks as the report, and the tool shows that subject as plain text.
 - Device model codes such as IP0300PoE stay in the report. A room name such as Living becomes Lxxxxx, the same length.
 - A command test starts capture while switching, when frame capture is available.
 - A core suspicion goes under Bevindingen. A question for the developers goes under Open vragen.
 - The tool shows the report as copyable text plus the destination address. A mailto link is only an extra. Before asking for yes, the text says the tester sends the report.
-- The report YAML still carries toolkit_version. The switch names and the dimmer DIM 100/0 translation stay as in 0.1.2-rc.1.
+- The report YAML still carries toolkit_version. The switch names and the dimmer DIM 100/0 translation stay.
 - The report opens with a fenced yaml block. Linear no longer sees front-matter.
 - `connection` is the live event socket. It stays `connecting` until the snapshot, then `connected`, and status and events use that same word.
 
