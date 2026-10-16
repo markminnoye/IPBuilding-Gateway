@@ -884,12 +884,51 @@ async def test_dimmer_on_and_off_become_dim_and_pulse_is_refused() -> None:
     assert "dimmer" in pulse.message
     assert bare.data["sent"] is False
     assert gateway.command_calls == [
-        {"device_id": "dim-0", "action": "DIM", "value": 100},
-        {"device_id": "dim-0", "action": "DIM", "value": 0},
+        {"device_id": "dim-0", "action": "DIM", "value": 100, "fade": 0},
+        {"device_id": "dim-0", "action": "DIM", "value": 0, "fade": 0},
     ]
     recorded = _command_results(session)
     assert [item["action"] for item in recorded] == ["DIM", "DIM"]
     assert "ON op een dimmer wordt DIM 100." in recorded[0]["message"]
+    assert preview.data["fade"] == 0
+
+
+@pytest.mark.asyncio
+async def test_dimmer_fade_is_sent_and_clamped() -> None:
+    gateway = FakeGateway(remote_debugging=True, capabilities=[])
+    gateway.devices = [
+        {
+            "id": "dim-0",
+            "device_type": "dimmer",
+            "name": "Lamp Noord",
+            "module_id": "mod-d",
+            "channel": 0,
+        }
+    ]
+    await gateway.start()
+    session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
+    try:
+        refused = await device_command(
+            session, device_id="dim-0", action="DIM", value=40, fade=True, confirmed=True
+        )
+        sent = await device_command(
+            session,
+            device_id="dim-0",
+            action="DIM",
+            value=40,
+            fade=300,
+            confirmed=True,
+        )
+    finally:
+        await session.stop()
+        await gateway.stop()
+    assert refused.data["sent"] is False
+    assert "geheel getal" in refused.message
+    assert sent.data["sent"] is True
+    assert sent.data["fade"] == 255
+    assert gateway.command_calls == [
+        {"device_id": "dim-0", "action": "DIM", "value": 40, "fade": 255}
+    ]
 
 
 @pytest.mark.asyncio

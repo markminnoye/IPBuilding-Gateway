@@ -70,6 +70,7 @@ from gateway.installation import (
 )
 from gateway.module_metadata import ModuleMetadataCache
 from gateway.payloads import (
+    clamp_fade,
     encode_dim_command,
     encode_dim_off,
     encode_dim_start,
@@ -477,7 +478,9 @@ class GatewayAPI:
             log.warning("WS command missing id or action: %s", data)
             return
 
-        result = await self._execute_command(entity_id, action, value)
+        result = await self._execute_command(
+            entity_id, action, value, fade=data.get("fade")
+        )
         await ws.send_json(
             {
                 "type": "command_result",
@@ -805,7 +808,9 @@ class GatewayAPI:
         if not action:
             raise ApiError(400, "missing_action", "Body must contain 'action'")
 
-        result = await self._execute_command(device_id, action, value)
+        result = await self._execute_command(
+            device_id, action, value, fade=body.get("fade")
+        )
         if result.ok:
             return web.json_response(
                 {
@@ -827,6 +832,9 @@ class GatewayAPI:
         elif error == "channel inactive":
             code = "channel_inactive"
             status = 422
+        elif error and error.startswith("fade must"):
+            code = "invalid_fade"
+            status = 400
         elif error and "unsupported" in error:
             code = "unsupported_action"
             status = 422
@@ -1104,7 +1112,7 @@ class GatewayAPI:
     # -------------------------------------------------------------------------
 
     async def _execute_command(
-        self, entity_id: str, action: str, value: Any
+        self, entity_id: str, action: str, value: Any, fade: Any = None
     ) -> CommandResult:
         """Resolve entity_id, encode and send the UDP command, wait for reply."""
         parsed = _resolve_entity_id(entity_id, self._cfg.installation)
@@ -1128,8 +1136,8 @@ class GatewayAPI:
         # ``awaits_reply`` is shared across relay and dimmer branches so the
         # post-send "wait for correlate_reply" decision stays in one place.
         # DIM_START is the only fire-and-forget action today; everything else
-        # (relay ON/OFF/PULSE/TOGGLE, dimmer DIM/TOGGLE/DIM_STOP) replies with
-        # a status frame that must land on the right registry key.
+        # (relay ON/OFF/PULSE/TOGGLE, dimmer DIM/ON/OFF/TOGGLE/DIM_STOP) replies
+        # with a status frame that must land on the right registry key.
         awaits_reply = True
         if dtype == DeviceType.RELAY:
             if action == "ON":
@@ -1144,13 +1152,22 @@ class GatewayAPI:
                 return CommandResult(False, f"unsupported relay action: {action}")
             payload = encode_relay_command(cmd)
         elif dtype == DeviceType.DIMMER:
-            if action == "DIM":
-                level = int(value) if value is not None else 0
+            if action in ("DIM", "ON", "OFF"):
+                try:
+                    fade_units = clamp_fade(0 if fade is None else fade)
+                except TypeError:
+                    return CommandResult(False, "fade must be an integer")
+                if action == "ON":
+                    level = 100
+                elif action == "OFF":
+                    level = 0
+                else:
+                    level = int(value) if value is not None else 0
                 if level == 0:
-                    payload = encode_dim_off(channel)
+                    payload = encode_dim_off(channel, fade_units)
                 else:
                     cmd = DimmerCommand(channel=channel, level=level)
-                    payload = encode_dim_command(cmd)
+                    payload = encode_dim_command(cmd, fade_units)
             elif action == "TOGGLE":
                 payload = encode_dim_toggle(channel)
             elif action == "DIM_START":

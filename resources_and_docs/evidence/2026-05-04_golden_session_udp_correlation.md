@@ -44,8 +44,8 @@ Doel: volledige golden-run (`relay` → `dimmer` → **scene Keuken UIT `100064`
 
 - `**relay_on`**: op relay-pad verschijnen `**S0000`** en `**T1400**` kort na REST.
 - `**relay_off**`: `**C0000**` + `**P0000**` op relay; parallel `**I9900**` op dimmer (status/poll-familie, niet per se “gelijk” aan relay-actie).
-- **Dimmer-stappen**: duidelijke reeks op `**.40`** — `S0501030` (50%), `S0991030` (100%), `C0991030` (off).
-- **Scene `100064`**: geen apart lange `S*` string zoals dimmer in dit venster; sterke burst van `**C*` op relay** en één `**C2001001` op dimmer** binnen **~300 ms** na scene-REST — kandidaat voor “scene uitvoering” op beide benen.
+- **Dimmer-stappen**: duidelijke reeks op `**.40`** — `S0501030` (50%), `S0991030` (100%), `C0991030` (off). Die staart `1030` is fade `030` (lezing 2026-10-16); de bytes blijven zoals gecaptured.
+- **Scene `100064`**: geen apart lange `S*` string zoals dimmer in dit venster; sterke burst van `**C*` op relay** en één `**C2001001` op dimmer** binnen **~300 ms** na scene-REST — kandidaat voor “scene uitvoering” op beide benen. **Lezing 2026-10-16:** `C2001001` past in `<C><ch=2><value 00><1><fade 001>` (kanaal 2, uit, fade 001). Het blijft één ongetimed sample; de fade is niet geklokt. De bytes blijven `C2001001`.
 
 ## Ruwe UDP-export (subset — niet-`I0000` naar `.50`)
 
@@ -54,7 +54,7 @@ Zie volledige tabel in `captures/2026-05-04T104550Z_golden-protocol-capture_udp_
 ## Open punten
 
 1. **Geen `udp.payload` richting IPBox** op deze POV (alleen uitgaand vanaf `10.10.1.1`) — zie eerdere analyses over mirror/een richting.
-2. **Scene-bytes** (`C2001001`, `C1600`, …) nog niet gemapt op IPBuilding-object-ID **100064** (alleen tijds-correlatie).
+2. **Scene-bytes** (`C2001001`, `C1600`, …) nog niet gemapt op IPBuilding-object-ID **100064** (alleen tijds-correlatie). `C2001001` past bij fade `001` (zie interpretatie); de scenekoppeling blijft open.
 3. Herhaalbaarheid: tweede run met zelfde runbook om te zien of byte-patronen **stabiel** zijn op milliseconde-niveau.
 
 ## Volgende stap (RE)

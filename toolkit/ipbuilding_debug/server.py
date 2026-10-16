@@ -139,11 +139,13 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         device_id: str,
         action: str,
         value: int | None = None,
+        fade: int | None = None,
         confirmed: bool = False,
     ) -> str:
         """These are tools for AI assistants such as Claude. Switch or dim one device.
 
         A relay takes ON, OFF, PULSE, or TOGGLE. A dimmer takes DIM 0-100, TOGGLE, DIM_START, or DIM_STOP. For a dimmer, ON is sent as DIM 100 and OFF as DIM 0. PULSE is refused for a dimmer. The type comes from list_devices.
+        fade is optional, 0-255, for DIM, ON, and OFF. Omit it or use 0 for an instant change. A higher value ramps. The module reports the end level before the lamp finishes.
         On a command test, call capture_frames while switching when udp_frame is available, before confirmed=true. Ask what the tester sees at that moment.
         First call with confirmed=false. Only send after an explicit yes and confirmed=true.
         ok true means the gateway sent the command. module_confirmed and confirm_ms say whether the module replied. If those fields are absent, this gateway version does not report them.
@@ -154,6 +156,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
                 device_id=device_id,
                 action=action,
                 value=value,
+                fade=fade,
                 confirmed=confirmed,
             )
         ).render()

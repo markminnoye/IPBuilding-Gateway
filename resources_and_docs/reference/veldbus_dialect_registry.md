@@ -38,14 +38,14 @@ Last updated: 2026-10-08
 | `relay.torhout.state_code` | Torhout IP0200 | in status reply | `0015`=off, `0115`=on (prefix `00`/`01`) | ✅ sinds gw **1.6.4** | — | [2026-08-24](../evidence/2026-08-24_jan_nolf_field_test.md) |
 | `relay.torhout.status_reply` | Torhout IP0200 | relay→hub | `I000060115`, `I000050015` | ✅ `dialect_id` | — | idem |
 | `relay.torhout.command_reply` | Torhout IP0200 | relay→hub na S/C | `C060000000` (9–10 tekens, state uit prefix) | ✅ sinds gw **1.6.5** | — | [2026-08-24](../evidence/2026-08-24_jan_nolf_field_test.md) §4 · [spec](../../docs/superpowers/specs/2026-08-25-torhout-dialect-decode-design.md) |
-| `dimmer.kessel-lo.hub_command` | IP0300PoE (Kessel-Lo) | hub→dimmer | `S110301030`, `C1991030` | ✅ | ✅ | [2026-05-14 dimmer timeline](../evidence/2026-05-14_dimmer_rest_udp_timeline_writeup.md) |
+| `dimmer.kessel-lo.hub_command` | IP0300PoE (Kessel-Lo) | hub→dimmer | `S110301030`, `C1991030` (fade `030`; formaat `[S\|C]{ch}{vv}1{fff}`) | ✅ | ✅ | [2026-05-14 dimmer timeline](../evidence/2026-05-14_dimmer_rest_udp_timeline_writeup.md) |
 | `dimmer.kessel-lo.status_reply` | Kessel-Lo IP0300 | dimmer→hub | `I0154110`, idle `I0154999` | ✅ family `54` | — | [2026-05-17](../evidence/2026-05-17_dimmer_I0154xxx_full_decode.md) |
 | `dimmer.kessel-lo.status_poll` | Kessel-Lo + IPBox 03.07 UI | hub→dimmer | `I1000000` (8 bytes) | ✅ TX | ✅ | [2026-08-05](../evidence/2026-08-05_dimmer_I_ch_000000_status_poll.md) |
 | `dimmer.kessel-lo.idle_keepalive` | Kessel-Lo IP0300 | dimmer→hub | `I9900` → reply `I0154999` | ✅ | ✅ poll TX | idem |
 | `dimmer.input.p2p` | IP1100→IP0300 | input→dimmer | `T11001000`, `D11001003` | ✅ observability | ✅ helpers | [2026-06-22](../evidence/2026-06-22_dimmer_p2p_hold_dim_capture.md) |
-| `dimmer.torhout.hub_command` | Torhout 8×0-10V | hub→dimmer | `S1231030`, `C1991030` | ✅ (zelfde als Kessel-Lo) | ✅ | [2026-08-24](../evidence/2026-08-24_jan_nolf_field_test.md) |
+| `dimmer.torhout.hub_command` | Torhout 8×0-10V | hub→dimmer | `S1231030`, `C1991030` (fade `030`; elke `fff` 000–999 decodeert) | ✅ (zelfde als Kessel-Lo) | ✅ | [2026-08-24](../evidence/2026-08-24_jan_nolf_field_test.md) |
 | `dimmer.torhout.status_reply` | Torhout 8×0-10V | dimmer→hub op poll | `I0115184` = ch1 84 % | ✅ sinds gw **1.6.5** (family `15`) | — | [2026-08-24](../evidence/2026-08-24_jan_nolf_field_test.md) §5.2 · [spec](../../docs/superpowers/specs/2026-08-25-torhout-dialect-decode-design.md) |
-| `dimmer.torhout.command_echo` | Torhout 8×0-10V | dimmer→hub na S/C | `S1231030` → `S1231030` (letterlijke echo) | ✅ sinds gw **1.6.5** (echo = state-bron) | — | idem §5.3 |
+| `dimmer.torhout.command_echo` | Torhout 8×0-10V | dimmer→hub na S/C | `S1231030` → `S1231030` (letterlijke echo; fade `030`. Andere fades, bv. `S0991000`, moeten ook decoderen) | ✅ sinds gw **1.6.5** (echo = state-bron) | — | idem §5.3 |
 | `dimmer.torhout.idle_keepalive` | Torhout 8×0-10V | dimmer→hub op `I9900` | `I0115000` | ✅ sinds gw **1.6.5** (family-15 sentinel, geen overwrite) | — | idem §5.2 |
 | `input.kessel-lo.button_event` | IP1100PoE / IP040x (Kessel-Lo) | input→hub | `B-…E` type `0x2d` | ✅ | — | Sprint 5 |
 | `input.torhout.button_event` | IP040x (Torhout) | input→hub | `B…E` type `0x01`, zelfde 13-byte layout | ✅ sinds gw **1.7.0** | — | [2026-08-29 log](../evidence/2026-08-24_jan_nolf_field_test.md) |
@@ -62,7 +62,7 @@ Het grootste verschil tussen de Kessel-Lo- en de Torhout-modules zit niet in de 
 | | Kessel-Lo (relay fw ~5.1, dimmer fw 5.4) | Torhout (oudere generatie) |
 |---|---|---|
 | Relay na `S`/`C` | **statusframe** `I0000{ch}{state}` | **echo + state** `C{ch}00{state}` (`C0600` → `C060000000`) |
-| Dimmer na `S…1030`/`C…1030` | **statusframe** `I0154{ch}{vv}` | **letterlijke echo** (`S1231030` → `S1231030`), **geen** statusframe |
+| Dimmer na `S…1{fff}`/`C…1{fff}` | **statusframe** `I0154{ch}{vv}` | **letterlijke echo** (`S1231030` → `S1231030`), **geen** statusframe |
 | Dimmer op poll `I{ch}000000` | `I0154{ch}{vv}` | `I0115{ch}{vv}` (family `15`) |
 | Dimmer op keepalive `I9900` | `I0154999` (all-nines sentinel) | `I0115000` |
 
@@ -132,7 +132,7 @@ RX  C060000000
 
 | Aspect | Formaat |
 |--------|---------|
-| Hub command | `[S\|C]{ch}{vv}1030` — `vv`=00 off, 10–98 %, 99=100% |
+| Hub command | `[S\|C]{ch}{vv}1{fff}` — `vv`=00 off, 10–98 %, 99=100%; `fff` = fade 000–255 (`000` meteen). Voorbeelden `…1030` zijn fade `030`. Het vaste `1` heeft een onbekende betekenis. De decoder accepteert elke driedelige fade 000–999 |
 | Status reply | `I0154{ch}{vv}` — 8 bytes; family constant **`54`** |
 | Idle | poll `I9900` → `I0154999` |
 | Status poll | `I{ch}000000` (8 bytes) → `I0154{ch}{vv}` |
@@ -143,7 +143,7 @@ RX  C060000000
 
 | Aspect | Formaat |
 |--------|---------|
-| Hub command | **Zelfde** Kessel-Lo hub-dialect (`S…1030`, `C…1030`) — **werkt in veld** |
+| Hub command | **Zelfde** Kessel-Lo hub-dialect (`[S\|C]{ch}{vv}1{fff}`) — **werkt in veld**. Vastgelegde frames `S1231030` / `C1991030` zijn fade `030` |
 | Status poll TX | **Zelfde** `I{ch}000000` |
 | Status reply RX | **`I0115{ccc}`** — family constant **`15`** i.p.v. `54` |
 | Ack na commando | **letterlijke echo**, géén statusframe — zie § Ack-model |
@@ -165,7 +165,7 @@ Voorbeelden uit log 2026-08-24 (poll ch0–3):
 2. `I0115000` is **idle-sentinel** voor family `15` (D0.2b), net als `999` bij family `54`: geen channel/level, geen state-overwrite. Family-gescoped: een globale `000`-sentinel zou Kessel-Lo `I0154000` (ch0 uit) breken. Jan bevestigt met de Zithoek-lamp (ch0) tijdens keepalive — veldvraag blijft open tot hij antwoordt.
 3. ~~Poll-matcher / `udp_bus` wait-window?~~ — **nee** (D0.3): `_dimmer_status_predicate` faalde uitsluitend omdat family `15` niet decodeerde.
 
-**Command-echo (D0.1-analogon):** letterlijke `S…1030` / `C…1030` van een dimmer-IP is state-bron (`dimmer.torhout.command_echo`). Prefix `C` → `level_percent: 0` (niet 100: `encode_dim_off` stuurt placeholder `99`).
+**Command-echo (D0.1-analogon):** letterlijke `S…1{fff}` / `C…1{fff}` van een dimmer-IP is state-bron (`dimmer.torhout.command_echo`). Voorbeeld uit 2026-08-24: `S1231030` (fade `030`). De decoder moet elke driedelige fade accepteren, niet alleen `030`. Prefix `C` → `level_percent: 0`. `encode_dim_off` stuurt waarde `00` en fade `000` (`C<ch>001000`); oudere frames `C<ch>991030` blijven cut met fade `030`.
 
 **Implementatie:** `_DIMMER_REPLY_RE` family `(54|15)`; idle `000` alleen bij family `15`; registry behandelt `dimmer_command` van een dimmer-IP als STATE.
 

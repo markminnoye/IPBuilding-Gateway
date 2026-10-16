@@ -6,11 +6,21 @@ Operator choice (aan/uit vs dim %): see
 
 ## Hub→dimmer dialect (gateway sends this)
 
-Command frames: ``<S|C><channel><value_code>1030``
+Command frames: ``<S|C><channel><value_code>1<fade>``
 
 - ``S`` = set/dim to level, ``C`` = cut/off
 - ``<channel>`` = single digit 0–7
 - ``<value_code>`` = ``10``..``98`` for 10–98 %, ``99`` = 100 %, ``00`` = off
+- ``1`` = fixed marker. What it means is unknown.
+- ``<fade>`` = three digits. Valid range on the module is ``000``–``255``.
+  ``000`` is instant. A larger value lengthens the ramp. About 0.2 s per unit
+  is an estimate from one installation on 16 Oct 2026; ``010`` was an outlier
+  and the scale is not exact. The module answers at once with the end level,
+  so a client can show the target while the lamp is still moving. A value
+  above 255 wraps on the module (300 behaved as 44, 999 as 231). This encoder
+  clamps to 0–255 and never sends a wrapped value. The gateway default is
+  ``000`` (``S0991000`` / ``C0001000``). Older captures used fade ``030``
+  (``S0991030``), which ramps. Mid-level fades and the exact scale are unmeasured.
 
 Reply frames are 8 ASCII bytes ``I0154<C><VV>`` where:
 
@@ -34,10 +44,11 @@ Confirmed against the REST↔UDP correlation for the Bureau dimmer (ch1, comp
 
 ### OFF encoding
 
-Hub OFF is always ``C<ch>001030`` (cut with value ``00``) for every IP0300PoE
-dimmer. Recent modules accept ``C<ch>991030`` and ``C<ch>001030`` the same
-way; older modules need ``00`` because ``C<ch>991030`` can land as full
-brightness.
+Hub OFF is ``C<ch>001<fade>`` (cut with value ``00``) for every IP0300PoE
+dimmer. The default fade is ``000`` (instant). Recent modules accept
+``C<ch>991<fade>`` and ``C<ch>001<fade>`` the same way for the level; older
+modules need ``00`` because ``C<ch>991…`` can land as full brightness. The
+value field and the fade field are separate.
 
 ## Input-module→dimmer dialect (peer-to-peer)
 
@@ -48,7 +59,7 @@ replaces the hub it becomes the source of these frames, so this dialect is both
 downstream button control (see ``encode_dim_toggle`` / ``encode_dim_start`` /
 ``encode_dim_stop`` and the ``TOGGLE`` / ``DIM_START`` / ``DIM_STOP`` API actions).
 
-Command frames (suffix differs from the hub ``…1030`` dialect):
+Command frames (the trailing digits are not the hub fade field):
 
 - ``T<channel><value>1000`` — toggle (short press; module uses last-level memory)
 - ``D<channel><value>1003`` — dim hold start (auto-direction; no ack from dimmer)
@@ -68,7 +79,11 @@ from typing import Any
 from gateway.models import DimmerCommand, DimmerStatus
 from gateway.payloads.dialects import KESSEL_LO, TORHOUT
 
-_DIMMER_CMD_RE = re.compile(r"^(?P<prefix>[SC])(?P<channel>\d)(?P<value>\d{2})1030$")
+# ``1`` + three fade digits. Any 000–999 is accepted so an echo still decodes.
+# The encoder clamps to 000–255 before sending.
+_DIMMER_CMD_RE = re.compile(
+    r"^(?P<prefix>[SC])(?P<channel>\d)(?P<value>\d{2})1(?P<fade>\d{3})$"
+)
 _DIMMER_IDLE_RE = re.compile(r"^I9900$")
 _DIMMER_STATUS_POLL_RE = re.compile(r"^I(?P<channel>[0-7])000000$")
 _DIMMER_REPLY_RE = re.compile(r"^I01(?P<family>54|15)(?P<value_code>\d{3})$")
@@ -86,7 +101,8 @@ _DIMMER_IDLE_DIALECT_BY_FAMILY = {
     "15": TORHOUT.message_type("dimmer", "idle_keepalive"),
 }
 
-# Hub OFF wire: C<ch>001030 (reference generation, 2026-08-27).
+# Hub OFF wire: C<ch>001<fade>, value 00 (reference generation, 2026-08-27).
+# Default fade is 000. Older frames used 030.
 
 # Input-module peer-to-peer dialect (IP1100PoE → IP0300PoE, observed only).
 _INPUT_TOGGLE_RE = re.compile(r"^T(?P<channel>\d)(?P<dimmax>\d{2})1000$")
@@ -169,6 +185,7 @@ def decode_dimmer_payload(data: bytes) -> dict[str, Any] | None:
             "channel": int(m.group("channel")),
             "value_code": value_code,
             "level_percent": level_percent,
+            "fade": int(m.group("fade")),
             "raw": text,
         }
 
@@ -240,16 +257,43 @@ def encode_dimmer_status_poll(channel: int) -> bytes:
     return f"I{channel}000000".encode("ascii")
 
 
-def encode_dim_command(cmd: DimmerCommand) -> bytes:
-    """Encode hub→dimmer DIM command: S<ch><value_code>1030."""
+def clamp_fade(fade: int) -> int:
+    """Clamp a fade to 0–255.
+
+    The module stores the fade in one byte and wraps above 255 (300 behaved
+    as 44, 999 as 231). Clamping keeps a too-large value from becoming a
+    short fade. ``bool`` is rejected because it is an ``int`` subclass.
+    """
+    if isinstance(fade, bool) or not isinstance(fade, int):
+        raise TypeError("fade must be an integer")
+    if fade < 0:
+        return 0
+    if fade > 255:
+        return 255
+    return fade
+
+
+def _fade_digits(fade: int) -> str:
+    return f"{clamp_fade(fade):03d}"
+
+
+def encode_dim_command(cmd: DimmerCommand, fade: int = 0) -> bytes:
+    """Encode hub→dimmer DIM: ``S<ch><value_code>1<fade>``.
+
+    ``fade`` defaults to 0 (instant, ``000``) and is clamped to 0–255.
+    """
     code = _percent_to_value_code(cmd.level)
-    wire = f"S{cmd.channel}{code}1030".encode("ascii")
+    wire = f"S{cmd.channel}{code}1{_fade_digits(fade)}".encode("ascii")
     return wire
 
 
-def encode_dim_off(channel: int) -> bytes:
-    """Encode hub→dimmer OFF: ``C<ch>001030``."""
-    return f"C{channel}001030".encode("ascii")
+def encode_dim_off(channel: int, fade: int = 0) -> bytes:
+    """Encode hub→dimmer OFF: ``C<ch>001<fade>``.
+
+    ``fade`` defaults to 0 (instant, ``000``) and is clamped to 0–255.
+    Value ``00`` is the cut. It is not a fade.
+    """
+    return f"C{channel}001{_fade_digits(fade)}".encode("ascii")
 
 
 def encode_dim_toggle(channel: int) -> bytes:

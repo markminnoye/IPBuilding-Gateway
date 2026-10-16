@@ -52,7 +52,7 @@ reply:   I00000100     →  relay status ON  (channel 0, state 0100)
 
 **Dimmer DIM 50% (id 571):**
 ```
-sent_hex: 5330353031303330  →  S0501030  (DIM 50%, kanaal 0)
+sent_hex: 5330353031303330  →  S0501030  (DIM 50%, kanaal 0, fade 030; lezing 2026-10-16: de laatste drie cijfers zijn de fade, `000` is meteen)
 reply:   I0154050           →  50% (internal code 050)
 ```
 

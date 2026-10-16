@@ -523,7 +523,17 @@ The gateway responds with a `discovery_completed` event (see below).
 
 ```json
 {"type": "command", "id": "10.10.1.40-0", "action": "DIM", "value": 75}
+{"type": "command", "id": "10.10.1.40-0", "action": "DIM", "value": 75, "fade": 30}
+{"type": "command", "id": "10.10.1.40-0", "action": "ON"}
+{"type": "command", "id": "10.10.1.40-0", "action": "OFF"}
+{"type": "command", "id": "10.10.1.40-0", "action": "TOGGLE"}
+{"type": "command", "id": "10.10.1.40-0", "action": "DIM_START"}
+{"type": "command", "id": "10.10.1.40-0", "action": "DIM_STOP"}
 ```
+
+`DIM` takes `value` 0–100. `0` and `OFF` send `C<ch>001<fade>`. `ON` is 100 % (`S<ch>991<fade>`). `TOGGLE` is `T<ch>991000` (last stored level). `DIM_START` is `D<ch>001003` and does not wait for a reply. `DIM_STOP` is `D<ch>001000`.
+
+`fade` is optional on `DIM`, `ON`, and `OFF`. Omit it or send `0` for an instant change. `1`–`255` lengthens the ramp; values outside that range are clamped. A non-integer comes back as `command_result` with `ok: false` and `error` `fade must be an integer`. About 0.2 s per unit is an estimate (16 Oct 2026); the exact scale, mid levels, and the meaning of the leading `1` are unmeasured. The module reports the end level immediately, so state runs ahead of the lamp. `fade` is ignored on `TOGGLE`, `DIM_START`, and `DIM_STOP`.
 
 ---
 
@@ -555,9 +565,14 @@ Save these as **example messages** on the `/ws` WebSocket request for quick reus
 {"type": "command", "id": "10.10.1.30-0", "action": "OFF"}
 ```
 
-**Dimmer DIM 75:**
+**Dimmer DIM 75 (instant):**
 ```json
 {"type": "command", "id": "10.10.1.40-0", "action": "DIM", "value": 75}
+```
+
+**Dimmer DIM 75 with fade 30:**
+```json
+{"type": "command", "id": "10.10.1.40-0", "action": "DIM", "value": 75, "fade": 30}
 ```
 
 ---

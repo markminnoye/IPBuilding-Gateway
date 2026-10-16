@@ -672,49 +672,57 @@ De relay module op `10.10.1.30` verwacht **raw ASCII commando's** op UDP/1001 �
 
 ### 6.6 Dimmer-commando's (UDP/1001)
 
-De IP0300PoE dimmer gebruikt **geen `J`-separator** (anders dan relay in sommige captures). Twee suffix-families:
+De IP0300PoE dimmer gebruikt **geen `J`-separator** (anders dan relay in sommige captures). Hub-set en -cut zijn 8 ASCII-bytes:
 
-| Dialect | Suffix | Gebruik |
-|---------|--------|---------|
-| **Hub absoluut** | `1030` | `S` = set niveau, `C` = cut/off |
-| **Hub knop/ramp** | `1000` / `1003` | `T` = toggle, `D` = hold start/stop |
+`<S|C><channel><value_code>1<fade>`
 
-**Hub absoluut — format:** `<S|C><channel><value_code>1030` (8 bytes ASCII)
+- `S` = set niveau, `C` = cut/off.
+- `<channel>` = één cijfer 0–7.
+- `<value_code>` = `10`–`98` = dat %, `99` = 100 %, `00` = uit.
+- `1` = vast teken vóór de fade. De betekenis is **onbekend**.
+- `<fade>` = drie cijfers. De module bewaart ze in **één byte**: geldig `000`–`255`. Boven 255 wikkelt de module (300 gedroeg zich als 44, 999 als 231). De encoder klemt daarom op 0–255 en stuurt nooit een gewikkelde waarde.
+- `000` is meteen, dezelfde snelheid als de wandknop (`T…1000`). Een grotere waarde verlengt de ramp. Ongeveer 0,2 s per eenheid is een **schatting** uit één installatie op 16 okt 2026, niet een getimede kalibratie; `010` week daarvan af. De exacte schaal en het gedrag op tussenliggende niveaus zijn **niet gemeten**.
+- De module antwoordt meteen met het **eindniveau**. Tijdens een fade loopt de getoonde status voor op de lamp. Een antwoord na enkele tientallen milliseconden is acceptatie van het setpoint, niet het einde van de ramp.
+
+De gateway stuurt standaard fade `000` (`S0991000` aan, `C0001000` uit). Oudere captures gebruikten fade `030` (`S0991030`, `C1991030`): dat is wat IPBox stuurde, en het blijft een geldig frame. `S0991030` is kanaal 0, niveau 99, marker `1`, fade `030`.
 
 | Brief | Actie | Voorbeeld | Reply |
 |-------|-------|-----------|-------|
-| `S` | DIM naar niveau | `S1501030` → ch1 50% | `I0154150` |
-| `S` | DIM 100% | `S0991030` → ch0 100% | `I0154099` |
-| `C` | OFF | `C1991030` → ch1 uit | `I0154100` |
+| `S` | DIM 100 %, fade 000 (meteen) | `S0991000` → ch0 100 % | `I0154099` |
+| `S` | DIM 100 %, fade 030 | `S0991030` → ch0 100 %, ramp | `I0154099` (eindniveau, lamp loopt nog) |
+| `S` | DIM naar niveau | `S1501030` → ch1 50 %, fade 030 | `I0154150` |
+| `C` | OFF, fade 000 | `C0001000` → ch0 uit | `I0154000` |
+| `C` | OFF in oudere captures | `C1991030` → ch1 uit, fade 030 | `I0154100` |
 
-Waarde-code: `10`–`98` = dat %, `99` = 100%, `00` = off (in replies). **UIT sturen:** gebruik `C…`, niet `S…00…` (REST `DIM 0` vertaalt in de gateway naar `C`, niet naar `S001030`).
+Waarde-code: `10`–`98` = dat %, `99` = 100 %, `00` = uit (in replies). **UIT sturen:** gebruik `C…`, niet `S…00…`. REST `DIM 0` en `OFF` worden `C<ch>001<fade>`. Waarde `00` en de fade zijn aparte velden. Oudere modules kunnen `C<ch>991…` als vol licht lezen; de gateway gebruikt daarom waarde `00`.
 
 **Status reply:** `I0154<C><VV>` — 3 cijfers na `I0154` = `<kanaal><waarde-code>` (niet één getal; ch0 leek dat wel). `I0154999` = idle poll, geen setpoint. Detail: [2026-05-17_dimmer_I0154xxx_full_decode.md](evidence/2026-05-17_dimmer_I0154xxx_full_decode.md).
 
 **Geldt voor de lab-generatie (dimmer fw 5.4).** Oudere modules in het veld gebruiken family **`15`** i.p.v. `54` en bevestigen een commando met een **letterlijke echo** in plaats van een statusframe. Waarde-codes (`00` uit, `10`–`98` %, `99` = 100 %) blijven identiek. Canoniek overzicht per generatie: [veldbus_dialect_registry.md](reference/veldbus_dialect_registry.md).
 
-**Hub knop/ramp — format:** suffix `1000` / `1003` (8 bytes ASCII)
+**Hub knop/ramp — aparte opcodes, geen fade-veld.** De staart van `T` en `D` is niet de fade van `S`/`C`.
 
 | Brief | Actie | Wire (gateway) | Reply |
 |-------|-------|----------------|-------|
 | `T` | Toggle aan/uit | `T<ch>991000` | `I0154<ch><vv>` — **aan** = laatste opgeslagen niveau, niet 100% |
-| `D` | Hold dim start | `D<ch>001003` | (geen) — module ramp autonoom |
+| `D` | Hold dim start | `D<ch>001003` | (geen) — module ramp tot de stop |
 | `D` | Hold dim stop | `D<ch>001000` | `I0154<ch><vv>` — niveau bij stop |
 
-De `99`/`00` in `T`/`D` zijn vaste placeholders; de module negeert ze voor toggle/ramp. Richting (omhoog/omlaag) wisselt de dimmer **intern** per hold. Bewijs: [2026-06-22_dimmer_p2p_hold_dim_capture.md](evidence/2026-06-22_dimmer_p2p_hold_dim_capture.md).
+`1003` op opcode `D` is start tegenover stop (`D…1000`). Het is geen tijdsduur: hetzelfde frame dimt de ene keer omhoog en de andere keer omlaag. De `99`/`00` in `T`/`D` zijn vaste placeholders. Bewijs: [2026-06-22_dimmer_p2p_hold_dim_capture.md](evidence/2026-06-22_dimmer_p2p_hold_dim_capture.md).
 
 #### Operator-keuze (gateway / Matter / HA)
 
-| Situatie | API-actie | Encoder |
-|----------|-----------|---------|
-| Schakelaar aan/uit | `TOGGLE` | `encode_dim_toggle` |
-| Lamp uit | `OFF` of `DIM` value=0 | `encode_dim_off` → `C…` |
-| Slider / scene op % | `DIM` | `encode_dim_command` → `S…` |
-| Lang indrukken | `DIM_START` / `DIM_STOP` | `encode_dim_start` / `encode_dim_stop` |
+| Situatie | API-actie | Wire |
+|----------|-----------|------|
+| Schakelaar aan, meteen | `ON` of `DIM` 100, fade 0 | `S<ch>991000` |
+| Schakelaar uit, meteen | `OFF` of `DIM` 0, fade 0 | `C<ch>001000` |
+| Laatste niveau behouden | `TOGGLE` | `T<ch>991000` |
+| Slider / scene op % | `DIM`, optionele `fade` 0–255 | `S<ch><val>1<fade>` |
+| Lang indrukken | `DIM_START` / `DIM_STOP` | `D<ch>001003` / `D<ch>001000` |
 
-Companion: `button_dim.yaml` v8 — korte druk → `light.toggle`; hold → `dim_start`/`dim_stop`. Spec: [2026-06-22-dimmer-button-ramp-protocol-design.md](../docs/superpowers/specs/2026-06-22-dimmer-button-ramp-protocol-design.md).
+`ON`/`OFF` zijn absoluut (100 % / uit), niet de `T`-toggle. Fade 0 is de default, ook voor een tussenliggend `DIM`. Een client kan `fade` meesturen; er is geen per-kanaal fade in de gateway en geen Home Assistant `transition`. Companion: `button_dim.yaml` v8 — korte druk → `light.toggle`; hold → `dim_start`/`dim_stop`. Spec: [2026-06-22-dimmer-button-ramp-protocol-design.md](../docs/superpowers/specs/2026-06-22-dimmer-button-ramp-protocol-design.md).
 
-**Soft AAN / Soft UIT** (EEPROM, §12.3): fysiek gedrag kan afwijken van het gecommandeerde setpoint — wire-code is het **doelniveau**, niet direct PWM.
+**Soft AAN / Soft UIT** (EEPROM, §12.3) is een opgeslagen curve in de module. De fade op dit `S`/`C`-frame kiest de ramp van dit commando: `000` is meteen, een hogere fade laat de lamp naar het doel lopen. De EEPROM-label "001 msec" is niet die draad-fade.
 
 Parser-code: `gateway/payloads/dimmer.py`. Input button-wire: [2026-05-22_sprint5_input_physical_completion.md](evidence/2026-05-22_sprint5_input_physical_completion.md).
 
@@ -991,7 +999,7 @@ De `descr` en `gr` velden in de embedded `api.html` JSON-response komen rechtstr
 | **Soft UIT %** | 0–100 | Niveau waaronder soft-uit begint (default **70%**) — lamp gaat naar 70%, dan soft naar 0% |
 | **Snelheid (msec)** | int | Transitietijd dimmen (default **001** msec) |
 
-Soft AAN/UIT en Snelheid worden als EEPROM-data via de diagnose-software naar de dimmodule geschreven (Download/Upload EEPROM functie). Dit verklaart het zachte dimgedrag dat in captures zichtbaar is.
+Soft AAN/UIT en Snelheid worden als EEPROM-data via de diagnose-software naar de dimmodule geschreven (Download/Upload EEPROM functie). Dat is een opgeslagen curve, los van de fade op een `S`/`C`-frame (§6.6). Veldtest 16 okt 2026: de laatste drie cijfers na het vaste `1` zijn die fade (`000` meteen; ongeveer 0,2 s per eenheid, schatting, `010` een uitschieter). Het zachte gedrag in oudere captures met `…1030` is fade `030`, wat IPBox stuurde. De EEPROM-label "001 msec" komt niet overeen met die ramp en is niet het fade-veld op de draad.
 
 ### 12.4 Ingangscomponenten — ID-prefix en veldstructuur
 

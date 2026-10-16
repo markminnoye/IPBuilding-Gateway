@@ -204,7 +204,7 @@ Fysieke AAN/UIT blijft de gate voordat RE_STATE “confirmed” mag worden.
 | # | Actie | Waarom |
 |---|-------|--------|
 | 1 | Bevestigen of IPBox nog master is (`hub_role=slave` in log) | Dual-hub kan dimmer-replies/commands storen |
-| 2 | Gericht dimmer-test: 1 kanaal ON → OFF → DIM via HA + verse log of pcap op `.42` | Bewijs of `S…1030` / off-payload aankomt en of module antwoordt |
+| 2 | Gericht dimmer-test: 1 kanaal ON → OFF → DIM via HA + verse log of pcap op `.42` | Bewijs of `S…1030` (fade `030`; lezing 2026-10-16) / off-payload aankomt en of module antwoordt |
 | 3 | Vergelijken met lab-IP0300PoE: zelfde payloads op Jan’s “8× 0-10V” faceplate | Generatie-gap (al gesignaleerd 2026-08-06) |
 | 4 | Relays + knoppen-UI als PASS parkeren | Restore + 1.6.2 knoppen-pad werkt |
 
