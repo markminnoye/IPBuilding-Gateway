@@ -144,6 +144,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         """These are tools for AI assistants such as Claude. Switch or dim one device.
 
         A relay takes ON, OFF, PULSE, or TOGGLE. A dimmer takes DIM 0-100, TOGGLE, DIM_START, or DIM_STOP. For a dimmer, ON is sent as DIM 100 and OFF as DIM 0. PULSE is refused for a dimmer. The type comes from list_devices.
+        On a command test, call capture_frames while switching when udp_frame is available, before confirmed=true. Ask what the tester sees at that moment.
         First call with confirmed=false. Only send after an explicit yes and confirmed=true.
         ok true means the gateway sent the command. module_confirmed and confirm_ms say whether the module replied. If those fields are absent, this gateway version does not report them.
         """
@@ -226,13 +227,16 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         redact: bool = True,
         feedback: str = "",
         include_events: bool | None = None,
+        vermoeden: str = "",
+        open_vraag: str = "",
     ) -> str:
         """Export a report: rapport, bugrapport, foutmelding, feedback, probleem melden, bug report.
 
         Use this when someone asks for a report, a bug report, feedback, or to report a problem, in Dutch or English.
         note is the problem description and stays in the summary. feedback is free text about the tool, the skill, tables, or terminology. The latest feedback is kept and shown under heading 6.
+        vermoeden is the core suspicion and is shown under Bevindingen. open_vraag is a question for the developers and is shown under Open vragen. Omit either one to keep the last text.
         include_events defaults to true. Pass false to leave events, frames, and logs out of the report. Omit it to keep the last choice.
-        Addresses and names are removed by default. Pass redact=false only when the tester wants the raw text locally. Tell them not to share that raw text.
+        Addresses and names are removed by default. Device model codes such as IP0300PoE stay. Pass redact=false only when the tester wants the raw text locally. Tell them not to share that raw text.
         """
         result = await export_session(
             gateway,
@@ -241,6 +245,8 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
             redact=redact,
             feedback=feedback,
             include_events=include_events,
+            vermoeden=vermoeden,
+            open_vraag=open_vraag,
         )
         return result.render()
 
@@ -252,13 +258,15 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
             korte_fout: str = "",
             feedback: str = "",
             include_events: bool | None = None,
+            vermoeden: str = "",
+            open_vraag: str = "",
         ) -> str:
             """Send the report: versturen, sturen, doorsturen naar Sonic Rocket, naar Mark, naar de ontwikkelaars, to the developers.
 
             Use this to send or forward a rapport, bugrapport, foutmelding, or feedback to Sonic Rocket, to Mark, or to the developers.
-            feedback and include_events are optional. Omit them to reuse the last export_session values.
-            The first call shows the privacy notice and the report. Nothing is sent.
-            Call again with confirmed=true only after an explicit yes. The tester chooses the sender and sends the mail.
+            feedback, include_events, vermoeden, and open_vraag are optional. Omit them to reuse the last export_session values.
+            The first call shows the privacy notice and the report. Nothing is sent. Before asking for yes, say that the tester sends the report and this tool does not.
+            Call again with confirmed=true only after an explicit yes. The result shows the report as copyable text, the destination address, and the masked subject. A mailto link is only an extra and may not be clickable. The tester sends the mail.
             Without an intake address the option is unavailable.
             """
             result = await send_report(
@@ -267,6 +275,8 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
                 korte_fout=korte_fout,
                 feedback=feedback,
                 include_events=include_events,
+                vermoeden=vermoeden,
+                open_vraag=open_vraag,
             )
             return result.render()
 

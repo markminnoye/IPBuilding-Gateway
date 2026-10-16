@@ -115,6 +115,10 @@ _IDENTITY_KV = re.compile(
 # Short names and rooms are redacted only from these fields, as whole words.
 _NAME_KEYS = {"descr", "gr", "module_name", "name", "room"}
 
+# Product model codes stay visible. A module that is named after its model
+# must not wipe that code out of the report.
+_MODEL_CODE = re.compile(r"(?i)^IP\d{3,4}PoE$")
+
 _SKIP_TOKENS = {
     "on",
     "off",
@@ -142,7 +146,7 @@ def collect_tokens(value: Any) -> set[str]:
             for key, item in node.items():
                 if key in _SENSITIVE_KEYS and isinstance(item, str):
                     token = item.strip()
-                    if token and token.lower() not in _SKIP_TOKENS:
+                    if token and token.lower() not in _SKIP_TOKENS and not is_model_code(token):
                         if len(token) >= 3 or key in _NAME_KEYS:
                             found.add(token)
                 else:
@@ -153,6 +157,11 @@ def collect_tokens(value: Any) -> set[str]:
 
     walk(value)
     return found
+
+
+def is_model_code(token: str) -> bool:
+    """True for a device model such as ``IP0300PoE``. Those stay unmasked."""
+    return _MODEL_CODE.fullmatch(token.strip()) is not None
 
 
 def mask_stem(name: str) -> str:
@@ -177,6 +186,7 @@ def collect_display_names(value: Any, hosts: set[str] | None = None) -> list[str
             not token
             or folded in seen
             or token.lower() in _SKIP_TOKENS
+            or is_model_code(token)
             or _fully_removed(token, known) is not None
         ):
             return
@@ -352,6 +362,8 @@ def _mask_name_field(value: str, masks: dict[str, str], hosts: set[str]) -> str:
     removed = _fully_removed(token, {host.lower() for host in hosts if host})
     if removed is not None:
         return removed
+    if is_model_code(token):
+        return token
     if not token or token.lower() in _SKIP_TOKENS:
         return _PLACEHOLDER["name"]
     found = _lookup_mask(token, masks)

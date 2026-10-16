@@ -131,10 +131,12 @@ def subject_line(
     installatie_id: str,
     korte_fout: str,
     moment: datetime | None = None,
+    tokens: set[str] | None = None,
+    hosts: set[str] | None = None,
     masks: dict[str, str] | None = None,
 ) -> str:
     when = (moment or datetime.now().astimezone()).isoformat(timespec="seconds")
-    short = _short_fault(korte_fout, masks)
+    short = _short_fault(korte_fout, tokens, hosts, masks)
     return f"[DEBUG] {installatie_id} | {short} | {when}"
 
 
@@ -145,20 +147,32 @@ def mailto_link(address: str, subject: str, body: str) -> str:
 def preview_message(report: str) -> str:
     return (
         f"{privacy_notice()}\n\n{report}\n"
-        "Bevestig om een mailto-link te maken. De toolkit verstuurt niets."
+        "De toolkit verstuurt dit rapport niet. "
+        "Jij stuurt het zelf vanuit je mailprogramma. "
+        "Bevestig om de tekst en het adres klaar te zetten. Zeg dan ja."
     )
 
 
-def sent_message(link: str) -> str:
+def sent_message(address: str, subject: str, report: str, link: str) -> str:
+    """Copyable report, destination, and masked subject. The mailto is extra."""
     return (
-        f"{link}\n\n"
-        "De mail is niet verstuurd. Open de link, kies in je mailprogramma "
-        "het afzenderadres en verstuur zelf. Je krijgt geen bevestiging."
+        "De mail is niet verstuurd. "
+        "Jij stuurt het rapport zelf vanuit je mailprogramma. "
+        "Je krijgt geen bevestiging.\n\n"
+        f"Adres: {address}\n"
+        f"Onderwerp: {subject}\n\n"
+        f"{report}\n\n"
+        "Extra, als een mailto-link in je programma opent. "
+        "In Claude Desktop is die link niet aanklikbaar. "
+        "Kopieer de tekst, het adres en het onderwerp hierboven.\n"
+        f"{link}"
     )
 
 
 OFFER_TO_SEND = (
-    "Wil je dit rapport naar de ontwikkelaars van Sonic Rocket sturen? Zeg dan ja."
+    "De toolkit verstuurt dit rapport niet. "
+    "Jij stuurt het zelf vanuit je mailprogramma. "
+    "Wil je dat ik de tekst en het adres klaarzet? Zeg dan ja."
 )
 
 
@@ -302,13 +316,23 @@ def _sections(body: dict[str, Any]) -> dict[str, Any]:
     else:
         appendix = _appendix_lines(body, logs, other_frames, len(polls))
     feedback = str(body.get("feedback") or "").strip()
+    suspicion = str(body.get("vermoeden") or "").strip()
+    if suspicion:
+        suspected.append(suspicion)
+    question = str(body.get("open_vraag") or "").strip()
+    open_lines = _open_questions(gaps)
+    if question:
+        if open_lines == "Geen open vraag uit het activiteitenlog.":
+            open_lines = question
+        else:
+            open_lines = f"{open_lines}\n{question}"
     return {
         "samenvatting": summary,
         "omgeving": _environment(body),
         "getest": "\n".join(tested) or "Geen stappen genoteerd.",
         "bevestigd": "\n".join(confirmed) or "Geen frame dat dit bevestigt.",
         "vermoeden": "\n".join(suspected) or "Geen vermoeden uit het activiteitenlog.",
-        "open": _open_questions(gaps),
+        "open": open_lines,
         "feedback": feedback or "—",
         "bijlage": "\n".join(appendix) or "Geen gebeurtenissen.",
         "dialects": _dialects(events),
@@ -434,8 +458,13 @@ def _dialects(events: list[Any]) -> list[str]:
     return found
 
 
-def _short_fault(korte_fout: str, masks: dict[str, str] | None = None) -> str:
-    cleaned = redact_text(korte_fout or "", masks=masks)
+def _short_fault(
+    korte_fout: str,
+    tokens: set[str] | None = None,
+    hosts: set[str] | None = None,
+    masks: dict[str, str] | None = None,
+) -> str:
+    cleaned = redact_text(korte_fout or "", tokens, hosts, masks)
     cleaned = " ".join(cleaned.split())
     cleaned = cleaned.replace("|", "/")
     if not cleaned:

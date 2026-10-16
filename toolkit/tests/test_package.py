@@ -75,7 +75,7 @@ def test_plugin_evals_stay_out_of_ci() -> None:
 
 def test_versions_match() -> None:
     versions_agree()
-    assert file_version() == "0.1.2-rc.1"
+    assert file_version() == "0.1.2-rc.2"
     plugin = json.loads((TOOLKIT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
     setting = plugin["userConfig"]["gateway_address"]
     assert setting["required"] is False

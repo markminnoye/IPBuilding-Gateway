@@ -205,7 +205,10 @@ def _write_manifest(dest: Path, version: str) -> None:
         },
         {
             "name": "device_command",
-            "description": "Eén apparaat schakelen of dimmen nadat de tester het bevestigd heeft.",
+            "description": (
+                "Eén apparaat schakelen of dimmen nadat de tester het bevestigd heeft. "
+                "Bij een commandotest eerst frames meelezen."
+            ),
         },
         {
             "name": "probe_generation",
@@ -237,7 +240,8 @@ def _write_manifest(dest: Path, version: str) -> None:
                 "name": "send_report",
                 "description": (
                     "Rapport versturen, sturen of doorsturen naar Sonic Rocket, naar Mark, "
-                    "naar de ontwikkelaars of de developers. De toolkit verstuurt niets zelf."
+                    "naar de ontwikkelaars of de developers. De toolkit verstuurt niets zelf. "
+                    "De tester stuurt de tekst. Het antwoord toont het adres en het onderwerp."
                 ),
             }
         )

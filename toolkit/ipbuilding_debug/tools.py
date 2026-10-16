@@ -1318,16 +1318,24 @@ async def export_session(
     redact: bool = True,
     feedback: str = "",
     include_events: bool | None = None,
+    vermoeden: str = "",
+    open_vraag: str = "",
 ) -> ToolResult:
     """Bundle the session. Names are masked and addresses removed unless redact is false."""
     if note or marker:
         await session.annotate(note or marker, marker=marker)
     if feedback.strip():
         session.tool_feedback = feedback.strip()
+    if vermoeden.strip():
+        session.suspicion = vermoeden.strip()
+    if open_vraag.strip():
+        session.developer_question = open_vraag.strip()
     if include_events is not None:
         session.include_events = bool(include_events)
     body = _export_body(session)
     body["feedback"] = session.tool_feedback
+    body["vermoeden"] = session.suspicion
+    body["open_vraag"] = session.developer_question
     body["events_included"] = session.include_events
     hosts = session_hosts(session)
     inventory = _inventory_names(session)
@@ -1370,11 +1378,15 @@ async def send_report(
     korte_fout: str = "",
     feedback: str = "",
     include_events: bool | None = None,
+    vermoeden: str = "",
+    open_vraag: str = "",
 ) -> ToolResult:
-    """Show the filtered report, then a mailto link after an explicit yes.
+    """Show the filtered report. After an explicit yes, show copyable text.
 
-    Nothing is sent from this process. Without an intake address the option
-    is unavailable. With the feature flag off, only the local report remains.
+    Nothing is sent from this process. The tester copies the report, the
+    address, and the masked subject into their own mail program. A mailto
+    link is only an extra. Without an intake address the option is
+    unavailable. With the feature flag off, only the local report remains.
     """
     if not report_send_enabled():
         return ToolResult(
@@ -1392,6 +1404,8 @@ async def send_report(
         redact=True,
         feedback=feedback,
         include_events=include_events,
+        vermoeden=vermoeden,
+        open_vraag=open_vraag,
     )
     report = str(exported.data.get("report") or "")
     if not confirmed:
@@ -1408,28 +1422,33 @@ async def send_report(
         )
     frontmatter = str(exported.data.get("frontmatter") or "")
     # Same map as the report. The mapping itself is not returned.
-    masks = _report_name_masks(
-        _export_body(session),
-        _inventory_names(session),
-        session_hosts(session),
+    raw_body = _export_body(session)
+    hosts = session_hosts(session)
+    inventory = _inventory_names(session)
+    tokens = collect_tokens({"inventory": inventory, "session": raw_body})
+    masks = _report_name_masks(raw_body, inventory, hosts)
+    subject = subject_line(
+        str(exported.data.get("installatie_id") or ""),
+        korte_fout,
+        tokens=tokens,
+        hosts=hosts,
+        masks=masks,
     )
     link = mailto_link(
         address,
-        subject_line(
-            str(exported.data.get("installatie_id") or ""),
-            korte_fout,
-            masks=masks,
-        ),
+        subject,
         email_body(section_map(exported.data), frontmatter),
     )
     return ToolResult(
-        sent_message(link),
+        sent_message(address, subject, report, link),
         {
             "ok": True,
             "kind": "report_mailto",
             "confirmed": True,
             "sent": False,
             "mailto": link,
+            "subject": subject,
+            "address": address,
         },
     )
 

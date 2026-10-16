@@ -131,6 +131,10 @@ class GatewaySession:
         self.notes: list[dict[str, str]] = []
         # Latest free-text feedback about the tool. Empty until export or send.
         self.tool_feedback = ""
+        # Core suspicion and a question for the developers. Empty until set.
+        # A later call without the argument keeps the last text.
+        self.suspicion = ""
+        self.developer_question = ""
         # Report choice. A later call without the argument keeps this value.
         self.include_events = True
         self.want_frames = False
