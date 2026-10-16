@@ -70,7 +70,6 @@ from gateway.installation import (
 )
 from gateway.module_metadata import ModuleMetadataCache
 from gateway.payloads import (
-    clamp_fade,
     encode_dim_command,
     encode_dim_off,
     encode_dim_start,
@@ -1153,21 +1152,23 @@ class GatewayAPI:
             payload = encode_relay_command(cmd)
         elif dtype == DeviceType.DIMMER:
             if action in ("DIM", "ON", "OFF"):
-                try:
-                    fade_units = clamp_fade(0 if fade is None else fade)
-                except TypeError:
-                    return CommandResult(False, "fade must be an integer")
+                fade_units = 0 if fade is None else fade
                 if action == "ON":
                     level = 100
                 elif action == "OFF":
                     level = 0
                 else:
                     level = int(value) if value is not None else 0
-                if level == 0:
-                    payload = encode_dim_off(channel, fade_units)
-                else:
-                    cmd = DimmerCommand(channel=channel, level=level)
-                    payload = encode_dim_command(cmd, fade_units)
+                try:
+                    if level == 0:
+                        payload = encode_dim_off(channel, fade_units)
+                    else:
+                        cmd = DimmerCommand(channel=channel, level=level)
+                        payload = encode_dim_command(cmd, fade_units)
+                except (TypeError, ValueError) as exc:
+                    if str(exc).startswith("fade must"):
+                        return CommandResult(False, str(exc))
+                    raise
             elif action == "TOGGLE":
                 payload = encode_dim_toggle(channel)
             elif action == "DIM_START":

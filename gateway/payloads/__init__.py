@@ -1,7 +1,6 @@
 """UDP/1001 payload encoders and decoders."""
 
 from gateway.payloads.dimmer import (
-    clamp_fade,
     decode_dimmer_payload,
     encode_dim_command,
     encode_dim_off,
@@ -18,7 +17,6 @@ from gateway.payloads.relay import (
 )
 
 __all__ = [
-    "clamp_fade",
     "decode_dimmer_payload",
     "encode_dim_command",
     "encode_dim_off",

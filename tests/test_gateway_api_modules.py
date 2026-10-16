@@ -688,16 +688,23 @@ class TestDimmerDownstreamCommands:
             "10.10.1.40", b"S0501030", expect_reply=True,
         )
 
-        ok, error = await api._execute_command("10.10.1.40-0", "DIM", 40, fade=300)
+        ok, error = await api._execute_command("10.10.1.40-0", "DIM", 40, fade=0)
+        assert ok is True
+        api._bus.send_command.assert_called_with(
+            "10.10.1.40", b"S0401000", expect_reply=True,
+        )
+
+        ok, error = await api._execute_command("10.10.1.40-0", "DIM", 40, fade=255)
         assert ok is True
         api._bus.send_command.assert_called_with(
             "10.10.1.40", b"S0401255", expect_reply=True,
         )
 
-        ok, error = await api._execute_command("10.10.1.40-0", "DIM", 10, fade="slow")
-        assert ok is False
-        assert error == "fade must be an integer"
-        assert api._bus.send_command.call_count == 4
+        for bad in (256, 300, -1, "slow"):
+            ok, error = await api._execute_command("10.10.1.40-0", "DIM", 10, fade=bad)
+            assert ok is False
+            assert error == "fade must be an integer from 0 to 255"
+        assert api._bus.send_command.call_count == 5
 
     @pytest.mark.asyncio
     async def test_unsupported_dimmer_action_rejected(self) -> None:

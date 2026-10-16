@@ -680,7 +680,7 @@ De IP0300PoE dimmer gebruikt **geen `J`-separator** (anders dan relay in sommige
 - `<channel>` = één cijfer 0–7.
 - `<value_code>` = `10`–`98` = dat %, `99` = 100 %, `00` = uit.
 - `1` = vast teken vóór de fade. De betekenis is **onbekend**.
-- `<fade>` = drie cijfers. De module bewaart ze in **één byte**: geldig `000`–`255`. Boven 255 wikkelt de module (300 gedroeg zich als 44, 999 als 231). De encoder klemt daarom op 0–255 en stuurt nooit een gewikkelde waarde.
+- `<fade>` = drie cijfers. De module bewaart ze in **één byte**: geldig `000`–`255`. Boven 255 wikkelt de module (300 gedroeg zich als 44, 999 als 231). De encoder weigert een fade buiten 0–255, zodat een gewikkelde waarde nooit op de draad komt.
 - `000` is meteen, dezelfde snelheid als de wandknop (`T…1000`). Een grotere waarde verlengt de ramp. Ongeveer 0,2 s per eenheid is een **schatting** uit één installatie op 16 okt 2026, niet een getimede kalibratie; `010` week daarvan af. De exacte schaal en het gedrag op tussenliggende niveaus zijn **niet gemeten**.
 - De module antwoordt meteen met het **eindniveau**. Tijdens een fade loopt de getoonde status voor op de lamp. Een antwoord na enkele tientallen milliseconden is acceptatie van het setpoint, niet het einde van de ramp.
 

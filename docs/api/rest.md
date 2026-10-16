@@ -415,7 +415,7 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) re
 | `DIM_START` | Dimmer | -- | `D<ch>001003` (hold start, no reply) |
 | `DIM_STOP` | Dimmer | -- | `D<ch>001000` (hold stop) |
 
-`fade` is optional on dimmer `DIM`, `ON`, and `OFF`. Omit it or send `0` for an instant change (the wall-button speed). `1`–`255` lengthens the ramp. Values outside `0`–`255` are clamped. A non-integer is `400` `invalid_fade`. About 0.2 s per unit is an estimate from 16 Oct 2026; `010` was an outlier. The exact scale and mid-level fades are unmeasured. The leading `1` before the three fade digits has an unknown meaning. The module replies at once with the end level, so reported state runs ahead of the lamp during a fade. There is no per-channel fade setting, and Home Assistant `transition` is not wired. `fade` on a relay, `TOGGLE`, `DIM_START`, or `DIM_STOP` is ignored.
+`fade` is optional on dimmer `DIM`, `ON`, and `OFF`. Omit it or send `0` for an instant change (the wall-button speed). `1`–`255` lengthens the ramp. A value below `0`, above `255`, or not an integer is rejected with `400` `invalid_fade` and is not sent. About 0.2 s per unit is an estimate from 16 Oct 2026; `010` was an outlier. The exact scale and mid-level fades are unmeasured. The leading `1` before the three fade digits has an unknown meaning. The module replies at once with the end level, so reported state runs ahead of the lamp during a fade. There is no per-channel fade setting, and Home Assistant `transition` is not wired. `fade` on a relay, `TOGGLE`, `DIM_START`, or `DIM_STOP` is ignored.
 
 **Response 200:** the gateway accepted and sent the command. A missing field-bus reply is still `ok: true`. It is not an error.
 
@@ -453,10 +453,10 @@ No reply inside the window:
 
 The WebSocket `command_result` frame carries the same three fields. See [websocket.md](websocket.md).
 
-**Response 400** (missing action, or a dimmer `fade` that is not an integer):
+**Response 400** (missing action, or a dimmer `fade` outside 0–255 or not an integer):
 ```json
 {"error": "missing_action", "message": "Body must contain 'action'"}
-{"error": "invalid_fade", "message": "fade must be an integer", "details": {"device_id": "10.10.1.40-0", "action": "DIM"}}
+{"error": "invalid_fade", "message": "fade must be an integer from 0 to 255", "details": {"device_id": "10.10.1.40-0", "action": "DIM"}}
 ```
 
 **Response 422** (unsupported action):

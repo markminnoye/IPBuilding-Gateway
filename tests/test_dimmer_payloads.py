@@ -5,7 +5,6 @@ import pytest
 from gateway.models import DimmerCommand
 from gateway.payloads.dialects import KESSEL_LO, TORHOUT
 from gateway.payloads.dimmer import (
-    clamp_fade,
     decode_dimmer_payload,
     decode_dimmer_status,
     encode_dim_command,
@@ -90,22 +89,30 @@ def test_encode_dim_command_explicit_fade():
     assert full == b"S0991030"
 
 
-def test_encode_dim_command_clamps_fade():
-    """Values above 255 are clamped. The module would otherwise wrap them."""
-    assert encode_dim_command(DimmerCommand(channel=0, level=99), fade=255) == b"S0991255"
-    assert encode_dim_command(DimmerCommand(channel=0, level=99), fade=300) == b"S0991255"
-    assert encode_dim_command(DimmerCommand(channel=0, level=99), fade=999) == b"S0991255"
-    assert encode_dim_command(DimmerCommand(channel=0, level=99), fade=-4) == b"S0991000"
-    with pytest.raises(TypeError, match="integer"):
-        clamp_fade(True)
+def test_encode_dim_command_accepts_fade_bounds():
+    """0 and 255 are valid. Outside that range is refused, not wrapped."""
+    cmd = DimmerCommand(channel=0, level=99)
+    assert encode_dim_command(cmd, fade=0) == b"S0991000"
+    assert encode_dim_command(cmd, fade=255) == b"S0991255"
+    for bad in (256, 300, -1):
+        with pytest.raises(ValueError, match="0 to 255"):
+            encode_dim_command(cmd, fade=bad)
+    with pytest.raises(TypeError, match="0 to 255"):
+        encode_dim_command(cmd, fade=True)
 
 
 def test_encode_dim_off():
     """Default off is instant: ``C<ch>001000``."""
     assert encode_dim_off(1) == b"C1001000"
     assert encode_dim_off(0) == b"C0001000"
+    assert encode_dim_off(0, fade=0) == b"C0001000"
     assert encode_dim_off(0, fade=30) == b"C0001030"
-    assert encode_dim_off(0, fade=300) == b"C0001255"
+    assert encode_dim_off(0, fade=255) == b"C0001255"
+    for bad in (256, 300, -1):
+        with pytest.raises(ValueError, match="0 to 255"):
+            encode_dim_off(0, fade=bad)
+    with pytest.raises(TypeError, match="0 to 255"):
+        encode_dim_off(0, fade="slow")
 
 
 def test_torhout_dim_off_echo_decodes_as_zero_percent():

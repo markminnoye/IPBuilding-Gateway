@@ -533,7 +533,7 @@ The gateway responds with a `discovery_completed` event (see below).
 
 `DIM` takes `value` 0–100. `0` and `OFF` send `C<ch>001<fade>`. `ON` is 100 % (`S<ch>991<fade>`). `TOGGLE` is `T<ch>991000` (last stored level). `DIM_START` is `D<ch>001003` and does not wait for a reply. `DIM_STOP` is `D<ch>001000`.
 
-`fade` is optional on `DIM`, `ON`, and `OFF`. Omit it or send `0` for an instant change. `1`–`255` lengthens the ramp; values outside that range are clamped. A non-integer comes back as `command_result` with `ok: false` and `error` `fade must be an integer`. About 0.2 s per unit is an estimate (16 Oct 2026); the exact scale, mid levels, and the meaning of the leading `1` are unmeasured. The module reports the end level immediately, so state runs ahead of the lamp. `fade` is ignored on `TOGGLE`, `DIM_START`, and `DIM_STOP`.
+`fade` is optional on `DIM`, `ON`, and `OFF`. Omit it or send `0` for an instant change. `1`–`255` lengthens the ramp. A value below 0, above 255, or not an integer is rejected and not sent. `command_result` is then `ok: false` with `error` `fade must be an integer from 0 to 255`. The REST call for the same body is `400` `invalid_fade` with that message. About 0.2 s per unit is an estimate (16 Oct 2026); the exact scale, mid levels, and the meaning of the leading `1` are unmeasured. The module reports the end level immediately, so state runs ahead of the lamp. `fade` is ignored on `TOGGLE`, `DIM_START`, and `DIM_STOP`.
 
 ---
 

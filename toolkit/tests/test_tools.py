@@ -894,7 +894,7 @@ async def test_dimmer_on_and_off_become_dim_and_pulse_is_refused() -> None:
 
 
 @pytest.mark.asyncio
-async def test_dimmer_fade_is_sent_and_clamped() -> None:
+async def test_dimmer_fade_outside_0_255_is_rejected() -> None:
     gateway = FakeGateway(remote_debugging=True, capabilities=[])
     gateway.devices = [
         {
@@ -908,26 +908,33 @@ async def test_dimmer_fade_is_sent_and_clamped() -> None:
     await gateway.start()
     session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
     try:
-        refused = await device_command(
+        refused_type = await device_command(
             session, device_id="dim-0", action="DIM", value=40, fade=True, confirmed=True
         )
-        sent = await device_command(
-            session,
-            device_id="dim-0",
-            action="DIM",
-            value=40,
-            fade=300,
-            confirmed=True,
+        refused_high = await device_command(
+            session, device_id="dim-0", action="DIM", value=40, fade=300, confirmed=True
+        )
+        refused_low = await device_command(
+            session, device_id="dim-0", action="DIM", value=40, fade=-1, confirmed=True
+        )
+        instant = await device_command(
+            session, device_id="dim-0", action="DIM", value=40, fade=0, confirmed=True
+        )
+        full = await device_command(
+            session, device_id="dim-0", action="DIM", value=40, fade=255, confirmed=True
         )
     finally:
         await session.stop()
         await gateway.stop()
-    assert refused.data["sent"] is False
-    assert "geheel getal" in refused.message
-    assert sent.data["sent"] is True
-    assert sent.data["fade"] == 255
+    for refused in (refused_type, refused_high, refused_low):
+        assert refused.data["sent"] is False
+        assert "0 tot en met 255" in refused.message
+    assert instant.data["sent"] is True
+    assert instant.data["fade"] == 0
+    assert full.data["fade"] == 255
     assert gateway.command_calls == [
-        {"device_id": "dim-0", "action": "DIM", "value": 40, "fade": 255}
+        {"device_id": "dim-0", "action": "DIM", "value": 40, "fade": 0},
+        {"device_id": "dim-0", "action": "DIM", "value": 40, "fade": 255},
     ]
 
 

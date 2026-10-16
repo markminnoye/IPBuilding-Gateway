@@ -897,8 +897,8 @@ async def device_command(
     The device type comes from list_devices. Dimmers are translated before
     anything is sent: ON becomes DIM 100, OFF becomes DIM 0, and PULSE is refused.
     ``fade`` is optional for DIM, ON, and OFF: omit it or pass 0 for an instant
-    change. 1–255 lengthens the ramp. Values outside 0–255 are clamped. The
-    module reports the end level before the lamp finishes.
+    change. 1–255 lengthens the ramp. A non-integer or a value outside 0–255
+    is rejected. The module reports the end level before the lamp finishes.
     """
     device_id = (device_id or "").strip()
     requested = (action or "").strip().upper()
@@ -932,9 +932,9 @@ async def device_command(
         return prepared
     action_name, value, note = prepared
     if action_name == "DIM" and fade is not None:
-        if isinstance(fade, bool) or not isinstance(fade, int):
+        if isinstance(fade, bool) or not isinstance(fade, int) or not 0 <= fade <= 255:
             return ToolResult(
-                "Fade moet een geheel getal zijn. Nog niet verstuurd.",
+                "Fade moet een geheel getal van 0 tot en met 255 zijn. Nog niet verstuurd.",
                 {
                     "ok": False,
                     "kind": KIND_OTHER,
@@ -943,10 +943,6 @@ async def device_command(
                     "action": action_name,
                 },
             )
-        if fade < 0:
-            fade = 0
-        elif fade > 255:
-            fade = 255
     preview = {
         "ok": False,
         "kind": "confirmation_required",

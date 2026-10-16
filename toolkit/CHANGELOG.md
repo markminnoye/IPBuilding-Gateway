@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- `device_command` sends dimmer DIM, ON, and OFF with fade 0 unless `fade` (0–255, clamped) is set. Toolkit version stays 0.1.2; this rides with the next toolkit release.
+- `device_command` sends dimmer DIM, ON, and OFF with fade 0 unless `fade` is set. A fade outside 0–255, or not an integer, is rejected and not sent. Toolkit version stays 0.1.2; this rides with the next toolkit release.
 
 ## 0.1.2 — 2026-10-16
 

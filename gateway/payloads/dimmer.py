@@ -18,7 +18,7 @@ Command frames: ``<S|C><channel><value_code>1<fade>``
   and the scale is not exact. The module answers at once with the end level,
   so a client can show the target while the lamp is still moving. A value
   above 255 wraps on the module (300 behaved as 44, 999 as 231). This encoder
-  clamps to 0–255 and never sends a wrapped value. The gateway default is
+  rejects a fade outside 0–255 so a wrapped value never reaches the wire. The gateway default is
   ``000`` (``S0991000`` / ``C0001000``). Older captures used fade ``030``
   (``S0991030``), which ramps. Mid-level fades and the exact scale are unmeasured.
 
@@ -80,7 +80,7 @@ from gateway.models import DimmerCommand, DimmerStatus
 from gateway.payloads.dialects import KESSEL_LO, TORHOUT
 
 # ``1`` + three fade digits. Any 000–999 is accepted so an echo still decodes.
-# The encoder clamps to 000–255 before sending.
+# The encoder rejects a fade outside 000–255 and does not send it.
 _DIMMER_CMD_RE = re.compile(
     r"^(?P<prefix>[SC])(?P<channel>\d)(?P<value>\d{2})1(?P<fade>\d{3})$"
 )
@@ -257,30 +257,27 @@ def encode_dimmer_status_poll(channel: int) -> bytes:
     return f"I{channel}000000".encode("ascii")
 
 
-def clamp_fade(fade: int) -> int:
-    """Clamp a fade to 0–255.
-
-    The module stores the fade in one byte and wraps above 255 (300 behaved
-    as 44, 999 as 231). Clamping keeps a too-large value from becoming a
-    short fade. ``bool`` is rejected because it is an ``int`` subclass.
-    """
-    if isinstance(fade, bool) or not isinstance(fade, int):
-        raise TypeError("fade must be an integer")
-    if fade < 0:
-        return 0
-    if fade > 255:
-        return 255
-    return fade
+_FADE_ERROR = "fade must be an integer from 0 to 255"
 
 
 def _fade_digits(fade: int) -> str:
-    return f"{clamp_fade(fade):03d}"
+    """Format a fade of 0–255 as three digits.
+
+    A non-integer raises ``TypeError``. A value outside 0–255 raises
+    ``ValueError``. The module wraps above 255, so an out-of-range fade is
+    refused here and never put on the wire. ``bool`` is not an integer.
+    """
+    if isinstance(fade, bool) or not isinstance(fade, int):
+        raise TypeError(_FADE_ERROR)
+    if fade < 0 or fade > 255:
+        raise ValueError(_FADE_ERROR)
+    return f"{fade:03d}"
 
 
 def encode_dim_command(cmd: DimmerCommand, fade: int = 0) -> bytes:
     """Encode hub→dimmer DIM: ``S<ch><value_code>1<fade>``.
 
-    ``fade`` defaults to 0 (instant, ``000``) and is clamped to 0–255.
+    ``fade`` defaults to 0 (instant, ``000``). Outside 0–255 raises ``ValueError``.
     """
     code = _percent_to_value_code(cmd.level)
     wire = f"S{cmd.channel}{code}1{_fade_digits(fade)}".encode("ascii")
@@ -290,7 +287,7 @@ def encode_dim_command(cmd: DimmerCommand, fade: int = 0) -> bytes:
 def encode_dim_off(channel: int, fade: int = 0) -> bytes:
     """Encode hub→dimmer OFF: ``C<ch>001<fade>``.
 
-    ``fade`` defaults to 0 (instant, ``000``) and is clamped to 0–255.
+    ``fade`` defaults to 0 (instant, ``000``). Outside 0–255 raises ``ValueError``.
     Value ``00`` is the cut. It is not a fade.
     """
     return f"C{channel}001{_fade_digits(fade)}".encode("ascii")
