@@ -131,6 +131,10 @@ class GatewaySession:
         self.notes: list[dict[str, str]] = []
         # Latest free-text feedback about the tool. Empty until export or send.
         self.tool_feedback = ""
+        # Core suspicion and a question for the developers. Empty until set.
+        # A later call without the argument keeps the last text.
+        self.suspicion = ""
+        self.developer_question = ""
         # Report choice. A later call without the argument keeps this value.
         self.include_events = True
         self.want_frames = False
@@ -550,6 +554,18 @@ class GatewaySession:
             await asyncio.sleep(0.02)
         return self.state == "connected" and self._session_up
 
+    def event_stream_state(self) -> str:
+        """One word for the live event socket, shared by status and events.
+
+        ``connected`` only after the snapshot is applied. Until then the
+        socket may already be open, and that stays ``connecting``.
+        """
+        if self._socket_ready():
+            return "connected"
+        if self.state in {"stopped", "configuration", "disconnected", "idle"}:
+            return self.state
+        return "connecting"
+
     def _socket_ready(self) -> bool:
         ws = self._ws
         return self._session_up and ws is not None and not ws.closed
@@ -614,7 +630,8 @@ class GatewaySession:
         log.info("websocket connecting")
         async with client.ws_connect(self.ws_url, heartbeat=20.0) as ws:
             self._ws = ws
-            self.state = "connected"
+            # Stay on connecting until the snapshot. A socket log can already
+            # say connected; status and the activiteitenlog wait for this.
             try:
                 async for message in ws:
                     if self._stopped.is_set():

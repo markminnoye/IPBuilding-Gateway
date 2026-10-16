@@ -121,9 +121,11 @@ async def test_export_report_splits_evidence_and_redacts_free_text() -> None:
     )
     hidden = await export_session(session, note=note)
     report = hidden.data["report"]
-    assert report.startswith("---")
+    assert report.startswith("```yaml\n")
+    assert "\n```\n" in report
     assert FEEDBACK_WARNING in report
-    assert report.index("---") < report.index(FEEDBACK_WARNING)
+    assert report.index("```yaml") < report.index(FEEDBACK_WARNING)
+    assert "\n---\n" not in report
     for heading in (
         "1. Samenvatting",
         "2. Omgeving",
@@ -161,7 +163,8 @@ async def test_export_report_splits_evidence_and_redacts_free_text() -> None:
     stored = installation_id()
     assert hidden.data["installatie_id"] == stored
     assert f"installatie_id: {stored}" in hidden.data["frontmatter"]
-    assert hidden.data["frontmatter"].splitlines()[0] == "---"
+    assert hidden.data["frontmatter"].splitlines()[0] == "```yaml"
+    assert hidden.data["frontmatter"].splitlines()[-1] == "```"
 
     raw_session = GatewaySession("192.0.2.10:9", backoff_start=30, backoff_max=30)
     shown = await export_session(raw_session, note=note, redact=False)
@@ -199,9 +202,9 @@ async def test_send_report_waits_for_confirmation_and_never_sends(
     assert parsed["address"] == "intake@example.invalid"
     assert parsed["subject"].startswith(f"[DEBUG] {installation_id()} | lamp uit | ")
     assert re.search(r"\d{4}-\d{2}-\d{2}T", parsed["subject"])
-    assert parsed["body"].startswith("---")
+    assert parsed["body"].startswith("```yaml\n")
     assert FEEDBACK_WARNING in parsed["body"]
-    assert parsed["body"].index("---") < parsed["body"].index(FEEDBACK_WARNING)
+    assert parsed["body"].index("```yaml") < parsed["body"].index(FEEDBACK_WARNING)
     for key in (
         "Samenvatting:",
         "Omgeving:",
@@ -217,7 +220,14 @@ async def test_send_report_waits_for_confirmation_and_never_sends(
     assert CONTACT_ADDRESS not in parsed["body"]
     assert "niet verstuurd" in sent.message
     assert "geen bevestiging" in sent.message
-    assert "intake@example.invalid" not in sent.message.split("mailto:", 1)[0]
+    assert "Jij stuurt het rapport zelf" in sent.message
+    before_link, _, _rest = sent.message.partition("mailto:")
+    assert "intake@example.invalid" in before_link
+    assert "Adres:" in before_link
+    assert "Onderwerp:" in before_link
+    assert "1. Samenvatting" in before_link
+    assert sent.data["subject"] == parsed["subject"]
+    assert sent.data["address"] == "intake@example.invalid"
 
     monkeypatch.setenv("IPBUILDING_REPORT_SEND", "0")
     assert report_send_enabled() is False
@@ -345,6 +355,8 @@ async def test_decode_test_names_a_relay_without_a_dialect_and_a_total_miss() ->
 
 
 def test_name_masks_keep_the_first_character_and_number_collisions() -> None:
+    assert mask_stem("Living") == "Lxxxxx"
+    assert len(mask_stem("Living")) == len("Living")
     assert mask_stem("Traphal") == "Txxxxxx"
     assert mask_stem("Kamer links") == "K" + ("x" * 10)
     assert name_masks(["Traphal"], "Traphal") == {"Traphal": "Txxxxxx"}
@@ -465,6 +477,86 @@ async def test_report_subject_uses_the_same_name_masks(
     assert "Txxxxxx-1 en Txxxxxx-2" in parsed["subject"]
     assert "masks" not in sent.data
     assert "Traphal" not in sent.message
+    assert "Onderwerp:" in sent.message
+    assert "Txxxxxx-1 en Txxxxxx-2" in sent.message.split("mailto:", 1)[0]
+
+
+@pytest.mark.asyncio
+async def test_report_keeps_model_codes_and_masks_the_subject(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("IPBUILDING_REPORT_SEND", raising=False)
+    monkeypatch.setenv("IPBUILDING_REPORT_INTAKE", "intake@example.invalid")
+    session = GatewaySession("192.0.2.40:9", backoff_start=30, backoff_max=30)
+    session.devices = {
+        "dev-1": {
+            "id": "dev-1",
+            "name": "IP0300PoE",
+            "room": "Living",
+            "device_type": "dimmer",
+        }
+    }
+    session.modules = {
+        "mod-d": {
+            "id": "mod-d",
+            "type": "dimmer",
+            "model": "IP0300PoE",
+            "name": "IP0300PoE",
+        }
+    }
+    exported = await export_session(session, note="Living bleef donker op de IP0300PoE")
+    report = exported.data["report"]
+    assert "IP0300PoE" in report
+    assert "model: IP0300PoE" in report
+    assert "Lxxxxx" in report
+    assert "Living" not in report
+    sent = await send_report(
+        session,
+        confirmed=True,
+        korte_fout="Living op 192.0.2.40 IP0300PoE",
+    )
+    subject = sent.data["subject"]
+    assert "Lxxxxx" in subject
+    assert "IP0300PoE" in subject
+    assert "[adres]" in subject
+    assert "Living" not in subject
+    assert "192.0.2.40" not in subject
+    assert subject in sent.message.split("mailto:", 1)[0]
+
+
+@pytest.mark.asyncio
+async def test_suspicion_and_developer_question_land_in_their_sections() -> None:
+    session = GatewaySession("192.0.2.41:9", backoff_start=30, backoff_max=30)
+    session.devices = {
+        "dev-1": {
+            "id": "dev-1",
+            "name": "Schemerlamp",
+            "room": "Living",
+            "device_type": "dimmer",
+        }
+    }
+    exported = await export_session(
+        session,
+        note="De lamp bleef aan",
+        vermoeden="Schemerlamp negeert DIM. Buiten deze sessie, 8 oktober, build 1.8.0-dev.10.",
+        open_vraag="Horen de ontwikkelaars dit bij model IP0300PoE?",
+    )
+    report = exported.data["report"]
+    suspected = report.split("Vermoeden", 1)[1].split("5. Open vragen", 1)[0]
+    questions = report.split("5. Open vragen", 1)[1].split("6. Feedback over de tool", 1)[0]
+    summary = report.split("1. Samenvatting", 1)[1].split("2. Omgeving", 1)[0]
+    assert "negeert DIM" in suspected
+    assert "8 oktober" in suspected
+    assert "1.8.0-dev.10" in suspected
+    assert "S" + ("x" * 10) in suspected
+    assert "Schemerlamp" not in report
+    assert "IP0300PoE" in questions
+    assert "ontwikkelaars" in questions
+    assert "negeert DIM" not in summary
+    assert "Horen de ontwikkelaars" not in summary
+    kept = await export_session(session)
+    assert "negeert DIM" in kept.data["report"]
+    assert "Horen de ontwikkelaars" in kept.data["report"]
 
 
 @pytest.mark.asyncio
@@ -504,9 +596,10 @@ async def test_report_times_are_local_and_the_template_is_complete() -> None:
         "7. Bijlage",
     ):
         assert heading in report
-    assert report.splitlines()[0] == "---"
+    assert report.splitlines()[0] == "```yaml"
     assert FEEDBACK_WARNING in report
-    assert report.index("---") < report.index(FEEDBACK_WARNING)
+    assert report.index("```yaml") < report.index(FEEDBACK_WARNING)
+    assert "\n---\n" not in report
     assert "installatie_id:" in result.data["frontmatter"]
     assert result.message.startswith(report)
 
@@ -704,7 +797,11 @@ async def test_export_shows_command_and_decode_with_masked_names() -> None:
     await gateway.start()
     session = GatewaySession(f"localhost:{gateway.port}", backoff_start=0.05)
     session.devices = {
-        "192.0.2.40-1": {"id": "192.0.2.40-1", "name": "Traphal"},
+        "192.0.2.40-1": {
+            "id": "192.0.2.40-1",
+            "name": "Traphal",
+            "device_type": "relay",
+        },
     }
     try:
         await device_command(session, device_id="192.0.2.40-1", action="ON", confirmed=False)
@@ -913,6 +1010,14 @@ def test_skill_describes_the_report_and_the_backlog() -> None:
     assert "doorsturen" in text
     assert "hoofdletterongevoelig" in text
     assert "spelling in de inventaris" in text
+    assert "Lxxxxx" in text
+    assert "IP0300PoE" in text
+    assert "open_vraag" in text
+    assert "tijdens het schakelen" in text
+    assert "de tester het rapport zelf verstuurt" in text
+    assert "```yaml" in text
+    assert "drie streepjes" in text
+    assert "datzelfde woord staat bij de gebeurtenissen" in text
     assert "Toegang op afstand" not in text
     assert "Debuggen en bedienen op afstand" not in text
     assert "onder **Debug**" in text

@@ -81,3 +81,6 @@ ipbuilding_gateway/gateway/
 # Debug toolkit bundle output
 toolkit/dist/
 toolkit/.build/
+
+# Claude Code plugin eval output
+toolkit/evals/results/

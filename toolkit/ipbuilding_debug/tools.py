@@ -32,6 +32,7 @@ from ipbuilding_debug.errors import (
     MSG_NOT_IN_THIS_GATEWAY_VERSION,
     MSG_REMOTE_DEBUGGING_OFF,
     SWITCH_NAME,
+    SWITCH_NAME_NL,
     PLANNED_CAPABILITIES,
     ClassifiedError,
     gate_feature,
@@ -106,10 +107,15 @@ COMMAND_WARNING = (
     "De gateway geeft ok: true zodra het commando is verstuurd, "
     "ook als de module niet antwoordt. "
     "Dat bewijst niet dat de lamp veranderde. "
-    "Kijk fysiek, of later via frames. Er is geen ruw pakket verstuurd."
+    "Vraag op het moment van schakelen wat de tester ziet, "
+    "bijvoorbeeld of het traag reageerde. "
+    "Er is geen ruw pakket verstuurd."
 )
 
 DEVICE_ACTIONS = ("ON", "OFF", "PULSE", "TOGGLE", "DIM", "DIM_START", "DIM_STOP")
+RELAY_ACTIONS = frozenset({"ON", "OFF", "PULSE", "TOGGLE"})
+DIMMER_ACTIONS = frozenset({"DIM", "TOGGLE", "DIM_START", "DIM_STOP"})
+_DEVICE_KINDS = frozenset({"relay", "dimmer", "input"})
 
 BUFFER_EVENT_TYPES = (
     "state_changed",
@@ -155,11 +161,13 @@ def _from_error(error: ClassifiedError, **extra: Any) -> ToolResult:
 
 REASON_UNSUPPORTED = "Deze gateway-versie kan dit nog niet."
 REASON_SWITCH_OFF = (
-    f"De schakelaar '{SWITCH_NAME}' staat uit. "
+    f"De schakelaar '{SWITCH_NAME}' staat uit "
+    f"(Nederlands: '{SWITCH_NAME_NL}'). "
     "Dit werkt pas als die aan staat."
 )
 REASON_SWITCH_OFF_LOGS = (
-    f"De schakelaar '{SWITCH_NAME}' staat uit. "
+    f"De schakelaar '{SWITCH_NAME}' staat uit "
+    f"(Nederlands: '{SWITCH_NAME_NL}'). "
     "Logregels komen dan niet binnen. Knoppen en statuswijzigingen blijven wel binnenkomen."
 )
 REASON_UNKNOWN = "De gateway meldt niet of dit nu werkt."
@@ -322,7 +330,7 @@ async def connection_status(
                 "ok": False,
                 "connected": False,
                 "kind": error.kind,
-                "connection": session.state,
+                "connection": session.event_stream_state(),
                 "buffer": _buffer_summary(session),
                 "missing_capabilities": list(PLANNED_CAPABILITIES),
                 "capability_status": _feature_rows(
@@ -337,11 +345,13 @@ async def connection_status(
         return _from_error(
             error,
             connected=False,
-            connection=session.state,
+            connection=session.event_stream_state(),
             buffer=_buffer_summary(session),
             **where,
         )
 
+    # Let the snapshot land so connection matches the activiteitenlog.
+    await session.wait_until_connected(2)
     remote = status.get("remote_debugging") if isinstance(status, dict) else None
     if not isinstance(remote, bool):
         remote = None
@@ -411,13 +421,18 @@ async def connection_status(
     note = _unavailable_note(blocked)
     if note and message not in (MSG_REMOTE_DEBUGGING_OFF, MSG_LOG_LEVEL_RATE_LIMITED):
         message = f"{message} {note}"
+    live = session.event_stream_state()
+    if live != "connected" and kind == "connected":
+        kind = "connecting"
+        message = f"{message} {_CONNECTION_WAIT}"
     return ToolResult(
         message,
         {
             "ok": ok,
             "connected": True,
             "kind": kind,
-            "connection": session.state,
+            "connection": live,
+            "connection_note": _connection_note(live),
             "version": (status or {}).get("version"),
             "remote_debugging": remote,
             "capabilities": caps,
@@ -615,11 +630,16 @@ async def recent_events(
             "in het activiteitenlog (state_changed, button_event: press, single_press, release "
             "en wat de gateway verder stuurde)."
         )
+    live = session.event_stream_state()
+    if events and live == "connecting":
+        message = f"{message} {_CONNECTION_WAIT}"
     return ToolResult(
         message,
         {
             "ok": True,
             "kind": "events",
+            "connection": live,
+            "connection_note": _connection_note(live),
             "events": events,
             "buffer": _buffer_summary(session),
         },
@@ -765,6 +785,104 @@ async def discover(session: GatewaySession, *, confirmed: bool = False) -> ToolR
     )
 
 
+def _device_kind(session: GatewaySession, device: dict[str, Any]) -> str:
+    """relay, dimmer, or input from the device, else from its module."""
+    raw = str(device.get("device_type") or "").strip().lower()
+    if raw in _DEVICE_KINDS:
+        return raw
+    module_id = device.get("module_id")
+    module = session.modules.get(str(module_id), {}) if module_id else {}
+    if isinstance(module, dict):
+        raw = str(module.get("type") or "").strip().lower()
+        if raw in _DEVICE_KINDS:
+            return raw
+    return ""
+
+
+async def _load_device(
+    session: GatewaySession, device_id: str
+) -> tuple[dict[str, Any] | None, ToolResult | None]:
+    """Device from the session, or from list_devices when that id is missing."""
+    current = session.devices.get(device_id)
+    if isinstance(current, dict):
+        return current, None
+    loaded = await list_devices(session)
+    current = session.devices.get(device_id)
+    if isinstance(current, dict):
+        return current, None
+    if loaded.data.get("ok") is not True:
+        return None, loaded
+    return None, None
+
+
+def _prepare_device_action(
+    kind: str, action_name: str, value: int | None
+) -> tuple[str, int | None, str] | ToolResult:
+    """Map a request onto the actions the gateway accepts for this type.
+
+    A dimmer accepts DIM 0-100, TOGGLE, DIM_START, and DIM_STOP. ON becomes
+    DIM 100 and OFF becomes DIM 0. PULSE is refused. A relay accepts ON, OFF,
+    PULSE, and TOGGLE.
+    """
+    if kind == "dimmer":
+        note = ""
+        if action_name == "ON":
+            action_name, value = "DIM", 100
+            note = "ON op een dimmer wordt DIM 100."
+        elif action_name == "OFF":
+            action_name, value = "DIM", 0
+            note = "OFF op een dimmer wordt DIM 0."
+        elif action_name == "PULSE":
+            return ToolResult(
+                "PULSE werkt niet op een dimmer. "
+                "Een dimmer neemt DIM met een waarde van 0 tot 100, TOGGLE, "
+                "DIM_START of DIM_STOP. Nog niet verstuurd.",
+                {"ok": False, "kind": KIND_OTHER, "sent": False, "action": "PULSE"},
+            )
+        elif action_name not in DIMMER_ACTIONS:
+            return ToolResult(
+                "Deze actie werkt niet op een dimmer. "
+                "Gebruik DIM (0 tot 100), TOGGLE, DIM_START of DIM_STOP. "
+                "Nog niet verstuurd.",
+                {"ok": False, "kind": KIND_OTHER, "sent": False, "action": action_name},
+            )
+        if action_name == "DIM" and value is None:
+            return ToolResult(
+                "DIM heeft een waarde nodig van 0 tot en met 100. Nog niet verstuurd.",
+                {
+                    "ok": False,
+                    "kind": "confirmation_required",
+                    "sent": False,
+                    "action": action_name,
+                },
+            )
+        if action_name == "DIM" and not 0 <= int(value) <= 100:
+            return ToolResult(
+                "DIM-waarde moet tussen 0 en 100 liggen. Nog niet verstuurd.",
+                {"ok": False, "kind": KIND_OTHER, "sent": False, "action": action_name},
+            )
+        return action_name, value, note
+    if kind == "relay":
+        if action_name not in RELAY_ACTIONS:
+            return ToolResult(
+                "Deze actie werkt niet op een relais. "
+                "Gebruik ON, OFF, PULSE of TOGGLE. Nog niet verstuurd.",
+                {"ok": False, "kind": KIND_OTHER, "sent": False, "action": action_name},
+            )
+        return action_name, value, ""
+    if kind == "input":
+        return ToolResult(
+            "Een input of knop neemt geen schakelcommando. Nog niet verstuurd.",
+            {"ok": False, "kind": KIND_OTHER, "sent": False, "action": action_name},
+        )
+    return ToolResult(
+        "Het type van dit apparaat is niet bekend. "
+        "Roep list_devices aan en gebruik het id en het type daaruit. "
+        "Nog niet verstuurd.",
+        {"ok": False, "kind": KIND_OTHER, "sent": False, "action": action_name},
+    )
+
+
 async def device_command(
     session: GatewaySession,
     *,
@@ -773,47 +891,62 @@ async def device_command(
     value: int | None = None,
     confirmed: bool = False,
 ) -> ToolResult:
-    """Switch or dim one device via POST /devices/{id}/command."""
+    """Switch or dim one device via POST /devices/{id}/command.
+
+    The device type comes from list_devices. Dimmers are translated before
+    anything is sent: ON becomes DIM 100, OFF becomes DIM 0, and PULSE is refused.
+    """
     device_id = (device_id or "").strip()
-    action_name = (action or "").strip().upper()
+    requested = (action or "").strip().upper()
     if not device_id:
         return ToolResult(
             "Er is geen apparaat opgegeven. Gebruik het id uit list_devices.",
             {"ok": False, "kind": KIND_OTHER, "sent": False},
         )
-    if action_name not in DEVICE_ACTIONS:
+    if requested not in DEVICE_ACTIONS:
         return ToolResult(
-            "Onbekende actie. Gebruik ON, OFF, PULSE, TOGGLE, DIM, DIM_START of DIM_STOP.",
-            {"ok": False, "kind": KIND_OTHER, "sent": False, "action": action_name},
-        )
-    if action_name == "DIM" and value is None:
-        return ToolResult(
-            "DIM heeft een waarde nodig van 0 tot en met 100. Nog niet verstuurd.",
-            {"ok": False, "kind": "confirmation_required", "sent": False, "action": action_name},
+            "Onbekende actie. "
+            "Een relais neemt ON, OFF, PULSE of TOGGLE. "
+            "Een dimmer neemt DIM (0 tot 100), TOGGLE, DIM_START of DIM_STOP.",
+            {"ok": False, "kind": KIND_OTHER, "sent": False, "action": requested},
         )
     if value is not None:
         value = int(value)
-        if action_name == "DIM" and not 0 <= value <= 100:
-            return ToolResult(
-                "DIM-waarde moet tussen 0 en 100 liggen. Nog niet verstuurd.",
-                {"ok": False, "kind": KIND_OTHER, "sent": False, "action": action_name},
-            )
+    device, load_error = await _load_device(session, device_id)
+    if device is None:
+        if load_error is not None:
+            return load_error
+        return ToolResult(
+            "Dit apparaat staat niet in de inventaris. "
+            "Roep list_devices aan en gebruik het id daaruit. Nog niet verstuurd.",
+            {"ok": False, "kind": KIND_OTHER, "sent": False, "action": requested},
+        )
+    prepared = _prepare_device_action(_device_kind(session, device), requested, value)
+    if isinstance(prepared, ToolResult):
+        prepared.data["device_id"] = device_id
+        prepared.data["requested_action"] = requested
+        return prepared
+    action_name, value, note = prepared
     preview = {
         "ok": False,
         "kind": "confirmation_required",
         "sent": False,
         "device_id": device_id,
         "action": action_name,
+        "requested_action": requested,
         "value": value,
+        "translated": bool(note),
     }
     if not confirmed:
         level = f" naar {value}" if value is not None else ""
+        lead = f"{note} " if note else ""
         return ToolResult(
             (
-                f"Nog niet verstuurd. Dit zet apparaat {device_id} op {action_name}{level} "
-                "via het gewone commando van de gateway. "
+                f"{lead}Nog niet verstuurd. Dit zet apparaat {device_id} op {action_name}{level} "
+                "via het commando van de gateway. "
                 "Een lamp kan aan, uit of anders van helderheid gaan. "
-                "Vraag de tester expliciet of dit mag. "
+                "Vraag de tester op dat moment wat hij ziet, "
+                "bijvoorbeeld of het traag reageerde. "
                 "Roep device_command daarna opnieuw aan met confirmed=true. "
                 + COMMAND_WARNING
             ),
@@ -836,6 +969,7 @@ async def device_command(
             confirm_ms=None,
             reported=None,
             confirmation_available=False,
+            note=note,
         )
         return _from_error(call_error, **preview)
     gateway_ok = isinstance(body, dict) and body.get("ok") is True
@@ -851,21 +985,27 @@ async def device_command(
         confirm_ms=confirmation["confirm_ms"],
         reported=confirmation["reported"],
         confirmation_available=confirmation["available"],
+        note=note,
     )
+    message = confirmation["message"]
+    if note:
+        message = f"{note} {message}"
     return ToolResult(
-        confirmation["message"],
+        message,
         {
             "ok": gateway_ok,
             "kind": "command",
             "sent": True,
             "device_id": device_id,
             "action": action_name,
+            "requested_action": requested,
             "value": value,
+            "translated": bool(note),
             "module_confirmed": confirmation["module_confirmed"],
             "confirm_ms": confirmation["confirm_ms"],
             "reported": confirmation["reported"],
             "confirmation_available": confirmation["available"],
-            "warning": confirmation["message"],
+            "warning": message,
             "gateway": body if isinstance(body, dict) else {},
         },
     )
@@ -1190,16 +1330,24 @@ async def export_session(
     redact: bool = True,
     feedback: str = "",
     include_events: bool | None = None,
+    vermoeden: str = "",
+    open_vraag: str = "",
 ) -> ToolResult:
     """Bundle the session. Names are masked and addresses removed unless redact is false."""
     if note or marker:
         await session.annotate(note or marker, marker=marker)
     if feedback.strip():
         session.tool_feedback = feedback.strip()
+    if vermoeden.strip():
+        session.suspicion = vermoeden.strip()
+    if open_vraag.strip():
+        session.developer_question = open_vraag.strip()
     if include_events is not None:
         session.include_events = bool(include_events)
     body = _export_body(session)
     body["feedback"] = session.tool_feedback
+    body["vermoeden"] = session.suspicion
+    body["open_vraag"] = session.developer_question
     body["events_included"] = session.include_events
     hosts = session_hosts(session)
     inventory = _inventory_names(session)
@@ -1242,11 +1390,15 @@ async def send_report(
     korte_fout: str = "",
     feedback: str = "",
     include_events: bool | None = None,
+    vermoeden: str = "",
+    open_vraag: str = "",
 ) -> ToolResult:
-    """Show the filtered report, then a mailto link after an explicit yes.
+    """Show the filtered report. After an explicit yes, show copyable text.
 
-    Nothing is sent from this process. Without an intake address the option
-    is unavailable. With the feature flag off, only the local report remains.
+    Nothing is sent from this process. The tester copies the report, the
+    address, and the masked subject into their own mail program. A mailto
+    link is only an extra. Without an intake address the option is
+    unavailable. With the feature flag off, only the local report remains.
     """
     if not report_send_enabled():
         return ToolResult(
@@ -1264,6 +1416,8 @@ async def send_report(
         redact=True,
         feedback=feedback,
         include_events=include_events,
+        vermoeden=vermoeden,
+        open_vraag=open_vraag,
     )
     report = str(exported.data.get("report") or "")
     if not confirmed:
@@ -1280,28 +1434,33 @@ async def send_report(
         )
     frontmatter = str(exported.data.get("frontmatter") or "")
     # Same map as the report. The mapping itself is not returned.
-    masks = _report_name_masks(
-        _export_body(session),
-        _inventory_names(session),
-        session_hosts(session),
+    raw_body = _export_body(session)
+    hosts = session_hosts(session)
+    inventory = _inventory_names(session)
+    tokens = collect_tokens({"inventory": inventory, "session": raw_body})
+    masks = _report_name_masks(raw_body, inventory, hosts)
+    subject = subject_line(
+        str(exported.data.get("installatie_id") or ""),
+        korte_fout,
+        tokens=tokens,
+        hosts=hosts,
+        masks=masks,
     )
     link = mailto_link(
         address,
-        subject_line(
-            str(exported.data.get("installatie_id") or ""),
-            korte_fout,
-            masks=masks,
-        ),
+        subject,
         email_body(section_map(exported.data), frontmatter),
     )
     return ToolResult(
-        sent_message(link),
+        sent_message(address, subject, report, link),
         {
             "ok": True,
             "kind": "report_mailto",
             "confirmed": True,
             "sent": False,
             "mailto": link,
+            "subject": subject,
+            "address": address,
         },
     )
 
@@ -1332,7 +1491,8 @@ def unavailable_tools(
                     "missing": "remote_debugging",
                     "reason": (
                         f"{tool} is niet te gebruiken: de schakelaar "
-                        f"{SWITCH_NAME} staat uit."
+                        f"'{SWITCH_NAME}' staat uit "
+                        f"(Nederlands: '{SWITCH_NAME_NL}')."
                     ),
                 }
             )
@@ -1587,9 +1747,23 @@ async def _record_command_result(
     confirm_ms: int | None,
     reported: dict[str, Any] | None,
     confirmation_available: bool,
+    note: str = "",
 ) -> None:
     """Store one sent command. Previews never call this."""
     name = _device_display_name(session, device_id)
+    message = _command_result_line(
+        action=action,
+        value=value,
+        name=name,
+        device_id=device_id,
+        ok=ok,
+        error=error,
+        module_confirmed=module_confirmed,
+        confirm_ms=confirm_ms,
+        reported=reported,
+    )
+    if note:
+        message = f"{note} {message}"
     event: dict[str, Any] = {
             "type": "command_result",
             "received_at": _format_local(datetime.now().astimezone()),
@@ -1602,18 +1776,10 @@ async def _record_command_result(
             "confirm_ms": confirm_ms,
             "reported": reported,
             "confirmation_available": confirmation_available,
-            "message": _command_result_line(
-                action=action,
-                value=value,
-                name=name,
-                device_id=device_id,
-                ok=ok,
-                error=error,
-                module_confirmed=module_confirmed,
-                confirm_ms=confirm_ms,
-                reported=reported,
-            ),
+            "message": message,
     }
+    if note:
+        event["translation"] = note
     if name:
         event["name"] = name
     await session.buffer.append(event)
@@ -1786,14 +1952,30 @@ def _diff_sentence(diff: dict[str, list[str]]) -> str:
     return " ".join(parts) + "."
 
 
+_CONNECTION_WAIT = (
+    "De live-verbinding is connecting. "
+    "connected op de gateway betekent dat hij antwoordt, niet dat gebeurtenissen al binnenkomen. "
+    "Zeg connected pas als connection connected is. Dat is hetzelfde woord als bij de gebeurtenissen."
+)
+
+
+def _connection_note(live: str) -> str:
+    if live == "connected":
+        return "connection is connected, hetzelfde woord als bij de gebeurtenissen."
+    if live == "connecting":
+        return _CONNECTION_WAIT
+    return f"connection is {live}."
+
+
 def _buffer_summary(session: GatewaySession) -> dict[str, Any]:
     gaps = session.gap_events()
+    live = session.event_stream_state()
     return {
         "count": len(session.buffer),
         "dropped": session.buffer.dropped,
         "gaps": len(gaps),
         "last_gap": gaps[-1] if gaps else None,
-        "connection": session.state,
+        "connection": live,
     }
 
 
@@ -1985,7 +2167,7 @@ def _export_body(session: GatewaySession) -> dict[str, Any]:
             "hub_role": status.get("hub_role"),
             "remote_debugging": status.get("remote_debugging"),
             "capabilities": _capabilities(status),
-            "connection": session.state,
+            "connection": session.event_stream_state(),
             "address": session.host,
         },
         # Random local id. The gateway instance id is a different value and

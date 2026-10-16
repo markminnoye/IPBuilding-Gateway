@@ -1,0 +1,1 @@
+De gateway is bereikbaar. Versie 1.8.0-dev.19. De schakelaar Bediening op afstand (voor debuggen) staat aan. Remote control (for debugging) is on. log_stream, udp_frame en raw_send zijn actief. address_source is manual. Geen adres in deze tekst.

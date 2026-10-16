@@ -1,7 +1,7 @@
 {
   "name": "ipbuilding-gateway-tools",
   "displayName": "IPBuilding Gateway Tools",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "IPBuilding Gateway Tools zijn hulpmiddelen voor AI-assistenten zoals Claude.",
   "author": {
     "name": "Sonic Rocket"

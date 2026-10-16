@@ -205,7 +205,10 @@ def _write_manifest(dest: Path, version: str) -> None:
         },
         {
             "name": "device_command",
-            "description": "Eén apparaat schakelen of dimmen nadat de tester het bevestigd heeft.",
+            "description": (
+                "Eén apparaat schakelen of dimmen nadat de tester het bevestigd heeft. "
+                "Bij een commandotest eerst frames meelezen."
+            ),
         },
         {
             "name": "probe_generation",
@@ -237,7 +240,8 @@ def _write_manifest(dest: Path, version: str) -> None:
                 "name": "send_report",
                 "description": (
                     "Rapport versturen, sturen of doorsturen naar Sonic Rocket, naar Mark, "
-                    "naar de ontwikkelaars of de developers. De toolkit verstuurt niets zelf."
+                    "naar de ontwikkelaars of de developers. De toolkit verstuurt niets zelf. "
+                    "De tester stuurt de tekst. Het antwoord toont het adres en het onderwerp."
                 ),
             }
         )
@@ -355,13 +359,17 @@ def _validate_skill_frontmatter(skill_dir: Path) -> str:
 
 def _plugin_files() -> list[Path]:
     skip = {".build", "dist", "__pycache__", ".pytest_cache"}
-    return sorted(
-        path
-        for path in TOOLKIT.rglob("*")
-        if path.is_file()
-        and not skip.intersection(path.relative_to(TOOLKIT).parts)
-        and path.suffix != ".pyc"
-    )
+    found: list[Path] = []
+    for path in TOOLKIT.rglob("*"):
+        if not path.is_file() or path.suffix == ".pyc":
+            continue
+        relative = path.relative_to(TOOLKIT)
+        if skip.intersection(relative.parts):
+            continue
+        if relative.parts[:2] == ("evals", "results"):
+            continue
+        found.append(path)
+    return sorted(found)
 
 
 def _write_zip(dest: Path, entries: list[tuple[Path, str]]) -> None:

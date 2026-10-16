@@ -54,9 +54,28 @@ def test_toolkit_sources_have_no_private_addresses() -> None:
     assert offenders == []
 
 
+def test_plugin_evals_stay_out_of_ci() -> None:
+    note = (TOOLKIT / "evals" / "README.md").read_text(encoding="utf-8")
+    assert "claude plugin eval" in note
+    assert "not part of CI" in note
+    cases = [
+        path
+        for path in (TOOLKIT / "evals").iterdir()
+        if path.is_dir() and (path / "prompt.md").is_file()
+    ]
+    assert 6 <= len(cases) <= 8
+    prompts = "\n".join((path / "prompt.md").read_text(encoding="utf-8") for path in cases)
+    assert "Hoe wordt het weer morgen?" in prompts
+    assert "Lamp Noord" in prompts
+    workflow = (TOOLKIT.parent / ".github" / "workflows" / "toolkit.yml").read_text(encoding="utf-8")
+    assert "plugin eval" not in workflow
+    ignore = (TOOLKIT.parent / ".gitignore").read_text(encoding="utf-8")
+    assert "toolkit/evals/results/" in ignore
+
+
 def test_versions_match() -> None:
     versions_agree()
-    assert file_version() == "0.1.1"
+    assert file_version() == "0.1.2"
     plugin = json.loads((TOOLKIT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
     setting = plugin["userConfig"]["gateway_address"]
     assert setting["required"] is False
@@ -128,6 +147,12 @@ def test_skill_mentions_the_switch_up_front_and_at_the_end() -> None:
     assert "niet pas na een fout" in text
     assert "Nederlands" in text
     assert "not available in this gateway version yet" in text
+    assert "toolkit_version" in text
+    assert "DIM 100" in text
+    assert "Zag je het traag reageren?" in text
+    assert "Home Assistant integration" not in (
+        TOOLKIT / "ipbuilding_debug" / "server.py"
+    ).read_text(encoding="utf-8")
 
 
 def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
@@ -152,6 +177,10 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
     assert "Voor ontwikkelaars (Claude Code)" in text
     assert (
         "claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools"
+        in text
+    )
+    assert (
+        "claude plugin install ipbuilding-gateway-tools --marketplace markminnoye/IPBuilding-Gateway"
         in text
     )
     assert "~/.claude/skills/" not in text
@@ -181,6 +210,25 @@ def test_tester_guide_is_plain_dutch_without_a_terminal() -> None:
         "claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools"
         in readme
     )
+    assert (
+        "claude plugin install ipbuilding-gateway-tools --marketplace markminnoye/IPBuilding-Gateway"
+        in readme
+    )
+    plugin = json.loads((TOOLKIT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    root_market = json.loads(
+        (TOOLKIT.parent / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8")
+    )
+    assert root_market["owner"]["name"] == "Sonic Rocket"
+    assert root_market["description"].startswith(
+        "IPBuilding Gateway Tools zijn hulpmiddelen voor AI-assistenten zoals Claude"
+    )
+    assert root_market["plugins"] == [
+        {
+            "name": "ipbuilding-gateway-tools",
+            "source": "./toolkit",
+            "description": plugin["description"],
+        }
+    ]
 
 
 def _load_staged_version(path: Path, name: str) -> str:

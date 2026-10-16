@@ -60,7 +60,11 @@ Zet de schakelaar weer uit. De add-on start opnieuw en de melding in Home Assist
 
 ## Voor ontwikkelaars (Claude Code)
 
-Pak de zip `ipbuilding-gateway-tools-claude-code` uit. Ga in de map staan waar de uitgepakte map `ipbuilding-gateway-tools` in staat, en voer dit uit: `claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools`. Een rapport sturen kan daar niet.
+Pak de zip `ipbuilding-gateway-tools-claude-code` uit. Ga in de map staan waar de uitgepakte map `ipbuilding-gateway-tools` in staat, en voer dit uit: `claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools`.
+
+Vanuit de repository op GitHub: `claude plugin install ipbuilding-gateway-tools --marketplace markminnoye/IPBuilding-Gateway`. De plug-in blijft in `toolkit/`.
+
+Een rapport sturen kan daar niet.
 
 ## Layout
 
@@ -69,7 +73,7 @@ Pak de zip `ipbuilding-gateway-tools-claude-code` uit. Ga in de map staan waar d
 | `ipbuilding_debug/` | MCP server |
 | `skills/ipbuilding-gateway-tools/SKILL.md` | Session guidance, also sent as the server instructions |
 | `HANDLEIDING.md` | Plain-language install guide |
-| `.claude-plugin/`, `.mcp.json` | Claude Code plugin |
+| `.claude-plugin/`, `.mcp.json` | Claude Code plugin. The repository root has `.claude-plugin/marketplace.json` so GitHub install finds this folder |
 | `scripts/build.py` | One build used locally and in CI |
 | `VERSION` | Version. A release tag `gateway-tools-vX.Y.Z` must match this file |
 
@@ -85,10 +89,10 @@ The gateway address is a user setting (`gateway_address` in the bundle, the same
 | `recent_events` | `state_changed` and `button_event` (press, single_press, release) from the activiteitenlog. No `udp_frame` required | — |
 | `read_logs` | Subscribes to the live log stream. Filters on `since` or the last `seconds`, minimum level, and `limit`. Redacts addresses and names unless `redact=false`. Without `log_stream`, points at the add-on Log tab | Gateway `log_stream` |
 | `discover` | `POST /api/v1/discover` only after `confirmed=true`, then the inventory diff | — |
-| `device_command` | `POST /api/v1/devices/{id}/command` only after `confirmed=true`. Reports `module_confirmed`, `confirm_ms`, and `reported` when the gateway sends them. Without those fields, says this version cannot confirm the module. A confirmed send is stored as `command_result` for the report. A preview is not | — |
+| `device_command` | `POST /api/v1/devices/{id}/command` only after `confirmed=true`. A relay takes ON, OFF, PULSE, or TOGGLE. A dimmer takes DIM 0–100, TOGGLE, DIM_START, or DIM_STOP. ON and OFF on a dimmer are sent as DIM 100 and DIM 0. PULSE on a dimmer is refused. The type comes from `list_devices`. Reports `module_confirmed`, `confirm_ms`, and `reported` when the gateway sends them. Without those fields, says this version cannot confirm the module. A confirmed send is stored as `command_result` for the report. A preview is not | — |
 | `probe_generation` | Works against `/status`, `/modules`, `/devices`. The dialect sentence is stored as `decode_result` | — |
 | `decode_test` | Local, uses `gateway/payloads`, then shows the current dialect city name. Kessel-Lo (`kessel-lo`) and Torhout (`torhout`) are defined in `ipbuilding_debug/dialect.py`. This is the dialect test: call it with the hex of a captured frame. The result is stored as `decode_result` for the report | — |
-| `export_session` | Events from this session only (gateway clock, or the moment the toolkit stored them), unless `include_events=false`. Each event gets `local_time` (ISO 8601 with offset) and `time_source` (`gateway` or `received`). `note` stays in the summary. `feedback` is free text about the tool and is shown under heading 6, through the same redaction. The latest value is kept. Redacts addresses, MAC addresses, email addresses, and names unless `redact=false`. Name masks are the same in the appendix. Adds a fixed plain-text report and YAML frontmatter, including `events_included`. When sending is available the tool text ends with an offer to send the report. Each event is in one section. `command_result` and `decode_result` appear under Wat getest werd. Bevestigd lists frames that confirm a command or a status change. Routine polls are a count in the appendix. No module reply is `niet bevestigd` | Live logs appear in the export once `log_stream` is active |
+| `export_session` | Events from this session only (gateway clock, or the moment the toolkit stored them), unless `include_events=false`. Each event gets `local_time` (ISO 8601 with offset) and `time_source` (`gateway` or `received`). `note` stays in the summary. `feedback` is free text about the tool and is shown under heading 6, through the same redaction. The latest value is kept. Redacts addresses, MAC addresses, email addresses, and names unless `redact=false`. Name masks are the same in the appendix. Adds a fixed plain-text report and a fenced yaml block, including `events_included`. When sending is available the tool text ends with an offer to send the report. Each event is in one section. `command_result` and `decode_result` appear under Wat getest werd. Bevestigd lists frames that confirm a command or a status change. Routine polls are a count in the appendix. No module reply is `niet bevestigd` | Live logs appear in the export once `log_stream` is active |
 | `send_report` | On by default. Shows the privacy notice and the filtered report, then a `mailto:` link after `confirmed=true`. Reuses `feedback` and `include_events` from the last export when those arguments are omitted. The process does not send mail. Without `IPBUILDING_REPORT_INTAKE` the option is unavailable. The Linear template files the ticket in the backlog with the label Agent | — |
 | `capture_frames` | Subscribes when `udp_frame` is advertised. The local decode of those frames is stored as `decode_result`, one per full dialect id | Gateway `udp_frame` |
 | `send_raw` | `POST /api/v1/debug/raw-send` when `raw_send` is advertised, and only after `confirmed=true`. Body is `module_ip`, optional port 1001, `payload_hex` (1–64 bytes), `window_ms` (1–3000, default 2000). Empty `replies` is success | Gateway raw send |
@@ -118,11 +122,11 @@ python3 toolkit/scripts/build.py
 
 The script stages a bundle, copies the decoders it needs, and runs `mcpb validate` and `mcpb pack`. It also writes `ipbuilding-gateway-tools-claude-code-<version>.zip` for developers. CI does the same on every pull request. A tag `gateway-tools-vX.Y.Z` whose number matches `VERSION` attaches the `.mcpb` and that zip to a GitHub release. The release text is `HANDLEIDING.md`. The workflow artifact is `ipbuilding-gateway-tools`. The packed file is `ipbuilding-gateway-tools-<version>.mcpb`.
 
-The `.mcpb` is the download for Claude Desktop. The Claude Code zip is for developers. Unpack it, then from the directory that contains the unpacked folder `ipbuilding-gateway-tools` run `claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools`. That installs the plugin and starts its MCP server. Sending a report is not available from that zip.
+The `.mcpb` is the download for Claude Desktop. The Claude Code zip is for developers. Unpack it, then from the directory that contains the unpacked folder `ipbuilding-gateway-tools` run `claude plugin install ipbuilding-gateway-tools --marketplace ./ipbuilding-gateway-tools`. From this GitHub repository, `claude plugin install ipbuilding-gateway-tools --marketplace markminnoye/IPBuilding-Gateway` uses the marketplace file at the repository root. That entry points at `toolkit/`, where the plugin stays. Both installs start the MCP server. Sending a report is not available from the zip or from that GitHub install.
 
 Sending a report is on unless `IPBUILDING_REPORT_SEND` is `0`, `false`, `no`, or `off`. The intake address is not in the repository. CI passes the Actions secret `IPBUILDING_REPORT_INTAKE` into the `.mcpb` manifest environment of the same name, and only when that value is non-empty. The Claude Code zip does not get that value. `.mcp.json` does not set it. Without the variable, the other tools still run and sending a report is not available. A confirmed call returns a `mailto:` link; the toolkit does not send the mail. The Linear template puts the ticket in the backlog with the label Agent.
 
-Each test bundle uses the next `0.1.0-rc.N` (`rc.1`, `rc.2`, …) in `toolkit/VERSION`. The same string goes in `.claude-plugin/plugin.json`, `pyproject.toml`, and the `.mcpb` manifest. Raise N by one for every new test build so Claude Desktop offers Update instead of Install, and so the builds stay distinct. Do not reuse a number.
+Each test bundle uses the next rc on the current version (`0.1.2-rc.1`, `0.1.2-rc.2`, …) in `toolkit/VERSION`. The same string goes in `.claude-plugin/plugin.json`, `pyproject.toml`, and the `.mcpb` manifest. Raise the rc by one for every new test build so Claude Desktop offers Update instead of Install, and so the builds stay distinct. Do not reuse a number.
 
 Do not use a `vX.Y.Z` tag for this package. That tag builds the Home Assistant add-on.
 
@@ -133,3 +137,5 @@ PYTHONPATH=toolkit:. python3 -m pytest toolkit/tests -q
 ```
 
 Tests use a fake gateway on localhost. They do not touch a real installation.
+
+Claude Code plugin evals live in `evals/`. How to run them is in `evals/README.md`. They call a model, so they are not part of CI.
