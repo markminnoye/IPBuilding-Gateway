@@ -11,7 +11,7 @@ On older Torhout modules the **commands work**, but Home Assistant status does n
 
 - Relay `.30` answers `S`/`C` with a **command echo** (`C060000000`), not the Kessel-Lo status frame `I0000{ch}{state}`. Undecoded → no `STATE` update after a toggle.
 - Dimmer `.42` answers status poll / keepalive with family **`15`** (`I0115184`, idle `I0115000`) instead of Kessel-Lo family `54`. Undecoded → poll timeout → brightness stays Unknown.
-- Dimmer `.42` also **echoes the command bytes** (`S1231030` → `S1231030`) and does **not** send a status frame. The payload already decoded as `dimmer_command`; the registry ignored it.
+- Dimmer `.42` also **echoes the command bytes** (`S1231030` → `S1231030`) and does **not** send a status frame. The payload already decoded as `dimmer_command`; the registry ignored it. `S1231030` is fade `030`. An echo with another three-digit fade (for example `S0991000`) must still decode as `dimmer_command` (note 2026-10-16).
 
 Core principle: **an echo from a module confirms the commanded stand**. Channel and level come from the echo itself, not from a guessed state quartet. The 20 s actuator poll (working on Torhout since 1.6.4) corrects an echo that was not physically executed.
 

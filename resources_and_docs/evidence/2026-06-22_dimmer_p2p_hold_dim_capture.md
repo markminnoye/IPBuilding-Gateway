@@ -51,7 +51,7 @@ Dit bevestigt de eerder open hypothese **"Autonomous mode"** uit `RE_STATE.md`:
 | Afzender | Toggle | Dim start | Dim stop | Set/Dim | Off |
 |----------|--------|-----------|----------|---------|-----|
 | **Input module** (50→40) | `T<ch><vv>1000` | `D<ch><vv>1003` | `D<ch><vv>1000` | — | — |
-| **Hub/Gateway** (1.1→40) | — | — | — | `S<ch><vv>1030` | `C<ch>991030` |
+| **Hub/Gateway** (1.1→40) | — | — | — | `S<ch><vv>1<fade>` (deze capture: fade `030`) | `C<ch>991030` (fade `030`) |
 
 Beide dialecten leven op dezelfde UDP/1001 bus. De dimmer accepteert beide.
 
@@ -79,7 +79,7 @@ Input                          Dimmer
 - Dim-omhoog: ~31%/s (afgeleid uit tijdsverschil hold-start/stop vs niveau in ack)
 - Dim-omlaag: ~20%/s
 
-Deze snelheden zijn hardware-intern; niet configureerbaar via UDP/1001.
+Deze snelheden horen bij het hold-protocol (`D…1003` tot `D…1000`). Ze zijn niet de fade op een `S`/`C`-frame. Of de hold-snelheid via UDP instelbaar is, is hier niet gemeten.
 
 ## Response format bevestigd
 
@@ -97,9 +97,11 @@ Sluit naadloos aan op Sprint 3 + 2026-06-03 correctie.
 | `D<ch><vv>1003` | `D` + ch-digit + 2-digit dimMax + `1003` | Dim hold start (auto-richting) |
 | `D<ch><vv>1000` | `D` + ch-digit + 2-digit dimMax + `1000` | Dim hold stop |
 
-Suffix semantiek:
-- `1000` = standaard input-dialect suffix (toggle en stop)
-- `1003` = dim-start variant (specifiek voor hold-begin)
+Suffix semantiek (alleen opcodes `T` en `D` in deze capture):
+- `1000` = toggle en hold-stop
+- `1003` = hold-start. De duur is tot `D…1000`, niet een fade-tijd. Hetzelfde frame dimt omhoog en daarna omlaag.
+
+`S`/`C` kunnen dezelfde bus een fade geven (`1` + drie cijfers, `000` meteen). Dat veld zit niet in deze `T`/`D`-frames. Lezing 2026-10-16; de bytes hierboven blijven zoals gecaptured.
 
 ## Impact op `gateway/payloads/dimmer.py`
 
@@ -112,7 +114,7 @@ _INPUT_DIM_START  = re.compile(r"^D(?P<channel>\d)(?P<dimmax>\d{2})1003$")
 _INPUT_DIM_STOP   = re.compile(r"^D(?P<channel>\d)(?P<dimmax>\d{2})1000$")
 ```
 
-**Gateway-implicatie:** als de gateway als hub werkt (vervangt IPBox), stuurt *zij* `S/C<ch><vv>1030` naar de dimmer. Het input-module peer-to-peer pad loopt *buiten* de gateway om. De gateway ziet de button event via `B-…E` op het input-module pad, beslist dan zelf (via HA-automation), en stuurt vervolgens een hub-commando. Het input→dimmer direct pad is dan een IPBox-artefact dat wegvalt zodra de gateway de centrale vervangt.
+**Gateway-implicatie:** als de gateway als hub werkt (vervangt IPBox), stuurt *zij* `S/C<ch><vv>1<fade>` naar de dimmer (default fade `000`; oudere `…1030` is fade `030`). Het input-module peer-to-peer pad loopt *buiten* de gateway om. De gateway ziet de button event via `B-…E` op het input-module pad, beslist dan zelf (via HA-automation), en stuurt vervolgens een hub-commando. Het input→dimmer direct pad is dan een IPBox-artefact dat wegvalt zodra de gateway de centrale vervangt.
 
 ## Referenties
 

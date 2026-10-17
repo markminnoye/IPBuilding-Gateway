@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Parse IPBuilding dimmer UDP payload ASCII according to proto-map v0.1.
+"""Parse IPBuilding dimmer UDP payload ASCII.
+
+Hub set/cut frames are ``<S|C><channel><value>1<fade>``. The last three
+digits are the fade (``000``–``999`` on the wire). ``S0501030`` is channel 0
+at 50 % with fade 030. ``S0991000`` is 100 % with fade 000.
 
 Examples:
-  S0501030 -> set channel 0 value 50
-  C1991030 -> off/cut channel 1 value code 99
+  S0501030 -> set channel 0 value 50, fade 30
+  C1991030 -> off/cut channel 1 value code 99, fade 30
+  S0991000 -> set channel 0 value 100, fade 0
   I9900    -> idle/poll marker
 """
 
@@ -15,7 +20,9 @@ import re
 import sys
 from typing import Any
 
-_SET_OR_CUT_RE = re.compile(r"^(?P<prefix>[SC])(?P<channel>\d)(?P<value>\d{2})1030$")
+_SET_OR_CUT_RE = re.compile(
+    r"^(?P<prefix>[SC])(?P<channel>\d)(?P<value>\d{2})1(?P<fade>\d{3})$"
+)
 _IDLE_RE = re.compile(r"^I(?P<code>\d{4})$")
 
 
@@ -37,7 +44,8 @@ def parse_dimmer_payload_ascii(payload: str) -> dict[str, Any] | None:
             "channel": int(m.group("channel")),
             "value_code": value_code,
             "value_percent": value_percent,
-            "suffix": "1030",
+            "suffix": "1" + m.group("fade"),
+            "fade": int(m.group("fade")),
             "proto_map": "v0.1",
         }
 
@@ -58,7 +66,8 @@ def _run_self_test() -> int:
     tests = [
         ("S0501030", {"action": "set", "channel": 0, "value_percent": 50}),
         ("S1991030", {"action": "set", "channel": 1, "value_percent": 100}),
-        ("C2991030", {"action": "off", "channel": 2, "value_percent": 100}),
+        ("C2991030", {"action": "off", "channel": 2, "value_percent": 100, "fade": 30}),
+        ("S0991000", {"action": "set", "channel": 0, "value_percent": 100, "fade": 0}),
         ("I9900", {"action": "idle", "family": "poll_or_status"}),
     ]
     for payload, expected in tests:

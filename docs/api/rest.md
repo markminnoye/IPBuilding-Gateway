@@ -397,15 +397,25 @@ Any other field (e.g. `ip`, `mac`, `type`, `hold_threshold_s`, `multi_press`) re
 **Request body -- Dimmer:**
 ```json
 {"action": "DIM", "value": 75}
+{"action": "DIM", "value": 75, "fade": 30}
+{"action": "ON"}
+{"action": "OFF"}
+{"action": "TOGGLE"}
+{"action": "DIM_START"}
+{"action": "DIM_STOP"}
 ```
 
-| Action | Valid for | Value |
-|--------|-----------|-------|
-| `ON` | Relay | -- |
-| `OFF` | Relay | -- |
-| `PULSE` | Relay | -- |
-| `TOGGLE` | Relay | -- |
-| `DIM` | Dimmer | `0-100` (0 = off) |
+| Action | Valid for | Value | Field bus |
+|--------|-----------|-------|-----------|
+| `ON` | Relay or dimmer | -- | Relay: on. Dimmer: 100 % (`S<ch>991<fade>`, default fade `000`) |
+| `OFF` | Relay or dimmer | -- | Relay: off. Dimmer: cut (`C<ch>001<fade>`, default fade `000`) |
+| `PULSE` | Relay | -- | |
+| `TOGGLE` | Relay or dimmer | -- | Relay: toggle. Dimmer: `T<ch>991000` (last stored level, not 100 %) |
+| `DIM` | Dimmer | `0-100` (0 = off) | `0` → `C<ch>001<fade>`; `1-100` → `S<ch><val>1<fade>` (`99` = 100 %) |
+| `DIM_START` | Dimmer | -- | `D<ch>001003` (hold start, no reply) |
+| `DIM_STOP` | Dimmer | -- | `D<ch>001000` (hold stop) |
+
+`fade` is optional on dimmer `DIM`, `ON`, and `OFF`. Omit it or send `0` for an instant change (the wall-button speed). `1`–`255` lengthens the ramp. A value below `0`, above `255`, or not an integer is rejected with `400` `invalid_fade` and is not sent. About 0.2 s per unit is an estimate from 16 Oct 2026; `010` was an outlier. The exact scale and mid-level fades are unmeasured. The leading `1` before the three fade digits has an unknown meaning. The module replies at once with the end level, so reported state runs ahead of the lamp during a fade. There is no per-channel fade setting, and Home Assistant `transition` is not wired. `fade` on a relay, `TOGGLE`, `DIM_START`, or `DIM_STOP` is ignored.
 
 **Response 200:** the gateway accepted and sent the command. A missing field-bus reply is still `ok: true`. It is not an error.
 
@@ -443,9 +453,10 @@ No reply inside the window:
 
 The WebSocket `command_result` frame carries the same three fields. See [websocket.md](websocket.md).
 
-**Response 400** (missing action):
+**Response 400** (missing action, or a dimmer `fade` outside 0–255 or not an integer):
 ```json
-{"ok": false, "error": "missing 'action'"}
+{"error": "missing_action", "message": "Body must contain 'action'"}
+{"error": "invalid_fade", "message": "fade must be an integer from 0 to 255", "details": {"device_id": "10.10.1.40-0", "action": "DIM"}}
 ```
 
 **Response 422** (unsupported action):

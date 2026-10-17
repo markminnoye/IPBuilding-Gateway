@@ -71,30 +71,63 @@ def test_decode_dimmer_idle_heartbeat():
 
 
 def test_encode_dim_command():
+    """Default fade is 000 (instant)."""
     wire = encode_dim_command(DimmerCommand(channel=0, level=30))
-    assert wire == b"S0301030"
+    assert wire == b"S0301000"
     parsed = decode_dimmer_payload(wire)
     assert parsed["action"] == "set"
     assert parsed["channel"] == 0
+    assert parsed["fade"] == 0
+
+
+def test_encode_dim_command_explicit_fade():
+    """Fade 30 is the three digits in ``S0301030``."""
+    wire = encode_dim_command(DimmerCommand(channel=0, level=30), fade=30)
+    assert wire == b"S0301030"
+    assert decode_dimmer_payload(wire)["fade"] == 30
+    full = encode_dim_command(DimmerCommand(channel=0, level=100), fade=30)
+    assert full == b"S0991030"
+
+
+def test_encode_dim_command_accepts_fade_bounds():
+    """0 and 255 are valid. Outside that range is refused, not wrapped."""
+    cmd = DimmerCommand(channel=0, level=99)
+    assert encode_dim_command(cmd, fade=0) == b"S0991000"
+    assert encode_dim_command(cmd, fade=255) == b"S0991255"
+    for bad in (256, 300, -1):
+        with pytest.raises(ValueError, match="0 to 255"):
+            encode_dim_command(cmd, fade=bad)
+    with pytest.raises(TypeError, match="0 to 255"):
+        encode_dim_command(cmd, fade=True)
 
 
 def test_encode_dim_off():
-    assert encode_dim_off(1) == b"C1001030"
-    assert encode_dim_off(0) == b"C0001030"
+    """Default off is instant: ``C<ch>001000``."""
+    assert encode_dim_off(1) == b"C1001000"
+    assert encode_dim_off(0) == b"C0001000"
+    assert encode_dim_off(0, fade=0) == b"C0001000"
+    assert encode_dim_off(0, fade=30) == b"C0001030"
+    assert encode_dim_off(0, fade=255) == b"C0001255"
+    for bad in (256, 300, -1):
+        with pytest.raises(ValueError, match="0 to 255"):
+            encode_dim_off(0, fade=bad)
+    with pytest.raises(TypeError, match="0 to 255"):
+        encode_dim_off(0, fade="slow")
 
 
 def test_torhout_dim_off_echo_decodes_as_zero_percent():
-    """C<ch>001030 echo must land as 0% (cut + value 00)."""
-    parsed = decode_dimmer_payload(b"C1001030")
+    """C<ch>001000 echo must land as 0% (cut + value 00, fade 000)."""
+    parsed = decode_dimmer_payload(b"C1001000")
     assert parsed is not None
     assert parsed["family"] == "dimmer_command"
     assert parsed["channel"] == 1
     assert parsed["action"] == "off"
     assert parsed["level_percent"] == 0
+    assert parsed["fade"] == 0
 
 
 def test_decode_dimmer_command_off_placeholder_is_zero():
-    """C{ch}991030 is OFF; 99 is a placeholder, not 100%."""
+    """C{ch}991030 is OFF; 99 is a placeholder, not 100%. Fade 030 still decodes."""
     parsed = decode_dimmer_payload(b"C1991030")
     assert parsed is not None
     assert parsed["family"] == "dimmer_command"
@@ -102,6 +135,24 @@ def test_decode_dimmer_command_off_placeholder_is_zero():
     assert parsed["channel"] == 1
     assert parsed["value_code"] == "99"
     assert parsed["level_percent"] == 0
+    assert parsed["fade"] == 30
+
+
+def test_decode_dimmer_command_accepts_any_three_digit_fade():
+    """The decoder keeps the wire digits, including values the encoder will not send."""
+    instant = decode_dimmer_payload(b"S0991000")
+    assert instant is not None
+    assert instant["fade"] == 0
+    assert instant["level_percent"] == 100
+    slow = decode_dimmer_payload(b"S0501010")
+    assert slow is not None
+    assert slow["channel"] == 0
+    assert slow["level_percent"] == 50
+    assert slow["fade"] == 10
+    wrapped = decode_dimmer_payload(b"S0991999")
+    assert wrapped is not None
+    assert wrapped["fade"] == 999
+    assert wrapped["level_percent"] == 100
 
 
 def test_decode_torhout_dimmer_status_ch1_84():

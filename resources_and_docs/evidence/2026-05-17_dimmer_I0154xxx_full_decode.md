@@ -52,7 +52,9 @@ Dimmer uses **compound first byte** (channel + direction encoded), unlike relay 
 | `S1501030` | DIM 50%, ch 1 | `I0154150` | ch 1 + `50` |
 | `C1991030` | OFF, ch 1 | `I0154100` | ch 1 + `00` |
 
-Proto-map v0.2 (hub command): `<S|C><channel><value_code>1030`
+Proto-map v0.2 (hub command, zoals gecaptured): `<S|C><channel><value_code>1030`
+
+**Lezing 2026-10-16:** die `1030` is marker `1` plus fade `030`, niet een vaste dialectvlag. Formaat `<S|C><channel><value_code>1<fade>`. Fade `000` is meteen; `000`–`255` is geldig (één byte; daarboven wikkelt de module). Ongeveer 0,2 s per eenheid is een schatting; `010` was een uitschieter; de exacte schaal en tussenliggende niveaus zijn niet gemeten. Het vaste `1` heeft een onbekende betekenis. De module antwoordt meteen met het eindniveau. De bytes in de tabel hierboven blijven de gecapturede frames (fade `030`).
 
 - `S` = set/dim, `C` = cut/off
 - `<channel>` = single digit channel index (0–7 per IP0300)
@@ -83,7 +85,7 @@ From [IPBUILDING_KNOWLEDGE.md](IPBUILDING_KNOWLEDGE.md) §12.3:
 - **Soft AAN** default 15%: lamp ramps to 15% first, then soft-up to target.
 - **Soft UIT** default 70%: lamp ramps to 70%, then soft-down to 0%.
 
-**Implication:** commanding REST `DIM 1%` may produce physical ~15% before ramping; wire value-code reflects **commanded setpoint**, not instantaneous PWM. Gateway must apply EEPROM `dimMin`/`dimMax` when translating user-facing %.
+**Implication:** EEPROM Soft AAN/UIT is a stored curve. The three fade digits on an `S`/`C` frame select the ramp of that command (`000` instant). The wire value-code is still the target level. A non-zero fade makes the lamp lag the reported end level. The EEPROM label "001 msec" is not the wire fade.
 
 ## Input-module→dimmer dialect (2026-06-22 — NIEUW)
 
@@ -107,11 +109,11 @@ De IP1100PoE input module stuurt commando's **rechtstreeks** naar de IP0300PoE d
 
 | | Hub-dialect | Input-dialect |
 |---|------------|---------------|
-| Suffix | `1030` | `1000` / `1003` |
-| Toggle | — | `T<ch><vv>1000` |
-| Dim set | `S<ch><vv>1030` | `D<ch><vv>1003` (start) + `D<ch><vv>1000` (stop) |
-| Off | `C<ch>991030` | `T<ch><vv>1000` (toggle naar off) |
-| Ack | altijd | alleen op stop (niet op start) |
+| Staart | `1` + fade `000`–`255` (captures: `1030` = fade `030`) | `1000` / `1003` op `T`/`D`, geen fade-veld |
+| Toggle | — (`T` is de knop-opcode) | `T<ch><vv>1000` |
+| Dim set | `S<ch><vv>1<fade>` | `D<ch><vv>1003` (start) + `D<ch><vv>1000` (stop). `1003` is start/stop, geen tijdsduur |
+| Off | `C<ch>001<fade>` (captures: `C<ch>991030`) | `T<ch><vv>1000` (toggle naar off) |
+| Ack | meteen het eindniveau | alleen op stop (niet op start) |
 
 ## Open questions
 

@@ -650,6 +650,63 @@ class TestDimmerDownstreamCommands:
         api._bus.correlate_reply.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_dim_defaults_to_instant_fade(self) -> None:
+        """DIM and ON/OFF use fade 000 unless the body sets fade."""
+        import asyncio
+
+        inst = _make_installation([
+            {
+                "ip": "10.10.1.40", "type": "dimmer", "mac": "00:24:77:52:9e:a8",
+                "channels": [{"ch": 0, "name": "Living", "active": True, "max_watt": 100}],
+            }
+        ])
+        api = _make_api(inst)
+        api._bus.last_send_ts = 0.0
+        reply_future: asyncio.Future = asyncio.Future()
+        reply_future.set_result(None)
+        api._bus.correlate_reply = MagicMock(return_value=reply_future)
+        send_future: asyncio.Future = asyncio.Future()
+        send_future.set_result(None)
+        api._bus.send_command.return_value = send_future
+
+        ok, error = await api._execute_command("10.10.1.40-0", "ON", None)
+        assert ok is True
+        assert error is None
+        api._bus.send_command.assert_called_with(
+            "10.10.1.40", b"S0991000", expect_reply=True,
+        )
+
+        ok, error = await api._execute_command("10.10.1.40-0", "OFF", None)
+        assert ok is True
+        api._bus.send_command.assert_called_with(
+            "10.10.1.40", b"C0001000", expect_reply=True,
+        )
+
+        ok, error = await api._execute_command("10.10.1.40-0", "DIM", 50, fade=30)
+        assert ok is True
+        api._bus.send_command.assert_called_with(
+            "10.10.1.40", b"S0501030", expect_reply=True,
+        )
+
+        ok, error = await api._execute_command("10.10.1.40-0", "DIM", 40, fade=0)
+        assert ok is True
+        api._bus.send_command.assert_called_with(
+            "10.10.1.40", b"S0401000", expect_reply=True,
+        )
+
+        ok, error = await api._execute_command("10.10.1.40-0", "DIM", 40, fade=255)
+        assert ok is True
+        api._bus.send_command.assert_called_with(
+            "10.10.1.40", b"S0401255", expect_reply=True,
+        )
+
+        for bad in (256, 300, -1, "slow"):
+            ok, error = await api._execute_command("10.10.1.40-0", "DIM", 10, fade=bad)
+            assert ok is False
+            assert error == "fade must be an integer from 0 to 255"
+        assert api._bus.send_command.call_count == 5
+
+    @pytest.mark.asyncio
     async def test_unsupported_dimmer_action_rejected(self) -> None:
         """Unknown dimmer actions return a typed error (no UDP sent)."""
         inst = _make_installation([

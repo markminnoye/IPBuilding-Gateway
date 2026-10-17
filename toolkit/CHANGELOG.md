@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `device_command` sends dimmer DIM, ON, and OFF with fade 0 unless `fade` is set. A fade outside 0–255, or not an integer, is rejected and not sent. Toolkit version stays 0.1.2; this rides with the next toolkit release.
+
 ## 0.1.2 — 2026-10-16
 
 - The ticket subject uses the same masks as the report, and the tool shows that subject as plain text.

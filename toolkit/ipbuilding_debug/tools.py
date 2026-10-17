@@ -889,12 +889,16 @@ async def device_command(
     device_id: str,
     action: str,
     value: int | None = None,
+    fade: int | None = None,
     confirmed: bool = False,
 ) -> ToolResult:
     """Switch or dim one device via POST /devices/{id}/command.
 
     The device type comes from list_devices. Dimmers are translated before
     anything is sent: ON becomes DIM 100, OFF becomes DIM 0, and PULSE is refused.
+    ``fade`` is optional for DIM, ON, and OFF: omit it or pass 0 for an instant
+    change. 1–255 lengthens the ramp. A non-integer or a value outside 0–255
+    is rejected. The module reports the end level before the lamp finishes.
     """
     device_id = (device_id or "").strip()
     requested = (action or "").strip().upper()
@@ -927,6 +931,18 @@ async def device_command(
         prepared.data["requested_action"] = requested
         return prepared
     action_name, value, note = prepared
+    if action_name == "DIM" and fade is not None:
+        if isinstance(fade, bool) or not isinstance(fade, int) or not 0 <= fade <= 255:
+            return ToolResult(
+                "Fade moet een geheel getal van 0 tot en met 255 zijn. Nog niet verstuurd.",
+                {
+                    "ok": False,
+                    "kind": KIND_OTHER,
+                    "sent": False,
+                    "device_id": device_id,
+                    "action": action_name,
+                },
+            )
     preview = {
         "ok": False,
         "kind": "confirmation_required",
@@ -937,6 +953,8 @@ async def device_command(
         "value": value,
         "translated": bool(note),
     }
+    if action_name == "DIM":
+        preview["fade"] = 0 if fade is None else fade
     if not confirmed:
         level = f" naar {value}" if value is not None else ""
         lead = f"{note} " if note else ""
@@ -956,6 +974,8 @@ async def device_command(
     payload: dict[str, Any] = {"action": action_name}
     if value is not None:
         payload["value"] = value
+    if action_name == "DIM":
+        payload["fade"] = 0 if fade is None else fade
     body, call_error = await session.post_json(path, payload)
     if call_error is not None:
         await _record_command_result(
@@ -990,25 +1010,25 @@ async def device_command(
     message = confirmation["message"]
     if note:
         message = f"{note} {message}"
-    return ToolResult(
-        message,
-        {
-            "ok": gateway_ok,
-            "kind": "command",
-            "sent": True,
-            "device_id": device_id,
-            "action": action_name,
-            "requested_action": requested,
-            "value": value,
-            "translated": bool(note),
-            "module_confirmed": confirmation["module_confirmed"],
-            "confirm_ms": confirmation["confirm_ms"],
-            "reported": confirmation["reported"],
-            "confirmation_available": confirmation["available"],
-            "warning": message,
-            "gateway": body if isinstance(body, dict) else {},
-        },
-    )
+    result = {
+        "ok": gateway_ok,
+        "kind": "command",
+        "sent": True,
+        "device_id": device_id,
+        "action": action_name,
+        "requested_action": requested,
+        "value": value,
+        "translated": bool(note),
+        "module_confirmed": confirmation["module_confirmed"],
+        "confirm_ms": confirmation["confirm_ms"],
+        "reported": confirmation["reported"],
+        "confirmation_available": confirmation["available"],
+        "warning": message,
+        "gateway": body if isinstance(body, dict) else {},
+    }
+    if "fade" in preview:
+        result["fade"] = preview["fade"]
+    return ToolResult(message, result)
 
 
 async def capture_frames(
