@@ -131,7 +131,8 @@ Voorbeelden:
 ### Nog te bevestigen
 
 - Of kanaal `3` (comp 574) exact `S3..1030` / `C3..1030` volgt.
-- Of suffix `1030` constant blijft voor alle dimmerkanalen/firmwarevarianten.
+
+**Gesloten 2026-10-16 — is `1030` constant?** Nee als vaste dialectvlag. In deze sweep stuurde IPBox overal fade `030` (`…1030`). Het frame is `<S|C><channel><value_code>1<fade>`; de laatste drie cijfers zijn de fade (`000` meteen, geldig `000`–`255`). De bytes hierboven blijven de gecapturede frames.
 
 ### Parser tool (v0.1)
 

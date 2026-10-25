@@ -46,7 +46,7 @@ Rechterpaneel:
 - **Uit te voeren acties relais: 3**
 - **Uit te voeren acties dim: 2**
 
-Som = **5** — dat is de **logic-queue** (pending uitvoeringen), *niet* de Action-kolom in de log. In dit screenshot-fragment verschijnen die pending acties **niet** als `S`/`C`/`T`/`…1030`-regels; we zien alleen de controle-sweep.
+Som = **5** — dat is de **logic-queue** (pending uitvoeringen), *niet* de Action-kolom in de log. In dit screenshot-fragment verschijnen die pending acties **niet** als `S`/`C`/`T`/`…1030`-regels; we zien alleen de controle-sweep. (`…1030` in die zin is het toen gebruikte hub-frame, fade `030`; lezing 2026-10-16.)
 
 ### 1.3 Per-module kanaalbereik in dit venster
 

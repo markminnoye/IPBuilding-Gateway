@@ -1,6 +1,6 @@
 # RE State (canonical)
 
-Last updated: 2026-08-30 (local)
+Last updated: 2026-10-16 (local)
 
 Compacte source of truth voor actuele reverse-engineeringstatus; detailbewijs blijft in de gelinkte evidence.
 
@@ -12,6 +12,7 @@ Compacte source of truth voor actuele reverse-engineeringstatus; detailbewijs bl
 
 ## Validated facts
 
+- **Dimmer fade op `S`/`C` (2026-10-16):** het frame is `<S|C><kanaal><waarde>1<fade>`. De laatste drie cijfers zijn een fade in één byte (`000`–`255`; daarboven wikkelt de module, 300 gedroeg zich als 44 en 999 als 231). `000` is meteen. Ongeveer 0,2 s per eenheid is een schatting uit één installatie; `010` was een uitschieter. De exacte schaal, tussenliggende niveaus en de betekenis van het vaste `1` zijn niet gemeten. De module antwoordt meteen met het eindniveau, dus de status loopt voor op de lamp. Oudere captures met `…1030` zijn fade `030` (wat IPBox stuurde) en blijven geldig. `C2001001` in de golden session past bij fade `001` en is één ongetimed sample. `T…1000` blijft toggle; `D…1003` / `D…1000` blijven hold-start en -stop, geen fade-tijd. De gateway stuurt default fade `000`. Detail: [IPBUILDING_KNOWLEDGE.md](IPBUILDING_KNOWLEDGE.md) §6.6.
 - De capture-orchestratie levert bruikbare artifacts (`capture.pcapng`, `manifest.jsonl`, `run.log`) in geslaagde runs. Evidence: `resources_and_docs/workflows/CAPTURE_LIVE_STATUS.md`.
 - Relay OFF/ON-correlatie is reproduceerbaar voor o.a. `547/557/563/570` met verwachte command-payloadfamilies. Evidence: `resources_and_docs/evidence/2026-05-04_relay_payload_correlation.md`.
 - Analyse is direction-aware gemaakt (`src/sport -> dst/dport` + summary), waardoor eerdere te nauwe conclusies gecorrigeerd zijn. Evidence: `resources_and_docs/evidence/2026-05-04_relay_payload_correlation.md`.
