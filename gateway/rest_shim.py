@@ -116,6 +116,7 @@ class RESTShim:
                 cmd = RelayCommand(channel=ch, action=RelayAction.ON)
             payload = encode_relay_command(cmd)
         elif dtype == DeviceType.DIMMER:
+            # Encoder default fade is 0 (instant). This shim has no fade parameter.
             if action_type == "DIM":
                 if not 0 <= value <= 100:
                     raise web.HTTPBadRequest(text="value must be 0-100 for DIM")

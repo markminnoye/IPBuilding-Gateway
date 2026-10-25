@@ -3,6 +3,12 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.8.1] - 2026-10-25
+
+### Changed
+- **Dimmer fade.** Dimmers schakelen standaard meteen, even snel als de wandknop. Een fade van 0 tot 255 maakt de overgang langer. 0 is meteen.
+- Een fade onder 0, boven 255, of geen geheel getal wordt geweigerd. Dat commando gaat niet naar de module.
+
 ## [1.8.0] - 2026-10-09
 
 Nieuw

@@ -103,6 +103,8 @@ Log (ch6 = Ledverlichting keuken):
 
 **Correctie op een eerdere lezing:** het formaat is `<S|C><ch><vv>1030`, dus dit is telkens **kanaal 1** op 23 % / 47 % / uit — niet ch2/ch4/ch9. Dat sluit aan op de poll van 22:34:26, die ch1 op 84 % zette: Jan speelde met de Lichtstraat.
 
+**Lezing 2026-10-16:** `1030` is marker `1` plus fade `030`. De bytes in het log hierboven blijven staan. Fade `000` is meteen; deze sessie gebruikte `030`.
+
 ### 5.2 Status-poll: module antwoordt, verkeerde family
 
 ```
@@ -123,13 +125,13 @@ Keepalive (niet poll): `I0115000` i.p.v. lab `I0154999` / poll `I9900`.
 
 ### 5.3 Ack na commando = **echo**, geen statusframe (nieuw 2026-08-25)
 
-De RX-regels in §5.1 zijn geen statusreply maar de **letterlijk teruggestuurde commandobytes**. In het lab antwoordt de dimmer op `S0501030` met `I0154050` — een echt statusframe (bewijs: [2026-06-01 veldtest](2026-06-01_gateway_field_test.md) § Command/reply, met de gateway zelf als hub; en Sprint 3 pcap `01:01.pcapng`, 11 Tx / 11 Rx op `10.10.1.40` zonder één teruggestuurde `S…1030`).
+De RX-regels in §5.1 zijn geen statusreply maar de **letterlijk teruggestuurde commandobytes**. In het lab antwoordt de dimmer op `S0501030` (fade `030`) met `I0154050` — een echt statusframe (bewijs: [2026-06-01 veldtest](2026-06-01_gateway_field_test.md) § Command/reply, met de gateway zelf als hub; en Sprint 3 pcap `01:01.pcapng`, 11 Tx / 11 Rx op `10.10.1.40` zonder één teruggestuurde `S…1030`).
 
 Dat er bij Jan géén statusframe volgde, blijkt uit wat ontbreekt: tussen 22:34:35 en 22:34:41 staat in de debug-log geen enkele `undecoded RX from 10.10.1.42`, terwijl elke `I0115…` elders in diezelfde log wél zo gelogd werd (polls 22:34:25–27, keepalives 22:34:21/42 en 22:35:02).
 
 De echo verdwijnt vandaag geruisloos omdat `decode_dimmer_payload` hem netjes herkent als `dimmer_command` — dus geen "undecoded" — terwijl `DeviceRegistry._handle_dimmer` alleen op `dimmer_status_reply` reageert.
 
-**Gevolg voor de fix:** op deze modulegeneratie is de echo de enige directe feedback na bediening. Wil de HA-status meteen kloppen, dan moet de echo de state seeden (`S1231030` = ch1 → 23 %); anders blijft het wachten op de volgende pollronde. Zelfde patroon als bij de relay in §4, waar de echo het state-quartet meekrijgt.
+**Gevolg voor de fix:** op deze modulegeneratie is de echo de enige directe feedback na bediening. Wil de HA-status meteen kloppen, dan moet de echo de state seeden (`S1231030` = ch1 → 23 %, fade `030`); anders blijft het wachten op de volgende pollronde. Een echo met een andere fade (bijvoorbeeld `…1000`) moet dezelfde weg volgen. Zelfde patroon als bij de relay in §4, waar de echo het state-quartet meekrijgt.
 
 **Dialect-id:** `dimmer.nolf.command_echo` — zie [registry § Ack-model](../reference/veldbus_dialect_registry.md#ack-model-per-generatie-2026-08-25).
 

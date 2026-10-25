@@ -78,9 +78,9 @@ Dit is de kern. De webservice-mnemonics mappen één-op-veel op de UDP-frames di
 | Webservice (TCP, dit bestand) | Veldbus (UDP/1001, onze RE) | Overeenkomst | RE-bron |
 | --- | --- | --- | --- |
 | `INF;<ip>` (status opvragen) | `I0000` poll + `I…` replies (`I<CH><state>`, `I0154xxx`, `I\x02R…E`) | **Sterk.** `INF`→`I`-familie. `I` = "info/status" op beide lagen. | matrix r17–27 |
-| `CLR;<ip>-<ch>` (off) | `C<CH>00` relay OFF / `C<ch><val>1030` dimmer OFF | **Sterk.** `CLR`→`C`. Eerste letter mnemonic = veldbus-prefix. | matrix r9, r24 |
+| `CLR;<ip>-<ch>` (off) | `C<CH>00` relay OFF / `C<ch><val>1<fade>` dimmer OFF (ipcom koos fade `030`, dus `…1030`) | **Sterk.** `CLR`→`C`. Eerste letter mnemonic = veldbus-prefix. De module leest de drie fade-cijfers. | matrix r9, r24 |
 | `TGL;<ip>-<ch>` (toggle) | `T<CH>00` relay toggle | **Sterk.** `TGL`→`T`. | matrix r13; relay set 2026-05-19 |
-| `DIM;<ip>-<ch>_<val>` | `S<ch><val>1030` dimmer dim | **Gedeeltelijk.** `DIM` (webservice) → `S…1030` (veldbus). Mnemonic ≠ veldbus-letter hier: dim-AAN gebruikt `S` op de bus, `DIM` op TCP. | matrix r24 |
+| `DIM;<ip>-<ch>_<val>` | `S<ch><val>1<fade>` dimmer dim (ipcom koos fade `030`) | **Gedeeltelijk.** `DIM` (webservice) → `S…1030` (veldbus, fade 030). Mnemonic ≠ veldbus-letter hier: dim-AAN gebruikt `S` op de bus, `DIM` op TCP. | matrix r24 |
 | `SET;<ip>-<ch>_<val>` (audio/generiek) | — (audio niet veldbus-gecaptured) | Onbevestigd op wire. Audio loopt mogelijk via Barix-IP, niet via UDP/1001-modules. | open |
 | (geen webservice-equivalent: relay ON) | `S<CH>00` relay ON | Relay-ON gaat in de WebUI via `TGL` (toggle) of regime, niet via een aparte "ON". Veldbus `S`=ON staat los van TCP `SET`. | relay set 2026-05-19 |
 | (geen) | `P<CH>00` pulse + `P000000000` echo | Pulse is een **module/config-eigenschap** (relay `pulse`-veld in `UpdateRelay`), niet los aanroepbaar in deze WebUI. | matrix r14, r19 |
@@ -89,7 +89,7 @@ Dit is de kern. De webservice-mnemonics mappen één-op-veel op de UDP-frames di
 
 ### Belangrijkste inzichten uit de vergelijking
 
-1. **Mnemonic-eerste-letter ≈ veldbus-prefix, maar niet 1:1.** `CLR→C`, `TGL→T`, `INF→I` kloppen mooi met onze wire-confirmed veldbus-letters. Maar `DIM` wordt op de bus `S…1030` en relay-ON (`S`) heeft géén eigen TCP-mnemonic. Conclusie: de single-letter veldbus-prefixes (`S`/`C`/`T`/`P`/`I`) zijn een **eigen, lager alfabet** dat `ipcom` genereert; de TCP-mnemonics zijn de UI-laag. Niet blind aannemen dat elke TCP-mnemonic een veldbus-frame is.
+1. **Mnemonic-eerste-letter ≈ veldbus-prefix, maar niet 1:1.** `CLR→C`, `TGL→T`, `INF→I` kloppen mooi met onze wire-confirmed veldbus-letters. Maar `DIM` wordt op de bus `S…1<fade>` (ipcom stuurde fade `030`) en relay-ON (`S`) heeft géén eigen TCP-mnemonic. Conclusie: de single-letter veldbus-prefixes (`S`/`C`/`T`/`P`/`I`) zijn een **eigen, lager alfabet** dat `ipcom` genereert; de TCP-mnemonics zijn de UI-laag. Niet blind aannemen dat elke TCP-mnemonic een veldbus-frame is.
 
 2. **`I` = info/status is consistent over beide lagen.** Dit versterkt onze interpretatie van de hele `I…`-familie (`I0000` poll, `I<CH><state>` relay, `I0154xxx` dimmer, `I\x02R…E` input) als de status/poll-tak van het protocol.
 
@@ -140,7 +140,7 @@ Dit is de kern. De webservice-mnemonics mappen één-op-veel op de UDP-frames di
 2. **Audio over UDP/1001 vs Barix-IP**: `SET;ip-ch_val` met vaste kanaalnummers (20/22/23/...). Onbekend of `ipcom` dit naar UDP/1001 of rechtstreeks naar de Barix-HTTP/streaming stuurt.
 3. **`SET`-mnemonic op de veldbus**: bestaat er een veldbus-`SET`-frame, of vertaalt `ipcom` `SET` naar iets anders? Niet wire-confirmed.
 4. **Regime/sfeer-activatie** schrijft de rauwe `regimeId` naar `ipcom`. Als we ooit de sferen-RE (uitgesteld) oppakken: het query-commando is `AAVX` en de ID-conventie is `AAV…`. Sluit aan bij `RE_STATE` "Unknowns → Input logical flow".
-5. **`DIM`-waarde-encoding**: webservice padt naar 2 cijfers (`val<10 → "0"+val`); onze veldbus-dimmer gebruikt value-codes `10`–`99` met `S<ch><val>1030`. Mogelijke directe relatie tussen WebUI-`val` en veldbus value-code, maar de `1030`-staart en kalibratie (soft-AAN/UIT §12.3) zitten in `ipcom`, niet hier.
+5. **`DIM`-waarde-encoding**: webservice padt naar 2 cijfers (`val<10 → "0"+val`); de veldbus-dimmer gebruikt value-codes `10`–`99` met `S<ch><val>1<fade>`. ipcom koos fade `030` (`…1030`). De module interpreteert die drie cijfers (geldig 000–255; `000` is meteen). De staart leeft dus niet alleen in ipcom. Soft-AAN/UIT (§12.3) blijft een EEPROM-curve, los van deze fade. Correctie 2026-10-16.
 
 ---
 

@@ -9,8 +9,9 @@ Base branch: `develop` (gateway), `feature/blueprints` (companion)
 A second dimmer wire dialect was reverse-engineered from
 `~/Downloads/capture dimmer.pcapng`: the IP1100PoE input module commands the
 IP0300PoE dimmer **peer-to-peer** (UDP/1001), bypassing the hub. It carries a
-toggle and a *hold-to-dim* ramp that the existing absolute `S…1030` dialect
-cannot express.
+toggle and a *hold-to-dim* ramp that an absolute level frame cannot express.
+(Correction 2026-10-16: `S…1030` in this text is fade `030`, not a dialect
+flag. See the note under Non-goals.)
 
 Wire contract (8-byte ASCII, grammar `<prefix><channel><value><suffix4>`):
 
@@ -35,7 +36,7 @@ Evidence: `resources_and_docs/evidence/2026-06-22_dimmer_p2p_hold_dim_capture.md
 
 The current companion `button_dim.yaml` (v7) implements hold-to-dim the **old
 way**: a `repeat` loop firing `light.turn_on brightness_step_pct` every ~200 ms
-(a flood of `S…1030` frames), plus a `direction_helper` (`input_boolean`) to
+(a flood of `S…1030` frames, fade 030), plus a `direction_helper` (`input_boolean`) to
 track up/down and `numeric_state` endpoint triggers to flip at 0%/100%.
 
 The native `T`/`D` protocol **replaces all of it**: one frame to start the ramp,
@@ -61,7 +62,9 @@ the loop, the endpoint detection, and the step/interval inputs.
 
 ## Non-goals
 
-- No change to the absolute `S…1030` / `C…1030` path (slider/scene still use `DIM`).
+- No change to the absolute `S` / `C` path (slider/scene still use `DIM`).
+
+**Correction 2026-10-16.** The last three digits of an absolute `S`/`C` frame are a fade (`000`–`255`), after a leading `1` whose meaning is unknown. `…1030` in this design is fade `030` (what IPBox sent). `000` is instant. About 0.2 s per unit is an estimate from 16 Oct 2026; `010` was an outlier; the exact scale and mid-level fades are unmeasured. The module replies at once with the end level. `…1000` on `T` and `D` stays toggle and ramp stop. `1003` on `D` stays hold-start versus stop, not a fade duration. The sentence below that ``…30`` means the absolute path and ``…00`` / ``…03`` the button path was the wrong reading. The non-goal "leave the absolute path unchanged" is superseded: `DIM`, `ON`, and `OFF` take an optional `fade` (default `000`). `D…1003` / `D…1000` are unchanged.
 - No new upstream decode (already on develop; the gateway is the hub, so it does
   not normally see p2p frames live — state comes from `I0154…` replies + polling).
 - No migration note for the dropped `direction_helper` (per owner: users just
@@ -93,8 +96,8 @@ encode_dim_stop(channel)   -> b"D{channel}001000"
 ```
 
 The `99`/`00` value field is a fixed placeholder in this dialect (the module
-ignores it for ramp; toggle uses last-level memory). Document the suffix split
-in the docstring: `…30` = absolute/REST path, `…00`/`…03` = button/ramp path.
+ignores it for ramp; toggle uses last-level memory). `1003` on `D` is hold
+start; `1000` on `D` is hold stop. Those digits are not the absolute-path fade.
 Export the three encoders from `gateway/payloads/__init__.py`.
 
 ### 2. Gateway — `gateway_api.py` (dispatch)
@@ -144,7 +147,7 @@ hold path. Bump `ipbuilding_blueprint_version` and the description.
 
 ### 5. Documentation
 
-- `gateway/payloads/dimmer.py` docstring: note the new encoders + suffix split.
+- `gateway/payloads/dimmer.py` docstring: note the new encoders. `D…1003` is hold start and `D…1000` is hold stop; they are not the absolute-path fade.
 - Gateway `ipbuilding_gateway/CHANGELOG.md`: downstream `T`/`D` support.
 - Companion `DOCS.md` + the cutover reference
   (`resources_and_docs/reference/2026-06-17_button_long_press_cutover.md`):
