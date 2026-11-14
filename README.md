@@ -17,11 +17,31 @@ The same gateway code runs in three shapes. Pick what fits your hardware:
 |---------|----------|--------|
 | **HA add-on** (Docker, Supervisor-managed) | Home Assistant OS / Supervised | Primary, fully supported |
 | **Standalone Docker container** (`docker run` / `python -m gateway`) | Linux — Raspberry Pi, NAS, VPS, any x86/ARM box | Same Python code, no Supervisor |
-| **ESP32 firmware** (C++ / ESP-IDF) | ESP32 + W5500 Ethernet | Future — protocol-level POC ([ARCHITECTURE.md](ARCHITECTURE.md) §3) |
+| **ESP32 firmware** (C++ / ESP-IDF) | ESP32 + W5500 Ethernet | [Future — protocol-level POC](#deployment-variants-overview) |
 
 For the HA add-on variant, follow the [Installation](#installation) steps
-below. For standalone or ESP32, see [ARCHITECTURE.md](ARCHITECTURE.md) §3 and
+below. For standalone or ESP32 and
 the [add-on documentation](ipbuilding_gateway/DOCS.md).
+
+## Deployment variants - Overview
+
+The diagram below shows the three products side by side:
+
+- legacy **HA-IPBuilding + IPBox** stack
+- current **gateway** solution as HA add-on or standalone container
+- future **ESP32 standalone** protocol-level proof of concept
+
+<p align="center">
+  <a href="docs/images/architecture.png">
+    <img src="docs/images/architecture.png" alt="Deployment variants overview" width="900"/>
+  </a>
+</p>
+
+This overview highlights the current product split:
+
+- **Legacy IPBox / HA-IPBuilding** — migration-friendly path for existing IPBox deployments
+- **Open gateway** — supported production path, with Home Assistant companion for entities
+- **ESP32 standalone** — future protocol-level POC for a more compact hardware form factor
 
 ## If Home Assistant is your client: the companion is required
 

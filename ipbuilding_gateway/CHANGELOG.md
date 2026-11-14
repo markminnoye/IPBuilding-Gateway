@@ -3,7 +3,23 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.8.1] - 2026-10-25
+
+### Changed
+- **Dimmer fade.** Dimmers schakelen standaard meteen, even snel als de wandknop. Een fade van 0 tot 255 maakt de overgang langer. 0 is meteen.
+- Een fade onder 0, boven 255, of geen geheel getal wordt geweigerd. Dat commando gaat niet naar de module.
+
+## [1.8.0] - 2026-10-09
+
+Nieuw
+- Een nieuwe schakelaar in de instellingen: Bediening op afstand (voor debuggen), in de groep "Debug", standaard uit. Zet hem aan als je samen met iemand een probleem in je installatie wil uitzoeken. Home Assistant toont een melding zolang hij aanstaat, zodat je hem niet vergeet uit te zetten.
+- Je ziet nu of een module je commando echt heeft ontvangen, en hoe vlot hij antwoordt.
+
+Opgelost
+- Een computer in je netwerk kan de gateway nu vanzelf vinden.
+- De gateway herkent nu ook oudere modules.
+
+### Technische details
 
 ### Changed
 - **Dimmer DIM, ON, and OFF switch instantly** unless the command body sets `fade` (an integer from 0 to 255). A fade below 0, above 255, or not an integer is rejected (`400` `invalid_fade`) and is not sent. The field-bus frame is `<S|C><channel><level>1<fade>`. `000` is instant, the same speed as the wall button. Older frames ending in `1030` are fade `030` and still decode. The module answers at once with the end level, so Home Assistant state runs ahead of the lamp during a fade. About 0.2 s per unit is an estimate from 16 Oct 2026; `010` was an outlier. The exact scale, mid-level fades, and the meaning of the leading `1` are unmeasured. No per-channel fade, and Home Assistant `transition` is not wired. The REST shim on `:30200` uses the same default (fade 0).
