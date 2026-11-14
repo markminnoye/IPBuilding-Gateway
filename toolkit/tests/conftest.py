@@ -22,3 +22,11 @@ def installation_id_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
     path = tmp_path / "installation_id"
     monkeypatch.setenv("IPBUILDING_INSTALLATION_ID_FILE", str(path))
     return path
+
+
+@pytest.fixture(autouse=True)
+def report_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Saved reports go to a temp folder, never the real Downloads."""
+    path = tmp_path / "reports"
+    monkeypatch.setenv("IPBUILDING_REPORT_DIR", str(path))
+    return path

@@ -286,7 +286,9 @@ def _sections(body: dict[str, Any]) -> dict[str, Any]:
         if item.get("type") not in _CONFIRMED_TYPES and item.get("type") not in _LOG_TYPES
     ]
     tested_items = [
-        item for item in others if item.get("type") in {"command_result", "decode_result"}
+        item
+        for item in others
+        if item.get("type") in {"command_result", "decode_result", "raw_send_result"}
     ]
     suspected_items = [item for item in others if item.get("type") in _SUSPECTED_TYPES]
     gaps = [item for item in others if item.get("type") == "gap"]

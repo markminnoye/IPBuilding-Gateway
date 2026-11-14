@@ -141,6 +141,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         value: int | None = None,
         fade: int | None = None,
         confirmed: bool = False,
+        verify: bool = True,
     ) -> str:
         """These are tools for AI assistants such as Claude. Switch or dim one device.
 
@@ -149,6 +150,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         On a command test, call capture_frames while switching when udp_frame is available, before confirmed=true. Ask what the tester sees at that moment.
         First call with confirmed=false. Only send after an explicit yes and confirmed=true.
         ok true means the gateway sent the command. module_confirmed and confirm_ms say whether the module replied. If those fields are absent, this gateway version does not report them.
+        A module reply can be only an echo of the command (Torhout dimmers). An echo proves receipt, not that the lamp moved. verify (default true) therefore reads the live level back from a dimmer after DIM, TOGGLE, and DIM_STOP with the status query I{ch}000000 when raw_send is active. That read changes nothing. readback.level_percent is what the module reports now; matches_request false means the command was probably not carried out. Always still ask the tester what the lamp does.
         """
         return (
             await device_command(
@@ -158,6 +160,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
                 value=value,
                 fade=fade,
                 confirmed=confirmed,
+                verify=verify,
             )
         ).render()
 
@@ -177,10 +180,13 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         module: str = "",
         pattern: str = "",
         limit: int = 50,
+        include_polls: bool = False,
     ) -> str:
         """Collect live field-bus frames from the gateway WebSocket.
 
-        direction is tx, rx, or both. module and pattern are optional filters.
+        Preferred use, record until done: call with seconds=0 to start listening, then tell the tester to press or switch, wait for the tester to say done (klaar), then call again with seconds=0. The second call returns everything in between, without a time window that can miss the press. You cannot speak while a call with seconds>0 is waiting.
+        direction is tx, rx, or both. module and pattern are optional filters (pattern is a plain substring, not a regex).
+        Routine polls and keepalives are left out and counted unless include_polls is true.
         Waits at most 30 seconds. If udp_frame is not in /status.capabilities, returns that this is not available in this gateway version yet.
         """
         result = await capture_frames(
@@ -190,6 +196,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
             module=module,
             pattern=pattern,
             limit=limit,
+            include_polls=include_polls,
         )
         return result.render()
 
@@ -203,7 +210,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
     ) -> str:
         """Send one raw field-bus packet through the gateway, then collect replies.
 
-        POST /api/v1/debug/raw-send. module_ip is the module IPv4 address. port is optional and must be 1001. payload_hex is 1 to 64 bytes. window_ms is optional, 1 to 3000, default 2000. An empty replies list is success. First call with confirmed=false. Show the tester the module, port, and hex, and ask for an explicit yes. Only then call again with confirmed=true. Never send without that yes. Needs capability raw_send. If that capability is absent, this gateway version does not support it.
+        POST /api/v1/debug/raw-send. Every sent packet and its replies go into the report under Wat getest werd. module_ip is the module IPv4 address. port is optional and must be 1001. payload_hex is 1 to 64 bytes. window_ms is optional, 1 to 3000, default 2000. An empty replies list is success. First call with confirmed=false. Show the tester the module, port, and hex, and ask for an explicit yes. Only then call again with confirmed=true. Never send without that yes. Needs capability raw_send. If that capability is absent, this gateway version does not support it.
         """
         result = await send_raw(
             gateway,
@@ -232,6 +239,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         include_events: bool | None = None,
         vermoeden: str = "",
         open_vraag: str = "",
+        save_file: bool = True,
     ) -> str:
         """Export a report: rapport, bugrapport, foutmelding, feedback, probleem melden, bug report.
 
@@ -239,6 +247,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         note is the problem description and stays in the summary. feedback is free text about the tool, the skill, tables, or terminology. The latest feedback is kept and shown under heading 6.
         vermoeden is the core suspicion and is shown under Bevindingen. open_vraag is a question for the developers and is shown under Open vragen. Omit either one to keep the last text.
         include_events defaults to true. Pass false to leave events, frames, and logs out of the report. Omit it to keep the last choice.
+        save_file (default true) also writes the filtered report as a Markdown file, by default in Downloads, and returns file_path. Give the tester that path and ask them to attach that file unchanged. Never write your own summary report in its place. A raw report (redact=false) is never written to disk.
         Addresses and names are removed by default. Device model codes such as IP0300PoE stay. Pass redact=false only when the tester wants the raw text locally. Tell them not to share that raw text.
         """
         result = await export_session(
@@ -250,6 +259,7 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
             include_events=include_events,
             vermoeden=vermoeden,
             open_vraag=open_vraag,
+            save_file=save_file,
         )
         return result.render()
 

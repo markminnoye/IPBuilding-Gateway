@@ -1,8 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.1.3 — 2026-11-14
 
-- `device_command` sends dimmer DIM, ON, and OFF with fade 0 unless `fade` is set. A fade outside 0–255, or not an integer, is rejected and not sent. Toolkit version stays 0.1.2; this rides with the next toolkit release.
+- `device_command` sends dimmer DIM, ON, and OFF with fade 0 unless `fade` is set. A fade outside 0–255, or not an integer, is rejected and not sent.
+- After DIM, TOGGLE, or DIM_STOP on a dimmer, `device_command` reads the live level back with the status query `I{ch}000000` when `raw_send` is active (`verify`, default on). The query changes no output. `readback` holds the level the module reports and `matches_request`. An echo from a Torhout dimmer counts as receipt, not as proof that the lamp moved.
+- `send_raw` writes each sent packet and its replies to the activity log as `raw_send_result`. The report lists them under Wat getest werd.
+- `export_session` saves the filtered report as a Markdown file (`IPBUILDING_REPORT_DIR`, else Downloads, else home) and returns `file_path`. A raw report (`redact=false`) is never written. `send_report` names the same file. The skill asks for that file unchanged instead of a summary written by the assistant.
+- `capture_frames` with `seconds=0` does not wait. Start with it, let the tester act, and call it again when the tester says done. Routine polls and keepalives are counted in `polls_skipped` and left out unless `include_polls` is true. The tool says when the frame limit was reached.
+- The skill adds record-until-done, the press/release check, and the echo read-back rule.
 
 ## 0.1.2 — 2026-10-16
 
