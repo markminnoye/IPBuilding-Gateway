@@ -5,9 +5,11 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import json
+import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
@@ -883,6 +885,149 @@ def _prepare_device_action(
     )
 
 
+# Dimmer actions after which the tool reads the level back from the module.
+_READBACK_ACTIONS = {"DIM", "TOGGLE", "DIM_STOP"}
+# Pause before the read-back so the module has taken the command. Tests set 0.
+READBACK_DELAY_S = 0.6
+_READBACK_WINDOW_MS = 1500
+
+
+def _readback_target(device: dict[str, Any]) -> tuple[str, int] | None:
+    """Module address and channel 0-7 for a dimmer status read, or None."""
+    module_ip = str(device.get("module_id") or "").strip()
+    channel = device.get("channel")
+    if _raw_module_ip(module_ip) is None:
+        return None
+    if type(channel) is not int or not 0 <= channel <= 7:
+        return None
+    return module_ip, channel
+
+
+def _readback_level(replies: list[Any], channel: int) -> dict[str, Any] | None:
+    """The first dimmer status reply for ``channel`` among the raw replies."""
+    for reply in replies:
+        if not isinstance(reply, dict) or not isinstance(reply.get("hex"), str):
+            continue
+        decoded = _safe_decode(reply["hex"])
+        if not isinstance(decoded, dict):
+            continue
+        for match in decoded.get("matches") or []:
+            if not isinstance(match, dict):
+                continue
+            fields = match.get("fields") if isinstance(match.get("fields"), dict) else {}
+            if fields.get("family") != "dimmer_status_reply":
+                continue
+            if fields.get("channel") != channel:
+                continue
+            level = fields.get("level_percent")
+            return {
+                "level_percent": level if type(level) is int else None,
+                "raw": str(fields.get("raw") or decoded.get("ascii") or reply["hex"]),
+                "dialect_id": full_dialect_id(str(fields.get("dialect_id") or "")),
+            }
+    return None
+
+
+async def _dimmer_readback(
+    session: GatewaySession,
+    device: dict[str, Any],
+    *,
+    action: str,
+    value: int | None,
+) -> dict[str, Any]:
+    """Ask the dimmer for the live level of this channel with ``I{ch}000000``.
+
+    This is a read. It changes no output. A module that only echoes the
+    command proves it received the frame, not that the lamp moved; this
+    read-back is the check. Needs ``raw_send``; without it the result says why.
+    """
+    target = _readback_target(device)
+    if target is None:
+        return {
+            "available": False,
+            "reason": "geen moduleadres of kanaal 0 tot 7 in de inventaris",
+        }
+    module_ip, channel = target
+    error = await session.refresh_status()
+    if error is not None:
+        return {"available": False, "reason": error.message or error.kind}
+    gated = gate_feature(session.status, "raw_send")
+    if gated is not None:
+        if gated.kind == KIND_REMOTE_DEBUGGING_OFF:
+            reason = "de schakelaar Bediening op afstand (voor debuggen) staat uit"
+        else:
+            reason = "deze gatewayversie kan geen testpakket sturen"
+        return {"available": False, "reason": reason}
+    if READBACK_DELAY_S > 0:
+        await asyncio.sleep(READBACK_DELAY_S)
+    query = f"I{channel}000000"
+    body, call_error = await session.post_json(
+        RAW_SEND_PATH,
+        {
+            "module_ip": module_ip,
+            "port": 1001,
+            "payload_hex": query.encode("ascii").hex(),
+            "window_ms": _READBACK_WINDOW_MS,
+        },
+        timeout=max(8.0, _READBACK_WINDOW_MS / 1000 + 3),
+    )
+    if call_error is not None:
+        code = _raw_error_code(body)
+        if code == "raw_send_rate_limited":
+            reason = "te veel testpakketten in de laatste minuut; probeer zo meteen opnieuw"
+        else:
+            reason = code or call_error.message or call_error.kind
+        return {"available": False, "query": query, "reason": reason}
+    replies = body.get("replies") if isinstance(body, dict) else None
+    found = _readback_level(replies if isinstance(replies, list) else [], channel)
+    result: dict[str, Any] = {
+        "available": True,
+        "query": query,
+        "channel": channel,
+        "answered": found is not None,
+    }
+    expected = value if action == "DIM" else None
+    if found is not None:
+        result.update(found)
+        if expected is not None and found.get("level_percent") is not None:
+            result["expected_percent"] = expected
+            result["matches_request"] = found["level_percent"] == expected
+    return result
+
+
+def _readback_sentence(readback: dict[str, Any] | None) -> str:
+    """One or two sentences for the tool message. Empty when not attempted."""
+    if not isinstance(readback, dict):
+        return ""
+    if not readback.get("available"):
+        reason = readback.get("reason") or "onbekende reden"
+        return f" Nalezen van de stand lukte niet: {reason}."
+    if not readback.get("answered"):
+        return (
+            " Nalezen: de module gaf geen stand terug op de leesvraag. "
+            "Vraag de tester wat de lamp doet."
+        )
+    level = readback.get("level_percent")
+    shown = f"{level}%" if level is not None else "een onbekende stand"
+    raw = readback.get("raw") or ""
+    if readback.get("matches_request") is False:
+        return (
+            f" Nalezen: de module meldt nu {shown} ({raw}), niet de gevraagde "
+            f"{readback.get('expected_percent')}%. Het commando is waarschijnlijk "
+            "niet uitgevoerd. Vraag de tester wat de lamp doet."
+        )
+    return (
+        f" Nalezen: de module meldt nu {shown} ({raw}). Vraag de tester of de "
+        "lamp dat ook echt doet; een module kan een stand melden die de lamp niet volgt."
+    )
+
+
+def _is_echo_only_dialect(readback: dict[str, Any] | None) -> bool:
+    if not isinstance(readback, dict):
+        return False
+    return "torhout" in str(readback.get("dialect_id") or "")
+
+
 async def device_command(
     session: GatewaySession,
     *,
@@ -891,6 +1036,7 @@ async def device_command(
     value: int | None = None,
     fade: int | None = None,
     confirmed: bool = False,
+    verify: bool = True,
 ) -> ToolResult:
     """Switch or dim one device via POST /devices/{id}/command.
 
@@ -899,6 +1045,8 @@ async def device_command(
     ``fade`` is optional for DIM, ON, and OFF: omit it or pass 0 for an instant
     change. 1–255 lengthens the ramp. A non-integer or a value outside 0–255
     is rejected. The module reports the end level before the lamp finishes.
+    ``verify`` reads the live level back from a dimmer after DIM, TOGGLE, and
+    DIM_STOP when ``raw_send`` is active. That read changes nothing.
     """
     device_id = (device_id or "").strip()
     requested = (action or "").strip().upper()
@@ -955,14 +1103,26 @@ async def device_command(
     }
     if action_name == "DIM":
         preview["fade"] = 0 if fade is None else fade
+    will_verify = (
+        verify
+        and _device_kind(session, device) == "dimmer"
+        and action_name in _READBACK_ACTIONS
+    )
+    preview["verify"] = will_verify
     if not confirmed:
         level = f" naar {value}" if value is not None else ""
         lead = f"{note} " if note else ""
+        check = (
+            "Daarna vraagt de tool de dimmer naar zijn stand. Die leesvraag verandert niets. "
+            if will_verify
+            else ""
+        )
         return ToolResult(
             (
                 f"{lead}Nog niet verstuurd. Dit zet apparaat {device_id} op {action_name}{level} "
                 "via het commando van de gateway. "
                 "Een lamp kan aan, uit of anders van helderheid gaan. "
+                f"{check}"
                 "Vraag de tester op dat moment wat hij ziet, "
                 "bijvoorbeeld of het traag reageerde. "
                 "Roep device_command daarna opnieuw aan met confirmed=true. "
@@ -994,6 +1154,9 @@ async def device_command(
         return _from_error(call_error, **preview)
     gateway_ok = isinstance(body, dict) and body.get("ok") is True
     confirmation = _command_confirmation(body, action_name)
+    readback: dict[str, Any] | None = None
+    if will_verify and gateway_ok:
+        readback = await _dimmer_readback(session, device, action=action_name, value=value)
     await _record_command_result(
         session,
         device_id=device_id,
@@ -1006,8 +1169,15 @@ async def device_command(
         reported=confirmation["reported"],
         confirmation_available=confirmation["available"],
         note=note,
+        readback=readback,
     )
     message = confirmation["message"]
+    if confirmation["module_confirmed"] and _is_echo_only_dialect(readback):
+        message += (
+            " Deze dimmer (Torhout) stuurt het commando alleen terug. "
+            "Dat bevestigt dat hij het ontving, niet dat de lamp veranderde."
+        )
+    message += _readback_sentence(readback)
     if note:
         message = f"{note} {message}"
     result = {
@@ -1025,6 +1195,7 @@ async def device_command(
         "confirmation_available": confirmation["available"],
         "warning": message,
         "gateway": body if isinstance(body, dict) else {},
+        "readback": readback,
     }
     if "fade" in preview:
         result["fade"] = preview["fade"]
@@ -1039,8 +1210,15 @@ async def capture_frames(
     module: str = "",
     pattern: str = "",
     limit: int = 50,
+    include_polls: bool = False,
 ) -> ToolResult:
-    """Live field-bus frames. Needs capability ``udp_frame``."""
+    """Live field-bus frames. Needs capability ``udp_frame``.
+
+    ``seconds=0`` does not wait: it returns what arrived since the previous
+    capture. Call it once to start, let the tester act, and call it again
+    when the tester says done. Routine polls and keepalives are left out
+    unless ``include_polls`` is true; the result counts them.
+    """
     error = await session.refresh_status()
     if error is not None:
         return _from_error(error, capability="udp_frame")
@@ -1048,7 +1226,7 @@ async def capture_frames(
     if gated is not None:
         return _from_error(gated, capability="udp_frame")
 
-    seconds = clamp_timeout(seconds if seconds > 0 else 0.1)
+    seconds = clamp_timeout(seconds if seconds > 0 else 0.0)
     limit = max(1, min(int(limit), 200))
     direction = (direction or "both").lower()
     # The first capture takes its cursor before subscribe, so a frame that is
@@ -1066,6 +1244,7 @@ async def capture_frames(
         )
     if session.frame_cursor is not None:
         since = session.frame_cursor
+    skipped: dict[str, int] = {"polls": 0}
     frames = await _collect_frames(
         session,
         since,
@@ -1074,6 +1253,8 @@ async def capture_frames(
         module=module,
         pattern=pattern,
         limit=limit,
+        include_polls=include_polls,
+        skipped=skipped,
     )
     await _record_capture_decodes(session, frames)
     session.frame_cursor = session.buffer.latest_seq
@@ -1085,10 +1266,26 @@ async def capture_frames(
         )
     else:
         message = f"{len(frames)} frame(s) ontvangen."
+    if skipped["polls"]:
+        message += (
+            f" {skipped['polls']} routinepoll(s) weggelaten; "
+            "include_polls=true toont ze."
+        )
+    if len(frames) >= limit:
+        message += (
+            f" De limiet van {limit} frames is bereikt; er kan meer zijn. "
+            "Roep de tool opnieuw aan met seconds=0 voor de rest."
+        )
     if continued:
         message = (
             "Deze opname gaat verder waar de vorige stopte, "
             "inclusief wat tussendoor binnenkwam. "
+            + message
+        )
+    elif seconds == 0:
+        message = (
+            "Meeluisteren loopt vanaf nu. Laat de tester drukken of kijken, en roep "
+            "capture_frames opnieuw aan met seconds=0 zodra hij klaar zegt. "
             + message
         )
     return ToolResult(
@@ -1100,6 +1297,8 @@ async def capture_frames(
             "seconds": seconds,
             "direction": direction,
             "continued": continued,
+            "polls_skipped": skipped["polls"],
+            "include_polls": include_polls,
         },
     )
 
@@ -1215,6 +1414,7 @@ async def send_raw(
         summary = "Geen antwoord binnen het venster. Dat is gelukt."
     if truncated:
         summary += " Er was nog een antwoord; de gateway bewaart er hoogstens 8."
+    await _record_raw_send(session, module_ip=module_ip, sent_hex=sent_hex, replies=decoded)
     return ToolResult(
         f"Pakket verstuurd naar {module_ip} op poort {port}. {summary}",
         {
@@ -1229,6 +1429,68 @@ async def send_raw(
             "replies": decoded,
             "truncated": truncated,
         },
+    )
+
+
+def _hex_as_text(hex_text: str) -> str:
+    """Printable ASCII for a frame, else the hex itself."""
+    try:
+        data = bytes.fromhex(hex_text)
+    except ValueError:
+        return hex_text
+    if data and all(32 <= byte < 127 for byte in data):
+        return data.decode("ascii")
+    return hex_text
+
+
+def _reply_summary(reply: Any) -> str:
+    if not isinstance(reply, dict):
+        return "?"
+    text = _hex_as_text(str(reply.get("hex") or ""))
+    decoded = reply.get("local_decode")
+    bits: list[str] = []
+    if isinstance(decoded, dict):
+        for match in decoded.get("matches") or []:
+            fields = match.get("fields") if isinstance(match, dict) else None
+            if not isinstance(fields, dict):
+                continue
+            family = fields.get("family")
+            if family:
+                bits.append(str(family))
+            level = fields.get("level_percent")
+            if type(level) is int:
+                bits.append(f"{level}%")
+            full = full_dialect_id(str(fields.get("dialect_id") or ""))
+            if full:
+                bits.append(full)
+            break
+    return f"{text} ({' '.join(bits)})" if bits else text
+
+
+async def _record_raw_send(
+    session: GatewaySession,
+    *,
+    module_ip: str,
+    sent_hex: str,
+    replies: list[Any],
+) -> None:
+    """Store one sent test packet and its replies for the report."""
+    sent = _hex_as_text(sent_hex)
+    if replies:
+        answer = "antwoord " + "; ".join(_reply_summary(reply) for reply in replies)
+    else:
+        answer = "geen antwoord"
+    await session.buffer.append(
+        {
+            "type": "raw_send_result",
+            "received_at": _format_local(datetime.now().astimezone()),
+            "module_ip": module_ip,
+            "sent_hex": sent_hex,
+            "reply_hex": [
+                str(reply.get("hex") or "") for reply in replies if isinstance(reply, dict)
+            ],
+            "message": f"testpakket {sent} naar {module_ip}: {answer}",
+        }
     )
 
 
@@ -1342,6 +1604,30 @@ def _stamp_note(note: dict[str, Any]) -> dict[str, Any]:
     return item
 
 
+def report_directory() -> Path:
+    """Where a saved report goes: ``IPBUILDING_REPORT_DIR``, else Downloads, else home."""
+    configured = os.environ.get("IPBUILDING_REPORT_DIR", "").strip()
+    if configured:
+        return Path(configured).expanduser()
+    home = Path.home()
+    downloads = home / "Downloads"
+    return downloads if downloads.is_dir() else home
+
+
+def _save_report_file(report: str, installatie_id: str) -> tuple[str, str]:
+    """Write the filtered report. Returns (path, error); one of them is empty."""
+    stamp = datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
+    safe_id = re.sub(r"[^A-Za-z0-9_-]", "", installatie_id or "")[:16] or "sessie"
+    folder = report_directory()
+    path = folder / f"ipbuilding-rapport-{safe_id}-{stamp}.md"
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        path.write_text(report, encoding="utf-8")
+    except OSError as exc:
+        return "", f"{exc.__class__.__name__}: {exc.strerror or exc}"
+    return str(path), ""
+
+
 async def export_session(
     session: GatewaySession,
     *,
@@ -1352,8 +1638,14 @@ async def export_session(
     include_events: bool | None = None,
     vermoeden: str = "",
     open_vraag: str = "",
+    save_file: bool = True,
 ) -> ToolResult:
-    """Bundle the session. Names are masked and addresses removed unless redact is false."""
+    """Bundle the session. Names are masked and addresses removed unless redact is false.
+
+    With ``save_file`` the filtered report is also written as a Markdown file
+    (Downloads by default), so the tester can attach it unchanged. A raw
+    report (``redact=false``) is never written to disk.
+    """
     if note or marker:
         await session.annotate(note or marker, marker=marker)
     if feedback.strip():
@@ -1386,6 +1678,20 @@ async def export_session(
     report = _localise_utc_text(report)
     frontmatter = _localise_utc_text(frontmatter)
     message = f"{report}\n{sharing}"
+    file_path = ""
+    file_error = ""
+    if save_file and redact:
+        file_path, file_error = _save_report_file(
+            report, str(body.get("installatie_id") or "")
+        )
+        if file_path:
+            message += (
+                f"\nHet volledige rapport staat ook als bestand: {file_path}. "
+                "Laat de tester dat bestand ongewijzigd meesturen. "
+                "Schrijf geen eigen samenvatting in de plaats ervan."
+            )
+        else:
+            message += f"\nHet rapport kon niet als bestand bewaard worden ({file_error})."
     offer = offer_sentence()
     if offer:
         message = f"{message}\n{offer}"
@@ -1398,6 +1704,8 @@ async def export_session(
             "sharing": sharing,
             "report": report,
             "frontmatter": frontmatter,
+            "file_path": file_path,
+            "file_error": file_error,
             **body,
         },
     )
@@ -1440,9 +1748,16 @@ async def send_report(
         open_vraag=open_vraag,
     )
     report = str(exported.data.get("report") or "")
+    file_path = str(exported.data.get("file_path") or "")
+    file_line = (
+        f"\nHet rapport staat ook als bestand: {file_path}. "
+        "Voeg dat bestand ongewijzigd toe als bijlage."
+        if file_path
+        else ""
+    )
     if not confirmed:
         return ToolResult(
-            preview_message(report),
+            preview_message(report) + file_line,
             {
                 "ok": True,
                 "kind": "report_preview",
@@ -1450,6 +1765,7 @@ async def send_report(
                 "sent": False,
                 "mailto": None,
                 "report": report,
+                "file_path": file_path,
             },
         )
     frontmatter = str(exported.data.get("frontmatter") or "")
@@ -1472,7 +1788,7 @@ async def send_report(
         email_body(section_map(exported.data), frontmatter),
     )
     return ToolResult(
-        sent_message(address, subject, report, link),
+        sent_message(address, subject, report, link) + file_line,
         {
             "ok": True,
             "kind": "report_mailto",
@@ -1481,6 +1797,7 @@ async def send_report(
             "mailto": link,
             "subject": subject,
             "address": address,
+            "file_path": file_path,
         },
     )
 
@@ -1768,6 +2085,7 @@ async def _record_command_result(
     reported: dict[str, Any] | None,
     confirmation_available: bool,
     note: str = "",
+    readback: dict[str, Any] | None = None,
 ) -> None:
     """Store one sent command. Previews never call this."""
     name = _device_display_name(session, device_id)
@@ -1782,6 +2100,16 @@ async def _record_command_result(
         confirm_ms=confirm_ms,
         reported=reported,
     )
+    if isinstance(readback, dict):
+        if not readback.get("available"):
+            message += f" nalezen niet gelukt ({readback.get('reason') or 'onbekend'})"
+        elif not readback.get("answered"):
+            message += " nalezen geen antwoord"
+        else:
+            level = readback.get("level_percent")
+            message += f" nagelezen {level}% ({readback.get('raw') or ''})"
+            if readback.get("matches_request") is False:
+                message += " WIJKT AF van de gevraagde stand"
     if note:
         message = f"{note} {message}"
     event: dict[str, Any] = {
@@ -1802,6 +2130,8 @@ async def _record_command_result(
         event["translation"] = note
     if name:
         event["name"] = name
+    if readback is not None:
+        event["readback"] = readback
     await session.buffer.append(event)
 
 
@@ -2037,6 +2367,7 @@ _EXPORT_TYPES = {
     "device_firmware_changed",
     "command_result",
     "decode_result",
+    "raw_send_result",
 }
 
 
@@ -2482,8 +2813,14 @@ async def _collect_frames(
     module: str,
     pattern: str,
     limit: int,
+    include_polls: bool = True,
+    skipped: dict[str, int] | None = None,
 ) -> list[dict[str, Any]]:
-    """Frames after ``since``, until ``limit`` matches or ``seconds`` elapses."""
+    """Frames after ``since``, until ``limit`` matches or ``seconds`` elapses.
+
+    Without ``include_polls`` a routine poll or keepalive is counted in
+    ``skipped["polls"]`` and not returned.
+    """
 
     def matching(event: dict[str, Any]) -> bool:
         return event.get("type") == "udp_frame" and _frame_matches(
@@ -2492,12 +2829,19 @@ async def _collect_frames(
 
     def gathered() -> list[dict[str, Any]]:
         found: list[dict[str, Any]] = []
+        polls = 0
         for entry in session.buffer.since(since, types={"udp_frame"}):
             if not matching(entry.event):
                 continue
-            found.append(_with_local_decode(entry.event))
+            item = _with_local_decode(entry.event)
+            if not include_polls and _frame_kind(item.get("local_decode")) == "poll":
+                polls += 1
+                continue
+            found.append(item)
             if len(found) >= limit:
                 break
+        if skipped is not None:
+            skipped["polls"] = polls
         return found
 
     loop = asyncio.get_running_loop()

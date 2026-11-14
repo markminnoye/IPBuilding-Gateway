@@ -207,7 +207,7 @@ def _write_manifest(dest: Path, version: str) -> None:
             "name": "device_command",
             "description": (
                 "Eén apparaat schakelen of dimmen nadat de tester het bevestigd heeft. "
-                "Bij een commandotest eerst frames meelezen."
+                "Bij een commandotest eerst frames meelezen. Leest de stand van een dimmer daarna na."
             ),
         },
         {
@@ -216,7 +216,10 @@ def _write_manifest(dest: Path, version: str) -> None:
         },
         {
             "name": "capture_frames",
-            "description": "Veldbusframes meelezen, als deze versie dat kan.",
+            "description": (
+                "Veldbusframes meelezen, als deze versie dat kan. "
+                "Met seconds=0: starten, tester laten drukken, bij klaar opnieuw ophalen."
+            ),
         },
         {
             "name": "send_raw",
@@ -230,7 +233,7 @@ def _write_manifest(dest: Path, version: str) -> None:
             "name": "export_session",
             "description": (
                 "Rapport, bugrapport, foutmelding of feedback. Probleem melden, report, bug report. "
-                "Namen en adressen gaan er standaard uit."
+                "Namen en adressen gaan er standaard uit. Bewaart het rapport ook als bestand."
             ),
         },
     ]
