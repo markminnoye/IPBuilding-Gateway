@@ -3,6 +3,12 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.9.0] - 2026-11-15
+
+### Added
+- **Per-dimmer perceptual curve (`dim_gamma`).** Each dimmer channel now supports a configurable `dim_gamma` (`0.5–5.0`, default `1.0` = linear) via `PATCH /api/v1/devices/{device_id}` and the Gateway Web UI (`Gamma` column). Commands map UI `%` to bus `%` via `dim_gamma`, and status updates (`I0154`, `state_changed`, `/api/v1/devices`) invert back to UI `%` so Home Assistant sliders stay in sync.
+- **Per-dimmer default transition (`default_fade`).** Each dimmer channel now supports a configurable `default_fade` (`0–255`, default `30` matching the IPBox) via `PATCH /api/v1/devices/{device_id}` and the Gateway Web UI (`Fade` column). `DIM`, `ON`, and `OFF` commands without an explicit `fade` parameter use the channel's `default_fade`.
+
 ## [1.8.1] - 2026-10-25
 
 ### Changed

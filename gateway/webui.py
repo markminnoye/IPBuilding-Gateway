@@ -532,11 +532,52 @@ INDEX_HTML = """<!doctype html>
     return el("td", {}, [input]);
   }
 
+  function buildGammaCell(device, state) {
+    if (!isChannel(device) || device.device_type !== "dimmer") {
+      state.dim_gamma = null;
+      return el("td", { class: "muted" }, [document.createTextNode("—")]);
+    }
+    var val = typeof device.dim_gamma === "number" ? device.dim_gamma : 1.0;
+    var input = el("input", {
+      type: "number",
+      min: "0.5",
+      max: "5.0",
+      step: "0.1",
+      style: "width:70px",
+      value: String(val),
+      title: "Dimming curve gamma (1.0 = linear, 2.2 = perceptual)",
+    });
+    state.dim_gamma = input;
+    return el("td", {}, [input]);
+  }
+
+  function buildFadeCell(device, state) {
+    if (!isChannel(device) || device.device_type !== "dimmer") {
+      state.default_fade = null;
+      return el("td", { class: "muted" }, [document.createTextNode("—")]);
+    }
+    var val = typeof device.default_fade === "number" ? device.default_fade : 30;
+    var input = el("input", {
+      type: "number",
+      min: "0",
+      max: "255",
+      step: "1",
+      style: "width:68px",
+      value: String(val),
+      title: "Default transition fade (0–255, IPBox default = 30)",
+    });
+    state.default_fade = input;
+    return el("td", {}, [input]);
+  }
+
   function currentValue(fieldName, inputEl) {
     if (inputEl === null) return undefined;
     if (fieldName === "active") return inputEl.checked;
-    if (fieldName === "max_watt") {
+    if (fieldName === "max_watt" || fieldName === "default_fade") {
       return parseInt(inputEl.value, 10);
+    }
+    if (fieldName === "dim_gamma") {
+      return Math.round(parseFloat(inputEl.value) * 100) / 100;
     }
     return inputEl.value;
   }
@@ -549,6 +590,8 @@ INDEX_HTML = """<!doctype html>
       "semantic_type",
       "active",
       "max_watt",
+      "dim_gamma",
+      "default_fade",
     ];
     fields.forEach(function (f) {
       var inputEl = state[f];
@@ -626,6 +669,10 @@ INDEX_HTML = """<!doctype html>
     tr.appendChild(buildTypeCell(device, state));
     tr.appendChild(buildActiveCell(device, state));
     tr.appendChild(buildWattCell(device, state));
+    if (moduleType === "dimmer") {
+      tr.appendChild(buildGammaCell(device, state));
+      tr.appendChild(buildFadeCell(device, state));
+    }
 
     var statusSpan = el("span", { class: "status" });
     var saveBtn = el("button", { text: "Save" });
@@ -811,20 +858,35 @@ INDEX_HTML = """<!doctype html>
     var chTitle = moduleType === "input"
       ? "Physical input port on IP1100 (0–7)"
       : "Output channel on this module";
+    var headerCells = [
+      el("th", { text: chLabel, title: chTitle }),
+      el("th", { text: "Name" }),
+      el("th", { text: "Room" }),
+      el("th", { text: "Type" }),
+      el("th", { text: "Active" }),
+      el("th", {
+        text: "Max Watt",
+        title: "Configured maximum power for this channel",
+      }),
+    ];
+    if (moduleType === "dimmer") {
+      headerCells.push(
+        el("th", {
+          text: "Gamma",
+          title: "Dimming curve gamma (1.0 = linear, ~2.2 = perceptual)",
+        })
+      );
+      headerCells.push(
+        el("th", {
+          text: "Fade",
+          title: "Default transition fade (0–255, IPBox default = 30)",
+        })
+      );
+    }
+    headerCells.push(el("th", { text: "" }));
     var table = el("table", { class: "module-table" }, [
       el("thead", {}, [
-        el("tr", {}, [
-          el("th", { text: chLabel, title: chTitle }),
-          el("th", { text: "Name" }),
-          el("th", { text: "Room" }),
-          el("th", { text: "Type" }),
-          el("th", { text: "Active" }),
-          el("th", {
-            text: "Max Watt",
-            title: "Configured maximum power for this channel",
-          }),
-          el("th", { text: "" }),
-        ]),
+        el("tr", {}, headerCells),
       ]),
     ]);
     var tbody = el("tbody", {});

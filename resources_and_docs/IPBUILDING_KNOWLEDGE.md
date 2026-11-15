@@ -181,7 +181,7 @@ Dezelfde soort embedded UI als de relaymodule: **HTTP/1.0**, homepage met Status
 | `descr`  | Omschrijving                                                 |
 | `gr`     | Groepnaam                                                    |
 | `dimMin` | Minimum helderheid (%) in de module                          |
-| `dimMax` | Maximum helderheid (%) in de module                          |
+| `dimMax` | Maximum helderheid (%) in de module — de module **schaalt** `1–100%` lineair naar `[dimMin .. dimMax]` (bewezen 2026-11-15, [evidence](evidence/2026-11-15_dimmer_fade_and_minmax_calibration.md)) |
 | `status` | Huidige waarde; **0** = uit, anders **1–100** (helderheid %) |
 
 
@@ -681,7 +681,7 @@ De IP0300PoE dimmer gebruikt **geen `J`-separator** (anders dan relay in sommige
 - `<value_code>` = `10`–`98` = dat %, `99` = 100 %, `00` = uit.
 - `1` = vast teken vóór de fade. De betekenis is **onbekend**.
 - `<fade>` = drie cijfers. De module bewaart ze in **één byte**: geldig `000`–`255`. Boven 255 wikkelt de module (300 gedroeg zich als 44, 999 als 231). De encoder weigert een fade buiten 0–255, zodat een gewikkelde waarde nooit op de draad komt.
-- `000` is meteen, dezelfde snelheid als de wandknop (`T…1000`). Een grotere waarde verlengt de ramp. Ongeveer 0,2 s per eenheid is een **schatting** uit één installatie op 16 okt 2026, niet een getimede kalibratie; `010` week daarvan af. De exacte schaal en het gedrag op tussenliggende niveaus zijn **niet gemeten**.
+- `000` is meteen, dezelfde snelheid als de wandknop (`T…1000`). Een grotere waarde verlengt de ramp. Kalibratie 15 nov 2026 ([evidence](evidence/2026-11-15_dimmer_fade_and_minmax_calibration.md)): voor `fade > 0` volgt de volledige `100→0%`-ramp vrijwel **`duur_s ≈ 3,8 + 0,17 × fade`** (`10` → ~5,5 s, `30` → ~9,0 s, `60` → ~13,9 s). Het is een **snelheid** (helling), geen vaste totaaltijd (`50→0%` bij `fade=30` duurde ~5,8 s), en de module maakt géén automatische Soft AAN/UIT-sprong op `S`/`C` met `fade > 0`.
 - De module antwoordt meteen met het **eindniveau**. Tijdens een fade loopt de getoonde status voor op de lamp. Een antwoord na enkele tientallen milliseconden is acceptatie van het setpoint, niet het einde van de ramp.
 
 De gateway stuurt standaard fade `000` (`S0991000` aan, `C0001000` uit). Oudere captures gebruikten fade `030` (`S0991030`, `C1991030`): dat is wat IPBox stuurde, en het blijft een geldig frame. `S0991030` is kanaal 0, niveau 99, marker `1`, fade `030`.

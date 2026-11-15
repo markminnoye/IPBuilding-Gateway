@@ -650,8 +650,8 @@ class TestDimmerDownstreamCommands:
         api._bus.correlate_reply.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_dim_defaults_to_instant_fade(self) -> None:
-        """DIM and ON/OFF use fade 000 unless the body sets fade."""
+    async def test_dim_defaults_to_module_default_fade(self) -> None:
+        """DIM and ON/OFF use the module's default_fade (30) unless overridden."""
         import asyncio
 
         inst = _make_installation([
@@ -673,19 +673,19 @@ class TestDimmerDownstreamCommands:
         assert ok is True
         assert error is None
         api._bus.send_command.assert_called_with(
-            "10.10.1.40", b"S0991000", expect_reply=True,
+            "10.10.1.40", b"S0991030", expect_reply=True,
         )
 
         ok, error = await api._execute_command("10.10.1.40-0", "OFF", None)
         assert ok is True
         api._bus.send_command.assert_called_with(
-            "10.10.1.40", b"C0001000", expect_reply=True,
+            "10.10.1.40", b"C0001030", expect_reply=True,
         )
 
-        ok, error = await api._execute_command("10.10.1.40-0", "DIM", 50, fade=30)
+        ok, error = await api._execute_command("10.10.1.40-0", "DIM", 50, fade=15)
         assert ok is True
         api._bus.send_command.assert_called_with(
-            "10.10.1.40", b"S0501030", expect_reply=True,
+            "10.10.1.40", b"S0501015", expect_reply=True,
         )
 
         ok, error = await api._execute_command("10.10.1.40-0", "DIM", 40, fade=0)

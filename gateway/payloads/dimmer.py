@@ -321,3 +321,35 @@ def encode_dim_stop(channel: int) -> bytes:
     with ``I0154<ch><VV>`` reporting the level reached when the stop landed.
     """
     return f"D{channel}001000".encode("ascii")
+
+
+def apply_dim_gamma(ui_pct: int, gamma: float) -> int:
+    """Map a UI percentage (0–100) to a bus percentage (0–100) via ``gamma``.
+
+    ``0`` always maps to ``0`` and ``100`` to ``100``. Any positive ``ui_pct``
+    clamps to at least ``1`` on the bus so low UI levels never turn the light off.
+    """
+    if ui_pct <= 0:
+        return 0
+    if ui_pct >= 100:
+        return 100
+    if gamma == 1.0:
+        return int(ui_pct)
+    mapped = round(100.0 * ((ui_pct / 100.0) ** gamma))
+    return max(1, min(100, mapped))
+
+
+def invert_dim_gamma(bus_pct: int, gamma: float) -> int:
+    """Invert :func:`apply_dim_gamma`: map a bus percentage (0–100) back to UI %.
+
+    Used on status updates (``I0154`` / snapshots) so UI sliders match the
+    user-facing perceptual scale instead of jumping back to raw bus values.
+    """
+    if bus_pct <= 0:
+        return 0
+    if bus_pct >= 100:
+        return 100
+    if gamma == 1.0:
+        return int(bus_pct)
+    mapped = round(100.0 * ((bus_pct / 100.0) ** (1.0 / gamma)))
+    return max(1, min(100, mapped))
