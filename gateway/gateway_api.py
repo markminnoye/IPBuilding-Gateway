@@ -63,6 +63,7 @@ from gateway.remote_debug import (
 from gateway.health import GatewayHealthMonitor
 from gateway.button_id import canonical_button_id
 from gateway.installation import (
+    DEFAULT_DIMMER_FADE,
     InstallationConfig,
     PushbuttonConfig,
     module_by_northbound_id,
@@ -77,6 +78,7 @@ from gateway.payloads import (
     encode_dim_toggle,
     encode_relay_command,
 )
+from gateway.payloads.dimmer import apply_dim_gamma, invert_dim_gamma
 from gateway.models import RelayAction, RelayCommand, DimmerCommand
 from gateway.udp_bus import UDPBus, format_payload
 from gateway.webui import INDEX_HTML
@@ -291,6 +293,7 @@ class GatewayAPI:
         self._app.router.add_post(
             "/api/v1/debug/raw-send", self._post_debug_raw_send
         )
+        self._app.router.add_get("/api/v1/debug/logs", self._get_debug_logs)
 
         # Register registry callbacks
         self._state_cb = self._registry.on_state_changed(self._on_state_changed)
@@ -504,7 +507,9 @@ class GatewayAPI:
         msg_type = data.get("type")
         try:
             if msg_type == "subscribe_logs":
-                await self._log_stream.subscribe(ws, data.get("min_level"))
+                await self._log_stream.subscribe(
+                    ws, data.get("min_level"), data.get("since"),
+                )
             elif msg_type == "unsubscribe_logs":
                 await self._log_stream.unsubscribe(ws)
             elif msg_type == "set_log_level":
@@ -1090,6 +1095,30 @@ class GatewayAPI:
             raise ApiError(exc.status, exc.code, exc.message) from None
         return web.json_response(result)
 
+    async def _get_debug_logs(self, request: web.Request) -> web.Response:
+        """GET /api/v1/debug/logs — recent lines from the memory ring.
+
+        Refused while remote debugging is off. ``since`` is an ISO 8601
+        timestamp; ``min_level`` defaults to info. Nothing is read from disk.
+        """
+        if not self._remote_debugging_enabled():
+            raise ApiError(
+                REMOTE_DEBUGGING_DISABLED_STATUS,
+                REMOTE_DEBUGGING_DISABLED,
+                REMOTE_DEBUGGING_DISABLED_MESSAGE,
+            )
+        since = request.query.get("since")
+        min_level = request.query.get("min_level")
+        if isinstance(since, str) and not since.strip():
+            since = None
+        if isinstance(min_level, str) and not min_level.strip():
+            min_level = None
+        try:
+            result = self._log_stream.history(min_level, since)
+        except LogStreamError as exc:
+            raise ApiError(exc.status, exc.code, exc.message) from None
+        return web.json_response({"ok": True, "schema_version": 2, **result})
+
     async def _post_discover(self, request: web.Request) -> web.Response:
         """POST /api/v1/discover — run forced discovery (ARP-sweep + HTTP identify).
 
@@ -1124,12 +1153,14 @@ class GatewayAPI:
         # Refuse commands for inactive channels so a manually-enabled HA entity
         # can't drive UDP traffic to a not-yet-wired relay/dimmer.
         installation = self._cfg.installation
-        if installation is not None:
-            mc = installation.module_by_ip(module_ip)
-            if mc is not None:
-                ch_cfg = next((c for c in mc.channels if c.ch == channel), None)
-                if ch_cfg is not None and not ch_cfg.active:
-                    return CommandResult(False, "channel inactive")
+        mc = installation.module_by_ip(module_ip) if installation is not None else None
+        ch_cfg = (
+            next((c for c in mc.channels if c.ch == channel), None)
+            if mc is not None
+            else None
+        )
+        if ch_cfg is not None and not ch_cfg.active:
+            return CommandResult(False, "channel inactive")
 
         # Encode the command
         # ``awaits_reply`` is shared across relay and dimmer branches so the
@@ -1152,13 +1183,26 @@ class GatewayAPI:
             payload = encode_relay_command(cmd)
         elif dtype == DeviceType.DIMMER:
             if action in ("DIM", "ON", "OFF"):
-                fade_units = 0 if fade is None else fade
+                if fade is None:
+                    fade_units = (
+                        ch_cfg.effective_default_fade
+                        if ch_cfg is not None
+                        else DEFAULT_DIMMER_FADE
+                    )
+                else:
+                    fade_units = fade
                 if action == "ON":
                     level = 100
                 elif action == "OFF":
                     level = 0
                 else:
-                    level = int(value) if value is not None else 0
+                    raw_level = int(value) if value is not None else 0
+                    gamma = (
+                        ch_cfg.effective_dim_gamma
+                        if ch_cfg is not None
+                        else 1.0
+                    )
+                    level = apply_dim_gamma(raw_level, gamma)
                 try:
                     if level == 0:
                         payload = encode_dim_off(channel, fade_units)
@@ -1637,8 +1681,15 @@ class GatewayAPI:
                         ch.max_watt if (rs and rs.state == "on") else 0
                     )
                 elif mc.type == DeviceType.DIMMER:
+                    device["dim_gamma"] = ch.effective_dim_gamma
+                    device["default_fade"] = ch.effective_default_fade
                     ds = self._registry.get_dimmer_state(key)
-                    level = ds.level_percent if ds else None
+                    raw_level = ds.level_percent if ds else None
+                    level = (
+                        invert_dim_gamma(raw_level, ch.effective_dim_gamma)
+                        if raw_level is not None
+                        else None
+                    )
                     device["level"] = level
                     if level is None:
                         # No data yet — distinguish "no recent fieldbus
@@ -1782,7 +1833,12 @@ class GatewayAPI:
             }
         elif key.device_type == DeviceType.DIMMER:
             assert isinstance(new, DimmerState)
-            level = new.level_percent
+            raw_level = new.level_percent
+            level = (
+                invert_dim_gamma(raw_level, ch_config.effective_dim_gamma)
+                if raw_level is not None
+                else None
+            )
             return {
                 "type": "state_changed",
                 "id": device_id,

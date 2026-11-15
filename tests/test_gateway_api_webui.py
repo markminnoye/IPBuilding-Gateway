@@ -198,3 +198,38 @@ class TestWebUiRoute:
         assert "statusBody.version" in body
         assert "Copy instance id" in body
         assert "gateway-meta" in body
+
+    def test_webui_inline_script_has_valid_js_syntax(self, tmp_path: Path) -> None:
+        """Inline <script> in INDEX_HTML must parse cleanly without literal newlines in strings."""
+        import shutil
+        import subprocess
+
+        from gateway.webui import INDEX_HTML
+
+        start = INDEX_HTML.index("<script>") + len("<script>")
+        end = INDEX_HTML.index("</script>")
+        js = INDEX_HTML[start:end]
+        assert "\\n" in js  # tooltip line breaks must be escaped in JS literals
+
+        node = shutil.which("node")
+        if node is not None:
+            js_file = tmp_path / "webui_check.js"
+            js_file.write_text(js, encoding="utf-8")
+            proc = subprocess.run(
+                [node, "--check", str(js_file)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert proc.returncode == 0, proc.stderr
+
+    def test_webui_tooltips_hover_only_and_standalone_neutral(self) -> None:
+        """Tooltips must be hover-only (no focus lock) and free of IPBox/HA references."""
+        from gateway.webui import INDEX_HTML
+
+        assert "IPBox" not in INDEX_HTML
+        assert "Home Assistant" not in INDEX_HTML
+        assert "normale fade" in INDEX_HTML
+        assert ".info-tip:hover .info-bubble" in INDEX_HTML
+        assert ".info-tip:focus .info-bubble" not in INDEX_HTML
+        assert ".info-tip:focus-visible .info-bubble" not in INDEX_HTML

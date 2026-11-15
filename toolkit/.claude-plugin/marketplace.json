@@ -1,0 +1,14 @@
+{
+  "name": "ipbuilding-gateway-tools",
+  "description": "IPBuilding Gateway Tools zijn hulpmiddelen voor AI-assistenten zoals Claude.",
+  "owner": {
+    "name": "Sonic Rocket"
+  },
+  "plugins": [
+    {
+      "name": "ipbuilding-gateway-tools",
+      "source": "./",
+      "description": "IPBuilding Gateway Tools zijn hulpmiddelen voor AI-assistenten zoals Claude."
+    }
+  ]
+}

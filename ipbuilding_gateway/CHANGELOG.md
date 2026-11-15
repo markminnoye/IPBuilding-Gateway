@@ -3,6 +3,18 @@
 All notable changes to the IPBuilding Gateway add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.9.0] - 2026-11-15
+
+### Added
+- **Per-dimmer perceptual curve (`dim_gamma`).** Each dimmer channel now supports a configurable `dim_gamma` (`1.0–3.5`, default `1.0` = linear) via `PATCH /api/v1/devices/{device_id}` and the Gateway Web UI (`Gamma` column). Commands map UI `%` to bus `%` via `dim_gamma`, and status updates (`I0154`, `state_changed`, `/api/v1/devices`) invert back to UI `%` so client sliders stay in sync.
+- **Per-dimmer default transition (`default_fade`).** Each dimmer channel now supports a configurable `default_fade` (`0–255`, default `30` ≈ 3 s, calibrated at ~0.1 s/unit) via `PATCH /api/v1/devices/{device_id}` and the Gateway Web UI (`Fade` column). `DIM`, `ON`, and `OFF` commands without an explicit `fade` parameter use the channel's `default_fade`.
+- **Gateway Web UI improvements.** Added instant hover-only `ⓘ` tooltips across all module tables, `Uitgang` (`<octet>.<block>.<pin>`) and 1-based `#N` channel/Device ID display, numeric input clamping (`Gamma`, `Fade`, `Max Watt`), and hid the unused `Max Watt` column on input modules.
+- **In-memory log ring buffer.** Added a short in-memory log ring for lookback.
+
+### Fixed
+- **Preserve dimmer `dim_gamma` and `default_fade` on module update.** `sync_channels_from_wire()` now preserves operator-configured `dim_gamma` and `default_fade` values when refreshing a dimmer module from `backupConfig`.
+- **Dimmer `S`/`C` fade & `start.sh` Bash 3.2 compatibility.**
+
 ## [1.8.1] - 2026-10-25
 
 ### Changed
@@ -22,6 +34,7 @@ Opgelost
 ### Technische details
 
 ### Changed
+- **Dimmer DIM, ON, and OFF switch instantly** unless the command body sets `fade` (an integer from 0 to 255). A fade below 0, above 255, or not an integer is rejected (`400` `invalid_fade`) and is not sent. The field-bus frame is `<S|C><channel><level>1<fade>`. `000` is instant, the same speed as the wall button. Older frames ending in `1030` are fade `030` and still decode. The module answers at once with the end level, so Home Assistant state runs ahead of the lamp during a fade. About 0.2 s per unit is an estimate from 16 Oct 2026; `010` was an outlier. The exact scale, mid-level fades, and the meaning of the leading `1` are unmeasured. No per-channel fade, and Home Assistant `transition` is not wired. The REST shim on `:30200` uses the same default (fade 0).
 - The settings group that holds **Remote control (for debugging)** is titled **Debug** in English and Dutch. The group description, the group key, and the switch texts are unchanged.
 - The add-on option is named **Remote control (for debugging)** (Nederlands: **Bediening op afstand (voor debuggen)**). The option key is unchanged. The Home Assistant notification follows the Home Assistant language.
 - Field-bus dialect ids use city names. The reference generation is `kessel-lo`. The older generation is `torhout`. `udp_frame` events carry that same `dialect_id`.
@@ -35,6 +48,7 @@ Opgelost
 - The develop add-on is listed in Home Assistant as **IPBuilding Gateway (develop)**. The release keeps the name **IPBuilding Gateway**.
 
 ### Added
+- **Log history.** While **Remote control (for debugging)** is on, the gateway keeps the last 500 lines and the last 15 minutes in memory. `GET /api/v1/debug/logs` and `subscribe_logs` take `since` and `min_level`. Nothing is written to disk. With the option off the ring is empty and the call is refused. `GET /api/v1/status` lists capability `log_history`.
 - **Raw send.** While **Remote control (for debugging)** is on, `POST /api/v1/debug/raw-send` and WebSocket `raw_send` send one payload on the gateway socket and return the replies from that module. `GET /api/v1/status` lists capability `raw_send`. With the option off the call is refused.
 - **Module reachability.** A command response includes `module_confirmed`, `confirm_ms`, and `reported` next to `ok`. No field-bus reply is still success. Each module on `/api/v1/modules` and in the WebSocket snapshot reports when it last answered and how fast.
 - **Remote control (for debugging)** in the add-on configuration, off by default. It stays on until you turn it off. While it is on, Home Assistant keeps a notification that anyone on your network can read field-bus traffic and send raw packets through this gateway.

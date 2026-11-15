@@ -9,4 +9,5 @@ CAPABILITIES: tuple[str, ...] = (
     "log_stream",
     "udp_frame",
     "raw_send",
+    "log_history",
 )

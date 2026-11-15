@@ -247,6 +247,33 @@ class TestSyncChannelsFromWire:
         assert mc.channels[0].active is True
         assert mc.channels[0].name == "Keuken LED"
 
+    def test_preserves_dim_gamma_and_default_fade_on_dimmer(self) -> None:
+        inst = InstallationConfig._parse({
+            "modules": [{
+                "ip": "10.10.1.40",
+                "type": "dimmer",
+                "mac": "00:24:77:52:ad:40",
+                "channels": [
+                    {
+                        "ch": 0,
+                        "name": "Bureau",
+                        "room": "Bureau",
+                        "active": True,
+                        "max_watt": 100,
+                        "dim_gamma": 2.2,
+                        "default_fade": 60,
+                    },
+                ],
+            }],
+        })
+        mc = inst.module_by_ip("10.10.1.40")
+        sync_channels_from_wire(mc, [
+            {"ch": 0, "name": "Wire Bureau", "room": "Wire", "active": True, "max_watt": 100},
+        ])
+        assert mc.channels[0].dim_gamma == 2.2
+        assert mc.channels[0].default_fade == 60
+        assert mc.channels[0].name == "Bureau"
+
 
 class TestSyncInputPushbuttonsFromCache:
     def test_merge_preserves_operator_fields_and_seeds_new_button(self) -> None:

@@ -86,7 +86,52 @@ INDEX_HTML = """<!doctype html>
   }
   table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
   th, td { border: 1px solid var(--border); padding: 0.3rem 0.5rem; text-align: left; }
-  th { background: var(--bg-alt); position: sticky; top: 0; }
+  th { background: var(--bg-alt); position: sticky; top: 0; z-index: 1; }
+  th:hover { z-index: 25; }
+  .info-tip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.3rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #888;
+    font-size: 0.85em;
+    line-height: 1;
+    cursor: help;
+    vertical-align: middle;
+  }
+  .info-tip:hover { color: inherit; }
+  .info-tip .info-bubble {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 30;
+    min-width: 220px;
+    max-width: 320px;
+    padding: 0.5rem 0.65rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #222;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: pre-line;
+    text-align: left;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+  }
+  .info-tip.info-tip-right .info-bubble {
+    left: auto;
+    right: 0;
+  }
+  .info-tip:hover .info-bubble {
+    display: block;
+  }
   input[type=text], select, input[type=number] {
     width: 100%;
     box-sizing: border-box;
@@ -137,7 +182,7 @@ INDEX_HTML = """<!doctype html>
   .status.err { color: var(--err); }
   .empty { padding: 1rem; color: #888; }
 
-  .module { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 1.25rem; overflow: hidden; }
+  .module { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 1.25rem; overflow: visible; }
   .module-header {
     display: flex;
     flex-wrap: wrap;
@@ -147,6 +192,7 @@ INDEX_HTML = """<!doctype html>
     background: var(--bg-alt);
     padding: 0.6rem 0.75rem;
     border-bottom: 1px solid var(--border);
+    border-radius: 5px 5px 0 0;
   }
   .module-title { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
   .module-name-row { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
@@ -281,7 +327,7 @@ INDEX_HTML = """<!doctype html>
   <div class="danger-action">
     <button id="resetDevices" class="btn-icon btn-scan" type="button">Clear all devices</button>
     <span id="resetStatus" class="status"></span>
-    <p class="danger-desc">Remove every module and channel from the gateway. Entities in Home Assistant disappear until you search for modules again. Download a backup first — this cannot be undone.</p>
+    <p class="danger-desc">Remove every module and channel from the gateway. Connected clients lose all devices until you search for modules again. Download a backup first — this cannot be undone.</p>
   </div>
 </section>
 
@@ -309,10 +355,10 @@ INDEX_HTML = """<!doctype html>
   var SEMANTIC_TYPES = ["light", "fan", "cover", "switch", "plug"];
   var NOT_IMPLEMENTED = "Not yet implemented";
   var HUB_ROLE_TOOLTIP =
-    "Slave: buttons via Home Assistant (LED steady). " +
-    "Master: buttons local on the input module (LED blinking); relays/dimmers still via HA. " +
+    "Slave: buttons routed via gateway (LED steady). " +
+    "Master: buttons local on the input module (LED blinking); relays/dimmers still controllable via gateway. " +
     "If the gateway fails, the module falls back to its own stored pairings. " +
-    "Change via Settings → Add-ons → IPBuilding Gateway → Configuration (restart required).";
+    "Change in the gateway configuration (restart required).";
   var gatewayInputModeLabel = "Slave";
 
   function renderGatewayMeta(statusBody) {
@@ -448,16 +494,49 @@ INDEX_HTML = """<!doctype html>
     return device.device_type === "relay" || device.device_type === "dimmer";
   }
 
+  function formatHardwareAddress(device) {
+    if (!device || typeof device.channel !== "number" || !device.module_ip) {
+      return null;
+    }
+    var parts = String(device.module_ip).split(".");
+    var octet = parts[parts.length - 1] || "?";
+    var block = Math.floor(device.channel / 8) + 1;
+    var pin = (device.channel % 8) + 1;
+    return {
+      label: octet + "." + block + "." + pin,
+      block: block,
+      pin: pin,
+    };
+  }
+
   function buildChannelCell(device, moduleType) {
     var hasChannel = typeof device.channel === "number";
+    if (!hasChannel) {
+      return el("td", { class: "muted", title: "Device ID: " + (device.id || "") }, [
+        document.createTextNode("—"),
+      ]);
+    }
+    var chNum = device.channel;
     var title = moduleType === "input"
-      ? "Physical input port on IP1100 (0–7)"
-      : "Channel number on this module";
-    return el(
-      "td",
-      { class: "muted", title: title },
-      [document.createTextNode(hasChannel ? String(device.channel) : "—")]
-    );
+      ? "Device ID: " + (device.id || "") + " · Physical input port on IP1100 (0–7)"
+      : "Device ID: " + (device.id || "") + " · API channel " + chNum;
+    return el("td", { class: "muted", title: title }, [
+      document.createTextNode(String(chNum)),
+    ]);
+  }
+
+  function buildTerminalCell(device) {
+    var hw = formatHardwareAddress(device);
+    if (!hw) {
+      return el("td", { class: "muted" }, [document.createTextNode("—")]);
+    }
+    var title =
+      "Kastadres: " + hw.label +
+      " (blok " + hw.block + ", uitgang " + hw.pin +
+      " · API channel " + device.channel + ")";
+    return el("td", { class: "muted", title: title }, [
+      document.createTextNode(hw.label),
+    ]);
   }
 
   function channelColumnLabel(moduleType) {
@@ -522,21 +601,97 @@ INDEX_HTML = """<!doctype html>
     return el("td", {}, [input]);
   }
 
+  function clampNumberInput(input, minVal, maxVal, decimals, fallback) {
+    input.addEventListener("change", function () {
+      var n = decimals > 0 ? parseFloat(input.value) : parseInt(input.value, 10);
+      if (isNaN(n)) {
+        n = fallback;
+      }
+      if (minVal !== null && n < minVal) n = minVal;
+      if (maxVal !== null && n > maxVal) n = maxVal;
+      if (decimals > 0) {
+        var factor = Math.pow(10, decimals);
+        n = Math.round(n * factor) / factor;
+      } else {
+        n = Math.round(n);
+      }
+      input.value = String(n);
+    });
+  }
+
   function buildWattCell(device, state) {
     if (!isChannel(device) || !("max_watt" in device)) {
       state.max_watt = null;
       return el("td", { class: "muted" }, [document.createTextNode("—")]);
     }
     var input = el("input", { type: "number", min: "0", step: "1", value: device.max_watt });
+    clampNumberInput(input, 0, null, 0, 0);
     state.max_watt = input;
+    return el("td", {}, [input]);
+  }
+
+  var GAMMA_TOOLTIP =
+    "Dimcurve gamma (1.0–3.5):\\n" +
+    "• 1.0 = lineair (uit)\\n" +
+    "• 2.2 = natuurlijk / aanbevolen (50% ≈ 22% bus)\\n" +
+    "• 2.8 = extra fijn onderin (felle LED-spots)";
+
+  var FADE_TOOLTIP =
+    "Default transition fade (0–255, ~0,1 s per eenheid):\\n" +
+    "• 0 = direct (geen fade)\\n" +
+    "• 30 = normale fade (~3 s)\\n" +
+    "• 60 = traag (~6 s)\\n" +
+    "• 120 = ~12 s · 180 = ~17 s · 255 = ~25 s (max)\\n" +
+    "Let op: bij ingestelde dimMin/dimMax loopt eerst het dode bereik mee.";
+
+  function buildGammaCell(device, state) {
+    if (!isChannel(device) || device.device_type !== "dimmer") {
+      state.dim_gamma = null;
+      return el("td", { class: "muted" }, [document.createTextNode("—")]);
+    }
+    var val = typeof device.dim_gamma === "number" ? device.dim_gamma : 1.0;
+    var input = el("input", {
+      type: "number",
+      min: "1.0",
+      max: "3.5",
+      step: "0.1",
+      style: "width:70px",
+      value: String(val),
+      title: GAMMA_TOOLTIP,
+    });
+    clampNumberInput(input, 1.0, 3.5, 2, 1.0);
+    state.dim_gamma = input;
+    return el("td", {}, [input]);
+  }
+
+  function buildFadeCell(device, state) {
+    if (!isChannel(device) || device.device_type !== "dimmer") {
+      state.default_fade = null;
+      return el("td", { class: "muted" }, [document.createTextNode("—")]);
+    }
+    var val = typeof device.default_fade === "number" ? device.default_fade : 30;
+    var input = el("input", {
+      type: "number",
+      min: "0",
+      max: "255",
+      step: "1",
+      style: "width:68px",
+      value: String(val),
+      title: FADE_TOOLTIP,
+    });
+    clampNumberInput(input, 0, 255, 0, 30);
+    state.default_fade = input;
     return el("td", {}, [input]);
   }
 
   function currentValue(fieldName, inputEl) {
     if (inputEl === null) return undefined;
     if (fieldName === "active") return inputEl.checked;
-    if (fieldName === "max_watt") {
+    if (fieldName === "max_watt" || fieldName === "default_fade") {
       return parseInt(inputEl.value, 10);
+    }
+    if (fieldName === "dim_gamma") {
+      return Math.round(parseFloat(inputEl.value) * 100) / 100;
     }
     return inputEl.value;
   }
@@ -549,6 +704,8 @@ INDEX_HTML = """<!doctype html>
       "semantic_type",
       "active",
       "max_watt",
+      "dim_gamma",
+      "default_fade",
     ];
     fields.forEach(function (f) {
       var inputEl = state[f];
@@ -592,6 +749,27 @@ INDEX_HTML = """<!doctype html>
       setStatus(statusSpan, "No changes", "");
       return;
     }
+    if ("max_watt" in patch) {
+      var w = patch.max_watt;
+      if (isNaN(w) || w < 0) {
+        setStatus(statusSpan, "Max Watt must be >= 0", "err");
+        return;
+      }
+    }
+    if ("dim_gamma" in patch) {
+      var g = patch.dim_gamma;
+      if (isNaN(g) || g < 1.0 || g > 3.5) {
+        setStatus(statusSpan, "Gamma must be 1.0–3.5", "err");
+        return;
+      }
+    }
+    if ("default_fade" in patch) {
+      var f = patch.default_fade;
+      if (isNaN(f) || f < 0 || f > 255) {
+        setStatus(statusSpan, "Fade must be 0–255", "err");
+        return;
+      }
+    }
     setStatus(statusSpan, "Saving…", "");
     fetch(DEVICE_BASE_URL + "/" + encodeURIComponent(device.id), {
       method: "PATCH",
@@ -621,11 +799,20 @@ INDEX_HTML = """<!doctype html>
     var tr = el("tr", { "data-id": device.id, "data-type": device.device_type });
 
     tr.appendChild(buildChannelCell(device, moduleType));
+    if (moduleType !== "input") {
+      tr.appendChild(buildTerminalCell(device));
+    }
     tr.appendChild(buildNameCell(device, state));
     tr.appendChild(buildRoomCell(device, state));
     tr.appendChild(buildTypeCell(device, state));
     tr.appendChild(buildActiveCell(device, state));
-    tr.appendChild(buildWattCell(device, state));
+    if (moduleType !== "input") {
+      tr.appendChild(buildWattCell(device, state));
+    }
+    if (moduleType === "dimmer") {
+      tr.appendChild(buildGammaCell(device, state));
+      tr.appendChild(buildFadeCell(device, state));
+    }
 
     var statusSpan = el("span", { class: "status" });
     var saveBtn = el("button", { text: "Save" });
@@ -800,6 +987,20 @@ INDEX_HTML = """<!doctype html>
     return el("div", { class: "module-header" }, [title, buildModuleActions(module)]);
   }
 
+  function buildHeaderCell(label, tooltipText, alignRight) {
+    var children = [document.createTextNode(label)];
+    if (tooltipText) {
+      var tip = el("span", {
+        class: "info-tip" + (alignRight ? " info-tip-right" : ""),
+        "aria-label": tooltipText,
+        text: "ⓘ",
+      });
+      tip.appendChild(el("span", { class: "info-bubble", text: tooltipText }));
+      children.push(tip);
+    }
+    return el("th", {}, children);
+  }
+
   function buildModuleSection(group) {
     var moduleType = group.module.type || "";
     var section = el("section", { class: "module" }, [buildModuleHeader(group.module)]);
@@ -809,22 +1010,43 @@ INDEX_HTML = """<!doctype html>
     }
     var chLabel = channelColumnLabel(moduleType);
     var chTitle = moduleType === "input"
-      ? "Physical input port on IP1100 (0–7)"
-      : "Output channel on this module";
+      ? "Fysieke ingangspoort op de IP1100PoE (0–7)"
+      : "Uitgangskanaal op deze module";
+    var headerCells = [
+      buildHeaderCell(chLabel, chTitle, false),
+    ];
+    if (moduleType !== "input") {
+      headerCells.push(
+        buildHeaderCell(
+          "Uitgang",
+          "Fysiek kastadres (<ip-octet>.<blok>.<uitgang>, 8 kanalen per blok)",
+          false
+        )
+      );
+    }
+    headerCells.push(
+      buildHeaderCell("Name", "Weergavenaam voor dit kanaal of deze knop", false),
+      buildHeaderCell("Room", "Ruimte / zone waarin dit kanaal zich bevindt", false),
+      buildHeaderCell("Type", "Apparaattype (light, switch, cover, button…)", false),
+      buildHeaderCell("Active", "Uitgevinkt = kanaal/knop uitgeschakeld", false)
+    );
+    if (moduleType !== "input") {
+      headerCells.push(
+        buildHeaderCell("Max Watt", "Ingesteld maximaal vermogen (W) voor dit kanaal", moduleType !== "dimmer")
+      );
+    }
+    if (moduleType === "dimmer") {
+      headerCells.push(
+        buildHeaderCell("Gamma", GAMMA_TOOLTIP, true)
+      );
+      headerCells.push(
+        buildHeaderCell("Fade", FADE_TOOLTIP, true)
+      );
+    }
+    headerCells.push(el("th", { text: "" }));
     var table = el("table", { class: "module-table" }, [
       el("thead", {}, [
-        el("tr", {}, [
-          el("th", { text: chLabel, title: chTitle }),
-          el("th", { text: "Name" }),
-          el("th", { text: "Room" }),
-          el("th", { text: "Type" }),
-          el("th", { text: "Active" }),
-          el("th", {
-            text: "Max Watt",
-            title: "Configured maximum power for this channel",
-          }),
-          el("th", { text: "" }),
-        ]),
+        el("tr", {}, headerCells),
       ]),
     ]);
     var tbody = el("tbody", {});

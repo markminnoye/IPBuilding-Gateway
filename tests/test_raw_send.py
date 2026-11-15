@@ -191,7 +191,7 @@ async def test_websocket_raw_send_uses_the_same_refusal() -> None:
 async def test_status_advertises_raw_send() -> None:
     api = _api(_Bus(), remote_debugging=False)
     body = json.loads((await api._get_status(None)).text)  # type: ignore[arg-type]
-    assert body["capabilities"] == ["log_stream", "udp_frame", "raw_send"]
+    assert body["capabilities"] == ["log_stream", "udp_frame", "raw_send", "log_history"]
 
 
 def test_policy_uses_known_modules_and_subnet() -> None:

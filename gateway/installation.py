@@ -100,6 +100,18 @@ class ChannelConfig:
     semantic_type: str = "light"  # light | fan | cover | switch | plug
     active: bool = True
     max_watt: int = 0
+    dim_gamma: float | None = None
+    default_fade: int | None = None  # dimmer-only override; None -> DEFAULT_DIMMER_FADE (30)
+
+    @property
+    def effective_dim_gamma(self) -> float:
+        """Return configured dim curve gamma, defaulting to 1.0 (linear)."""
+        return self.dim_gamma if self.dim_gamma is not None else DEFAULT_DIM_GAMMA
+
+    @property
+    def effective_default_fade(self) -> int:
+        """Return configured default fade for dimmer channels, else DEFAULT_DIMMER_FADE."""
+        return self.default_fade if self.default_fade is not None else DEFAULT_DIMMER_FADE
 
     @property
     def description(self) -> str:
@@ -123,12 +135,18 @@ class ChannelConfig:
             "active": self.active,
             "max_watt": self.max_watt,
         }
+        if self.dim_gamma is not None:
+            d["dim_gamma"] = self.dim_gamma
+        if self.default_fade is not None:
+            d["default_fade"] = self.default_fade
         if self.ipbox_id is not None:
             d["ipbox_id"] = self.ipbox_id
         return d
 
     @classmethod
     def from_dict(cls, data: dict) -> "ChannelConfig":
+        raw_gamma = data.get("dim_gamma")
+        raw_fade = data.get("default_fade")
         return cls(
             ch=data["ch"],
             ipbox_id=data.get("ipbox_id"),
@@ -138,7 +156,15 @@ class ChannelConfig:
             semantic_type=data.get("semantic_type", "light"),
             active=data.get("active", True),
             max_watt=data.get("max_watt", 0),
+            dim_gamma=float(raw_gamma) if raw_gamma is not None else None,
+            default_fade=int(raw_fade) if raw_fade is not None else None,
         )
+
+
+DEFAULT_DIM_GAMMA = 1.0
+# Default transition fade (0–255 units) when a dimmer module has no override.
+# Matches the IPBox default fade of 30.
+DEFAULT_DIMMER_FADE = 30
 
 
 # Default hold threshold (seconds) when no per-button override is present.
@@ -280,10 +306,11 @@ class ModuleConfig:
     def from_dict(cls, data: dict) -> "ModuleConfig":
         """Reconstruct from a devices.json dict entry, skipping runtime fields."""
         mac = data.get("mac", "")
+        dtype = DeviceType(data["type"])
         mc = cls(
             name=data.get("name", data.get("ip", "")),
             ip=data["ip"],
-            type=DeviceType(data["type"]),
+            type=dtype,
             firmware=data.get("firmware", ""),
             model=data.get("model", ""),
             mac=mac,
@@ -437,6 +464,18 @@ class InstallationConfig:
                         ),
                         active=ch_entry.get("active", True),
                         max_watt=ch_entry.get("max_watt", 0),
+                        dim_gamma=(
+                            float(ch_entry["dim_gamma"])
+                            if dtype == DeviceType.DIMMER
+                            and ch_entry.get("dim_gamma") is not None
+                            else None
+                        ),
+                        default_fade=(
+                            int(ch_entry["default_fade"])
+                            if dtype == DeviceType.DIMMER
+                            and ch_entry.get("default_fade") is not None
+                            else None
+                        ),
                     )
                 )
 

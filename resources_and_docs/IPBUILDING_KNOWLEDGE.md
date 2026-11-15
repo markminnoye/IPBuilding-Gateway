@@ -181,7 +181,7 @@ Dezelfde soort embedded UI als de relaymodule: **HTTP/1.0**, homepage met Status
 | `descr`  | Omschrijving                                                 |
 | `gr`     | Groepnaam                                                    |
 | `dimMin` | Minimum helderheid (%) in de module                          |
-| `dimMax` | Maximum helderheid (%) in de module                          |
+| `dimMax` | Maximum helderheid (%) in de module — de module **schaalt** `1–100%` lineair naar `[dimMin .. dimMax]` (bewezen 2026-11-15, [evidence](evidence/2026-11-15_dimmer_fade_and_minmax_calibration.md)) |
 | `status` | Huidige waarde; **0** = uit, anders **1–100** (helderheid %) |
 
 
@@ -681,7 +681,7 @@ De IP0300PoE dimmer gebruikt **geen `J`-separator** (anders dan relay in sommige
 - `<value_code>` = `10`–`98` = dat %, `99` = 100 %, `00` = uit.
 - `1` = vast teken vóór de fade. De betekenis is **onbekend**.
 - `<fade>` = drie cijfers. De module bewaart ze in **één byte**: geldig `000`–`255`. Boven 255 wikkelt de module (300 gedroeg zich als 44, 999 als 231). De encoder weigert een fade buiten 0–255, zodat een gewikkelde waarde nooit op de draad komt.
-- `000` is meteen, dezelfde snelheid als de wandknop (`T…1000`). Een grotere waarde verlengt de ramp. Ongeveer 0,2 s per eenheid is een **schatting** uit één installatie op 16 okt 2026, niet een getimede kalibratie; `010` week daarvan af. De exacte schaal en het gedrag op tussenliggende niveaus zijn **niet gemeten**.
+- `000` is meteen, dezelfde snelheid als de wandknop (`T…1000`). Een grotere waarde verlengt de ramp. Kalibratie 15 nov 2026 ([evidence](evidence/2026-11-15_dimmer_fade_and_minmax_calibration.md)): voor `fade > 0` volgt de volledige `100→0%`-ramp vrijwel **`duur_s ≈ 3,8 + 0,17 × fade`** (`10` → ~5,5 s, `30` → ~9,0 s, `60` → ~13,9 s). Het is een **snelheid** (helling), geen vaste totaaltijd (`50→0%` bij `fade=30` duurde ~5,8 s), en de module maakt géén automatische Soft AAN/UIT-sprong op `S`/`C` met `fade > 0`.
 - De module antwoordt meteen met het **eindniveau**. Tijdens een fade loopt de getoonde status voor op de lamp. Een antwoord na enkele tientallen milliseconden is acceptatie van het setpoint, niet het einde van de ramp.
 
 De gateway stuurt standaard fade `000` (`S0991000` aan, `C0001000` uit). Oudere captures gebruikten fade `030` (`S0991030`, `C1991030`): dat is wat IPBox stuurde, en het blijft een geldig frame. `S0991030` is kanaal 0, niveau 99, marker `1`, fade `030`.
@@ -999,7 +999,7 @@ De `descr` en `gr` velden in de embedded `api.html` JSON-response komen rechtstr
 | **Soft UIT %** | 0–100 | Niveau waaronder soft-uit begint (default **70%**) — lamp gaat naar 70%, dan soft naar 0% |
 | **Snelheid (msec)** | int | Transitietijd dimmen (default **001** msec) |
 
-Soft AAN/UIT en Snelheid worden als EEPROM-data via de diagnose-software naar de dimmodule geschreven (Download/Upload EEPROM functie). Dat is een opgeslagen curve, los van de fade op een `S`/`C`-frame (§6.6). Veldtest 16 okt 2026: de laatste drie cijfers na het vaste `1` zijn die fade (`000` meteen; ongeveer 0,2 s per eenheid, schatting, `010` een uitschieter). Het zachte gedrag in oudere captures met `…1030` is fade `030`, wat IPBox stuurde. De EEPROM-label "001 msec" komt niet overeen met die ramp en is niet het fade-veld op de draad.
+Soft AAN/UIT en Snelheid worden als EEPROM-data via de diagnose-software naar de dimmodule geschreven (Download/Upload EEPROM functie). Dat is een opgeslagen curve, los van de fade op een `S`/`C`-frame (§6.6). Kalibratie 15 nov 2026 (25 fps luma-meting op Bureau IP0300PoE, `fade = 5..255` met `dimMin = 20 / dimMax = 70`): de drie cijfers na het vaste `1` vormen een lineaire totale transitieduur van **~0,10 s per eenheid** (`000` meteen, `030` ≈ 3 s, `060` ≈ 6 s, `120` ≈ 12 s, `180` ≈ 17 s, `255` ≈ 25 s; bij `fade ≤ 10` domineert de ~1,4 s ondergrens van de LED-driver, en `dimMin = 20` geeft een aanloopvertraging van ~20% van de totale tijd). Het zachte gedrag in oudere captures met `…1030` is fade `030`, wat IPBox stuurde. De EEPROM-label "001 msec" komt niet overeen met die ramp en is niet het fade-veld op de draad.
 
 ### 12.4 Ingangscomponenten — ID-prefix en veldstructuur
 

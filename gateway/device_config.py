@@ -7,6 +7,7 @@ scope) and installation.py (parsing/schema only).
 from __future__ import annotations
 
 import logging
+import math
 
 from gateway.button_id import canonical_button_id
 from gateway.installation import (
@@ -24,7 +25,15 @@ from gateway.types import DeviceType
 
 log = logging.getLogger(__name__)
 
-NORTHBOUND_CHANNEL_FIELDS = {"name", "room", "semantic_type", "active", "max_watt"}
+NORTHBOUND_CHANNEL_FIELDS = {
+    "name",
+    "room",
+    "semantic_type",
+    "active",
+    "max_watt",
+    "dim_gamma",
+    "default_fade",
+}
 NORTHBOUND_PUSHBUTTON_FIELDS = {
     "name",
     "room",
@@ -104,6 +113,47 @@ def validate_channel_fields(
                     "max_watt must be a non-negative integer",
                 )
             result["max_watt"] = value
+        elif key == "dim_gamma":
+            if module_type is not None and module_type != DeviceType.DIMMER:
+                raise DeviceConfigError(
+                    "validation",
+                    "dim_gamma is only supported on dimmer channels",
+                )
+            if value is None:
+                result["dim_gamma"] = None
+            elif (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value < 1.0
+                or value > 3.5
+            ):
+                raise DeviceConfigError(
+                    "validation",
+                    "dim_gamma must be a number between 1.0 and 3.5",
+                )
+            else:
+                result["dim_gamma"] = round(float(value), 2)
+        elif key == "default_fade":
+            if module_type is not None and module_type != DeviceType.DIMMER:
+                raise DeviceConfigError(
+                    "validation",
+                    "default_fade is only supported on dimmer channels",
+                )
+            if value is None:
+                result["default_fade"] = None
+            elif (
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or value < 0
+                or value > 255
+            ):
+                raise DeviceConfigError(
+                    "validation",
+                    "default_fade must be an integer from 0 to 255",
+                )
+            else:
+                result["default_fade"] = value
     return result
 
 
@@ -202,11 +252,12 @@ def sync_channels_from_wire(
 ) -> int:
     """Merge backupConfig-derived channel slots into a relay/dimmer module.
 
-    Preserves operator-edited ``name``, ``room``, ``semantic_type``, and
-    ``max_watt`` on existing channels. ``active`` follows the wire snapshot
-    (EEPROM configured = active). Fills missing ``name``/``room`` from wire
-    data when the operator left them blank. Appends newly discovered slot
-    indices without removing entries absent from the wire snapshot.
+    Preserves operator-edited ``name``, ``room``, ``semantic_type``,
+    ``max_watt``, ``dim_gamma``, and ``default_fade`` on existing channels.
+    ``active`` follows the wire snapshot (EEPROM configured = active). Fills
+    missing ``name``/``room`` from wire data when the operator left them blank.
+    Appends newly discovered slot indices without removing entries absent from
+    the wire snapshot.
 
     Returns the number of channel slots appended.
     """
@@ -237,6 +288,8 @@ def sync_channels_from_wire(
                         if existing.max_watt
                         else int(wire.get("max_watt", 0) or 0)
                     ),
+                    dim_gamma=existing.dim_gamma,
+                    default_fade=existing.default_fade,
                 )
             )
         else:

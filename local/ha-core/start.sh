@@ -62,11 +62,10 @@ fi
 # shellcheck disable=SC1091
 source "${VENV_DIR}/bin/activate"
 
-hass_args=()
-if [ "${debug}" -eq 1 ]; then
-  hass_args+=(--debug -v)
-fi
-
 echo "[start.sh] debug=${debug}"
 
-exec hass "${hass_args[@]}"
+if [ "${debug}" -eq 1 ]; then
+  exec hass --debug -v
+else
+  exec hass
+fi
