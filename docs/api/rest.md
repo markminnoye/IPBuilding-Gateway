@@ -60,7 +60,7 @@ Device-ID format: `{module_ip}-{channel}` (e.g. `10.10.1.30-0`) or an optional c
   "multi_press": false,
   "multi_press_window_ms": 350,
   "remote_debugging": false,
-  "capabilities": ["log_stream", "udp_frame", "raw_send"],
+  "capabilities": ["log_stream", "udp_frame", "raw_send", "log_history"],
   "actions": {
     "discover": { "method": "POST", "path": "/api/v1/discover" },
     "refresh_modules": { "method": "POST", "path": "/api/v1/modules/refresh" }
@@ -78,7 +78,7 @@ Push updates are sent on WebSocket as `gateway_status` when aggregate `status` o
 | `multi_press` | boolean | Global double/triple-press classification for all wall buttons (add-on option). When `false`, short release emits `single_press` immediately. |
 | `multi_press_window_ms` | integer | Inter-click window in ms when `multi_press` is enabled (default 350). |
 | `remote_debugging` | boolean | Add-on option **Remote control (for debugging)**. `false` until a user turns it on in the add-on configuration. It stays on until they turn it off. While it is on, anyone on the network can read field-bus traffic and send raw packets through this gateway. Check this field before calling a remote-debugging route. |
-| `capabilities` | list of strings | Features this gateway build actually implements. `log_stream` is live logs over WebSocket. `udp_frame` is live field-bus frames over WebSocket (`subscribe_udp_frames`). `raw_send` is one raw payload plus the replies that arrive in a short window (`POST /api/v1/debug/raw-send` or WebSocket `raw_send`). The list stays present when `remote_debugging` is `false`, so a client can tell “this build has the feature” from “the option is off”. Unknown extra fields are safe for older clients. |
+| `capabilities` | list of strings | Features this gateway build actually implements. `log_stream` is live logs over WebSocket. `udp_frame` is live field-bus frames over WebSocket (`subscribe_udp_frames`). `raw_send` is one raw payload plus the replies that arrive in a short window (`POST /api/v1/debug/raw-send` or WebSocket `raw_send`). `log_history` is the in-memory log ring queried by `GET /api/v1/debug/logs` and by `subscribe_logs` with `since`. The list stays present when `remote_debugging` is `false`, so a client can tell “this build has the feature” from “the option is off”. Unknown extra fields are safe for older clients. |
 
 ---
 
@@ -607,6 +607,49 @@ No reply is still HTTP 200 with `replies: []`.
 Every send, including a refused target, rate limit, or busy socket, is written to the gateway log: time, client, target, port, hex bytes, result, and reply count.
 
 WebSocket: `{"type": "raw_send", ...same fields...}` returns `{"type": "raw_send_result", ...same body...}`. While the option is off the frame is the shared `remote_debugging_disabled` error.
+
+---
+
+## GET /api/v1/debug/logs
+
+**Description:** Return recent gateway log lines kept in memory. Requires capability `log_history`. The ring holds at most **500 lines** and at most the last **15 minutes**, whichever is tighter. It fills only while **Remote control (for debugging)** is on. Nothing is written to disk, and a restart or turning the option off drops the ring.
+
+Lines quieter than the process log level are never stored. Raise the level with `POST /api/v1/debug/log-level` first if debug traffic must be included. Token- and password-like values are redacted.
+
+**Query:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `since` | string, optional | ISO 8601 timestamp, same shape as `lines[].ts` (`2026-10-08T12:00:00.000Z`). Returns lines at that time and later. For the last 60 seconds, send the current UTC time minus 60 seconds. Omitted returns every line the ring still holds. |
+| `min_level` | string, optional | `debug`, `info`, `warning`, or `error`. Default `info`. A line below this level is left out. |
+
+**Response 200:**
+
+```json
+{
+  "ok": true,
+  "schema_version": 2,
+  "min_level": "warning",
+  "since": "2026-10-08T12:00:00.000Z",
+  "lines": [
+    {
+      "type": "log",
+      "ts": "2026-10-08T12:00:10.000Z",
+      "level": "warning",
+      "logger": "gateway.udp_bus",
+      "message": "command timed out (no reply)"
+    }
+  ]
+}
+```
+
+`since` is `null` when the query omitted it. `lines` is empty when nothing in the ring matches. That is still HTTP 200.
+
+Each line is the same object as a WebSocket `log` event.
+
+**Response 403** — remote debugging is off. Same code and sentence as `POST /api/v1/debug/log-level`. The ring is empty in that case.
+
+**Response 400:** `invalid_since` or `invalid_log_level`.
 
 ---
 

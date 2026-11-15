@@ -42,6 +42,7 @@ Opgelost
 - The develop add-on is listed in Home Assistant as **IPBuilding Gateway (develop)**. The release keeps the name **IPBuilding Gateway**.
 
 ### Added
+- **Log history.** While **Remote control (for debugging)** is on, the gateway keeps the last 500 lines and the last 15 minutes in memory. `GET /api/v1/debug/logs` and `subscribe_logs` take `since` and `min_level`. Nothing is written to disk. With the option off the ring is empty and the call is refused. `GET /api/v1/status` lists capability `log_history`.
 - **Raw send.** While **Remote control (for debugging)** is on, `POST /api/v1/debug/raw-send` and WebSocket `raw_send` send one payload on the gateway socket and return the replies from that module. `GET /api/v1/status` lists capability `raw_send`. With the option off the call is refused.
 - **Module reachability.** A command response includes `module_confirmed`, `confirm_ms`, and `reported` next to `ok`. No field-bus reply is still success. Each module on `/api/v1/modules` and in the WebSocket snapshot reports when it last answered and how fast.
 - **Remote control (for debugging)** in the add-on configuration, off by default. It stays on until you turn it off. While it is on, Home Assistant keeps a notification that anyone on your network can read field-bus traffic and send raw packets through this gateway.
