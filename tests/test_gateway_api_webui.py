@@ -222,3 +222,14 @@ class TestWebUiRoute:
                 check=False,
             )
             assert proc.returncode == 0, proc.stderr
+
+    def test_webui_tooltips_hover_only_and_standalone_neutral(self) -> None:
+        """Tooltips must be hover-only (no focus lock) and free of IPBox/HA references."""
+        from gateway.webui import INDEX_HTML
+
+        assert "IPBox" not in INDEX_HTML
+        assert "Home Assistant" not in INDEX_HTML
+        assert "normale fade" in INDEX_HTML
+        assert ".info-tip:hover .info-bubble" in INDEX_HTML
+        assert ".info-tip:focus .info-bubble" not in INDEX_HTML
+        assert ".info-tip:focus-visible .info-bubble" not in INDEX_HTML

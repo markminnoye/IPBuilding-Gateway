@@ -87,7 +87,7 @@ INDEX_HTML = """<!doctype html>
   table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
   th, td { border: 1px solid var(--border); padding: 0.3rem 0.5rem; text-align: left; }
   th { background: var(--bg-alt); position: sticky; top: 0; z-index: 1; }
-  th:hover, th:focus-within { z-index: 25; }
+  th:hover { z-index: 25; }
   .info-tip {
     position: relative;
     display: inline-flex;
@@ -103,7 +103,7 @@ INDEX_HTML = """<!doctype html>
     cursor: help;
     vertical-align: middle;
   }
-  .info-tip:hover, .info-tip:focus { color: inherit; outline: none; }
+  .info-tip:hover { color: inherit; }
   .info-tip .info-bubble {
     display: none;
     position: absolute;
@@ -129,9 +129,7 @@ INDEX_HTML = """<!doctype html>
     left: auto;
     right: 0;
   }
-  .info-tip:hover .info-bubble,
-  .info-tip:focus .info-bubble,
-  .info-tip:focus-visible .info-bubble {
+  .info-tip:hover .info-bubble {
     display: block;
   }
   input[type=text], select, input[type=number] {
@@ -329,7 +327,7 @@ INDEX_HTML = """<!doctype html>
   <div class="danger-action">
     <button id="resetDevices" class="btn-icon btn-scan" type="button">Clear all devices</button>
     <span id="resetStatus" class="status"></span>
-    <p class="danger-desc">Remove every module and channel from the gateway. Entities in Home Assistant disappear until you search for modules again. Download a backup first — this cannot be undone.</p>
+    <p class="danger-desc">Remove every module and channel from the gateway. Connected clients lose all devices until you search for modules again. Download a backup first — this cannot be undone.</p>
   </div>
 </section>
 
@@ -357,10 +355,10 @@ INDEX_HTML = """<!doctype html>
   var SEMANTIC_TYPES = ["light", "fan", "cover", "switch", "plug"];
   var NOT_IMPLEMENTED = "Not yet implemented";
   var HUB_ROLE_TOOLTIP =
-    "Slave: buttons via Home Assistant (LED steady). " +
-    "Master: buttons local on the input module (LED blinking); relays/dimmers still via HA. " +
+    "Slave: buttons routed via gateway (LED steady). " +
+    "Master: buttons local on the input module (LED blinking); relays/dimmers still controllable via gateway. " +
     "If the gateway fails, the module falls back to its own stored pairings. " +
-    "Change via Settings → Add-ons → IPBuilding Gateway → Configuration (restart required).";
+    "Change in the gateway configuration (restart required).";
   var gatewayInputModeLabel = "Slave";
 
   function renderGatewayMeta(statusBody) {
@@ -589,7 +587,7 @@ INDEX_HTML = """<!doctype html>
   var FADE_TOOLTIP =
     "Default transition fade (0–255, ~0,1 s per eenheid):\\n" +
     "• 0 = direct (geen fade)\\n" +
-    "• 30 = IPBox standaard (~3 s)\\n" +
+    "• 30 = normale fade (~3 s)\\n" +
     "• 60 = traag (~6 s)\\n" +
     "• 120 = ~12 s · 180 = ~17 s · 255 = ~25 s (max)\\n" +
     "Let op: bij ingestelde dimMin/dimMax loopt eerst het dode bereik mee.";
@@ -928,14 +926,13 @@ INDEX_HTML = """<!doctype html>
   function buildHeaderCell(label, tooltipText, alignRight) {
     var children = [document.createTextNode(label)];
     if (tooltipText) {
-      var btn = el("button", {
-        type: "button",
+      var tip = el("span", {
         class: "info-tip" + (alignRight ? " info-tip-right" : ""),
         "aria-label": tooltipText,
         text: "ⓘ",
       });
-      btn.appendChild(el("span", { class: "info-bubble", text: tooltipText }));
-      children.push(btn);
+      tip.appendChild(el("span", { class: "info-bubble", text: tooltipText }));
+      children.push(tip);
     }
     return el("th", {}, children);
   }
@@ -953,10 +950,10 @@ INDEX_HTML = """<!doctype html>
       : "Uitgangskanaal op deze module";
     var headerCells = [
       buildHeaderCell(chLabel, chTitle, false),
-      buildHeaderCell("Name", "Weergavenaam in Home Assistant", false),
-      buildHeaderCell("Room", "Ruimte / area-naam voor Home Assistant", false),
-      buildHeaderCell("Type", "Entity-type in Home Assistant (light, switch, cover, button…)", false),
-      buildHeaderCell("Active", "Uitgevinkt = kanaal/knop verborgen of gedeactiveerd in Home Assistant", false),
+      buildHeaderCell("Name", "Weergavenaam voor dit kanaal of deze knop", false),
+      buildHeaderCell("Room", "Ruimte / zone waarin dit kanaal zich bevindt", false),
+      buildHeaderCell("Type", "Apparaattype (light, switch, cover, button…)", false),
+      buildHeaderCell("Active", "Uitgevinkt = kanaal/knop uitgeschakeld", false),
     ];
     if (moduleType !== "input") {
       headerCells.push(

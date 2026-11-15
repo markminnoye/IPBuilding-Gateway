@@ -252,11 +252,12 @@ def sync_channels_from_wire(
 ) -> int:
     """Merge backupConfig-derived channel slots into a relay/dimmer module.
 
-    Preserves operator-edited ``name``, ``room``, ``semantic_type``, and
-    ``max_watt`` on existing channels. ``active`` follows the wire snapshot
-    (EEPROM configured = active). Fills missing ``name``/``room`` from wire
-    data when the operator left them blank. Appends newly discovered slot
-    indices without removing entries absent from the wire snapshot.
+    Preserves operator-edited ``name``, ``room``, ``semantic_type``,
+    ``max_watt``, ``dim_gamma``, and ``default_fade`` on existing channels.
+    ``active`` follows the wire snapshot (EEPROM configured = active). Fills
+    missing ``name``/``room`` from wire data when the operator left them blank.
+    Appends newly discovered slot indices without removing entries absent from
+    the wire snapshot.
 
     Returns the number of channel slots appended.
     """
@@ -287,6 +288,8 @@ def sync_channels_from_wire(
                         if existing.max_watt
                         else int(wire.get("max_watt", 0) or 0)
                     ),
+                    dim_gamma=existing.dim_gamma,
+                    default_fade=existing.default_fade,
                 )
             )
         else:
