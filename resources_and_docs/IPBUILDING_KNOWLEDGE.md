@@ -999,7 +999,7 @@ De `descr` en `gr` velden in de embedded `api.html` JSON-response komen rechtstr
 | **Soft UIT %** | 0–100 | Niveau waaronder soft-uit begint (default **70%**) — lamp gaat naar 70%, dan soft naar 0% |
 | **Snelheid (msec)** | int | Transitietijd dimmen (default **001** msec) |
 
-Soft AAN/UIT en Snelheid worden als EEPROM-data via de diagnose-software naar de dimmodule geschreven (Download/Upload EEPROM functie). Dat is een opgeslagen curve, los van de fade op een `S`/`C`-frame (§6.6). Veldtest 16 okt 2026: de laatste drie cijfers na het vaste `1` zijn die fade (`000` meteen; ongeveer 0,2 s per eenheid, schatting, `010` een uitschieter). Het zachte gedrag in oudere captures met `…1030` is fade `030`, wat IPBox stuurde. De EEPROM-label "001 msec" komt niet overeen met die ramp en is niet het fade-veld op de draad.
+Soft AAN/UIT en Snelheid worden als EEPROM-data via de diagnose-software naar de dimmodule geschreven (Download/Upload EEPROM functie). Dat is een opgeslagen curve, los van de fade op een `S`/`C`-frame (§6.6). Kalibratie 15 nov 2026 (25 fps luma-meting op Bureau IP0300PoE, `fade = 5..255` met `dimMin = 20 / dimMax = 70`): de drie cijfers na het vaste `1` vormen een lineaire totale transitieduur van **~0,10 s per eenheid** (`000` meteen, `030` ≈ 3 s, `060` ≈ 6 s, `120` ≈ 12 s, `180` ≈ 17 s, `255` ≈ 25 s; bij `fade ≤ 10` domineert de ~1,4 s ondergrens van de LED-driver, en `dimMin = 20` geeft een aanloopvertraging van ~20% van de totale tijd). Het zachte gedrag in oudere captures met `…1030` is fade `030`, wat IPBox stuurde. De EEPROM-label "001 msec" komt niet overeen met die ramp en is niet het fade-veld op de draad.
 
 ### 12.4 Ingangscomponenten — ID-prefix en veldstructuur
 

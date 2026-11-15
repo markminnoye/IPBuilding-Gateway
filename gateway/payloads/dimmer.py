@@ -13,14 +13,16 @@ Command frames: ``<S|C><channel><value_code>1<fade>``
 - ``<value_code>`` = ``10``..``98`` for 10–98 %, ``99`` = 100 %, ``00`` = off
 - ``1`` = fixed marker. What it means is unknown.
 - ``<fade>`` = three digits. Valid range on the module is ``000``–``255``.
-  ``000`` is instant. A larger value lengthens the ramp. About 0.2 s per unit
-  is an estimate from one installation on 16 Oct 2026; ``010`` was an outlier
-  and the scale is not exact. The module answers at once with the end level,
-  so a client can show the target while the lamp is still moving. A value
-  above 255 wraps on the module (300 behaved as 44, 999 as 231). This encoder
-  rejects a fade outside 0–255 so a wrapped value never reaches the wire. The gateway default is
-  ``000`` (``S0991000`` / ``C0001000``). Older captures used fade ``030``
-  (``S0991030``), which ramps. Mid-level fades and the exact scale are unmeasured.
+  ``000`` is instant. A larger value lengthens the ramp linearly at ~0.1 s per
+  unit across the full 0–255 range (calibrated 2026-11-15 via 25 fps luma
+  capture on IP0300PoE: fade 30 ≈ 3 s, 60 ≈ 6 s, 120 ≈ 12 s, 180 ≈ 17 s,
+  255 ≈ 25 s; below ~1.4 s the LED driver minimum response dominates, and
+  module dimMin/dimMax adds a proportional deadband at the start). The module
+  answers at once with the end level, so a client can show the target while
+  the lamp is still moving. A value above 255 wraps on the module (300 behaved
+  as 44, 999 as 231). This encoder rejects a fade outside 0–255 so a wrapped
+  value never reaches the wire. The gateway default is ``000`` (``S0991000`` /
+  ``C0001000``). Older captures used fade ``030`` (``S0991030``), which ramps.
 
 Reply frames are 8 ASCII bytes ``I0154<C><VV>`` where:
 

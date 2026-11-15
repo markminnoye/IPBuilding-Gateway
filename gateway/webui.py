@@ -539,10 +539,12 @@ INDEX_HTML = """<!doctype html>
     "• 2.8 = extra fijn onderin (felle LED-spots)";
 
   var FADE_TOOLTIP =
-    "Default transition fade (0–255):\n" +
+    "Default transition fade (0–255, ~0,1 s per eenheid):\n" +
     "• 0 = direct (geen fade)\n" +
-    "• 30 = IPBox standaard (~9s voor 100→0%)\n" +
-    "• 60 = traag (~14s voor 100→0%)";
+    "• 30 = IPBox standaard (~3 s)\n" +
+    "• 60 = traag (~6 s)\n" +
+    "• 120 = ~12 s · 180 = ~17 s · 255 = ~25 s (max)\n" +
+    "Let op: bij ingestelde dimMin/dimMax loopt eerst het dode bereik mee.";
 
   function buildGammaCell(device, state) {
     if (!isChannel(device) || device.device_type !== "dimmer") {
