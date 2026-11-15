@@ -494,6 +494,21 @@ INDEX_HTML = """<!doctype html>
     return device.device_type === "relay" || device.device_type === "dimmer";
   }
 
+  function formatHardwareAddress(device) {
+    if (!device || typeof device.channel !== "number" || !device.module_ip) {
+      return null;
+    }
+    var parts = String(device.module_ip).split(".");
+    var octet = parts[parts.length - 1] || "?";
+    var block = Math.floor(device.channel / 8) + 1;
+    var pin = (device.channel % 8) + 1;
+    return {
+      label: octet + "." + block + "." + pin,
+      block: block,
+      pin: pin,
+    };
+  }
+
   function buildChannelCell(device, moduleType) {
     var hasChannel = typeof device.channel === "number";
     if (!hasChannel) {
@@ -504,12 +519,24 @@ INDEX_HTML = """<!doctype html>
     var chNum = device.channel;
     var title = moduleType === "input"
       ? "Device ID: " + (device.id || "") + " · Physical input port on IP1100 (0–7)"
-      : "Device ID: " + (device.id || "") + " · Kanaal " + chNum + " (fysieke uitgang " + (chNum + 1) + ")";
-    var nodes = [document.createTextNode(String(chNum))];
-    if (moduleType !== "input") {
-      nodes.push(el("span", { class: "muted", text: " (#" + (chNum + 1) + ")" }));
+      : "Device ID: " + (device.id || "") + " · API channel " + chNum;
+    return el("td", { class: "muted", title: title }, [
+      document.createTextNode(String(chNum)),
+    ]);
+  }
+
+  function buildTerminalCell(device) {
+    var hw = formatHardwareAddress(device);
+    if (!hw) {
+      return el("td", { class: "muted" }, [document.createTextNode("—")]);
     }
-    return el("td", { class: "muted", title: title }, nodes);
+    var title =
+      "Kastadres: " + hw.label +
+      " (blok " + hw.block + ", uitgang " + hw.pin +
+      " · API channel " + device.channel + ")";
+    return el("td", { class: "muted", title: title }, [
+      document.createTextNode(hw.label),
+    ]);
   }
 
   function channelColumnLabel(moduleType) {
@@ -772,6 +799,9 @@ INDEX_HTML = """<!doctype html>
     var tr = el("tr", { "data-id": device.id, "data-type": device.device_type });
 
     tr.appendChild(buildChannelCell(device, moduleType));
+    if (moduleType !== "input") {
+      tr.appendChild(buildTerminalCell(device));
+    }
     tr.appendChild(buildNameCell(device, state));
     tr.appendChild(buildRoomCell(device, state));
     tr.appendChild(buildTypeCell(device, state));
@@ -984,11 +1014,22 @@ INDEX_HTML = """<!doctype html>
       : "Uitgangskanaal op deze module";
     var headerCells = [
       buildHeaderCell(chLabel, chTitle, false),
+    ];
+    if (moduleType !== "input") {
+      headerCells.push(
+        buildHeaderCell(
+          "Uitgang",
+          "Fysiek kastadres (<ip-octet>.<blok>.<uitgang>, 8 kanalen per blok)",
+          false
+        )
+      );
+    }
+    headerCells.push(
       buildHeaderCell("Name", "Weergavenaam voor dit kanaal of deze knop", false),
       buildHeaderCell("Room", "Ruimte / zone waarin dit kanaal zich bevindt", false),
       buildHeaderCell("Type", "Apparaattype (light, switch, cover, button…)", false),
-      buildHeaderCell("Active", "Uitgevinkt = kanaal/knop uitgeschakeld", false),
-    ];
+      buildHeaderCell("Active", "Uitgevinkt = kanaal/knop uitgeschakeld", false)
+    );
     if (moduleType !== "input") {
       headerCells.push(
         buildHeaderCell("Max Watt", "Ingesteld maximaal vermogen (W) voor dit kanaal", moduleType !== "dimmer")

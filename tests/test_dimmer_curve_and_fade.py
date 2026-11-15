@@ -195,6 +195,7 @@ class TestGatewayDimmerCurveAndFade:
         resp_ui = await api._get_webui(make_mocked_request("GET", "/"))
         assert resp_ui.status == 200
         assert "Gamma" in resp_ui.text
+        assert "Uitgang" in resp_ui.text
         assert "1.0 = lineair (uit)" in resp_ui.text
         assert "2.2 = natuurlijk / aanbevolen" in resp_ui.text
         assert "2.8 = extra fijn onderin" in resp_ui.text
