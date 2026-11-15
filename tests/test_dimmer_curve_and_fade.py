@@ -59,7 +59,7 @@ class TestDimGammaMath:
 
     def test_positive_ui_never_maps_to_zero(self) -> None:
         assert apply_dim_gamma(1, 3.0) == 1
-        assert invert_dim_gamma(1, 0.5) == 1
+        assert invert_dim_gamma(1, 1.0) == 1
         assert invert_dim_gamma(1, 3.0) == 22
 
     def test_gamma_2_2_midpoint_and_roundtrip(self) -> None:
@@ -96,7 +96,7 @@ class TestSchemaAndValidation:
         }
         with pytest.raises(DeviceConfigError):
             validate_channel_fields({"dim_gamma": 2.2}, DeviceType.RELAY)
-        for bad in (0.1, 6.0, True, "2.2", float("nan")):
+        for bad in (0.9, 3.6, 5.0, True, "2.2", float("nan")):
             with pytest.raises(DeviceConfigError):
                 validate_channel_fields({"dim_gamma": bad}, DeviceType.DIMMER)
 
@@ -195,4 +195,7 @@ class TestGatewayDimmerCurveAndFade:
         resp_ui = await api._get_webui(make_mocked_request("GET", "/"))
         assert resp_ui.status == 200
         assert "Gamma" in resp_ui.text
-        assert "Default transition fade (0–255, IPBox default = 30)" in resp_ui.text
+        assert "1.0 = lineair (uit)" in resp_ui.text
+        assert "2.2 = natuurlijk / aanbevolen" in resp_ui.text
+        assert "2.8 = extra fijn onderin" in resp_ui.text
+        assert "Default transition fade (0–255):" in resp_ui.text

@@ -532,6 +532,18 @@ INDEX_HTML = """<!doctype html>
     return el("td", {}, [input]);
   }
 
+  var GAMMA_TOOLTIP =
+    "Dimcurve gamma (1.0–3.5):\n" +
+    "• 1.0 = lineair (uit)\n" +
+    "• 2.2 = natuurlijk / aanbevolen (50% ≈ 22% bus)\n" +
+    "• 2.8 = extra fijn onderin (felle LED-spots)";
+
+  var FADE_TOOLTIP =
+    "Default transition fade (0–255):\n" +
+    "• 0 = direct (geen fade)\n" +
+    "• 30 = IPBox standaard (~9s voor 100→0%)\n" +
+    "• 60 = traag (~14s voor 100→0%)";
+
   function buildGammaCell(device, state) {
     if (!isChannel(device) || device.device_type !== "dimmer") {
       state.dim_gamma = null;
@@ -540,12 +552,12 @@ INDEX_HTML = """<!doctype html>
     var val = typeof device.dim_gamma === "number" ? device.dim_gamma : 1.0;
     var input = el("input", {
       type: "number",
-      min: "0.5",
-      max: "5.0",
+      min: "1.0",
+      max: "3.5",
       step: "0.1",
       style: "width:70px",
       value: String(val),
-      title: "Dimming curve gamma (1.0 = linear, 2.2 = perceptual)",
+      title: GAMMA_TOOLTIP,
     });
     state.dim_gamma = input;
     return el("td", {}, [input]);
@@ -564,7 +576,7 @@ INDEX_HTML = """<!doctype html>
       step: "1",
       style: "width:68px",
       value: String(val),
-      title: "Default transition fade (0–255, IPBox default = 30)",
+      title: FADE_TOOLTIP,
     });
     state.default_fade = input;
     return el("td", {}, [input]);
@@ -634,6 +646,20 @@ INDEX_HTML = """<!doctype html>
     if (Object.keys(patch).length === 0) {
       setStatus(statusSpan, "No changes", "");
       return;
+    }
+    if ("dim_gamma" in patch) {
+      var g = patch.dim_gamma;
+      if (isNaN(g) || g < 1.0 || g > 3.5) {
+        setStatus(statusSpan, "Gamma must be 1.0–3.5", "err");
+        return;
+      }
+    }
+    if ("default_fade" in patch) {
+      var f = patch.default_fade;
+      if (isNaN(f) || f < 0 || f > 255) {
+        setStatus(statusSpan, "Fade must be 0–255", "err");
+        return;
+      }
     }
     setStatus(statusSpan, "Saving…", "");
     fetch(DEVICE_BASE_URL + "/" + encodeURIComponent(device.id), {
@@ -873,13 +899,13 @@ INDEX_HTML = """<!doctype html>
       headerCells.push(
         el("th", {
           text: "Gamma",
-          title: "Dimming curve gamma (1.0 = linear, ~2.2 = perceptual)",
+          title: GAMMA_TOOLTIP,
         })
       );
       headerCells.push(
         el("th", {
           text: "Fade",
-          title: "Default transition fade (0–255, IPBox default = 30)",
+          title: FADE_TOOLTIP,
         })
       );
     }

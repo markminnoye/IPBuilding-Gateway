@@ -125,12 +125,12 @@ def validate_channel_fields(
                 isinstance(value, bool)
                 or not isinstance(value, (int, float))
                 or not math.isfinite(value)
-                or value < 0.5
-                or value > 5.0
+                or value < 1.0
+                or value > 3.5
             ):
                 raise DeviceConfigError(
                     "validation",
-                    "dim_gamma must be a number between 0.5 and 5.0",
+                    "dim_gamma must be a number between 1.0 and 3.5",
                 )
             else:
                 result["dim_gamma"] = round(float(value), 2)
