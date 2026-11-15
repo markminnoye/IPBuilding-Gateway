@@ -496,14 +496,20 @@ INDEX_HTML = """<!doctype html>
 
   function buildChannelCell(device, moduleType) {
     var hasChannel = typeof device.channel === "number";
+    if (!hasChannel) {
+      return el("td", { class: "muted", title: "Device ID: " + (device.id || "") }, [
+        document.createTextNode("—"),
+      ]);
+    }
+    var chNum = device.channel;
     var title = moduleType === "input"
-      ? "Physical input port on IP1100 (0–7)"
-      : "Channel number on this module";
-    return el(
-      "td",
-      { class: "muted", title: title },
-      [document.createTextNode(hasChannel ? String(device.channel) : "—")]
-    );
+      ? "Device ID: " + (device.id || "") + " · Physical input port on IP1100 (0–7)"
+      : "Device ID: " + (device.id || "") + " · Kanaal " + chNum + " (fysieke uitgang " + (chNum + 1) + ")";
+    var nodes = [document.createTextNode(String(chNum))];
+    if (moduleType !== "input") {
+      nodes.push(el("span", { class: "muted", text: " (#" + (chNum + 1) + ")" }));
+    }
+    return el("td", { class: "muted", title: title }, nodes);
   }
 
   function channelColumnLabel(moduleType) {
