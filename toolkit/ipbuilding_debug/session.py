@@ -350,6 +350,27 @@ class GatewaySession:
         except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as exc:
             return None, classify_transport(exc)
 
+    async def patch_json(
+        self,
+        path: str,
+        payload: dict[str, Any],
+        *,
+        timeout: float = 8.0,
+    ) -> tuple[Any, ClassifiedError | None]:
+        if self.address_error:
+            return None, ClassifiedError(KIND_NO_ADDRESS, MSG_NO_ADDRESS, self.address_error)
+        url = f"{self.base_http}{path}"
+        try:
+            client = await self._client()
+            client_timeout = aiohttp.ClientTimeout(total=timeout)
+            async with client.patch(url, json=payload, timeout=client_timeout) as response:
+                body = await _read_json(response)
+                if response.status >= 400:
+                    return body, classify_http(response.status, body)
+                return body, None
+        except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as exc:
+            return None, classify_transport(exc)
+
     async def wait_for_state(
         self,
         device_id: str,

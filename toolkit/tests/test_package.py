@@ -31,12 +31,21 @@ PRIVATE_IP = re.compile(
 
 
 def _text_files() -> list[Path]:
-    skip = {".build", "dist", "__pycache__", ".pytest_cache"}
+    skip = {
+        ".build",
+        "dist",
+        "__pycache__",
+        ".pytest_cache",
+        ".venv",
+        "ipbuilding_gateway_tools.egg-info",
+    }
     found = []
     for path in TOOLKIT.rglob("*"):
         if not path.is_file():
             continue
-        if skip.intersection(path.relative_to(TOOLKIT).parts):
+        if path.name == "uv.lock" or skip.intersection(path.relative_to(TOOLKIT).parts):
+            continue
+        if any(part.endswith(".egg-info") for part in path.relative_to(TOOLKIT).parts):
             continue
         if path.suffix in {".pyc"}:
             continue
@@ -75,7 +84,7 @@ def test_plugin_evals_stay_out_of_ci() -> None:
 
 def test_versions_match() -> None:
     versions_agree()
-    assert file_version() == "0.1.3"
+    assert file_version() == "0.1.4"
     plugin = json.loads((TOOLKIT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
     setting = plugin["userConfig"]["gateway_address"]
     assert setting["required"] is False
@@ -285,6 +294,7 @@ def test_staged_manifest_asks_for_the_gateway_address(
         "read_logs",
         "discover",
         "device_command",
+        "calibrate_dimmer",
         "probe_generation",
         "capture_frames",
         "send_raw",

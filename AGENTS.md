@@ -116,6 +116,7 @@ Legacy referentie (geen verplicht eindmodel, alleen inspiratie): [`markminnoye/H
 | **binary-analysis-patterns** | Payload-structuur, parsers |
 | **network-engineer** | VLAN, mirror POV |
 | **async-python-patterns** | asyncio veldbus + gateway service |
+| **dimmer-calibration** | IP0300PoE dimbereik (`dimMin`/`dimMax`), `dim_gamma` & `ffprobe` luma-kalibratie |
 | **home-assistant-custom-integration** | companion, config flow, entities |
 | **home-assistant-integrations-addons** | add-on, Supervisor, ha-mcp |
 | **home-assistant-entities-services** | services, entity_id, device registry |

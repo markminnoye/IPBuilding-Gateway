@@ -13,6 +13,7 @@ from mcp.server.mcpserver import MCPServer
 from ipbuilding_debug.report import report_send_enabled
 from ipbuilding_debug.session import GatewaySession
 from ipbuilding_debug.tools import (
+    calibrate_dimmer,
     capture_frames,
     connection_status,
     decode_test,
@@ -32,10 +33,26 @@ from ipbuilding_debug.version import __version__
 log = logging.getLogger("ipbuilding_debug")
 
 
+def _strip_skill_frontmatter(text: str) -> str:
+    if text.startswith("---\n"):
+        end = text.find("\n---\n", 4)
+        if end >= 0:
+            return text[end + 5 :].lstrip("\n")
+    return text
+
+
 def skill_text() -> str:
-    path = Path(__file__).resolve().parents[1] / "skills" / "ipbuilding-gateway-tools" / "SKILL.md"
-    if path.is_file():
-        return path.read_text(encoding="utf-8")
+    skills_dir = Path(__file__).resolve().parents[1] / "skills"
+    primary = skills_dir / "ipbuilding-gateway-tools" / "SKILL.md"
+    if primary.is_file():
+        parts = [primary.read_text(encoding="utf-8")]
+        for extra in sorted(skills_dir.glob("*/SKILL.md")):
+            if extra.parent.name == "ipbuilding-gateway-tools":
+                continue
+            body = _strip_skill_frontmatter(extra.read_text(encoding="utf-8")).strip()
+            if body:
+                parts.append(body)
+        return "\n\n".join(parts)
     return (
         "Praat Nederlands met de tester. "
         "Roep eerst connection_status aan. "
@@ -163,6 +180,67 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
                 verify=verify,
             )
         ).render()
+
+    @mcp.tool(name="calibrate_dimmer")
+    async def calibrate_dimmer_tool(
+        mode: str = "status",
+        device_id: str = "",
+        module_ip: str = "",
+        channel: int | None = None,
+        steps: str = "",
+        hold_seconds: float = 2.5,
+        countdown_seconds: float = 0.0,
+        sync_on_seconds: float = 2.0,
+        sync_off_seconds: float = 3.0,
+        video_path: str = "",
+        sweep_log_path: str = "",
+        margin_min: int = 1,
+        sat_threshold: float = 0.985,
+        dim_min: int | None = None,
+        dim_max: int | None = None,
+        dim_gamma: float | None = None,
+        default_fade: int | None = None,
+        keep_raw: bool = False,
+        confirmed: bool = False,
+    ) -> str:
+        """Calibrate an IP0300PoE dimmer channel: status, sweep, analyze, or apply.
+
+        Use mode='status' to inspect channels (0..7, cabinet output octet.block.pin,
+        module dimMin/dimMax when directly reachable, gateway dim_gamma and default_fade).
+        Use mode='sweep' first with confirmed=false to preview timing and camera instructions
+        (dark room, SDR 1080p, AE/AF Lock on an indirect surface). Call again with
+        confirmed=true only after the tester confirms recording has started. A sweep temporarily
+        sets dim_gamma=1.0 (and dimMin=0..100 when module HTTP is reachable), runs an ON/OFF
+        sync pulse and percentage steps, writes a sweep log file, and restores prior values.
+        Use mode='analyze' with video_path (and sweep_log_path if available) to extract 10 Hz
+        luma via ffprobe and compute recommended dimMin, dimMax, and dim_gamma.
+        Use mode='apply' first with confirmed=false to preview proposed module dimMin/dimMax
+        and gateway dim_gamma/default_fade changes; apply only after explicit tester yes
+        with confirmed=true.
+        """
+        result = await calibrate_dimmer(
+            gateway,
+            mode=mode,
+            device_id=device_id,
+            module_ip=module_ip,
+            channel=channel,
+            steps=steps,
+            hold_seconds=hold_seconds,
+            countdown_seconds=countdown_seconds,
+            sync_on_seconds=sync_on_seconds,
+            sync_off_seconds=sync_off_seconds,
+            video_path=video_path,
+            sweep_log_path=sweep_log_path,
+            margin_min=margin_min,
+            sat_threshold=sat_threshold,
+            dim_min=dim_min,
+            dim_max=dim_max,
+            dim_gamma=dim_gamma,
+            default_fade=default_fade,
+            keep_raw=keep_raw,
+            confirmed=confirmed,
+        )
+        return result.render()
 
     @mcp.tool(name="probe_generation")
     async def probe_generation_tool() -> str:

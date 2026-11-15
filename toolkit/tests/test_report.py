@@ -44,7 +44,7 @@ _EMAIL = re.compile(
     r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
 )
 _ALLOWED_EMAILS = {CONTACT_ADDRESS}
-_SKIP_PARTS = {".git", "__pycache__", ".build", "dist", ".pytest_cache"}
+_SKIP_PARTS = {".git", "__pycache__", ".build", "dist", ".pytest_cache", ".venv"}
 
 
 def test_privacy_notice_has_retention_and_contact_and_no_statement() -> None:

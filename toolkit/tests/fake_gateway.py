@@ -53,6 +53,9 @@ class FakeGateway:
         self.command_calls: list[dict[str, Any]] = []
         self.command_status = 200
         self.command_body: dict[str, Any] = {"ok": True, "schema_version": 2}
+        self.patch_calls: list[dict[str, Any]] = []
+        self.patch_status = 200
+        self.patch_body: dict[str, Any] | None = None
         self.connects = 0
         self.port = 0
         self._sockets: list[web.WebSocketResponse] = []
@@ -93,6 +96,7 @@ class FakeGateway:
         app.router.add_get("/api/v1/modules", self._modules)
         app.router.add_get("/api/v1/devices", self._devices)
         app.router.add_post("/api/v1/discover", self._discover)
+        app.router.add_patch("/api/v1/devices/{device_id}", self._patch)
         app.router.add_post("/api/v1/devices/{device_id}/command", self._command)
         app.router.add_post("/api/v1/debug/raw-send", self._raw)
         app.router.add_get("/ws", self._ws)
@@ -157,6 +161,17 @@ class FakeGateway:
                 "schema_version": 2,
             }
         )
+
+    async def _patch(self, request: web.Request) -> web.Response:
+        body = await request.json()
+        dev_id = request.match_info["device_id"]
+        self.patch_calls.append({"device_id": dev_id, **body})
+        if self.patch_status >= 400:
+            return web.json_response(self.patch_body or {"error": "patch_failed"}, status=self.patch_status)
+        for dev in self.devices:
+            if str(dev.get("id") or "") == dev_id:
+                dev.update(body)
+        return web.json_response(self.patch_body or {"ok": True, "device_id": dev_id, **body})
 
     async def _command(self, request: web.Request) -> web.Response:
         body = await request.json()

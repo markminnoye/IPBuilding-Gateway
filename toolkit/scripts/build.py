@@ -94,16 +94,36 @@ def _copy_tree(src: Path, dest: Path) -> None:
         shutil.copytree(
             src,
             dest,
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache"),
+            ignore=shutil.ignore_patterns(
+                "__pycache__",
+                "*.pyc",
+                ".pytest_cache",
+                ".venv",
+                "uv.lock",
+                "ipbuilding_gateway_tools.egg-info",
+                "*.egg-info",
+            ),
         )
     else:
         shutil.copy2(src, dest)
 
 
 def scan_private_ips(path: Path) -> None:
+    skip_parts = {
+        ".build",
+        "dist",
+        "__pycache__",
+        ".pytest_cache",
+        ".venv",
+        "ipbuilding_gateway_tools.egg-info",
+    }
     files = [path] if path.is_file() else [item for item in path.rglob("*") if item.is_file()]
     for file in files:
-        if file.suffix in {".pyc"}:
+        if (
+            file.suffix in {".pyc"}
+            or file.name == "uv.lock"
+            or any(part in skip_parts or part.endswith(".egg-info") for part in file.parts)
+        ):
             continue
         text = file.read_text(encoding="utf-8", errors="replace")
         match = PRIVATE_IP.search(text)
@@ -208,6 +228,13 @@ def _write_manifest(dest: Path, version: str) -> None:
             "description": (
                 "Eén apparaat schakelen of dimmen nadat de tester het bevestigd heeft. "
                 "Bij een commandotest eerst frames meelezen. Leest de stand van een dimmer daarna na."
+            ),
+        },
+        {
+            "name": "calibrate_dimmer",
+            "description": (
+                "Dimmerkanaal kalibreren (status, sweep, video-analyse met ffprobe en "
+                "dimMin, dimMax, dim_gamma en default_fade opslaan na bevestiging)."
             ),
         },
         {
@@ -361,13 +388,20 @@ def _validate_skill_frontmatter(skill_dir: Path) -> str:
 
 
 def _plugin_files() -> list[Path]:
-    skip = {".build", "dist", "__pycache__", ".pytest_cache"}
+    skip = {
+        ".build",
+        "dist",
+        "__pycache__",
+        ".pytest_cache",
+        ".venv",
+        "ipbuilding_gateway_tools.egg-info",
+    }
     found: list[Path] = []
     for path in TOOLKIT.rglob("*"):
-        if not path.is_file() or path.suffix == ".pyc":
+        if not path.is_file() or path.suffix == ".pyc" or path.name == "uv.lock":
             continue
         relative = path.relative_to(TOOLKIT)
-        if skip.intersection(relative.parts):
+        if skip.intersection(relative.parts) or any(part.endswith(".egg-info") for part in relative.parts):
             continue
         if relative.parts[:2] == ("evals", "results"):
             continue
@@ -391,7 +425,9 @@ def write_download_zips(version: str, dest: Path = DIST) -> Path:
     sending a report is not available from this zip.
     """
     versions_agree()
-    _validate_skill_frontmatter(TOOLKIT / "skills" / "ipbuilding-gateway-tools")
+    skills_root = TOOLKIT / "skills"
+    for skill_dir in sorted(p for p in skills_root.iterdir() if p.is_dir()):
+        _validate_skill_frontmatter(skill_dir)
     dest.mkdir(parents=True, exist_ok=True)
     plugin_zip = dest / f"ipbuilding-gateway-tools-claude-code-{version}.zip"
     _write_zip(

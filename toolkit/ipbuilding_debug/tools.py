@@ -5,8 +5,11 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import json
+import math
 import os
 import re
+import tempfile
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -14,6 +17,18 @@ from typing import Any
 from urllib.parse import quote
 
 from ipbuilding_debug.buffer import clamp_timeout
+from ipbuilding_debug.calibration import (
+    DEFAULT_HOLD_SECONDS,
+    DEFAULT_SWEEP_STEPS,
+    DEFAULT_SYNC_OFF_SECONDS,
+    DEFAULT_SYNC_ON_SECONDS,
+    analyze_luma_series,
+    extract_video_luma_async,
+    fetch_module_dimmer_statuses,
+    format_uitgang,
+    parse_steps,
+    save_module_dimmer_channel,
+)
 from ipbuilding_debug.decode import decode_frame, parse_frame
 from ipbuilding_debug.dialect import (
     dialect_name,
@@ -1202,6 +1217,1017 @@ async def device_command(
     return ToolResult(message, result)
 
 
+async def _calibrated_sleeper(session: GatewaySession, seconds: float) -> None:
+    if seconds <= 0:
+        return
+    sleeper = getattr(session, "_sleeper", None)
+    if callable(sleeper):
+        await sleeper(seconds)
+    else:
+        await asyncio.sleep(seconds)
+
+
+async def _load_calibration_inventory(
+    session: GatewaySession,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], ToolResult | None]:
+    modules, devices, error = await _inventory(session)
+    if error is not None and not devices and not modules:
+        return [], [], _from_error(error, mode="calibration")
+    session.devices = {
+        str(device.get("id")): device
+        for device in devices
+        if isinstance(device, dict) and device.get("id") is not None
+    }
+    session.modules = {
+        str(module.get("id")): module
+        for module in modules
+        if isinstance(module, dict) and module.get("id") is not None
+    }
+    if error is not None and not devices:
+        return modules, [], _from_error(error, mode="calibration")
+    return modules, devices, None
+
+
+def _dimmer_module_ip(device: dict[str, Any], modules: dict[str, dict[str, Any]]) -> str:
+    direct = str(device.get("module_ip") or "").strip()
+    if direct:
+        return direct
+    mod_id = str(device.get("module_id") or "").strip()
+    mod = modules.get(mod_id, {})
+    if isinstance(mod, dict):
+        ip = str(mod.get("ip") or "").strip()
+        if ip:
+            return ip
+    return mod_id
+
+
+def _matching_dimmers(
+    session: GatewaySession,
+    devices: list[dict[str, Any]],
+    modules_by_id: dict[str, dict[str, Any]],
+    *,
+    device_id: str,
+    module_ip: str,
+    channel: int | None,
+) -> tuple[list[dict[str, Any]], ToolResult | None]:
+    dimmers = [d for d in devices if isinstance(d, dict) and _device_kind(session, d) == "dimmer"]
+    if device_id:
+        for dev in devices:
+            if str(dev.get("id") or "") == device_id:
+                if _device_kind(session, dev) != "dimmer":
+                    return [], ToolResult(
+                        f"Apparaat {device_id} is geen dimmer maar '{_device_kind(session, dev) or 'onbekend'}'.",
+                        {"ok": False, "kind": KIND_OTHER, "device_id": device_id},
+                    )
+                return [dev], None
+        return [], ToolResult(
+            f"Apparaat {device_id} staat niet in de inventaris. Roep list_devices aan.",
+            {"ok": False, "kind": KIND_OTHER, "device_id": device_id},
+        )
+
+    filtered = dimmers
+    if module_ip:
+        filtered = [
+            d
+            for d in filtered
+            if _dimmer_module_ip(d, modules_by_id) == module_ip
+            or str(d.get("module_id") or "").strip() == module_ip
+        ]
+    if channel is not None:
+        filtered = [d for d in filtered if d.get("channel") == channel]
+
+    if (module_ip or channel is not None) and not filtered:
+        return [], ToolResult(
+            "Geen dimmer gevonden voor die module/kanaal-combinatie. Roep list_devices aan.",
+            {
+                "ok": False,
+                "kind": KIND_OTHER,
+                "module_ip": module_ip or None,
+                "channel": channel,
+            },
+        )
+    return filtered, None
+
+
+def _validate_calibration_channel(channel: int | None) -> ToolResult | None:
+    if channel is None:
+        return None
+    if isinstance(channel, bool) or not isinstance(channel, int) or not 0 <= channel <= 7:
+        return ToolResult(
+            "Kanaal moet een geheel getal van 0 tot en met 7 zijn.",
+            {"ok": False, "kind": KIND_OTHER, "channel": channel},
+        )
+    return None
+
+
+def _validate_timing_bounds(
+    *,
+    hold_seconds: float,
+    sync_on_seconds: float,
+    sync_off_seconds: float,
+    countdown_seconds: float = 0.0,
+) -> ToolResult | None:
+    for label, val in (
+        ("hold_seconds", hold_seconds),
+        ("sync_on_seconds", sync_on_seconds),
+        ("sync_off_seconds", sync_off_seconds),
+    ):
+        if (
+            isinstance(val, bool)
+            or not isinstance(val, (int, float))
+            or not math.isfinite(float(val))
+            or not 0.5 <= float(val) <= 10.0
+        ):
+            return ToolResult(
+                f"{label} moet tussen 0.5 en 10.0 seconden liggen.",
+                {"ok": False, "kind": KIND_OTHER, "parameter": label, "value": val},
+            )
+    if (
+        isinstance(countdown_seconds, bool)
+        or not isinstance(countdown_seconds, (int, float))
+        or not math.isfinite(float(countdown_seconds))
+        or not 0.0 <= float(countdown_seconds) <= 30.0
+    ):
+        return ToolResult(
+            "countdown_seconds moet tussen 0.0 en 30.0 seconden liggen.",
+            {"ok": False, "kind": KIND_OTHER, "parameter": "countdown_seconds", "value": countdown_seconds},
+        )
+    return None
+
+
+def _module_row_for_channel(rows: list[dict[str, Any]] | None, ch: int) -> dict[str, Any] | None:
+    if not rows:
+        return None
+    for row in rows:
+        try:
+            if int(row.get("ch")) == ch:
+                return row
+        except (TypeError, ValueError):
+            continue
+    if 0 <= ch < len(rows) and isinstance(rows[ch], dict):
+        return rows[ch]
+    return None
+
+
+async def _fetch_modules_map(module_ips: set[str]) -> dict[str, tuple[list[dict[str, Any]] | None, str | None]]:
+    ips = sorted(ip for ip in module_ips if ip and not any(c.isspace() for c in ip))
+    if not ips:
+        return {}
+    results = await asyncio.gather(
+        *(fetch_module_dimmer_statuses(ip) for ip in ips),
+        return_exceptions=False,
+    )
+    return dict(zip(ips, results))
+
+
+async def calibrate_dimmer(
+    session: GatewaySession,
+    *,
+    mode: str = "status",
+    device_id: str = "",
+    module_ip: str = "",
+    channel: int | None = None,
+    steps: str = "",
+    hold_seconds: float = DEFAULT_HOLD_SECONDS,
+    countdown_seconds: float = 0.0,
+    sync_on_seconds: float = DEFAULT_SYNC_ON_SECONDS,
+    sync_off_seconds: float = DEFAULT_SYNC_OFF_SECONDS,
+    video_path: str = "",
+    sweep_log_path: str = "",
+    margin_min: int = 1,
+    sat_threshold: float = 0.985,
+    dim_min: int | None = None,
+    dim_max: int | None = None,
+    dim_gamma: float | None = None,
+    default_fade: int | None = None,
+    keep_raw: bool = False,
+    confirmed: bool = False,
+) -> ToolResult:
+    """Calibrate an IP0300PoE dimmer channel (status, sweep, analyze, apply)."""
+    norm_mode = (mode or "status").strip().lower()
+    if norm_mode not in {"status", "sweep", "analyze", "apply"}:
+        return ToolResult(
+            "Ongeldige kalibratiemodus. Kies status, sweep, analyze of apply.",
+            {"ok": False, "kind": KIND_OTHER, "mode": norm_mode},
+        )
+
+    device_id = (device_id or "").strip()
+    module_ip = (module_ip or "").strip()
+    ch_err = _validate_calibration_channel(channel)
+    if ch_err is not None:
+        return ch_err
+
+    if norm_mode == "analyze":
+        return await _calibrate_analyze(
+            session,
+            device_id=device_id,
+            module_ip=module_ip,
+            channel=channel,
+            steps=steps,
+            hold_seconds=hold_seconds,
+            sync_on_seconds=sync_on_seconds,
+            sync_off_seconds=sync_off_seconds,
+            video_path=video_path,
+            sweep_log_path=sweep_log_path,
+            margin_min=margin_min,
+            sat_threshold=sat_threshold,
+        )
+
+    modules, devices, inv_err = await _load_calibration_inventory(session)
+    if inv_err is not None:
+        return inv_err
+    modules_by_id = {
+        str(m.get("id")): m for m in modules if isinstance(m, dict) and m.get("id") is not None
+    }
+    matches, match_err = _matching_dimmers(
+        session,
+        devices,
+        modules_by_id,
+        device_id=device_id,
+        module_ip=module_ip,
+        channel=channel,
+    )
+    if match_err is not None:
+        return match_err
+
+    if norm_mode == "status":
+        return await _calibrate_status(matches, modules_by_id)
+
+    if not matches:
+        return ToolResult(
+            "Geen dimmers gevonden in de gateway-inventaris.",
+            {"ok": False, "kind": KIND_OTHER, "mode": norm_mode},
+        )
+    if len(matches) > 1:
+        options = [
+            f"{d.get('id')} ({d.get('name') or 'zonder naam'}, kanaal {d.get('channel')})"
+            for d in matches
+        ]
+        return ToolResult(
+            "Meerdere dimmers gevonden; geef device_id of module_ip + channel op: "
+            + ", ".join(options),
+            {"ok": False, "kind": KIND_OTHER, "mode": norm_mode, "candidates": options},
+        )
+
+    target = matches[0]
+    target_id = str(target.get("id") or "")
+    target_ip = _dimmer_module_ip(target, modules_by_id)
+    target_ch = target.get("channel")
+    if isinstance(target_ch, bool) or not isinstance(target_ch, int) or not 0 <= target_ch <= 7:
+        return ToolResult(
+            f"Dimmer {target_id} heeft een ongeldig kanaalnummer ({target_ch}).",
+            {"ok": False, "kind": KIND_OTHER, "mode": norm_mode, "device_id": target_id},
+        )
+
+    if norm_mode == "sweep":
+        return await _calibrate_sweep(
+            session,
+            target=target,
+            target_id=target_id,
+            module_ip=target_ip,
+            channel=target_ch,
+            steps=steps,
+            hold_seconds=hold_seconds,
+            countdown_seconds=countdown_seconds,
+            sync_on_seconds=sync_on_seconds,
+            sync_off_seconds=sync_off_seconds,
+            sweep_log_path=sweep_log_path,
+            keep_raw=keep_raw,
+            confirmed=confirmed,
+        )
+
+    return await _calibrate_apply(
+        session,
+        target=target,
+        target_id=target_id,
+        module_ip=target_ip,
+        channel=target_ch,
+        dim_min=dim_min,
+        dim_max=dim_max,
+        dim_gamma=dim_gamma,
+        default_fade=default_fade,
+        confirmed=confirmed,
+    )
+
+
+async def _calibrate_status(
+    dimmers: list[dict[str, Any]],
+    modules_by_id: dict[str, dict[str, Any]],
+) -> ToolResult:
+    ips = {_dimmer_module_ip(d, modules_by_id) for d in dimmers}
+    mod_map = await _fetch_modules_map(ips)
+    rows: list[dict[str, Any]] = []
+    for dev in dimmers:
+        ch = dev.get("channel")
+        mod_ip = _dimmer_module_ip(dev, modules_by_id)
+        statuses, mod_err = mod_map.get(mod_ip, (None, None))
+        mod_row = (
+            _module_row_for_channel(statuses, ch)
+            if isinstance(ch, int) and not isinstance(ch, bool)
+            else None
+        )
+        entry: dict[str, Any] = {
+            "device_id": dev.get("id"),
+            "name": dev.get("name"),
+            "room": dev.get("room"),
+            "module_ip": mod_ip,
+            "channel": ch,
+            "uitgang": (
+                format_uitgang(mod_ip, ch)
+                if mod_ip and isinstance(ch, int) and not isinstance(ch, bool)
+                else None
+            ),
+            "active": dev.get("active"),
+            "state": dev.get("state"),
+            "level": dev.get("level"),
+            "dim_gamma": dev.get("dim_gamma"),
+            "default_fade": dev.get("default_fade"),
+            "module_http_reachable": statuses is not None,
+        }
+        if mod_row is not None:
+            entry["descr"] = mod_row.get("descr")
+            entry["gr"] = mod_row.get("gr")
+            entry["dim_min"] = mod_row.get("dimMin")
+            entry["dim_max"] = mod_row.get("dimMax")
+            entry["module_state"] = mod_row.get("state")
+        elif mod_err:
+            entry["module_http_error"] = mod_err
+        rows.append(entry)
+
+    unreachable_ips = sorted(ip for ip, (data, _) in mod_map.items() if data is None)
+    note_http = (
+        f" Directe module-uitlezing niet bereikbaar voor {', '.join(unreachable_ips)}; "
+        "gateway-waarden zijn wel getoond."
+        if unreachable_ips
+        else ""
+    )
+    msg = (
+        f"{len(rows)} dimmerkanaal/-kanalen gevonden. "
+        "Kanalen tellen vanaf 0 (zelfde cijfer als op de module)."
+        + note_http
+    )
+    return ToolResult(
+        msg,
+        {
+            "ok": True,
+            "kind": "dimmer_calibration",
+            "mode": "status",
+            "channels": rows,
+            "module_http": {
+                ip: {"reachable": data is not None, "error": err or ""}
+                for ip, (data, err) in sorted(mod_map.items())
+            },
+        },
+    )
+
+
+async def _calibrate_sweep(
+    session: GatewaySession,
+    *,
+    target: dict[str, Any],
+    target_id: str,
+    module_ip: str,
+    channel: int,
+    steps: str,
+    hold_seconds: float,
+    countdown_seconds: float,
+    sync_on_seconds: float,
+    sync_off_seconds: float,
+    sweep_log_path: str,
+    keep_raw: bool,
+    confirmed: bool,
+) -> ToolResult:
+    try:
+        parsed_steps = parse_steps(steps or None)
+    except ValueError as exc:
+        return ToolResult(
+            f"Ongeldige sweep-stappen: {exc}",
+            {"ok": False, "kind": KIND_OTHER, "mode": "sweep", "sent": False},
+        )
+    timing_err = _validate_timing_bounds(
+        hold_seconds=hold_seconds,
+        sync_on_seconds=sync_on_seconds,
+        sync_off_seconds=sync_off_seconds,
+        countdown_seconds=countdown_seconds,
+    )
+    if timing_err is not None:
+        timing_err.data["mode"] = "sweep"
+        return timing_err
+
+    statuses, mod_err = await fetch_module_dimmer_statuses(module_ip)
+    mod_row = _module_row_for_channel(statuses, channel)
+    uitgang = format_uitgang(module_ip, channel)
+    orig_gamma = target.get("dim_gamma")
+    orig_min = mod_row.get("dimMin") if mod_row else None
+    orig_max = mod_row.get("dimMax") if mod_row else None
+    orig_descr = str(mod_row.get("descr") or target.get("name") or "") if mod_row else ""
+    orig_gr = str(mod_row.get("gr") or target.get("room") or "") if mod_row else ""
+
+    est_s = round(
+        float(countdown_seconds)
+        + float(sync_on_seconds)
+        + float(sync_off_seconds)
+        + len(parsed_steps) * float(hold_seconds)
+        + 0.5,
+        1,
+    )
+    preview = {
+        "ok": False,
+        "kind": "confirmation_required",
+        "mode": "sweep",
+        "sent": False,
+        "device_id": target_id,
+        "name": target.get("name"),
+        "room": target.get("room"),
+        "module_ip": module_ip,
+        "channel": channel,
+        "uitgang": uitgang,
+        "steps": parsed_steps,
+        "hold_seconds": float(hold_seconds),
+        "sync_on_seconds": float(sync_on_seconds),
+        "sync_off_seconds": float(sync_off_seconds),
+        "countdown_seconds": float(countdown_seconds),
+        "estimated_seconds": est_s,
+        "keep_raw": bool(keep_raw),
+        "module_http_reachable": mod_row is not None,
+        "original": {
+            "dim_gamma": orig_gamma,
+            "dim_min": orig_min,
+            "dim_max": orig_max,
+        },
+    }
+    if not confirmed:
+        mod_note = (
+            f"Module dimMin/dimMax ({orig_min}..{orig_max}) gaat tijdelijk naar 0..100"
+            if mod_row is not None
+            else (
+                "Directe module-HTTP is niet bereikbaar; alleen gateway dim_gamma gaat tijdelijk naar 1.0"
+                + (f" ({mod_err})" if mod_err else "")
+            )
+        )
+        return ToolResult(
+            (
+                f"Nog niet gestart. Kalibratiesweep op {target.get('name') or target_id} "
+                f"(uitgang {uitgang}, kanaal {channel}): {len(parsed_steps)} stappen van "
+                f"{parsed_steps[0]}% tot {parsed_steps[-1]}% (duur ~{est_s} s, sync-puls "
+                f"{sync_on_seconds} s aan / {sync_off_seconds} s uit). {mod_note}. "
+                "Verduister eerst de kamer, richt de smartphonecamera (SDR 1080p, AE/AF Lock) "
+                "op een indirect verlichte muur of plafond en start de video-opname. "
+                "Roep calibrate_dimmer opnieuw aan met confirmed=true zodra de opname loopt."
+            ),
+            preview,
+        )
+
+    if countdown_seconds > 0:
+        await _calibrated_sleeper(session, float(countdown_seconds))
+
+    patch_path = f"/api/v1/devices/{quote(target_id, safe='')}"
+    cmd_path = f"/api/v1/devices/{quote(target_id, safe='')}/command"
+
+    gateway_raw_applied = False
+    module_raw_applied = False
+    recorded_steps: list[dict[str, Any]] = []
+    used_nominal_offsets = False
+    t_sync_off = 0.0
+    sweep_error: str | None = None
+    restored = {"gateway_dim_gamma": False, "module_dim_min_max": False}
+
+    try:
+        if orig_gamma is not None and float(orig_gamma) != 1.0:
+            _, p_err = await session.patch_json(patch_path, {"dim_gamma": 1.0})
+            if p_err is not None:
+                return _from_error(p_err, mode="sweep", device_id=target_id, sent=False)
+            gateway_raw_applied = True
+
+        if mod_row is not None and (orig_min, orig_max) != (0, 100):
+            saved_ok, save_err = await save_module_dimmer_channel(
+                module_ip,
+                channel,
+                descr=orig_descr,
+                gr=orig_gr,
+                dim_min=0,
+                dim_max=100,
+            )
+            if not saved_ok:
+                sweep_error = f"Kon module-schaal niet tijdelijk op 0..100 zetten: {save_err}"
+                raise RuntimeError(sweep_error)
+            module_raw_applied = True
+
+        # Sync pulse: ON 100% -> OFF 0%
+        _, c_err = await session.post_json(
+            cmd_path, {"action": "DIM", "value": 100, "fade": 0}
+        )
+        if c_err is not None:
+            return _from_error(c_err, mode="sweep", device_id=target_id, sent=True)
+        await _calibrated_sleeper(session, float(sync_on_seconds))
+
+        _, c_err = await session.post_json(
+            cmd_path, {"action": "DIM", "value": 0, "fade": 0}
+        )
+        if c_err is not None:
+            return _from_error(c_err, mode="sweep", device_id=target_id, sent=True)
+        t_sync_off = time.monotonic()
+        await _calibrated_sleeper(session, float(sync_off_seconds))
+
+        for idx, pct in enumerate(parsed_steps):
+            actual_offset = round(time.monotonic() - t_sync_off, 3)
+            nominal_offset = round(float(sync_off_seconds) + idx * float(hold_seconds), 3)
+            body, c_err = await session.post_json(
+                cmd_path, {"action": "DIM", "value": pct, "fade": 0}
+            )
+            ok_step = c_err is None and isinstance(body, dict) and body.get("ok") is True
+            recorded_steps.append(
+                {
+                    "level": pct,
+                    "offset_s": actual_offset,
+                    "nominal_offset_s": nominal_offset,
+                    "ok": ok_step,
+                }
+            )
+            if c_err is not None:
+                sweep_error = c_err.message
+                break
+            await _calibrated_sleeper(session, float(hold_seconds))
+
+        # Final OFF so the video shows a clear end state.
+        await session.post_json(cmd_path, {"action": "DIM", "value": 0, "fade": 0})
+        await _calibrated_sleeper(session, min(1.0, float(hold_seconds)))
+    except RuntimeError:
+        pass
+    finally:
+        if not keep_raw:
+            if module_raw_applied and isinstance(orig_min, int) and isinstance(orig_max, int):
+                if 0 <= orig_min < orig_max <= 100:
+                    ok_rest, _ = await save_module_dimmer_channel(
+                        module_ip,
+                        channel,
+                        descr=orig_descr,
+                        gr=orig_gr,
+                        dim_min=orig_min,
+                        dim_max=orig_max,
+                    )
+                    restored["module_dim_min_max"] = ok_rest
+            if gateway_raw_applied and orig_gamma is not None:
+                _, r_err = await session.patch_json(patch_path, {"dim_gamma": orig_gamma})
+                restored["gateway_dim_gamma"] = r_err is None
+
+    if sweep_error is not None and not recorded_steps:
+        return ToolResult(
+            sweep_error,
+            {
+                "ok": False,
+                "kind": KIND_OTHER,
+                "mode": "sweep",
+                "sent": False,
+                "device_id": target_id,
+                "restored": restored,
+            },
+        )
+
+    step_offsets: list[float]
+    if recorded_steps:
+        measured_span = recorded_steps[-1]["offset_s"] - recorded_steps[0]["offset_s"]
+        expected_span = max(0.0, (len(recorded_steps) - 1) * float(hold_seconds))
+        if expected_span > 0.2 and measured_span < 0.05 * expected_span:
+            step_offsets = [float(item["nominal_offset_s"]) for item in recorded_steps]
+            used_nominal_offsets = True
+        else:
+            step_offsets = [float(item["offset_s"]) for item in recorded_steps]
+    else:
+        step_offsets = []
+
+    safe_id = re.sub(r"[^A-Za-z0-9._-]+", "_", target_id or f"ch{channel}")
+    target_log = (
+        Path(sweep_log_path).expanduser()
+        if sweep_log_path.strip()
+        else Path(tempfile.gettempdir()) / f"ipbuilding_dimmer_sweep_{safe_id}.json"
+    )
+    target_log.parent.mkdir(parents=True, exist_ok=True)
+    log_payload = {
+        "device_id": target_id,
+        "name": target.get("name"),
+        "room": target.get("room"),
+        "module_ip": module_ip,
+        "channel": channel,
+        "uitgang": uitgang,
+        "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "sync_on_seconds": float(sync_on_seconds),
+        "sync_off_seconds": float(sync_off_seconds),
+        "hold_seconds": float(hold_seconds),
+        "steps": [int(item["level"]) for item in recorded_steps],
+        "step_offsets_seconds": step_offsets,
+        "used_nominal_offsets": used_nominal_offsets,
+        "module_http_reachable": mod_row is not None,
+    }
+    target_log.write_text(
+        json.dumps(log_payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    await session.annotate(
+        f"Dimmersweep {target.get('name') or target_id} (uitgang {uitgang}): "
+        f"{len(recorded_steps)} stappen gelogd naar {target_log.name}",
+        marker="calibrate_dimmer_sweep",
+    )
+    return ToolResult(
+        (
+            f"Sweep afgerond voor {target.get('name') or target_id} (uitgang {uitgang}, "
+            f"{len(recorded_steps)} stappen). Log opgeslagen op {target_log}. "
+            "Stop de video-opname en roep calibrate_dimmer(mode='analyze', "
+            f"video_path=..., sweep_log_path='{target_log}') aan."
+        ),
+        {
+            "ok": sweep_error is None,
+            "kind": "dimmer_calibration",
+            "mode": "sweep",
+            "sent": True,
+            "device_id": target_id,
+            "uitgang": uitgang,
+            "module_ip": module_ip,
+            "channel": channel,
+            "steps": log_payload["steps"],
+            "hold_seconds": float(hold_seconds),
+            "sync_on_seconds": float(sync_on_seconds),
+            "sync_off_seconds": float(sync_off_seconds),
+            "step_offsets_seconds": step_offsets,
+            "sweep_log_path": str(target_log),
+            "module_http_reachable": mod_row is not None,
+            "keep_raw": bool(keep_raw),
+            "restored": restored,
+            "partial_error": sweep_error or "",
+        },
+    )
+
+
+async def _calibrate_analyze(
+    session: GatewaySession,
+    *,
+    device_id: str,
+    module_ip: str,
+    channel: int | None,
+    steps: str,
+    hold_seconds: float,
+    sync_on_seconds: float,
+    sync_off_seconds: float,
+    video_path: str,
+    sweep_log_path: str,
+    margin_min: int,
+    sat_threshold: float,
+) -> ToolResult:
+    if not video_path.strip():
+        return ToolResult(
+            "Geef video_path op om een kalibratievideo te analyseren.",
+            {"ok": False, "kind": KIND_OTHER, "mode": "analyze"},
+        )
+    if isinstance(margin_min, bool) or not isinstance(margin_min, int) or margin_min < 0:
+        return ToolResult(
+            "margin_min moet een geheel getal >= 0 zijn.",
+            {"ok": False, "kind": KIND_OTHER, "mode": "analyze"},
+        )
+    if (
+        isinstance(sat_threshold, bool)
+        or not isinstance(sat_threshold, (int, float))
+        or not 0.5 <= float(sat_threshold) <= 1.0
+    ):
+        return ToolResult(
+            "sat_threshold moet tussen 0.5 en 1.0 liggen.",
+            {"ok": False, "kind": KIND_OTHER, "mode": "analyze"},
+        )
+
+    sweep_meta: dict[str, Any] = {}
+    step_offsets: list[float] | None = None
+    effective_hold = float(hold_seconds)
+    effective_sync_on = float(sync_on_seconds)
+    effective_sync_off = float(sync_off_seconds)
+    raw_steps: str | list[int] | None = steps.strip() or None
+
+    if sweep_log_path.strip():
+        log_file = Path(sweep_log_path.strip()).expanduser()
+        if not log_file.is_file():
+            return ToolResult(
+                f"Sweep-logbestand niet gevonden: {log_file}",
+                {"ok": False, "kind": KIND_OTHER, "mode": "analyze"},
+            )
+        try:
+            sweep_meta = json.loads(log_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            return ToolResult(
+                f"Kon sweep-logbestand niet lezen: {exc}",
+                {"ok": False, "kind": KIND_OTHER, "mode": "analyze"},
+            )
+        if not isinstance(sweep_meta, dict):
+            return ToolResult(
+                "Ongeldig JSON-formaat in sweep-logbestand.",
+                {"ok": False, "kind": KIND_OTHER, "mode": "analyze"},
+            )
+        if raw_steps is None and isinstance(sweep_meta.get("steps"), list):
+            raw_steps = sweep_meta["steps"]
+        if isinstance(sweep_meta.get("step_offsets_seconds"), list):
+            step_offsets = [float(x) for x in sweep_meta["step_offsets_seconds"]]
+        if isinstance(sweep_meta.get("hold_seconds"), (int, float)):
+            effective_hold = float(sweep_meta["hold_seconds"])
+        if isinstance(sweep_meta.get("sync_on_seconds"), (int, float)):
+            effective_sync_on = float(sweep_meta["sync_on_seconds"])
+        if isinstance(sweep_meta.get("sync_off_seconds"), (int, float)):
+            effective_sync_off = float(sweep_meta["sync_off_seconds"])
+        device_id = device_id or str(sweep_meta.get("device_id") or "")
+        module_ip = module_ip or str(sweep_meta.get("module_ip") or "")
+        if channel is None and isinstance(sweep_meta.get("channel"), int):
+            channel = sweep_meta["channel"]
+
+    try:
+        parsed_steps = parse_steps(raw_steps)
+    except ValueError as exc:
+        return ToolResult(
+            f"Ongeldige stappen: {exc}",
+            {"ok": False, "kind": KIND_OTHER, "mode": "analyze"},
+        )
+
+    timing_err = _validate_timing_bounds(
+        hold_seconds=effective_hold,
+        sync_on_seconds=effective_sync_on,
+        sync_off_seconds=effective_sync_off,
+    )
+    if timing_err is not None:
+        timing_err.data["mode"] = "analyze"
+        return timing_err
+
+    try:
+        samples = await extract_video_luma_async(video_path.strip())
+        analysis = analyze_luma_series(
+            samples,
+            parsed_steps,
+            effective_hold,
+            sync_on_seconds=effective_sync_on,
+            sync_off_seconds=effective_sync_off,
+            step_offsets_seconds=step_offsets,
+            margin_min=margin_min,
+            sat_threshold=float(sat_threshold),
+        )
+    except (FileNotFoundError, RuntimeError, ValueError) as exc:
+        return ToolResult(
+            f"Video-analyse mislukt: {exc}",
+            {"ok": False, "kind": KIND_OTHER, "mode": "analyze", "video_path": video_path},
+        )
+
+    await session.annotate(
+        f"Video-analyse {device_id or sweep_meta.get('uitgang') or 'dimmer'}: "
+        f"gemeten dimMin={analysis['measured_dim_min']}, "
+        f"advies dimMin={analysis['recommended_dim_min']}, "
+        f"dimMax={analysis['recommended_dim_max']}, "
+        f"dim_gamma={analysis['recommended_dim_gamma']}",
+        marker="calibrate_dimmer_analyze",
+    )
+    msg = (
+        f"Analyse klaar: gemeten ontsteking op {analysis['measured_dim_min']}%. "
+        f"Aanbevolen instelling: dimMin={analysis['recommended_dim_min']}, "
+        f"dimMax={analysis['recommended_dim_max']}, "
+        f"dim_gamma={analysis['recommended_dim_gamma']}. "
+        "Toon de volledige staptabel aan de tester en vraag om bevestiging "
+        "vóórdat je calibrate_dimmer(mode='apply', confirmed=true) aanroept."
+    )
+    return ToolResult(
+        msg,
+        {
+            "ok": True,
+            "kind": "dimmer_calibration",
+            "mode": "analyze",
+            "device_id": device_id or None,
+            "module_ip": module_ip or None,
+            "channel": channel,
+            "uitgang": sweep_meta.get("uitgang")
+            or (format_uitgang(module_ip, channel) if module_ip and channel is not None else None),
+            "video_path": str(Path(video_path.strip()).expanduser()),
+            "sweep_log_path": sweep_log_path.strip() or None,
+            "frame_count": len(samples),
+            **analysis,
+        },
+    )
+
+
+async def _calibrate_apply(
+    session: GatewaySession,
+    *,
+    target: dict[str, Any],
+    target_id: str,
+    module_ip: str,
+    channel: int,
+    dim_min: int | None,
+    dim_max: int | None,
+    dim_gamma: float | None,
+    default_fade: int | None,
+    confirmed: bool,
+) -> ToolResult:
+    if (
+        dim_min is None
+        and dim_max is None
+        and dim_gamma is None
+        and default_fade is None
+    ):
+        return ToolResult(
+            "Geef minstens dim_min/dim_max, dim_gamma of default_fade op.",
+            {"ok": False, "kind": KIND_OTHER, "mode": "apply", "sent": False},
+        )
+
+    want_module_curve = dim_min is not None or dim_max is not None
+    if want_module_curve:
+        for label, val in (("dim_min", dim_min), ("dim_max", dim_max)):
+            if val is not None and (isinstance(val, bool) or not isinstance(val, int)):
+                return ToolResult(
+                    f"{label} moet een geheel getal zijn.",
+                    {"ok": False, "kind": KIND_OTHER, "mode": "apply", "sent": False},
+                )
+
+    parsed_gamma: float | None = None
+    if dim_gamma is not None:
+        if (
+            isinstance(dim_gamma, bool)
+            or not isinstance(dim_gamma, (int, float))
+            or not math.isfinite(float(dim_gamma))
+            or not 1.0 <= float(dim_gamma) <= 3.5
+        ):
+            return ToolResult(
+                "dim_gamma moet tussen 1.0 en 3.5 liggen.",
+                {"ok": False, "kind": KIND_OTHER, "mode": "apply", "sent": False},
+            )
+        parsed_gamma = round(float(dim_gamma), 2)
+
+    if default_fade is not None:
+        if (
+            isinstance(default_fade, bool)
+            or not isinstance(default_fade, int)
+            or not 0 <= default_fade <= 255
+        ):
+            return ToolResult(
+                "default_fade moet een geheel getal van 0 tot en met 255 zijn.",
+                {"ok": False, "kind": KIND_OTHER, "mode": "apply", "sent": False},
+            )
+
+    statuses, mod_err = await fetch_module_dimmer_statuses(module_ip)
+    mod_row = _module_row_for_channel(statuses, channel)
+
+    resolved_min: int | None = None
+    resolved_max: int | None = None
+    if want_module_curve:
+        if mod_row is None:
+            return ToolResult(
+                "Kan dimMin/dimMax niet opslaan: directe HTTP-verbinding met de "
+                f"dimmermodule ({module_ip}) lukte niet ({mod_err or 'onbereikbaar'}). "
+                "Je kunt wel dim_gamma en default_fade via de gateway opslaan.",
+                {
+                    "ok": False,
+                    "kind": KIND_OTHER,
+                    "mode": "apply",
+                    "sent": False,
+                    "module_ip": module_ip,
+                    "channel": channel,
+                },
+            )
+        resolved_min = dim_min if dim_min is not None else mod_row.get("dimMin")
+        resolved_max = dim_max if dim_max is not None else mod_row.get("dimMax")
+        if (
+            not isinstance(resolved_min, int)
+            or not isinstance(resolved_max, int)
+            or not 0 <= resolved_min < resolved_max <= 100
+        ):
+            return ToolResult(
+                f"dim_min en dim_max moeten voldoen aan 0 <= dim_min < dim_max <= 100 "
+                f"(kreeg {resolved_min}..{resolved_max}).",
+                {"ok": False, "kind": KIND_OTHER, "mode": "apply", "sent": False},
+            )
+
+    uitgang = format_uitgang(module_ip, channel)
+    orig_descr = str(mod_row.get("descr") or target.get("name") or "") if mod_row else ""
+    orig_gr = str(mod_row.get("gr") or target.get("room") or "") if mod_row else ""
+    before_state = {
+        "dim_min": mod_row.get("dimMin") if mod_row else None,
+        "dim_max": mod_row.get("dimMax") if mod_row else None,
+        "dim_gamma": target.get("dim_gamma"),
+        "default_fade": target.get("default_fade"),
+    }
+    after_state = {
+        "dim_min": resolved_min if want_module_curve else before_state["dim_min"],
+        "dim_max": resolved_max if want_module_curve else before_state["dim_max"],
+        "dim_gamma": parsed_gamma if parsed_gamma is not None else before_state["dim_gamma"],
+        "default_fade": default_fade if default_fade is not None else before_state["default_fade"],
+    }
+
+    if not confirmed:
+        parts: list[str] = []
+        if want_module_curve:
+            parts.append(
+                f"module dimMin/dimMax van {before_state['dim_min']}..{before_state['dim_max']} "
+                f"naar {resolved_min}..{resolved_max} (met behoud van descr='{orig_descr}', gr='{orig_gr}')"
+            )
+        if parsed_gamma is not None:
+            parts.append(f"gateway dim_gamma van {before_state['dim_gamma']} naar {parsed_gamma}")
+        if default_fade is not None:
+            parts.append(f"gateway default_fade van {before_state['default_fade']} naar {default_fade}")
+        return ToolResult(
+            (
+                f"Nog niet opgeslagen. Voorgesteld voor {target.get('name') or target_id} "
+                f"(uitgang {uitgang}, kanaal {channel}): "
+                + "; ".join(parts)
+                + ". Vraag bevestiging en roep calibrate_dimmer opnieuw aan met confirmed=true."
+            ),
+            {
+                "ok": False,
+                "kind": "confirmation_required",
+                "mode": "apply",
+                "sent": False,
+                "device_id": target_id,
+                "uitgang": uitgang,
+                "module_ip": module_ip,
+                "channel": channel,
+                "before": before_state,
+                "after": after_state,
+            },
+        )
+
+    module_saved = False
+    verified_module: dict[str, Any] | None = None
+    if want_module_curve and resolved_min is not None and resolved_max is not None:
+        ok_save, save_err = await save_module_dimmer_channel(
+            module_ip,
+            channel,
+            descr=orig_descr,
+            gr=orig_gr,
+            dim_min=resolved_min,
+            dim_max=resolved_max,
+        )
+        if not ok_save:
+            return ToolResult(
+                f"Opslaan op dimmermodule mislukt: {save_err}",
+                {
+                    "ok": False,
+                    "kind": KIND_OTHER,
+                    "mode": "apply",
+                    "sent": False,
+                    "device_id": target_id,
+                },
+            )
+        module_saved = True
+        fresh_statuses, _ = await fetch_module_dimmer_statuses(module_ip)
+        fresh_row = _module_row_for_channel(fresh_statuses, channel)
+        if fresh_row is not None:
+            verified_module = {
+                "dim_min": fresh_row.get("dimMin"),
+                "dim_max": fresh_row.get("dimMax"),
+                "descr": fresh_row.get("descr"),
+                "gr": fresh_row.get("gr"),
+            }
+
+    gateway_patch: dict[str, Any] = {}
+    if parsed_gamma is not None:
+        gateway_patch["dim_gamma"] = parsed_gamma
+    if default_fade is not None:
+        gateway_patch["default_fade"] = default_fade
+
+    gateway_body: Any = None
+    if gateway_patch:
+        patch_path = f"/api/v1/devices/{quote(target_id, safe='')}"
+        gateway_body, patch_err = await session.patch_json(patch_path, gateway_patch)
+        if patch_err is not None:
+            return _from_error(
+                patch_err,
+                mode="apply",
+                device_id=target_id,
+                sent=module_saved,
+                module_saved=module_saved,
+                verified_module=verified_module,
+            )
+
+    await session.annotate(
+        f"Kalibratie opgeslagen op {target.get('name') or target_id} (uitgang {uitgang}): "
+        f"dimMin={after_state['dim_min']}, dimMax={after_state['dim_max']}, "
+        f"dim_gamma={after_state['dim_gamma']}, default_fade={after_state['default_fade']}",
+        marker="calibrate_dimmer_apply",
+    )
+    return ToolResult(
+        (
+            f"Kalibratie opgeslagen voor {target.get('name') or target_id} (uitgang {uitgang}): "
+            f"dimMin={after_state['dim_min']}, dimMax={after_state['dim_max']}, "
+            f"dim_gamma={after_state['dim_gamma']}, default_fade={after_state['default_fade']}. "
+            "Test met de tester 1%, 50%, 100% en een fade aan/uit om te verifiëren."
+        ),
+        {
+            "ok": True,
+            "kind": "dimmer_calibration",
+            "mode": "apply",
+            "sent": True,
+            "device_id": target_id,
+            "uitgang": uitgang,
+            "module_ip": module_ip,
+            "channel": channel,
+            "before": before_state,
+            "after": after_state,
+            "module_saved": module_saved,
+            "verified_module": verified_module,
+            "gateway": gateway_body if isinstance(gateway_body, dict) else {},
+        },
+    )
+
+
 async def capture_frames(
     session: GatewaySession,
     *,
@@ -1893,10 +2919,9 @@ def _device_row(device: dict[str, Any], modules: dict[str, dict[str, Any]]) -> d
         "state": device.get("state") if "state" in device else None,
         "active": device.get("active"),
     }
-    if "level" in device:
-        row["level"] = device["level"]
-    if "semantic_type" in device:
-        row["semantic_type"] = device["semantic_type"]
+    for key in ("level", "semantic_type", "module_ip", "room", "dim_gamma", "default_fade"):
+        if key in device:
+            row[key] = device[key]
     if "last_seen" in module:
         row["last_seen"] = module["last_seen"]
     else:

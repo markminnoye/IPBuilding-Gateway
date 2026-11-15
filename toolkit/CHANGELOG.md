@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4 — 2026-11-15
+
+- `calibrate_dimmer` calibrates an IP0300PoE dimmer channel across four modes: `status`, `sweep` (temporary linear scale with `ON 100% -> OFF 0%` sync pulse and automatic restore), `analyze` (`10 Hz` `ffprobe` luma extraction and log-log `dim_gamma` fit), and `apply` (`saveChannel` for `dimMin`/`dimMax` keeping `descr`/`gr`, plus gateway `PATCH` for `dim_gamma` and `default_fade`). `sweep` and `apply` require `confirmed=true`.
+- Added the `dimmer-kalibratie` skill and included extra skills under `toolkit/skills/*/SKILL.md` in `skill_text()`.
+- `list_devices` includes `module_ip`, `room`, `dim_gamma`, and `default_fade` when present on a device.
+
 ## 0.1.3 — 2026-11-14
 
 - `device_command` sends dimmer DIM, ON, and OFF with fade 0 unless `fade` is set. A fade outside 0–255, or not an integer, is rejected and not sent.
