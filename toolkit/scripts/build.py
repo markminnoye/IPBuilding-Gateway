@@ -40,6 +40,7 @@ GATEWAY_DIRS = ("gateway/payloads",)
 COPY_NAMES = (
     "ipbuilding_debug",
     "skills",
+    "commands",
     "HANDLEIDING.md",
     "README.md",
     ".mcpbignore",
@@ -151,7 +152,7 @@ def stage(version: str, dest: Path = STAGING) -> Path:
         _copy_tree(REPO / rel, dest / rel)
     _write_pyproject(dest, version)
     _write_manifest(dest, version)
-    for relative in ("ipbuilding_debug", "skills", "README.md", "HANDLEIDING.md", "manifest.json"):
+    for relative in ("ipbuilding_debug", "skills", "commands", "README.md", "HANDLEIDING.md", "manifest.json"):
         scan_private_ips(dest / relative)
     return dest
 
@@ -328,6 +329,23 @@ def _write_manifest(dest: Path, version: str) -> None:
             }
         },
         "tools": tools,
+        "prompts": [
+            {
+                "name": "dimmer-kalibratie",
+                "description": (
+                    "Kalibreer een IP0300PoE dimmerkanaal stap voor stap "
+                    "(status, sweep met video, ffprobe-analyse en opslaan)."
+                ),
+                "arguments": ["kanaal"],
+                "text": (
+                    "Start de dimmerkalibratie voor ${arguments.kanaal}. "
+                    "Roep eerst calibrate_dimmer(mode='status') aan en begeleid "
+                    "daarna stap voor stap de meting (kamer verduisteren, camera op "
+                    "AE/AF Lock, sweep, video-analyse met ffprobe en apply na "
+                    "bevestiging) volgens de skill dimmer-kalibratie."
+                ),
+            }
+        ],
         "keywords": ["ipbuilding", "home-assistant", "gateway"],
     }
     (dest / "manifest.json").write_text(

@@ -472,6 +472,14 @@ async def test_calibrate_dimmer_validation_and_server_registration() -> None:
         server = build_server(session)
         tools = await server.list_tools()
         assert "calibrate_dimmer" in {tool.name for tool in tools}
+        prompts = await server.list_prompts()
+        assert "dimmer-kalibratie" in {prompt.name for prompt in prompts}
+        prompt_res = await server.get_prompt("dimmer-kalibratie", {"kanaal": "bureau"})
+        prompt_text = "\n".join(
+            getattr(msg.content, "text", str(msg.content)) for msg in prompt_res.messages
+        )
+        assert "bureau" in prompt_text
+        assert "calibrate_dimmer" in prompt_text
         assert "dimmer-kalibratie" in skill_text()
     finally:
         await session.stop()

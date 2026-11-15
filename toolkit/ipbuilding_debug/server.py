@@ -242,6 +242,32 @@ def build_server(session: GatewaySession | None = None) -> MCPServer:
         )
         return result.render()
 
+    @mcp.prompt(
+        name="dimmer-kalibratie",
+        title="Dimmer kalibreren",
+        description=(
+            "Kalibreer een IP0300PoE dimmerkanaal stap voor stap "
+            "(status, sweep met video, ffprobe-analyse en opslaan)."
+        ),
+    )
+    def dimmer_kalibratie_prompt(kanaal: str = "") -> str:
+        """Start de interactieve dimmerkalibratie voor een dimmerkanaal of ruimte."""
+        target = (
+            f" voor kanaal of ruimte '{kanaal.strip()}'"
+            if kanaal and kanaal.strip()
+            else ""
+        )
+        return (
+            f"Start de dimmerkalibratie{target}. "
+            "Roep eerst calibrate_dimmer(mode='status') aan om de huidige kanalen, "
+            "uitgangen (<octet>.<blok>.<pin>), dimMin, dimMax, dim_gamma en default_fade te tonen. "
+            "Begeleid mij daarna stap voor stap volgens de skill dimmer-kalibratie:\n"
+            "1. Kamer verduisteren en smartphone-camera richten op een indirect verlicht vlak met AE/AF Lock aan.\n"
+            "2. Sweep-voorstel tonen met calibrate_dimmer(mode='sweep', confirmed=false) en pas na mijn ja uitvoeren met confirmed=true.\n"
+            "3. De opgenomen video analyseren met calibrate_dimmer(mode='analyze', video_path=...) en de volledige tabel met alle 16 stappen (Luma Yavg en dY) tonen.\n"
+            "4. De aanbevolen dimMin, dimMax, dim_gamma en default_fade voorleggen met calibrate_dimmer(mode='apply', confirmed=false) en pas na mijn bevestiging opslaan met confirmed=true."
+        )
+
     @mcp.tool(name="probe_generation")
     async def probe_generation_tool() -> str:
         """List gateway version, hub role, and modules from the existing REST API.

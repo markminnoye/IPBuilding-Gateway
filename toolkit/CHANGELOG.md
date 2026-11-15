@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5 — 2026-11-15
+
+- **Commando `/dimmer-kalibratie` (MCP prompt + command):** `dimmer-kalibratie` is nu geregistreerd als MCP-prompt (`@mcp.prompt` en `prompts` in `manifest.json`) én als plugin-commando (`commands/dimmer-kalibratie.md`), zodat de kalibratie in Claude Desktop en Claude Code direct als selecteerbaar commando in het `+` / `/` menu verschijnt.
+
 ## 0.1.4 — 2026-11-15
 
 - `calibrate_dimmer` calibrates an IP0300PoE dimmer channel across four modes: `status`, `sweep` (temporary linear scale with `ON 100% -> OFF 0%` sync pulse and automatic restore), `analyze` (`10 Hz` `ffprobe` luma extraction and log-log `dim_gamma` fit), and `apply` (`saveChannel` for `dimMin`/`dimMax` keeping `descr`/`gr`, plus gateway `PATCH` for `dim_gamma` and `default_fade`). `sweep` and `apply` require `confirmed=true`.

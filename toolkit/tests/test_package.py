@@ -84,7 +84,7 @@ def test_plugin_evals_stay_out_of_ci() -> None:
 
 def test_versions_match() -> None:
     versions_agree()
-    assert file_version() == "0.1.4"
+    assert file_version() == "0.1.5"
     plugin = json.loads((TOOLKIT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
     setting = plugin["userConfig"]["gateway_address"]
     assert setting["required"] is False
@@ -121,6 +121,7 @@ def test_download_zips_match_the_upload_formats(
         "ipbuilding-gateway-tools/.mcp.json",
         "ipbuilding-gateway-tools/.claude-plugin/plugin.json",
         "ipbuilding-gateway-tools/.claude-plugin/marketplace.json",
+        "ipbuilding-gateway-tools/commands/dimmer-kalibratie.md",
         "ipbuilding-gateway-tools/skills/ipbuilding-gateway-tools/SKILL.md",
         "ipbuilding-gateway-tools/ipbuilding_debug/__main__.py",
         "ipbuilding-gateway-tools/pyproject.toml",
@@ -302,6 +303,7 @@ def test_staged_manifest_asks_for_the_gateway_address(
         "export_session",
         "send_report",
     ]
+    assert [p["name"] for p in manifest["prompts"]] == ["dimmer-kalibratie"]
     assert "IPBUILDING_REPORT_INTAKE" not in manifest["server"]["mcp_config"]["env"]
     assert (staged / "gateway" / "payloads" / "relay.py").is_file()
     description = manifest["long_description"]
