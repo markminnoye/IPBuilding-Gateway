@@ -198,4 +198,4 @@ class TestGatewayDimmerCurveAndFade:
         assert "1.0 = lineair (uit)" in resp_ui.text
         assert "2.2 = natuurlijk / aanbevolen" in resp_ui.text
         assert "2.8 = extra fijn onderin" in resp_ui.text
-        assert "Default transition fade (0–255):" in resp_ui.text
+        assert "Default transition fade (0–255, ~0,1 s per eenheid):" in resp_ui.text

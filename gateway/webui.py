@@ -568,12 +568,31 @@ INDEX_HTML = """<!doctype html>
     return el("td", {}, [input]);
   }
 
+  function clampNumberInput(input, minVal, maxVal, decimals, fallback) {
+    input.addEventListener("change", function () {
+      var n = decimals > 0 ? parseFloat(input.value) : parseInt(input.value, 10);
+      if (isNaN(n)) {
+        n = fallback;
+      }
+      if (minVal !== null && n < minVal) n = minVal;
+      if (maxVal !== null && n > maxVal) n = maxVal;
+      if (decimals > 0) {
+        var factor = Math.pow(10, decimals);
+        n = Math.round(n * factor) / factor;
+      } else {
+        n = Math.round(n);
+      }
+      input.value = String(n);
+    });
+  }
+
   function buildWattCell(device, state) {
     if (!isChannel(device) || !("max_watt" in device)) {
       state.max_watt = null;
       return el("td", { class: "muted" }, [document.createTextNode("—")]);
     }
     var input = el("input", { type: "number", min: "0", step: "1", value: device.max_watt });
+    clampNumberInput(input, 0, null, 0, 0);
     state.max_watt = input;
     return el("td", {}, [input]);
   }
@@ -607,6 +626,7 @@ INDEX_HTML = """<!doctype html>
       value: String(val),
       title: GAMMA_TOOLTIP,
     });
+    clampNumberInput(input, 1.0, 3.5, 2, 1.0);
     state.dim_gamma = input;
     return el("td", {}, [input]);
   }
@@ -626,6 +646,7 @@ INDEX_HTML = """<!doctype html>
       value: String(val),
       title: FADE_TOOLTIP,
     });
+    clampNumberInput(input, 0, 255, 0, 30);
     state.default_fade = input;
     return el("td", {}, [input]);
   }
@@ -694,6 +715,13 @@ INDEX_HTML = """<!doctype html>
     if (Object.keys(patch).length === 0) {
       setStatus(statusSpan, "No changes", "");
       return;
+    }
+    if ("max_watt" in patch) {
+      var w = patch.max_watt;
+      if (isNaN(w) || w < 0) {
+        setStatus(statusSpan, "Max Watt must be >= 0", "err");
+        return;
+      }
     }
     if ("dim_gamma" in patch) {
       var g = patch.dim_gamma;
