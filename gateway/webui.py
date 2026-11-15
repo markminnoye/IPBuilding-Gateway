@@ -533,17 +533,17 @@ INDEX_HTML = """<!doctype html>
   }
 
   var GAMMA_TOOLTIP =
-    "Dimcurve gamma (1.0–3.5):\n" +
-    "• 1.0 = lineair (uit)\n" +
-    "• 2.2 = natuurlijk / aanbevolen (50% ≈ 22% bus)\n" +
+    "Dimcurve gamma (1.0–3.5):\\n" +
+    "• 1.0 = lineair (uit)\\n" +
+    "• 2.2 = natuurlijk / aanbevolen (50% ≈ 22% bus)\\n" +
     "• 2.8 = extra fijn onderin (felle LED-spots)";
 
   var FADE_TOOLTIP =
-    "Default transition fade (0–255, ~0,1 s per eenheid):\n" +
-    "• 0 = direct (geen fade)\n" +
-    "• 30 = IPBox standaard (~3 s)\n" +
-    "• 60 = traag (~6 s)\n" +
-    "• 120 = ~12 s · 180 = ~17 s · 255 = ~25 s (max)\n" +
+    "Default transition fade (0–255, ~0,1 s per eenheid):\\n" +
+    "• 0 = direct (geen fade)\\n" +
+    "• 30 = IPBox standaard (~3 s)\\n" +
+    "• 60 = traag (~6 s)\\n" +
+    "• 120 = ~12 s · 180 = ~17 s · 255 = ~25 s (max)\\n" +
     "Let op: bij ingestelde dimMin/dimMax loopt eerst het dode bereik mee.";
 
   function buildGammaCell(device, state) {
