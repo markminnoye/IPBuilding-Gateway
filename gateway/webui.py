@@ -86,7 +86,54 @@ INDEX_HTML = """<!doctype html>
   }
   table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
   th, td { border: 1px solid var(--border); padding: 0.3rem 0.5rem; text-align: left; }
-  th { background: var(--bg-alt); position: sticky; top: 0; }
+  th { background: var(--bg-alt); position: sticky; top: 0; z-index: 1; }
+  th:hover, th:focus-within { z-index: 25; }
+  .info-tip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.3rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #888;
+    font-size: 0.85em;
+    line-height: 1;
+    cursor: help;
+    vertical-align: middle;
+  }
+  .info-tip:hover, .info-tip:focus { color: inherit; outline: none; }
+  .info-tip .info-bubble {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 30;
+    min-width: 220px;
+    max-width: 320px;
+    padding: 0.5rem 0.65rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #222;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: pre-line;
+    text-align: left;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+  }
+  .info-tip.info-tip-right .info-bubble {
+    left: auto;
+    right: 0;
+  }
+  .info-tip:hover .info-bubble,
+  .info-tip:focus .info-bubble,
+  .info-tip:focus-visible .info-bubble {
+    display: block;
+  }
   input[type=text], select, input[type=number] {
     width: 100%;
     box-sizing: border-box;
@@ -137,7 +184,7 @@ INDEX_HTML = """<!doctype html>
   .status.err { color: var(--err); }
   .empty { padding: 1rem; color: #888; }
 
-  .module { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 1.25rem; overflow: hidden; }
+  .module { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 1.25rem; overflow: visible; }
   .module-header {
     display: flex;
     flex-wrap: wrap;
@@ -147,6 +194,7 @@ INDEX_HTML = """<!doctype html>
     background: var(--bg-alt);
     padding: 0.6rem 0.75rem;
     border-bottom: 1px solid var(--border);
+    border-radius: 5px 5px 0 0;
   }
   .module-title { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
   .module-name-row { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
@@ -696,7 +744,9 @@ INDEX_HTML = """<!doctype html>
     tr.appendChild(buildRoomCell(device, state));
     tr.appendChild(buildTypeCell(device, state));
     tr.appendChild(buildActiveCell(device, state));
-    tr.appendChild(buildWattCell(device, state));
+    if (moduleType !== "input") {
+      tr.appendChild(buildWattCell(device, state));
+    }
     if (moduleType === "dimmer") {
       tr.appendChild(buildGammaCell(device, state));
       tr.appendChild(buildFadeCell(device, state));
@@ -875,6 +925,21 @@ INDEX_HTML = """<!doctype html>
     return el("div", { class: "module-header" }, [title, buildModuleActions(module)]);
   }
 
+  function buildHeaderCell(label, tooltipText, alignRight) {
+    var children = [document.createTextNode(label)];
+    if (tooltipText) {
+      var btn = el("button", {
+        type: "button",
+        class: "info-tip" + (alignRight ? " info-tip-right" : ""),
+        "aria-label": tooltipText,
+        text: "ⓘ",
+      });
+      btn.appendChild(el("span", { class: "info-bubble", text: tooltipText }));
+      children.push(btn);
+    }
+    return el("th", {}, children);
+  }
+
   function buildModuleSection(group) {
     var moduleType = group.module.type || "";
     var section = el("section", { class: "module" }, [buildModuleHeader(group.module)]);
@@ -884,31 +949,26 @@ INDEX_HTML = """<!doctype html>
     }
     var chLabel = channelColumnLabel(moduleType);
     var chTitle = moduleType === "input"
-      ? "Physical input port on IP1100 (0–7)"
-      : "Output channel on this module";
+      ? "Fysieke ingangspoort op de IP1100PoE (0–7)"
+      : "Uitgangskanaal op deze module";
     var headerCells = [
-      el("th", { text: chLabel, title: chTitle }),
-      el("th", { text: "Name" }),
-      el("th", { text: "Room" }),
-      el("th", { text: "Type" }),
-      el("th", { text: "Active" }),
-      el("th", {
-        text: "Max Watt",
-        title: "Configured maximum power for this channel",
-      }),
+      buildHeaderCell(chLabel, chTitle, false),
+      buildHeaderCell("Name", "Weergavenaam in Home Assistant", false),
+      buildHeaderCell("Room", "Ruimte / area-naam voor Home Assistant", false),
+      buildHeaderCell("Type", "Entity-type in Home Assistant (light, switch, cover, button…)", false),
+      buildHeaderCell("Active", "Uitgevinkt = kanaal/knop verborgen of gedeactiveerd in Home Assistant", false),
     ];
+    if (moduleType !== "input") {
+      headerCells.push(
+        buildHeaderCell("Max Watt", "Ingesteld maximaal vermogen (W) voor dit kanaal", moduleType !== "dimmer")
+      );
+    }
     if (moduleType === "dimmer") {
       headerCells.push(
-        el("th", {
-          text: "Gamma",
-          title: GAMMA_TOOLTIP,
-        })
+        buildHeaderCell("Gamma", GAMMA_TOOLTIP, true)
       );
       headerCells.push(
-        el("th", {
-          text: "Fade",
-          title: FADE_TOOLTIP,
-        })
+        buildHeaderCell("Fade", FADE_TOOLTIP, true)
       );
     }
     headerCells.push(el("th", { text: "" }));
